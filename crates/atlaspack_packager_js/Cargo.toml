@@ -21,7 +21,6 @@ oxc_syntax = { workspace = true }
 parking_lot = { workspace = true }
 pretty_assertions = { workspace = true }
 rayon = { workspace = true }
-regex = { workspace = true }
 tracing = { workspace = true }
 
 [build-dependencies]

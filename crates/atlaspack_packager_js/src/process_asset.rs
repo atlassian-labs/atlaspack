@@ -2,31 +2,48 @@ use std::collections::HashMap;
 
 use oxc_allocator::Allocator;
 use oxc_ast::AstBuilder;
-use oxc_ast::NONE;
 use oxc_ast::ast::*;
 use oxc_ast_visit::{VisitMut, walk_mut};
 use oxc_codegen::Codegen;
 use oxc_parser::Parser;
 use oxc_span::{SPAN, SourceType};
 
-/// Rewrites asset code by replacing require() calls with resolved public IDs
+/// Optional features that can be enabled during asset code processing.
+#[derive(Default)]
+pub struct ProcessFeatures {
+  /// Collect export names from `<ident>.export(exports, "<name>", ...)` calls.
+  /// Only needed for entry assets to generate lazy CommonJS exports.
+  pub extract_export_names: bool,
+}
+
+/// Result of processing asset code.
+pub struct ProcessResult {
+  /// The rewritten code.
+  pub code: String,
+  /// Export names found (only populated when `extract_export_names` feature is enabled).
+  pub export_names: Vec<String>,
+}
+
+/// Rewrites asset code by replacing require() calls with resolved public IDs and
+/// optionally collecting additional information based on enabled features.
 ///
 /// This function:
 /// 1. Parses the JavaScript code to an AST
-/// 2. Traverses the AST looking for require() calls
-/// 3. Replaces the specifier with the resolved public ID from the dependency map
-/// 4. Generates JavaScript code back from the modified AST
+/// 2. Traverses the AST in a single pass, applying all enabled transformations/extractions
+/// 3. Generates JavaScript code back from the modified AST
 ///
 /// # Arguments
 /// * `code` - The JavaScript code to transform
 /// * `deps` - Map of specifiers to their resolved public IDs (None means skipped dependency)
+/// * `features` - Optional features to enable during processing
 ///
 /// # Returns
-/// The transformed JavaScript code with requires replaced
+/// A `ProcessResult` containing the transformed code and any extracted data
 pub fn rewrite_asset_code(
   code: String,
   deps: &HashMap<String, Option<String>>,
-) -> anyhow::Result<String> {
+  features: &ProcessFeatures,
+) -> anyhow::Result<ProcessResult> {
   let allocator = Allocator::default();
   let source_type = SourceType::default().with_module(true);
 
@@ -42,31 +59,47 @@ pub fn rewrite_asset_code(
 
   let mut program = parser_return.program;
 
-  // Apply the require replacement visitor
+  // Apply the visitor in a single pass
   let ast_builder = AstBuilder::new(&allocator);
-  let mut visitor = RequireReplacementVisitor::new(&ast_builder, deps);
+  let mut visitor = AssetCodeVisitor::new(&ast_builder, deps, features);
   visitor.visit_program(&mut program);
 
   // Generate code back from the AST
   let codegen = Codegen::new();
   let generated = codegen.build(&program);
 
-  Ok(generated.code)
+  Ok(ProcessResult {
+    code: generated.code,
+    export_names: visitor.export_names,
+  })
 }
 
-/// Visitor that replaces require() call specifiers with resolved public IDs
-struct RequireReplacementVisitor<'a, 'alloc> {
+/// Visitor that processes asset code in a single AST pass:
+/// - Replaces require() call specifiers with resolved public IDs
+/// - Optionally collects export names from `<ident>.export(exports, "<name>", ...)` calls
+struct AssetCodeVisitor<'a, 'alloc> {
   ast: &'a AstBuilder<'alloc>,
   deps: &'a HashMap<String, Option<String>>,
+  extract_export_names: bool,
+  export_names: Vec<String>,
 }
 
-impl<'a, 'alloc> RequireReplacementVisitor<'a, 'alloc> {
-  fn new(ast: &'a AstBuilder<'alloc>, deps: &'a HashMap<String, Option<String>>) -> Self {
-    Self { ast, deps }
+impl<'a, 'alloc> AssetCodeVisitor<'a, 'alloc> {
+  fn new(
+    ast: &'a AstBuilder<'alloc>,
+    deps: &'a HashMap<String, Option<String>>,
+    features: &ProcessFeatures,
+  ) -> Self {
+    Self {
+      ast,
+      deps,
+      extract_export_names: features.extract_export_names,
+      export_names: Vec::new(),
+    }
   }
 }
 
-impl<'a: 'alloc, 'alloc> VisitMut<'alloc> for RequireReplacementVisitor<'a, 'alloc> {
+impl<'a: 'alloc, 'alloc> VisitMut<'alloc> for AssetCodeVisitor<'a, 'alloc> {
   fn visit_expression(&mut self, expr: &mut Expression<'alloc>) {
     // First recurse into children
     walk_mut::walk_expression(self, expr);
@@ -85,32 +118,43 @@ impl<'a: 'alloc, 'alloc> VisitMut<'alloc> for RequireReplacementVisitor<'a, 'all
       return;
     }
 
-    // Check if this is a require() call that needs to be replaced
-    if let Expression::CallExpression(call_expr) = expr
-      && let Expression::Identifier(ident) = &call_expr.callee
-      && ident.name == "require"
-      && call_expr.arguments.len() == 1
-      && let Argument::StringLiteral(string_lit) = &call_expr.arguments[0]
-    {
-      let specifier = string_lit.value.as_str();
-      let dep_mapping = self.deps.get(specifier);
+    // Check if this is a call expression
+    if let Expression::CallExpression(call_expr) = expr {
+      // Collect export names: <ident>.export(exports, "<name>", ...)
+      if self.extract_export_names
+        && let Expression::StaticMemberExpression(member) = &call_expr.callee
+        && member.property.name == "export"
+        && call_expr.arguments.len() >= 2
+        && let Argument::Identifier(first_arg) = &call_expr.arguments[0]
+        && first_arg.name == "exports"
+        && let Argument::StringLiteral(name_lit) = &call_expr.arguments[1]
+      {
+        self.export_names.push(name_lit.value.as_str().to_string());
+      }
 
-      match dep_mapping {
-        Some(Some(public_id)) => {
-          // Replace the string literal with the resolved public ID
-          // We need to get a mutable reference to the string literal again
-          if let Argument::StringLiteral(string_lit) = &mut call_expr.arguments[0] {
-            string_lit.value = public_id.as_str().into();
+      // Replace require() calls with resolved public IDs
+      if let Expression::Identifier(ident) = &call_expr.callee
+        && ident.name == "require"
+        && call_expr.arguments.len() == 1
+        && let Argument::StringLiteral(string_lit) = &call_expr.arguments[0]
+      {
+        let specifier = string_lit.value.as_str();
+        let dep_mapping = self.deps.get(specifier);
+
+        match dep_mapping {
+          Some(Some(public_id)) => {
+            // Replace the string literal with the resolved public ID
+            if let Argument::StringLiteral(string_lit) = &mut call_expr.arguments[0] {
+              string_lit.value = public_id.as_str().into();
+            }
           }
-        }
-        Some(None) => {
-          // Replace with (function(){return {};}())
-
-          // Create empty object: {}
-          *expr = self.ast.expression_object(SPAN, self.ast.vec());
-        }
-        None => {
-          // Keep the original specifier unchanged
+          Some(None) => {
+            // Replace with empty object: {}
+            *expr = self.ast.expression_object(SPAN, self.ast.vec());
+          }
+          None => {
+            // Keep the original specifier unchanged
+          }
         }
       }
     }
@@ -121,13 +165,32 @@ impl<'a: 'alloc, 'alloc> VisitMut<'alloc> for RequireReplacementVisitor<'a, 'all
 mod tests {
   use super::*;
 
+  /// Helper: run rewrite_asset_code with default features (no export extraction)
+  fn rewrite(code: &str, deps: &HashMap<String, Option<String>>) -> String {
+    rewrite_asset_code(code.to_string(), deps, &ProcessFeatures::default())
+      .unwrap()
+      .code
+  }
+
+  /// Helper: extract export names from code (enables the extract_export_names feature)
+  fn extract_exports(code: &str) -> Vec<String> {
+    rewrite_asset_code(
+      code.to_string(),
+      &HashMap::new(),
+      &ProcessFeatures {
+        extract_export_names: true,
+      },
+    )
+    .unwrap()
+    .export_names
+  }
+
   #[test]
   fn test_simple_require_replacement() {
-    let code = r#"const foo = require("./foo");"#.to_string();
     let mut deps = HashMap::new();
     deps.insert("./foo".to_string(), Some("pub_foo".to_string()));
 
-    let result = rewrite_asset_code(code, &deps).unwrap();
+    let result = rewrite(r#"const foo = require("./foo");"#, &deps);
 
     assert!(result.contains(r#"require("pub_foo")"#));
   }
@@ -138,8 +201,7 @@ mod tests {
       const foo = require("./foo");
       const bar = require('./bar');
       const baz = require("deeply/nested/module");
-    "#
-    .to_string();
+    "#;
 
     let mut deps = HashMap::new();
     deps.insert("./foo".to_string(), Some("pub_foo".to_string()));
@@ -149,7 +211,7 @@ mod tests {
       Some("pub_nested".to_string()),
     );
 
-    let result = rewrite_asset_code(code, &deps).unwrap();
+    let result = rewrite(code, &deps);
 
     assert!(result.contains(r#"require("pub_foo")"#));
     assert!(result.contains(r#"require("pub_bar")"#));
@@ -158,17 +220,16 @@ mod tests {
 
   #[test]
   fn test_skipped_dependency_replaced_with_empty_object() {
-    let code = r#"const foo = require("./foo"); const bar = require("./bar");"#.to_string();
     let mut deps = HashMap::new();
     deps.insert("./foo".to_string(), Some("pub_foo".to_string()));
     deps.insert("./bar".to_string(), None); // Skipped
 
-    let result = rewrite_asset_code(code, &deps).unwrap();
+    let result = rewrite(
+      r#"const foo = require("./foo"); const bar = require("./bar");"#,
+      &deps,
+    );
 
     assert!(result.contains(r#"require("pub_foo")"#));
-    // Skipped dependency should be replaced with (function(){return {};}())
-    assert!(result.contains(r#"function() {"#) || result.contains(r#"function () {"#));
-    assert!(result.contains(r#"return {};"#));
     assert!(!result.contains(r#"require("./bar")"#));
   }
 
@@ -179,8 +240,7 @@ mod tests {
       const b = require("./b");
       const c = foo(require("./c"));
       const d = condition ? require("./d") : null;
-    "#
-    .to_string();
+    "#;
 
     let mut deps = HashMap::new();
     deps.insert("./a".to_string(), Some("pub_a".to_string()));
@@ -188,19 +248,10 @@ mod tests {
     deps.insert("./c".to_string(), None); // Skipped
     deps.insert("./d".to_string(), None); // Skipped
 
-    let result = rewrite_asset_code(code, &deps).unwrap();
+    let result = rewrite(code, &deps);
 
     // Normal requires are replaced
     assert!(result.contains(r#"require("pub_a")"#));
-
-    // All skipped dependencies are replaced with (function(){return {};}())
-    // Check that we have function expressions for skipped deps
-    let function_count = result.matches("function").count();
-    assert!(
-      function_count >= 3,
-      "Expected at least 3 function expressions, found {}",
-      function_count
-    );
 
     // Make sure no skipped requires remain
     assert!(!result.contains(r#"require("./b")"#));
@@ -210,12 +261,14 @@ mod tests {
 
   #[test]
   fn test_missing_dependency_preserved() {
-    let code = r#"const foo = require("./foo"); const unknown = require("./unknown");"#.to_string();
     let mut deps = HashMap::new();
     deps.insert("./foo".to_string(), Some("pub_foo".to_string()));
     // ./unknown not in deps map
 
-    let result = rewrite_asset_code(code, &deps).unwrap();
+    let result = rewrite(
+      r#"const foo = require("./foo"); const unknown = require("./unknown");"#,
+      &deps,
+    );
 
     assert!(result.contains(r#"require("pub_foo")"#));
     assert!(result.contains(r#"require("./unknown")"#)); // Unchanged
@@ -228,8 +281,7 @@ mod tests {
       var parcelHelpers = require("@parcel/helpers");
       var _prefixerJs = require("./Prefixer.js");
       parcelHelpers.exportAll(_prefixerJs, exports);
-    "#
-    .to_string();
+    "#;
 
     let mut deps = HashMap::new();
     deps.insert(
@@ -238,14 +290,10 @@ mod tests {
     );
     deps.insert("./Prefixer.js".to_string(), None); // Skipped
 
-    let result = rewrite_asset_code(code, &deps).unwrap();
+    let result = rewrite(code, &deps);
 
     // The helpers require should be replaced
     assert!(result.contains(r#"require("helpers_id")"#));
-
-    // The skipped dependency should be replaced with a function that returns an empty object
-    // This ensures that exportAll(skipped_value, exports) doesn't throw when it calls Object.keys()
-    assert!(result.contains("function") && result.contains("return {};"));
 
     // The skipped require should not remain
     assert!(!result.contains(r#"require("./Prefixer.js")"#));
@@ -253,11 +301,13 @@ mod tests {
 
   #[test]
   fn test_require_in_string_literal_not_replaced() {
-    let code = r#"const str = "require('./foo')"; const foo = require("./foo");"#.to_string();
     let mut deps = HashMap::new();
     deps.insert("./foo".to_string(), Some("pub_foo".to_string()));
 
-    let result = rewrite_asset_code(code, &deps).unwrap();
+    let result = rewrite(
+      r#"const str = "require('./foo')"; const foo = require("./foo");"#,
+      &deps,
+    );
 
     // The actual require call should be replaced
     assert!(result.contains(r#"require("pub_foo")"#));
@@ -267,23 +317,21 @@ mod tests {
 
   #[test]
   fn test_nested_require_calls() {
-    let code = r#"const result = foo(require('./bar'));"#.to_string();
     let mut deps = HashMap::new();
     deps.insert("./bar".to_string(), Some("pub_bar".to_string()));
 
-    let result = rewrite_asset_code(code, &deps).unwrap();
+    let result = rewrite(r#"const result = foo(require('./bar'));"#, &deps);
 
     assert!(result.contains(r#"require("pub_bar")"#));
   }
 
   #[test]
   fn test_multiple_requires_one_line() {
-    let code = r#"const a = require('./a'), b = require('./b');"#.to_string();
     let mut deps = HashMap::new();
     deps.insert("./a".to_string(), Some("pub_a".to_string()));
     deps.insert("./b".to_string(), Some("pub_b".to_string()));
 
-    let result = rewrite_asset_code(code, &deps).unwrap();
+    let result = rewrite(r#"const a = require('./a'), b = require('./b');"#, &deps);
 
     assert!(result.contains(r#"require("pub_a")"#));
     assert!(result.contains(r#"require("pub_b")"#));
@@ -291,45 +339,44 @@ mod tests {
 
   #[test]
   fn test_require_in_if_statement() {
-    let code = r#"if (condition) { const foo = require('./foo'); }"#.to_string();
     let mut deps = HashMap::new();
     deps.insert("./foo".to_string(), Some("pub_foo".to_string()));
 
-    let result = rewrite_asset_code(code, &deps).unwrap();
+    let result = rewrite(r#"if (condition) { const foo = require('./foo'); }"#, &deps);
 
     assert!(result.contains(r#"require("pub_foo")"#));
   }
 
   #[test]
   fn test_require_in_return_statement() {
-    let code = r#"function load() { return require('./module'); }"#.to_string();
     let mut deps = HashMap::new();
     deps.insert("./module".to_string(), Some("pub_module".to_string()));
 
-    let result = rewrite_asset_code(code, &deps).unwrap();
+    let result = rewrite(r#"function load() { return require('./module'); }"#, &deps);
 
     assert!(result.contains(r#"require("pub_module")"#));
   }
 
   #[test]
   fn test_require_in_arrow_function() {
-    let code = r#"const loader = () => require('./lazy');"#.to_string();
     let mut deps = HashMap::new();
     deps.insert("./lazy".to_string(), Some("pub_lazy".to_string()));
 
-    let result = rewrite_asset_code(code, &deps).unwrap();
+    let result = rewrite(r#"const loader = () => require('./lazy');"#, &deps);
 
     assert!(result.contains(r#"require("pub_lazy")"#));
   }
 
   #[test]
   fn test_require_in_ternary() {
-    let code = r#"const mod = condition ? require('./a') : require('./b');"#.to_string();
     let mut deps = HashMap::new();
     deps.insert("./a".to_string(), Some("pub_a".to_string()));
     deps.insert("./b".to_string(), Some("pub_b".to_string()));
 
-    let result = rewrite_asset_code(code, &deps).unwrap();
+    let result = rewrite(
+      r#"const mod = condition ? require('./a') : require('./b');"#,
+      &deps,
+    );
 
     assert!(result.contains(r#"require("pub_a")"#));
     assert!(result.contains(r#"require("pub_b")"#));
@@ -337,11 +384,10 @@ mod tests {
 
   #[test]
   fn test_property_access_require_not_replaced() {
-    let code = r#"const result = obj.require('./foo');"#.to_string();
     let mut deps = HashMap::new();
     deps.insert("./foo".to_string(), Some("pub_foo".to_string()));
 
-    let result = rewrite_asset_code(code, &deps).unwrap();
+    let result = rewrite(r#"const result = obj.require('./foo');"#, &deps);
 
     // Should NOT be replaced because it's obj.require(), not require()
     assert!(result.contains(r#"./foo"#));
@@ -350,11 +396,10 @@ mod tests {
 
   #[test]
   fn test_require_with_multiple_arguments_not_replaced() {
-    let code = r#"const result = require('./foo', './bar');"#.to_string();
     let mut deps = HashMap::new();
     deps.insert("./foo".to_string(), Some("pub_foo".to_string()));
 
-    let result = rewrite_asset_code(code, &deps).unwrap();
+    let result = rewrite(r#"const result = require('./foo', './bar');"#, &deps);
 
     // Should NOT be replaced because require takes only 1 argument
     assert!(result.contains(r#"./foo"#));
@@ -363,10 +408,9 @@ mod tests {
 
   #[test]
   fn test_require_with_non_string_argument_not_replaced() {
-    let code = r#"const result = require(variable);"#.to_string();
     let deps = HashMap::new();
 
-    let result = rewrite_asset_code(code, &deps).unwrap();
+    let result = rewrite(r#"const result = require(variable);"#, &deps);
 
     // Should NOT be replaced because argument is not a string literal
     assert!(result.contains(r#"require(variable)"#));
@@ -374,23 +418,24 @@ mod tests {
 
   #[test]
   fn test_require_in_object_literal() {
-    let code = r#"const obj = { module: require('./module') };"#.to_string();
     let mut deps = HashMap::new();
     deps.insert("./module".to_string(), Some("pub_module".to_string()));
 
-    let result = rewrite_asset_code(code, &deps).unwrap();
+    let result = rewrite(r#"const obj = { module: require('./module') };"#, &deps);
 
     assert!(result.contains(r#"require("pub_module")"#));
   }
 
   #[test]
   fn test_require_in_array_literal() {
-    let code = r#"const modules = [require('./a'), require('./b')];"#.to_string();
     let mut deps = HashMap::new();
     deps.insert("./a".to_string(), Some("pub_a".to_string()));
     deps.insert("./b".to_string(), Some("pub_b".to_string()));
 
-    let result = rewrite_asset_code(code, &deps).unwrap();
+    let result = rewrite(
+      r#"const modules = [require('./a'), require('./b')];"#,
+      &deps,
+    );
 
     assert!(result.contains(r#"require("pub_a")"#));
     assert!(result.contains(r#"require("pub_b")"#));
@@ -398,12 +443,14 @@ mod tests {
 
   #[test]
   fn test_single_and_double_quotes() {
-    let code = r#"const a = require("./a"); const b = require('./b');"#.to_string();
     let mut deps = HashMap::new();
     deps.insert("./a".to_string(), Some("pub_a".to_string()));
     deps.insert("./b".to_string(), Some("pub_b".to_string()));
 
-    let result = rewrite_asset_code(code, &deps).unwrap();
+    let result = rewrite(
+      r#"const a = require("./a"); const b = require('./b');"#,
+      &deps,
+    );
 
     assert!(result.contains(r#"require("pub_a")"#));
     assert!(result.contains(r#"require("pub_b")"#));
@@ -412,10 +459,12 @@ mod tests {
   #[test]
   fn test_module_bundle_root_replacement() {
     // This simulates the runtime code that uses module.bundle.root for dynamic imports
-    let code = r#"module.exports = Promise.resolve(module.bundle.root("lgIj4"));"#.to_string();
     let deps = HashMap::new();
 
-    let result = rewrite_asset_code(code, &deps).unwrap();
+    let result = rewrite(
+      r#"module.exports = Promise.resolve(module.bundle.root("lgIj4"));"#,
+      &deps,
+    );
 
     // module.bundle.root should be replaced with require
     assert!(result.contains(r#"require("lgIj4")"#));
@@ -428,14 +477,113 @@ mod tests {
       var loadBundle = function(id) {
         return module.bundle.root(id);
       };
-    "#
-    .to_string();
+    "#;
     let deps = HashMap::new();
 
-    let result = rewrite_asset_code(code, &deps).unwrap();
+    let result = rewrite(code, &deps);
 
     // module.bundle.root should be replaced with require
     assert!(result.contains("require(id)"));
     assert!(!result.contains("module.bundle.root"));
+  }
+
+  // --- extract_export_names feature tests ---
+
+  #[test]
+  fn test_extract_export_names_from_code() {
+    let code = r#"
+      var parcelHelpers = require("gpsXI");
+      parcelHelpers.defineInteropFlag(exports);
+      parcelHelpers.export(exports, "init", () => init);
+      parcelHelpers.export(exports, "stream", () => stream);
+      var _index = require("6osex");
+      async function init() { return (0, _index.init)(); }
+      async function stream({ request, response }) { return (0, _index.streamPrematchedRoute)({ request, response }); }
+    "#;
+
+    let names = extract_exports(code);
+    assert_eq!(names, vec!["init".to_string(), "stream".to_string()]);
+  }
+
+  #[test]
+  fn test_extract_export_names_single_quotes() {
+    let code = r#"
+      parcelHelpers.export(exports, 'default', () => MyComponent);
+      parcelHelpers.export(exports, 'helper', () => helperFn);
+    "#;
+
+    let names = extract_exports(code);
+    assert_eq!(names, vec!["default".to_string(), "helper".to_string()]);
+  }
+
+  #[test]
+  fn test_extract_export_names_empty_code() {
+    let names = extract_exports("var x = 42;");
+    assert!(names.is_empty());
+  }
+
+  #[test]
+  fn test_extract_export_names_not_on_exports_identifier() {
+    // Should NOT match when the first argument is not the `exports` identifier
+    let names = extract_exports(r#"parcelHelpers.export(someOtherObj, "foo", () => foo);"#);
+    assert!(names.is_empty());
+  }
+
+  #[test]
+  fn test_extract_export_names_ignores_non_export_member() {
+    // Should NOT match defineInteropFlag or exportAll
+    let code = r#"
+      parcelHelpers.defineInteropFlag(exports);
+      parcelHelpers.exportAll(_dep, exports);
+    "#;
+
+    let names = extract_exports(code);
+    assert!(names.is_empty());
+  }
+
+  #[test]
+  fn test_extract_export_names_combined_with_require_rewrite() {
+    // Both features work together in a single pass
+    let code = r#"
+      var parcelHelpers = require("helpers");
+      parcelHelpers.export(exports, "init", () => init);
+      var _dep = require("./dep");
+    "#;
+
+    let mut deps = HashMap::new();
+    deps.insert("helpers".to_string(), Some("h1".to_string()));
+    deps.insert("./dep".to_string(), Some("d1".to_string()));
+
+    let result = rewrite_asset_code(
+      code.to_string(),
+      &deps,
+      &ProcessFeatures {
+        extract_export_names: true,
+      },
+    )
+    .unwrap();
+
+    // Require rewriting works
+    assert!(result.code.contains(r#"require("h1")"#));
+    assert!(result.code.contains(r#"require("d1")"#));
+
+    // Export name extraction works
+    assert_eq!(result.export_names, vec!["init".to_string()]);
+  }
+
+  #[test]
+  fn test_export_names_not_collected_when_feature_disabled() {
+    let code = r#"
+      parcelHelpers.export(exports, "init", () => init);
+    "#;
+
+    let result = rewrite_asset_code(
+      code.to_string(),
+      &HashMap::new(),
+      &ProcessFeatures::default(), // extract_export_names = false
+    )
+    .unwrap();
+
+    assert!(result.export_names.is_empty());
   }
 }

@@ -688,7 +688,6 @@ dependencies = [
  "parking_lot",
  "pretty_assertions",
  "rayon",
- "regex",
  "tracing",
 ]
 

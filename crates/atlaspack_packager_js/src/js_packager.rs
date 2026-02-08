@@ -14,9 +14,37 @@ use rayon::prelude::*;
 use atlaspack_core::package_result::{BundleInfo, CacheKeyMap, PackageResult};
 
 use super::JsPackager;
-use super::process_asset::rewrite_asset_code;
+use super::process_asset::{ProcessFeatures, rewrite_asset_code};
 
-type PackagedAsset<'a> = (&'a Asset, String);
+/// A processed asset: the asset reference, its wrapped code, and any export names extracted.
+type PackagedAsset<'a> = (&'a Asset, String, Vec<String>);
+
+/// Generate lazy entry exports for a CommonJS bundle. Instead of eagerly executing the
+/// entry module with `module.exports = require('id')`, this generates wrapper functions
+/// that defer the require() call until the export is actually invoked.
+///
+/// This is critical for SSR bundles where the environment (e.g., `globalThis.ssrContext`)
+/// may not be set up at bundle load time, but will be available by the time the exported
+/// functions (e.g., `init`, `stream`) are called.
+fn generate_lazy_entry_exports(public_id: &str, export_names: &[String]) -> String {
+  if export_names.is_empty() {
+    // Fallback: no recognized exports, use eager require
+    return format!("module.exports = require('{}');", public_id);
+  }
+
+  // Generate lazy wrapper: defer require() until an export is actually called.
+  // Calling require() multiple times is safe -- the prelude caches modules.
+  let mut result = String::new();
+
+  for name in export_names {
+    result.push_str(&format!(
+      "module.exports['{}'] = function() {{ return require('{}')['{}'].apply(this, arguments); }};\n",
+      name, public_id, name
+    ));
+  }
+
+  result
+}
 
 impl<B: BundleGraph + Send + Sync> JsPackager<B> {
   pub fn new(
@@ -59,11 +87,12 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
         let asset_code =
           String::from_utf8_lossy(&code.ok_or(anyhow::anyhow!("Unable to read asset code"))?)
             .to_string();
+        let is_entry = bundle.entry_asset_ids.contains(&asset.id);
         self
-          .process_asset(bundle, asset, asset_code)
-          .map(|content| (*asset, content))
+          .process_asset(bundle, asset, asset_code, is_entry)
+          .map(|(content, export_names)| (*asset, content, export_names))
       })
-      .collect::<anyhow::Result<Vec<(&Asset, String)>>>()?;
+      .collect::<anyhow::Result<Vec<PackagedAsset>>>()?;
     span.exit();
 
     let bundle_contents = self.assemble_bundle(bundle, contents);
@@ -111,14 +140,26 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
   }
 
   #[tracing::instrument(level = "trace", skip_all)]
-  fn process_asset(&self, bundle: &Bundle, asset: &Asset, code: String) -> anyhow::Result<String> {
+  fn process_asset(
+    &self,
+    bundle: &Bundle,
+    asset: &Asset,
+    code: String,
+    is_entry: bool,
+  ) -> anyhow::Result<(String, Vec<String>)> {
     // Get dependency map for this asset
     let deps = self.get_asset_dependency_map(bundle, asset)?;
-    let code = rewrite_asset_code(code, &deps)?;
+
+    let features = ProcessFeatures {
+      // Only extract export names for entry assets (needed for lazy CommonJS exports)
+      extract_export_names: is_entry,
+    };
+    let result = rewrite_asset_code(code, &deps, &features)?;
 
     // All assets are wrapped, including entry assets. Entry assets will be explicitly
     // required at the bottom of the bundle to ensure they execute in order.
-    self.wrap_asset(bundle, asset, code)
+    let wrapped = self.wrap_asset(bundle, asset, result.code)?;
+    Ok((wrapped, result.export_names))
   }
 
   fn get_asset_dependency_map(
@@ -196,22 +237,34 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
     ))
   }
 
-  pub fn assemble_bundle(&self, bundle: &Bundle, contents: Vec<(&Asset, String)>) -> String {
+  pub fn assemble_bundle(&self, bundle: &Bundle, contents: Vec<PackagedAsset>) -> String {
     // This is a temporary implementation that will just use string concatenation
 
     // Sort the contents - non-entry assets by asset id first, then entry assets in the same order as bundle.entry_asset_ids
+
+    // Extract entry asset export names before consuming contents (needed for lazy export generation)
+    let entry_export_names: Vec<String> = bundle
+      .entry_asset_ids
+      .first()
+      .and_then(|entry_id| {
+        contents
+          .iter()
+          .find(|(asset, _, _)| asset.id == *entry_id)
+          .map(|(_, _, export_names)| export_names.clone())
+      })
+      .unwrap_or_default();
 
     // Separate entry and non-entry assets
     let (mut entry_contents, mut non_entry_contents): (Vec<PackagedAsset>, Vec<PackagedAsset>) =
       contents
         .into_iter()
-        .partition(|(asset, _)| bundle.entry_asset_ids.contains(&asset.id));
+        .partition(|(asset, _, _)| bundle.entry_asset_ids.contains(&asset.id));
 
     // Sort non-entry assets by asset ID
-    non_entry_contents.sort_by_key(|(asset, _)| asset.id.clone());
+    non_entry_contents.sort_by_key(|(asset, _, _)| asset.id.clone());
 
     // Sort entry assets by their order in bundle.entry_asset_ids
-    entry_contents.sort_by_key(|(asset, _)| {
+    entry_contents.sort_by_key(|(asset, _, _)| {
       bundle
         .entry_asset_ids
         .iter()
@@ -225,7 +278,7 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
 
     let asset_contents = contents
       .into_iter()
-      .map(|(_, content)| content)
+      .map(|(_, content, _)| content)
       .collect::<Vec<_>>()
       .join("\n");
 
@@ -290,16 +343,17 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
     let is_commonjs = bundle.env.output_format == OutputFormat::CommonJS;
 
     if is_commonjs {
-      let main_entry_require = if let Some(main_entry_id) = bundle.entry_asset_ids.first() {
+      let main_entry_exports = if let Some(main_entry_id) = bundle.entry_asset_ids.first() {
         let public_id = bundle_graph
           .get_public_asset_id(main_entry_id)
           .expect("Main entry asset not found in bundle graph");
-        format!("module.exports = require('{}');", public_id)
+
+        generate_lazy_entry_exports(&public_id, &entry_export_names)
       } else {
         String::new()
       };
 
-      prelude_loader + &asset_contents + "\n" + &main_entry_require + "\n"
+      prelude_loader + &asset_contents + "\n" + &main_entry_exports + "\n"
     } else {
       "(function() {\n".to_string()
         + &prelude_loader
@@ -359,18 +413,18 @@ mod tests {
     let asset2 = create_test_asset("aaa", "/a.js");
     let asset3 = create_test_asset("mmm", "/m.js");
 
-    let contents = vec![
-      (&asset1, "// asset zzz".to_string()),
-      (&asset2, "// asset aaa".to_string()),
-      (&asset3, "// asset mmm".to_string()),
+    let contents: Vec<(&Asset, String, Vec<String>)> = vec![
+      (&asset1, "// asset zzz".to_string(), vec![]),
+      (&asset2, "// asset aaa".to_string(), vec![]),
+      (&asset3, "// asset mmm".to_string(), vec![]),
     ];
 
     // Test the sorting logic directly
     let (entry_contents, mut non_entry_contents): (Vec<_>, Vec<_>) = contents
       .into_iter()
-      .partition(|(asset, _)| bundle.entry_asset_ids.contains(&asset.id));
+      .partition(|(asset, _, _)| bundle.entry_asset_ids.contains(&asset.id));
 
-    non_entry_contents.sort_by_key(|(asset, _)| asset.id.clone());
+    non_entry_contents.sort_by_key(|(asset, _, _)| asset.id.clone());
 
     // Verify sorting order
     assert_eq!(non_entry_contents.len(), 3);
@@ -389,20 +443,20 @@ mod tests {
     let entry2 = create_test_asset("entry2", "/entry2.js");
     let non_entry = create_test_asset("zzz", "/zzz.js");
 
-    let contents = vec![
-      (&entry1, "// entry 1".to_string()),
-      (&non_entry, "// non entry".to_string()),
-      (&entry2, "// entry 2".to_string()),
+    let contents: Vec<(&Asset, String, Vec<String>)> = vec![
+      (&entry1, "// entry 1".to_string(), vec![]),
+      (&non_entry, "// non entry".to_string(), vec![]),
+      (&entry2, "// entry 2".to_string(), vec![]),
     ];
 
     // Test the partitioning and sorting logic
     let (mut entry_contents, mut non_entry_contents): (Vec<_>, Vec<_>) = contents
       .into_iter()
-      .partition(|(asset, _)| bundle.entry_asset_ids.contains(&asset.id));
+      .partition(|(asset, _, _)| bundle.entry_asset_ids.contains(&asset.id));
 
-    non_entry_contents.sort_by_key(|(asset, _)| asset.id.clone());
+    non_entry_contents.sort_by_key(|(asset, _, _)| asset.id.clone());
 
-    entry_contents.sort_by_key(|(asset, _)| {
+    entry_contents.sort_by_key(|(asset, _, _)| {
       bundle
         .entry_asset_ids
         .iter()
@@ -435,5 +489,30 @@ mod tests {
     assert!(expected_pattern.contains("function (require,module,exports)"));
     assert!(expected_pattern.contains("module.exports = 42;"));
     assert!(expected_pattern.ends_with("});"));
+  }
+
+  #[test]
+  fn test_generate_lazy_entry_exports_with_exports() {
+    use super::generate_lazy_entry_exports;
+
+    let export_names = vec!["init".to_string(), "stream".to_string()];
+    let result = generate_lazy_entry_exports("abc123", &export_names);
+
+    assert!(result.contains("require('abc123')['init']"));
+    assert!(result.contains("require('abc123')['stream']"));
+    assert!(result.contains("module.exports['init']"));
+    assert!(result.contains("module.exports['stream']"));
+    // Should NOT contain eager module.exports = require(...)
+    assert!(!result.contains("module.exports = require"));
+  }
+
+  #[test]
+  fn test_generate_lazy_entry_exports_fallback_empty() {
+    use super::generate_lazy_entry_exports;
+
+    let result = generate_lazy_entry_exports("abc123", &[]);
+
+    // Should fall back to eager require
+    assert!(result.contains("module.exports = require('abc123')"));
   }
 }
