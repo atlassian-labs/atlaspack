@@ -258,3 +258,305 @@ impl FinalizedSymbolTracker {
     self.requirements_by_dep.get(dep_id)
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use std::path::PathBuf;
+  use std::sync::atomic::{AtomicU32, Ordering};
+
+  use pretty_assertions::assert_eq;
+
+  use super::*;
+  use crate::types::{DependencyBuilder, Environment, Priority, SpecifierType, Target};
+
+  static ASSET_COUNTER: AtomicU32 = AtomicU32::new(0);
+
+  type TestSymbol<'a> = (&'a str, &'a str, bool);
+
+  fn symbol(test_symbol: &TestSymbol) -> Symbol {
+    let (local, exported, is_weak) = test_symbol;
+    Symbol {
+      local: String::from(*local),
+      exported: String::from(*exported),
+      is_weak: *is_weak,
+      ..Symbol::default()
+    }
+  }
+
+  fn make_asset(file_path: &str, symbols: Vec<TestSymbol>) -> Arc<Asset> {
+    let unique_id = ASSET_COUNTER.fetch_add(1, Ordering::SeqCst);
+    Arc::new(Asset {
+      id: format!("asset_{:016x}", unique_id),
+      file_path: PathBuf::from(file_path),
+      symbols: Some(symbols.iter().map(symbol).collect()),
+      ..Asset::default()
+    })
+  }
+
+  fn make_dependency(
+    source_asset: &Asset,
+    specifier: &str,
+    symbols: Vec<TestSymbol>,
+  ) -> Dependency {
+    DependencyBuilder::default()
+      .symbols(symbols.iter().map(symbol).collect())
+      .specifier(specifier.to_string())
+      .env(Arc::new(Environment::default()))
+      .specifier_type(SpecifierType::default())
+      .source_path(source_asset.file_path.clone())
+      .source_asset_id(source_asset.id.clone())
+      .priority(Priority::default())
+      .build()
+  }
+
+  fn make_entry_dependency() -> Dependency {
+    Dependency::entry(String::from("entry.js"), Target::default())
+  }
+
+  /// Creates a simple graph: entry_dep -> entry_asset -> dep_a -> asset_a
+  fn setup_simple_graph() -> (AssetGraph, Arc<Asset>, Dependency, Arc<Asset>) {
+    let mut graph = AssetGraph::new();
+
+    // Entry dependency
+    let entry_dep = make_entry_dependency();
+    let entry_dep_node = graph.add_entry_dependency(entry_dep, false);
+
+    // Entry asset that imports symbol "a" from "./a.js"
+    let entry_asset = make_asset("entry.js", vec![]);
+    let entry_asset_node = graph.add_asset(entry_asset.clone(), false);
+    graph.add_edge(&entry_dep_node, &entry_asset_node);
+
+    // Dependency on "./a.js" requesting symbol "a"
+    let dep_a = make_dependency(&entry_asset, "./a.js", vec![("a", "a", false)]);
+    let dep_a_node = graph.add_dependency(dep_a.clone(), false);
+    graph.add_edge(&entry_asset_node, &dep_a_node);
+
+    // Asset a.js that provides symbol "a"
+    let asset_a = make_asset("a.js", vec![("a", "a", false)]);
+    let asset_a_node = graph.add_asset(asset_a.clone(), false);
+    graph.add_edge(&dep_a_node, &asset_a_node);
+
+    (graph, entry_asset, dep_a, asset_a)
+  }
+
+  #[test]
+  fn track_symbols_registers_requirements_from_dependencies() {
+    let (graph, entry_asset, dep_a, _asset_a) = setup_simple_graph();
+    let mut tracker = SymbolTracker::default();
+
+    // Track symbols for entry_asset with its dependency
+    tracker
+      .track_symbols(&graph, &entry_asset, &[dep_a.clone()])
+      .unwrap();
+
+    // Verify the requirement was registered
+    let requirements = tracker.requirements_by_dep.get(&dep_a.id).unwrap();
+    assert_eq!(requirements.len(), 1);
+    assert_eq!(requirements[0].symbol.exported, "a");
+    assert!(
+      requirements[0].final_location.is_none(),
+      "Symbol should not be resolved yet"
+    );
+  }
+
+  #[test]
+  fn track_symbols_satisfies_requirements_when_asset_provides_symbol() {
+    let (graph, entry_asset, dep_a, asset_a) = setup_simple_graph();
+    let mut tracker = SymbolTracker::default();
+
+    // First, register the requirement from the entry asset
+    tracker
+      .track_symbols(&graph, &entry_asset, &[dep_a.clone()])
+      .unwrap();
+
+    // Now track the providing asset - this should satisfy the requirement
+    tracker.track_symbols(&graph, &asset_a, &[]).unwrap();
+
+    // Verify the requirement is now satisfied
+    let requirements = tracker.requirements_by_dep.get(&dep_a.id).unwrap();
+    assert_eq!(requirements.len(), 1);
+
+    let final_location = requirements[0]
+      .final_location
+      .as_ref()
+      .expect("Symbol should be resolved");
+    assert_eq!(final_location.providing_asset.id, asset_a.id);
+    assert_eq!(final_location.local_name, "a");
+    assert_eq!(final_location.imported_name, "a");
+  }
+
+  #[test]
+  fn track_symbols_does_not_satisfy_with_weak_symbols() {
+    let mut graph = AssetGraph::new();
+
+    // Entry dependency
+    let entry_dep = make_entry_dependency();
+    let entry_dep_node = graph.add_entry_dependency(entry_dep, false);
+
+    // Entry asset
+    let entry_asset = make_asset("entry.js", vec![]);
+    let entry_asset_node = graph.add_asset(entry_asset.clone(), false);
+    graph.add_edge(&entry_dep_node, &entry_asset_node);
+
+    // Dependency requesting symbol "a"
+    let dep_a = make_dependency(&entry_asset, "./lib.js", vec![("a", "a", false)]);
+    let dep_a_node = graph.add_dependency(dep_a.clone(), false);
+    graph.add_edge(&entry_asset_node, &dep_a_node);
+
+    // Library asset that re-exports "a" (weak symbol - is_weak: true)
+    let lib_asset = make_asset("lib.js", vec![("a", "a", true)]);
+    let lib_asset_node = graph.add_asset(lib_asset.clone(), false);
+    graph.add_edge(&dep_a_node, &lib_asset_node);
+
+    let mut tracker = SymbolTracker::default();
+
+    // Register requirement
+    tracker
+      .track_symbols(&graph, &entry_asset, &[dep_a.clone()])
+      .unwrap();
+
+    // Track the library asset with weak symbol - should NOT satisfy the requirement
+    tracker.track_symbols(&graph, &lib_asset, &[]).unwrap();
+
+    // Verify the requirement is still unsatisfied
+    let requirements = tracker.requirements_by_dep.get(&dep_a.id).unwrap();
+    assert!(
+      requirements[0].final_location.is_none(),
+      "Weak symbol should not satisfy requirement"
+    );
+  }
+
+  #[test]
+  fn track_symbols_propagates_answer_up_dependency_chain() {
+    let mut graph = AssetGraph::new();
+
+    // entry_dep -> entry_asset -> lib_dep -> lib_asset -> a_dep -> a_asset
+    // Entry requests "a", lib re-exports "a", a.js provides "a"
+
+    let entry_dep = make_entry_dependency();
+    let entry_dep_node = graph.add_entry_dependency(entry_dep, false);
+
+    let entry_asset = make_asset("entry.js", vec![]);
+    let entry_asset_node = graph.add_asset(entry_asset.clone(), false);
+    graph.add_edge(&entry_dep_node, &entry_asset_node);
+
+    let lib_dep = make_dependency(&entry_asset, "./lib.js", vec![("a", "a", false)]);
+    let lib_dep_node = graph.add_dependency(lib_dep.clone(), false);
+    graph.add_edge(&entry_asset_node, &lib_dep_node);
+
+    // lib.js re-exports "a" (weak)
+    let lib_asset = make_asset("lib.js", vec![("a", "a", true)]);
+    let lib_asset_node = graph.add_asset(lib_asset.clone(), false);
+    graph.add_edge(&lib_dep_node, &lib_asset_node);
+
+    let a_dep = make_dependency(&lib_asset, "./a.js", vec![("a", "a", false)]);
+    let a_dep_node = graph.add_dependency(a_dep.clone(), false);
+    graph.add_edge(&lib_asset_node, &a_dep_node);
+
+    // a.js provides "a" (strong symbol)
+    let a_asset = make_asset("a.js", vec![("a", "a", false)]);
+    let a_asset_node = graph.add_asset(a_asset.clone(), false);
+    graph.add_edge(&a_dep_node, &a_asset_node);
+
+    let mut tracker = SymbolTracker::default();
+
+    // Register requirements in traversal order
+    tracker
+      .track_symbols(&graph, &entry_asset, &[lib_dep.clone()])
+      .unwrap();
+    tracker
+      .track_symbols(&graph, &lib_asset, &[a_dep.clone()])
+      .unwrap();
+
+    // Now the providing asset satisfies the requirement
+    tracker.track_symbols(&graph, &a_asset, &[]).unwrap();
+
+    // Both lib_dep and a_dep should now have the requirement satisfied
+    let lib_requirements = tracker.requirements_by_dep.get(&lib_dep.id).unwrap();
+    let lib_final = lib_requirements[0]
+      .final_location
+      .as_ref()
+      .expect("lib_dep requirement should be satisfied");
+    assert_eq!(
+      lib_final.providing_asset.id, a_asset.id,
+      "lib_dep should point to a.js as provider"
+    );
+
+    let a_requirements = tracker.requirements_by_dep.get(&a_dep.id).unwrap();
+    let a_final = a_requirements[0]
+      .final_location
+      .as_ref()
+      .expect("a_dep requirement should be satisfied");
+    assert_eq!(
+      a_final.providing_asset.id, a_asset.id,
+      "a_dep should point to a.js as provider"
+    );
+  }
+
+  #[test]
+  fn finalize_creates_correct_used_symbols_mapping() {
+    let (graph, entry_asset, dep_a, asset_a) = setup_simple_graph();
+    let mut tracker = SymbolTracker::default();
+
+    tracker
+      .track_symbols(&graph, &entry_asset, &[dep_a.clone()])
+      .unwrap();
+    tracker.track_symbols(&graph, &asset_a, &[]).unwrap();
+
+    let finalized = tracker.finalize();
+
+    let used_symbols = finalized
+      .get_used_symbols_for_dependency(&dep_a.id)
+      .expect("Should have used symbols for dep_a");
+
+    assert_eq!(used_symbols.len(), 1);
+
+    let symbol_key = symbol(&("a", "a", false));
+    let used_symbol = used_symbols
+      .get(&symbol_key)
+      .expect("Should have symbol 'a'");
+    assert_eq!(used_symbol.asset, asset_a.id);
+    assert_eq!(used_symbol.symbol.exported, "a");
+  }
+
+  #[test]
+  #[should_panic(expected = "was not satisfied")]
+  fn finalize_panics_on_unsatisfied_requirements() {
+    let (graph, entry_asset, dep_a, _asset_a) = setup_simple_graph();
+    let mut tracker = SymbolTracker::default();
+
+    // Register requirement but never satisfy it
+    tracker
+      .track_symbols(&graph, &entry_asset, &[dep_a])
+      .unwrap();
+
+    // This should panic because the requirement is not satisfied
+    tracker.finalize();
+  }
+
+  #[test]
+  fn track_symbols_errors_on_duplicate_symbol_resolution() {
+    let (graph, entry_asset, dep_a, asset_a) = setup_simple_graph();
+    let mut tracker = SymbolTracker::default();
+
+    tracker
+      .track_symbols(&graph, &entry_asset, &[dep_a])
+      .unwrap();
+
+    // Satisfy once
+    tracker.track_symbols(&graph, &asset_a, &[]).unwrap();
+
+    // Trying to satisfy again should error
+    let result = tracker.track_symbols(&graph, &asset_a, &[]);
+    assert!(
+      result.is_err(),
+      "Should error when symbol is resolved twice"
+    );
+    assert!(
+      result
+        .unwrap_err()
+        .to_string()
+        .contains("has already been located")
+    );
+  }
+}
