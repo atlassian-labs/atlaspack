@@ -188,7 +188,7 @@ jobs:
       - run: yarn test:js:unit
 
   integration_tests:
-    name: Integration tests (${{ matrix.os }}, Node ${{ matrix.node }}
+    name: Integration tests (${{ matrix.os }}, Node ${{ matrix.node }})
     needs:
       - build_native
     timeout-minutes: 45
@@ -219,7 +219,7 @@ jobs:
           RUST_BACKTRACE: full
 
   integration_tests_v3:
-    name: Integration tests (v3 ${{ matrix.os }}, Node ${{ matrix.node }}
+    name: Integration tests (v3 ${{ matrix.os }}, Node ${{ matrix.node }})
     needs:
       - build_native
     timeout-minutes: 15
