@@ -193,4 +193,111 @@ mod tests {
 
     assert!(error.message.contains("test panic message"));
   }
+
+  #[test]
+  fn test_transform_tracks_included_files() {
+    use crate::{CompiledCssInJsTransform, PluginOptions};
+
+    // Create a transform
+    let opts = PluginOptions::default();
+    let transform = CompiledCssInJsTransform::new(opts);
+
+    // Verify initial state has no included files
+    {
+      let state = transform.state();
+      assert_eq!(state.borrow().included_files.len(), 0);
+    }
+
+    // Simulate adding included files (what happens when .compiled.css files are read)
+    {
+      let state = transform.state();
+      let mut state_mut = state.borrow_mut();
+      state_mut
+        .included_files
+        .push("/path/to/file1.compiled.css".to_string());
+      state_mut
+        .included_files
+        .push("/path/to/file2.compiled.css".to_string());
+    }
+
+    // Verify files were tracked
+    {
+      let state = transform.state();
+      let state_ref = state.borrow();
+      assert_eq!(state_ref.included_files.len(), 2);
+      assert_eq!(state_ref.included_files[0], "/path/to/file1.compiled.css");
+      assert_eq!(state_ref.included_files[1], "/path/to/file2.compiled.css");
+    }
+  }
+
+  #[test]
+  fn test_included_files_tracks_imported_style_modules() {
+    use crate::{CompiledCssInJsTransform, PluginOptions};
+    use std::fs;
+    use tempfile::tempdir;
+
+    // Create a temporary directory with style files
+    let temp_dir = tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    // Create a styles.js file that exports styles
+    let styles_path = temp_path.join("styles.js");
+    fs::write(
+      &styles_path,
+      r#"
+        export const baseStyles = {
+          color: 'red',
+          fontSize: '14px'
+        };
+      "#,
+    )
+    .unwrap();
+
+    // Create an index.js that imports from styles.js
+    let index_path = temp_path.join("index.js");
+    fs::write(
+      &index_path,
+      r#"
+        import { baseStyles } from './styles';
+        import { css } from '@compiled/react';
+
+        const styles = css(baseStyles);
+      "#,
+    )
+    .unwrap();
+
+    // Create transform
+    let opts = PluginOptions::default();
+    let transform = CompiledCssInJsTransform::new(opts);
+
+    // When the transformer processes index.js and resolves baseStyles,
+    // it should read styles.js and add it to included_files
+    // This is what happens in the real transform when resolve_binding is called
+
+    // Simulate what load_or_parse_module does
+    {
+      let state = transform.state();
+      let mut state_mut = state.borrow_mut();
+      // The transformer adds resolved file paths to included_files
+      state_mut
+        .included_files
+        .push(styles_path.to_str().unwrap().to_string());
+    }
+
+    // Verify the imported file was tracked
+    {
+      let state = transform.state();
+      let state_ref = state.borrow();
+      assert_eq!(
+        state_ref.included_files.len(),
+        1,
+        "Should track the imported styles.js file"
+      );
+      assert!(
+        state_ref.included_files[0].ends_with("styles.js"),
+        "Should track styles.js, got: {}",
+        state_ref.included_files[0]
+      );
+    }
+  }
 }

@@ -37,6 +37,7 @@ use std::sync::OnceLock;
 use atlaspack_contextual_imports::ContextualImportsConfig;
 use atlaspack_contextual_imports::ContextualImportsInlineRequireVisitor;
 use atlaspack_core::types::Condition;
+use atlaspack_core::types::DependencyKind;
 use atlaspack_macros::MacroCallback;
 use atlaspack_macros::MacroError;
 use atlaspack_macros::Macros;
@@ -374,9 +375,10 @@ pub fn transform(
                   let compiled_css_transform =
                     atlassian_swc_compiled_css::CompiledCssInJsTransform::new(plugin_options);
 
+                  let compiled_css_state = compiled_css_transform.state();
+
                   {
-                    let shared_state = compiled_css_transform.state();
-                    let mut state = shared_state.borrow_mut();
+                    let mut state = compiled_css_state.borrow_mut();
                     let transform_file =
                       atlassian_swc_compiled_css::TransformFile::transform_compiled_with_options(
                         source_map.clone(),
@@ -397,6 +399,24 @@ pub fn transform(
                     visit_mut_pass(compiled_css_transform),
                     should_run_compiled_css,
                   ));
+
+                  // Add dependencies for any extra files used during Compiled transform
+                  if should_run_compiled_css {
+                    let state = compiled_css_state.borrow();
+
+                    for included_file in &state.included_files {
+                      result.dependencies.push(DependencyDescriptor {
+                        kind: DependencyKind::File,
+                        loc: SourceLocation::from(&source_map, swc_core::common::DUMMY_SP),
+                        specifier: swc_core::ecma::atoms::Atom::from(included_file.as_str()),
+                        attributes: None,
+                        is_optional: false,
+                        is_helper: false,
+                        source_type: None,
+                        placeholder: None,
+                      });
+                    }
+                  }
 
                   // Apply strip runtime transform when extract is enabled
                   if transform_config.extract {

@@ -418,6 +418,7 @@ export interface CompiledCssInJsPluginResult {
   styleRules: Array<string>;
   diagnostics: Array<JsDiagnostic>;
   bailOut: boolean;
+  includedFiles?: Array<string>;
 }
 export declare function atlaspackNapiLoadBundleGraph(
   atlaspackNapi: AtlaspackNapi,

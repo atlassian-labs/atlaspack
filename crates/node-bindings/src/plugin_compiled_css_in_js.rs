@@ -81,6 +81,9 @@ pub struct CompiledCssInJsPluginResult {
   pub style_rules: Vec<String>,
   pub diagnostics: Vec<JsDiagnostic>,
   pub bail_out: bool,
+  /// Files that were imported/included during transformation.
+  /// These should be tracked for cache invalidation.
+  pub included_files: Vec<String>,
 }
 
 /// Guard to protect concurrent access to panic handler during source map generation
@@ -280,6 +283,7 @@ fn process_compiled_css_in_js(
           documentation_url: None,
         }],
         bail_out: true,
+        included_files: Vec::new(),
       });
     }
   }
@@ -355,8 +359,12 @@ fn process_compiled_css_in_js(
       atlassian_swc_compiled_css::transform_with_file(program, transform_file, options)
     });
 
-    let (mut transformed_program, mut style_rules) = match transform_output {
-      Ok(output) => (output.program, output.metadata.style_rules),
+    let (mut transformed_program, mut style_rules, included_files) = match transform_output {
+      Ok(output) => (
+        output.program,
+        output.metadata.style_rules,
+        output.metadata.included_files,
+      ),
       Err(errors) => {
         let diagnostics = convert_diagnostics(transform_errors_to_diagnostics(errors, &source_map));
         return Ok(CompiledCssInJsPluginResult {
@@ -365,6 +373,7 @@ fn process_compiled_css_in_js(
           style_rules: Vec::new(),
           diagnostics,
           bail_out: true,
+          included_files: Vec::new(),
         });
       }
     };
@@ -402,6 +411,7 @@ fn process_compiled_css_in_js(
             style_rules: Vec::new(),
             diagnostics,
             bail_out: true,
+            included_files: Vec::new(),
           });
         }
       }
@@ -465,6 +475,7 @@ fn process_compiled_css_in_js(
       style_rules,
       diagnostics: Vec::new(),
       bail_out: false,
+      included_files,
     })
   })
 }

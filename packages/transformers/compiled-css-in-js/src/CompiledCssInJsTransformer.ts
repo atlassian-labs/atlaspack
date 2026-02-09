@@ -243,6 +243,15 @@ export default new Transformer({
       ];
     }
 
+    // Add File dependencies for any imported style files
+    if (result.includedFiles && result.includedFiles.length > 0) {
+      for (const includedFile of result.includedFiles) {
+        asset.addIncludedFile({
+          filePath: includedFile,
+        });
+      }
+    }
+
     return [asset];
   },
 });
