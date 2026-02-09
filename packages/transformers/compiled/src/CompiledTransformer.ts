@@ -229,6 +229,12 @@ export default new Transformer<Config>({
       // Load the resolver now (during setup) to populate the cache
       // This ensures FS operations happen during setup, not during transform
       loadResolver(contents.resolver, options.projectRoot);
+      // After loading, we strip the resolver string from contents so that it never appears in
+      // compiledConfig. This prevents the Compiled babel plugin from seeing a string resolver
+      // and doing require.resolve() during transform -- even if the resolver override in the
+      // plugin options is omitted.
+      // The resolverCacheKey preserves the string for cache key computation.
+      delete contents.resolver;
     }
 
     return {
