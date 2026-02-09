@@ -7,8 +7,7 @@ use atlaspack_core::types::{MaybeBundleBehavior, Priority};
 /// This is expected to grow as we implement more of the research doc.
 #[derive(Debug, Clone, Default)]
 pub struct IdealGraphBuildOptions {
-  /// When true, the builder will collect additional debugging metadata.
-  pub collect_debug: bool,
+  // Reserved for future tunables.
 }
 
 /// Summary stats from building an [`IdealGraph`].
@@ -17,6 +16,12 @@ pub struct IdealGraphBuildStats {
   pub assets: usize,
   pub dependencies: usize,
 }
+
+/// Compact numeric asset identifier used by the ideal graph algorithm.
+///
+/// This is intended to be cheap to copy/hash and suitable for indexing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct AssetKey(pub u32);
 
 /// Typed decision event.
 ///
@@ -28,8 +33,8 @@ pub struct IdealGraphBuildStats {
 pub enum DecisionKind {
   // Phase 1 (boundaries)
   BoundaryCreated {
-    asset_id: String,
-    from_asset_id: String,
+    asset: AssetKey,
+    from_asset: AssetKey,
     dependency_id: String,
     priority: Priority,
     type_change: bool,
@@ -38,30 +43,57 @@ pub enum DecisionKind {
 
   // Phase 2 (sync graph)
   SyncEdgeIncluded {
-    from_asset_id: String,
-    to_asset_id: String,
+    from_asset: AssetKey,
+    to_asset: AssetKey,
   },
   SyncEdgeSkipped {
-    from_asset_id: String,
-    to_asset_id: String,
+    from_asset: AssetKey,
+    to_asset: AssetKey,
     reason: SyncEdgeSkipReason,
   },
 
   // Phase 4 (placement)
   BundleRootCreated {
-    bundle_id: IdealBundleId,
-    root_asset_id: String,
+    root_asset: AssetKey,
   },
   AssetAssignedToBundle {
-    asset_id: String,
-    bundle_id: IdealBundleId,
+    asset: AssetKey,
+    bundle_root: AssetKey,
+    reason: AssetAssignmentReason,
   },
 
   // Phase 6 (availability)
   AvailabilityComputed {
-    bundle_id: IdealBundleId,
+    bundle_root: AssetKey,
     ancestor_assets_len: usize,
   },
+
+  // Phase 7+ (shared bundles)
+  ReachabilityComputed {
+    bundle_root: AssetKey,
+    reachable_assets_len: usize,
+  },
+  SharedBundleCreated {
+    shared_bundle_root: AssetKey,
+    source_bundle_roots: Vec<AssetKey>,
+    asset_count: usize,
+  },
+  AssetMovedToSharedBundle {
+    asset: AssetKey,
+    from_bundle_root: AssetKey,
+    shared_bundle_root: AssetKey,
+  },
+  BundleEdgeRewritten {
+    from_bundle_root: AssetKey,
+    to_bundle_root: AssetKey,
+    via_shared_bundle_root: AssetKey,
+  },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AssetAssignmentReason {
+  Dominator,
+  MultipleRootsFallback,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -180,9 +212,98 @@ pub struct IdealGraph {
   pub debug: Option<IdealGraphDebug>,
 }
 
+impl IdealGraph {
+  pub fn create_bundle(&mut self, bundle: IdealBundle) -> anyhow::Result<()> {
+    anyhow::ensure!(
+      !self.bundles.contains_key(&bundle.id),
+      "bundle already exists: {}",
+      bundle.id.0
+    );
+    self.bundles.insert(bundle.id.clone(), bundle);
+    Ok(())
+  }
+
+  pub fn ensure_bundle(&mut self, bundle: IdealBundle) {
+    self.bundles.entry(bundle.id.clone()).or_insert(bundle);
+  }
+
+  pub fn add_bundle_edge(&mut self, from: IdealBundleId, to: IdealBundleId, ty: IdealEdgeType) {
+    // Dedup to keep later phases simpler.
+    if self
+      .bundle_edges
+      .iter()
+      .any(|(a, b, t)| *a == from && *b == to && *t == ty)
+    {
+      return;
+    }
+    self.bundle_edges.push((from, to, ty));
+  }
+
+  pub fn remove_bundle_edge(&mut self, from: &IdealBundleId, to: &IdealBundleId) {
+    self.bundle_edges.retain(|(a, b, _)| a != from || b != to);
+  }
+
+  /// Retarget all bundle edges whose `to` is in `targets` to instead point at `new_to`.
+  ///
+  /// Returns the list of rewritten edges (from, old_to, ty) for decision logging.
+  pub fn retarget_incoming_edges(
+    &mut self,
+    targets: &HashSet<IdealBundleId>,
+    new_to: &IdealBundleId,
+  ) -> Vec<(IdealBundleId, IdealBundleId, IdealEdgeType)> {
+    let mut rewritten = Vec::new();
+
+    for (from, to, ty) in self.bundle_edges.iter_mut() {
+      if targets.contains(to) {
+        rewritten.push((from.clone(), to.clone(), *ty));
+        *to = new_to.clone();
+      }
+    }
+
+    // Dedup any edges that became identical.
+    let mut seen = HashSet::new();
+    self
+      .bundle_edges
+      .retain(|(a, b, t)| seen.insert((a.clone(), b.clone(), *t)));
+
+    rewritten
+  }
+
+  pub fn move_asset_to_bundle(
+    &mut self,
+    asset_id: &str,
+    to: &IdealBundleId,
+  ) -> anyhow::Result<Option<IdealBundleId>> {
+    let prev = self.asset_to_bundle.get(asset_id).cloned();
+
+    if let Some(prev_bundle) = &prev {
+      if let Some(b) = self.bundles.get_mut(prev_bundle) {
+        b.assets.remove(asset_id);
+      }
+    }
+
+    let to_bundle = self
+      .bundles
+      .get_mut(to)
+      .ok_or_else(|| anyhow::anyhow!("missing bundle: {}", to.0))?;
+
+    to_bundle.assets.insert(asset_id.to_string());
+    self
+      .asset_to_bundle
+      .insert(asset_id.to_string(), to.clone());
+
+    Ok(prev)
+  }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct IdealGraphDebug {
   pub decisions: DecisionLog,
+
+  /// Mapping for rendering [`AssetKey`] values.
+  ///
+  /// `asset_ids[key.0 as usize]` yields the original asset id string.
+  pub asset_ids: Vec<String>,
 }
 
 #[cfg(test)]

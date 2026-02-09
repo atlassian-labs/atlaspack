@@ -127,9 +127,7 @@ mod tests {
     let async_asset_node = asset_graph.add_asset(async_asset, false);
     asset_graph.add_edge(&lazy_dep_node, &async_asset_node);
 
-    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions {
-      collect_debug: true,
-    });
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
     let (g, stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_eq!(stats.assets, 2);
@@ -174,5 +172,157 @@ mod tests {
 
     // Avoid unused warnings.
     let _ = (entry_asset_node, async_asset_node);
+  }
+
+  fn format_bundle_assets(g: &IdealGraph) -> String {
+    let mut bundle_ids: Vec<&str> = g.bundles.keys().map(|b| b.0.as_str()).collect();
+    bundle_ids.sort();
+
+    let mut out = String::new();
+    for bundle_id in bundle_ids {
+      let bundle = &g.bundles[&types::IdealBundleId(bundle_id.to_string())];
+      let mut assets: Vec<&str> = bundle.assets.iter().map(|s| s.as_str()).collect();
+      assets.sort();
+      out.push_str(bundle_id);
+      out.push_str(" -> [");
+      out.push_str(&assets.join(", "));
+      out.push_str("]\n");
+    }
+    out
+  }
+
+  fn assert_bundles(g: &IdealGraph, expected: &[(&str, &[&str])]) {
+    use pretty_assertions::assert_eq;
+
+    // Build actual snapshot map.
+    let mut actual: Vec<(String, Vec<String>)> = g
+      .bundles
+      .iter()
+      .map(|(id, b)| {
+        let mut assets: Vec<String> = b.assets.iter().cloned().collect();
+        assets.sort();
+        (id.0.clone(), assets)
+      })
+      .collect();
+    actual.sort_by(|a, b| a.0.cmp(&b.0));
+
+    let mut exp: Vec<(String, Vec<String>)> = expected
+      .iter()
+      .map(|(id, assets)| {
+        let mut a = assets.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        a.sort();
+        (id.to_string(), a)
+      })
+      .collect();
+    exp.sort_by(|a, b| a.0.cmp(&b.0));
+
+    // If mismatch, print a readable snapshot.
+    let actual_snapshot = format_bundle_assets(g);
+    assert_eq!(
+      exp, actual,
+      "bundle snapshot (actual):\n{}",
+      actual_snapshot
+    );
+  }
+
+  /// Builds a small asset graph for tests using a concise list of edges.
+  ///
+  /// Syntax:
+  /// - `entry("id")` declares the entry asset id.
+  /// - `lazy(from, to)` creates a Lazy boundary dep from asset `from` to asset `to`.
+  /// - `sync(from, to)` creates a Sync dep from asset `from` to asset `to`.
+  fn fixture_graph(edges: &[(&str, &str, atlaspack_core::types::Priority)]) -> AssetGraph {
+    let mut asset_graph = AssetGraph::new();
+
+    // Create entry dep + entry asset.
+    let target = Target::default();
+    let entry_dep = Dependency::entry("entry.js".to_string(), target);
+    let entry_dep_node = asset_graph.add_entry_dependency(entry_dep, false);
+
+    let entry_asset = Arc::new(Asset {
+      id: "deadbeefdeadbeef".into(),
+      file_path: "entry.js".into(),
+      file_type: FileType::Js,
+      env: Arc::new(Environment::default()),
+      ..Asset::default()
+    });
+    let entry_asset_node = asset_graph.add_asset(entry_asset, false);
+    asset_graph.add_edge(&entry_dep_node, &entry_asset_node);
+
+    // Map asset id -> node id.
+    let mut asset_nodes: std::collections::HashMap<String, usize> =
+      std::collections::HashMap::new();
+    asset_nodes.insert("deadbeefdeadbeef".to_string(), entry_asset_node);
+
+    // Ensure all asset nodes exist.
+    for (from, to, _prio) in edges {
+      for id in [*from, *to] {
+        if asset_nodes.contains_key(id) {
+          continue;
+        }
+        let asset = Arc::new(Asset {
+          id: id.into(),
+          file_path: format!("{id}.js").into(),
+          file_type: FileType::Js,
+          env: Arc::new(Environment::default()),
+          ..Asset::default()
+        });
+        let node = asset_graph.add_asset(asset, false);
+        asset_nodes.insert(id.into(), node);
+      }
+    }
+
+    // Add deps.
+    for (from, to, prio) in edges {
+      let dep = atlaspack_core::types::DependencyBuilder::default()
+        .specifier(to.to_string())
+        .specifier_type(atlaspack_core::types::SpecifierType::Esm)
+        .env(Arc::new(Environment::default()))
+        .priority(*prio)
+        .source_asset_id((*from).into())
+        .build();
+      let dep_node = asset_graph.add_dependency(dep, false);
+      asset_graph.add_edge(asset_nodes.get(*from).unwrap(), &dep_node);
+      asset_graph.add_edge(&dep_node, asset_nodes.get(*to).unwrap());
+    }
+
+    asset_graph
+  }
+
+  #[test]
+  fn creates_shared_bundle_for_asset_needed_by_multiple_async_roots() {
+    use atlaspack_core::types::Priority;
+    use pretty_assertions::assert_eq;
+
+    // entry ->(lazy)-> a, entry ->(lazy)-> b
+    // a ->(sync)-> react, b ->(sync)-> react
+    let asset_graph = fixture_graph(&[
+      ("deadbeefdeadbeef", "asset_a", Priority::Lazy),
+      ("deadbeefdeadbeef", "asset_b", Priority::Lazy),
+      ("asset_a", "react", Priority::Sync),
+      ("asset_b", "react", Priority::Sync),
+    ]);
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    // React should exist in exactly one bundle.
+    let bundles_containing_react = g
+      .bundles
+      .values()
+      .filter(|b| b.assets.contains("react"))
+      .count();
+    assert_eq!(bundles_containing_react, 1);
+
+    // Assert bundles in a way that prints a full snapshot when it fails.
+    assert_bundles(
+      &g,
+      &[
+        ("@@shared:asset_a,asset_b", &["react"]),
+        ("asset_a", &["asset_a"]),
+        ("asset_b", &["asset_b"]),
+        ("deadbeefdeadbeef", &["deadbeefdeadbeef"]),
+      ],
+    );
   }
 }
