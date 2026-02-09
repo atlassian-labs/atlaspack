@@ -41,7 +41,13 @@ use atlaspack_core::{
   asset_graph::{AssetGraph, NodeId},
   types::{BundleBehavior, Priority},
 };
-use petgraph::{Direction, algo::dominators, graph::NodeIndex, stable_graph::StableDiGraph};
+use petgraph::{
+  Direction,
+  algo::{dominators, kosaraju_scc},
+  graph::NodeIndex,
+  stable_graph::StableDiGraph,
+  visit::{EdgeRef, IntoEdgeReferences},
+};
 use tracing::{debug, instrument};
 
 use super::types::{
@@ -68,6 +74,13 @@ pub struct IdealGraphBuilder {
   asset_to_sync_node: HashMap<super::types::AssetKey, NodeIndex>,
 
   dominators: Option<dominators::Dominators<NodeIndex>>,
+
+  // Entry roots.
+  entry_roots: HashSet<super::types::AssetKey>,
+
+  // Assets reachable from any entry root by following *sync-only* edges.
+  // Used to break ties for multi-root assets in a deterministic way.
+  entry_sync_reachable: HashSet<super::types::AssetKey>,
 
   // Bundle roots are either entry assets or boundary assets.
   bundle_roots: HashSet<super::types::AssetKey>,
@@ -98,6 +111,7 @@ impl IdealGraphBuilder {
       "ideal graph: interned asset ids"
     );
     let entry_assets = self.extract_entry_assets(asset_graph)?;
+    self.entry_roots = entry_assets.iter().copied().collect();
 
     // Phase 0: gather core stats.
     let stats = IdealGraphBuildStats {
@@ -354,9 +368,31 @@ impl IdealGraphBuilder {
       }
     }
 
+    // Compute reachability from entry roots in the sync graph.
+    self.entry_sync_reachable.clear();
+    let mut stack: Vec<NodeIndex> = Vec::new();
+    for &entry in entry_assets {
+      if let Some(&idx) = self.asset_to_sync_node.get(&entry) {
+        stack.push(idx);
+      }
+    }
+    let mut visited_nodes: HashSet<NodeIndex> = HashSet::new();
+    while let Some(n) = stack.pop() {
+      if !visited_nodes.insert(n) {
+        continue;
+      }
+      if let Some(SyncNode::Asset(k)) = self.sync_graph.node_weight(n).copied() {
+        self.entry_sync_reachable.insert(k);
+      }
+      for out in self.sync_graph.neighbors_directed(n, Direction::Outgoing) {
+        stack.push(out);
+      }
+    }
+
     debug!(
       sync_nodes = self.sync_graph.node_count(),
       sync_edges = self.sync_graph.edge_count(),
+      entry_sync_reachable = self.entry_sync_reachable.len(),
       "ideal graph: built sync graph"
     );
     Ok(())
@@ -517,12 +553,27 @@ impl IdealGraphBuilder {
       else {
         // Asset is reachable from multiple roots (no single dominator).
         // Place it deterministically in the smallest bundle root for now.
-        let fallback = self
-          .bundle_roots
-          .iter()
-          .copied()
-          .min()
-          .context("no bundle roots")?;
+        // If the asset is reachable from an entry via sync edges, prefer placing in an entry root.
+        // This avoids hoisting "core" sync graph assets into async roots just because they are
+        // also referenced from those roots.
+        let fallback = if self.entry_sync_reachable.contains(&current) {
+          self
+            .entry_roots
+            .iter()
+            .copied()
+            .min()
+            .context("no entry roots")?
+        } else {
+          // Otherwise, prefer a non-entry root so shared extraction can later hoist multi-root assets.
+          self
+            .bundle_roots
+            .iter()
+            .copied()
+            .filter(|r| !self.entry_roots.contains(r))
+            .min()
+            .or_else(|| self.entry_roots.iter().copied().min())
+            .context("no bundle roots")?
+        };
         return Ok(IdealBundleId(self.assets.id_for(fallback).to_string()));
       };
 
@@ -602,11 +653,19 @@ impl IdealGraphBuilder {
 
   /// Computes `ancestor_assets` per bundle using the *intersection* rule described in the doc.
   ///
+  /// Cycle handling:
+  /// - Fast path: if the bundle graph is a DAG, we do a single topo-order propagation.
+  /// - Slow path: if the bundle graph contains cycles, we condense strongly connected components (SCCs)
+  ///   into a DAG and propagate at SCC granularity.
+  ///
+  /// The SCC path is intentionally isolated so it can be deleted easily if we decide the bundle graph
+  /// must be acyclic (e.g. by construction) and we no longer want to support cycles.
+  ///
   /// This is currently implemented with `HashSet<String>` for simplicity. We can swap this
   /// for a bitset representation once the algorithm is stable.
   #[instrument(level = "debug", skip_all)]
   fn compute_availability(&mut self, ideal: &mut IdealGraph) -> anyhow::Result<()> {
-    // Build a petgraph representation for topo traversal.
+    // Build a petgraph representation for traversal.
     let mut g: StableDiGraph<IdealBundleId, IdealEdgeType> = StableDiGraph::new();
     let mut idx_by_bundle: HashMap<IdealBundleId, NodeIndex> = HashMap::new();
 
@@ -629,16 +688,36 @@ impl IdealGraphBuilder {
       bundle.ancestor_assets.clear();
     }
 
-    // Attempt topo sort; if cyclic, fall back to a conservative no-op.
-    let order = match petgraph::algo::toposort(&g, None) {
-      Ok(o) => o,
-      Err(_) => {
-        // TODO: implement SCC-based fixpoint propagation.
-        debug!("ideal graph: bundle graph cyclic; skipping availability propagation");
-        return Ok(());
-      }
-    };
+    // ----------------------------
+    // Fast path: DAG topo propagation
+    // ----------------------------
+    if let Ok(order) = petgraph::algo::toposort(&g, None) {
+      self.compute_availability_dag(&g, ideal, order)?;
+      debug!(
+        bundles = ideal.bundles.len(),
+        "ideal graph: computed availability (dag)"
+      );
+      return Ok(());
+    }
 
+    // ----------------------------
+    // Cycle-handling path: SCC condensation
+    // ----------------------------
+    debug!("ideal graph: bundle graph has cycles; computing availability via SCC condensation");
+    self.compute_availability_scc(&g, ideal)?;
+    debug!(
+      bundles = ideal.bundles.len(),
+      "ideal graph: computed availability (scc)"
+    );
+    Ok(())
+  }
+
+  fn compute_availability_dag(
+    &mut self,
+    g: &StableDiGraph<IdealBundleId, IdealEdgeType>,
+    ideal: &mut IdealGraph,
+    order: Vec<NodeIndex>,
+  ) -> anyhow::Result<()> {
     for node in order {
       let bundle_id = g
         .node_weight(node)
@@ -693,10 +772,120 @@ impl IdealGraphBuilder {
       );
     }
 
-    debug!(
-      bundles = ideal.bundles.len(),
-      "ideal graph: computed availability for bundles"
-    );
+    Ok(())
+  }
+
+  fn compute_availability_scc(
+    &mut self,
+    g: &StableDiGraph<IdealBundleId, IdealEdgeType>,
+    ideal: &mut IdealGraph,
+  ) -> anyhow::Result<()> {
+    // `kosaraju_scc` returns SCCs as lists of nodes.
+    let sccs: Vec<Vec<NodeIndex>> = kosaraju_scc(g);
+
+    // Map node -> scc index.
+    let mut scc_of: HashMap<NodeIndex, usize> = HashMap::new();
+    for (i, scc) in sccs.iter().enumerate() {
+      for &n in scc {
+        scc_of.insert(n, i);
+      }
+    }
+
+    // Build SCC DAG: nodes are SCC indices.
+    let mut scc_graph: StableDiGraph<usize, ()> = StableDiGraph::new();
+    let scc_nodes: Vec<NodeIndex> = (0..sccs.len()).map(|i| scc_graph.add_node(i)).collect();
+
+    for e in g.edge_references() {
+      let a = e.source();
+      let b = e.target();
+      let sa = scc_of[&a];
+      let sb = scc_of[&b];
+      if sa != sb {
+        scc_graph.add_edge(scc_nodes[sa], scc_nodes[sb], ());
+      }
+    }
+
+    // Condensation graph is a DAG.
+    let scc_order = match petgraph::algo::toposort(&scc_graph, None) {
+      Ok(o) => o,
+      Err(_) => {
+        // Condensation graph should always be acyclic.
+        anyhow::bail!("SCC condensation graph unexpectedly cyclic");
+      }
+    };
+
+    // Compute an "available set" per SCC as we traverse.
+    let mut available_for_scc: Vec<HashSet<String>> = vec![HashSet::new(); sccs.len()];
+
+    for scc_node in scc_order {
+      let scc_idx = *scc_graph
+        .node_weight(scc_node)
+        .context("SCC node missing")?;
+
+      // Parents are other SCCs.
+      let parents: Vec<usize> = scc_graph
+        .neighbors_directed(scc_node, Direction::Incoming)
+        .filter_map(|p| scc_graph.node_weight(p).copied())
+        .collect();
+
+      let mut availability: Option<HashSet<String>> = None;
+      for p in parents {
+        let parent_assets = available_for_scc[p].clone();
+        availability = Some(match availability {
+          None => parent_assets,
+          Some(prev) => prev.intersection(&parent_assets).cloned().collect(),
+        });
+      }
+      let availability = availability.unwrap_or_default();
+
+      // Assign availability to each bundle in the SCC.
+      for &bundle_node in &sccs[scc_idx] {
+        let bundle_id = g
+          .node_weight(bundle_node)
+          .cloned()
+          .context("bundle node missing")?;
+
+        let bundle = ideal
+          .bundles
+          .get_mut(&bundle_id)
+          .context("bundle missing")?;
+
+        if bundle.behavior == Some(BundleBehavior::Isolated)
+          || bundle.behavior == Some(BundleBehavior::InlineIsolated)
+        {
+          bundle.ancestor_assets = HashSet::new();
+        } else {
+          bundle.ancestor_assets = availability.clone();
+        }
+
+        self.decision(
+          "availability",
+          super::types::DecisionKind::AvailabilityComputed {
+            bundle_root: self
+              .assets
+              .key_for(&bundle_id.0)
+              .context("bundle root not interned")?,
+            ancestor_assets_len: bundle.ancestor_assets.len(),
+          },
+        );
+      }
+
+      // After we assign ancestor assets for SCC, compute what becomes available to children SCCs.
+      // We conservatively use the union of `all_assets_available_from_here()` across bundles in SCC.
+      let mut scc_available: HashSet<String> = HashSet::new();
+      for &bundle_node in &sccs[scc_idx] {
+        let bundle_id = g
+          .node_weight(bundle_node)
+          .cloned()
+          .context("bundle node missing")?;
+        if let Some(b) = ideal.bundles.get(&bundle_id) {
+          scc_available.extend(b.all_assets_available_from_here());
+        }
+      }
+
+      available_for_scc[scc_idx] = scc_available;
+    }
+
     Ok(())
   }
 
@@ -829,13 +1018,20 @@ impl IdealGraphBuilder {
 
       let mut eligible: Vec<AssetKey> = Vec::new();
       for root in roots {
+        // Do not consider entry roots for shared extraction.
+        // Entry bundles are "always-on" and act as the baseline; extracting from them tends
+        // to create redundant shared bundles.
+        if self.entry_roots.contains(&root) {
+          continue;
+        }
+
         let root_id = self.assets.id_for(root);
         let bundle_id = super::types::IdealBundleId(root_id.to_string());
         let Some(bundle) = ideal.bundles.get(&bundle_id) else {
           continue;
         };
 
-        // If already available when this bundle loads, skip.
+        // If already available when this bundle loads (from ancestors), skip.
         if bundle.ancestor_assets.contains(asset_id) {
           continue;
         }
@@ -926,37 +1122,40 @@ impl IdealGraphBuilder {
         }
       }
 
-      // Rewrite edges: retarget all incoming edges that pointed at any of the source roots
-      // to instead point at the shared bundle.
+      // Add edges to ensure the shared bundle is loaded before any bundle roots that require it.
       //
-      // This prevents leaving stale/duplicate edges around.
+      // Important: we do NOT retarget/remove the existing edges to the roots (e.g. Lazy edges from
+      // an entry bundle to an async bundle root). Those edges encode load ordering and must remain.
       let roots_set: HashSet<IdealBundleId> = roots
         .iter()
         .map(|r| IdealBundleId(self.assets.id_for(*r).to_string()))
         .collect();
 
-      let rewritten = ideal.retarget_incoming_edges(&roots_set, &shared_bundle_id);
-      for (from, _old_to, _ty) in rewritten {
-        let from_root = self
-          .assets
-          .key_for(&from.0)
-          .unwrap_or(super::types::AssetKey(u32::MAX));
+      // For each existing (parent -> root) edge, also add (parent -> shared) with the same edge type.
+      let existing_edges = ideal.bundle_edges.clone();
+      for (from, to, ty) in existing_edges {
+        if roots_set.contains(&to) {
+          ideal.add_bundle_edge(from.clone(), shared_bundle_id.clone(), ty);
 
-        self.decision(
-          "shared",
-          super::types::DecisionKind::BundleEdgeRewritten {
-            from_bundle_root: from_root,
-            to_bundle_root: shared_key,
-            via_shared_bundle_root: shared_key,
-          },
-        );
+          let from_root = self
+            .assets
+            .key_for(&from.0)
+            .unwrap_or(super::types::AssetKey(u32::MAX));
+
+          self.decision(
+            "shared",
+            super::types::DecisionKind::BundleEdgeRewritten {
+              from_bundle_root: from_root,
+              to_bundle_root: shared_key,
+              via_shared_bundle_root: shared_key,
+            },
+          );
+        }
       }
 
-      // Ensure each source root depends on the shared bundle.
-      // We add a Sync edge, and remove any existing edge to avoid duplicates.
+      // Ensure each source root itself depends on the shared bundle (Sync).
       for root in roots {
         let from_id = IdealBundleId(self.assets.id_for(root).to_string());
-        ideal.remove_bundle_edge(&from_id, &shared_bundle_id);
         ideal.add_bundle_edge(from_id, shared_bundle_id.clone(), IdealEdgeType::Sync);
       }
     }
