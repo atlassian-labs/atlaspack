@@ -262,7 +262,9 @@ impl Atlaspack {
     &self,
   ) -> anyhow::Result<(Arc<AssetGraph>, BundleGraphRequestOutput, bool)> {
     // First, build the asset graph
-    let (asset_graph, had_previous_graph) = self.build_asset_graph()?;
+    // Eventually we will pass the symbol tracker into bundling to acces
+    // directly, but for now it is ignored
+    let (_symbol_tracker, asset_graph, had_previous_graph) = self.build_asset_graph()?;
 
     // Then run the bundle graph request
     let asset_graph_for_request = asset_graph.clone();
