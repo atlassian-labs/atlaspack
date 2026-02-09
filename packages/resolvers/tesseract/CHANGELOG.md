@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.15.26
+
+### Patch Changes
+
+- [#1004](https://github.com/atlassian-labs/atlaspack/pull/1004) [`1815c2c`](https://github.com/atlassian-labs/atlaspack/commit/1815c2ce48e32f4df97ccdd668fd650fc79d1051) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - cleanup server file check in tesseract resolver
+
+- Updated dependencies []:
+  - @atlaspack/node-resolver-core@3.7.24
+  - @atlaspack/plugin@2.14.53
+
 ## 2.15.25
 
 ### Patch Changes
