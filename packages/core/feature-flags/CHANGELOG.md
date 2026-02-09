@@ -1,5 +1,11 @@
 # @atlaspack/feature-flags
 
+## 2.29.1
+
+### Patch Changes
+
+- [#1004](https://github.com/atlassian-labs/atlaspack/pull/1004) [`1815c2c`](https://github.com/atlassian-labs/atlaspack/commit/1815c2ce48e32f4df97ccdd668fd650fc79d1051) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - cleanup server file check in tesseract resolver
+
 ## 2.29.0
 
 ### Minor Changes
