@@ -666,7 +666,9 @@ dependencies = [
  "atlaspack_dev_dep_resolver",
  "atlaspack_filesystem",
  "mockall",
+ "pretty_assertions",
  "serde",
+ "serde_json",
  "tracing",
 ]
 
