@@ -4,7 +4,7 @@
  * This is a direct port of @compiled/parcel-transformer to Atlaspack,
  * allowing users to transition without any change in functionality.
  */
-import {join} from 'path';
+import path, {join} from 'path';
 import assert from 'assert';
 
 import {transformAsync} from '@babel/core';
@@ -20,6 +20,8 @@ import type {
 import {Transformer} from '@atlaspack/plugin';
 import SourceMap from '@atlaspack/source-map';
 import {relativeUrl} from '@atlaspack/utils';
+// eslint-disable-next-line import/no-extraneous-dependencies
+import browserslist from 'browserslist';
 
 import type {CompiledTransformerOpts} from './types';
 import {
@@ -132,6 +134,11 @@ interface Config {
    * serializable (functions cannot be serialized across the Rust/JS boundary).
    */
   resolverCacheKey?: string;
+  browserslist?:
+    | Array<string>
+    | {
+        [key: string]: Array<string>;
+      };
 }
 
 /**
@@ -153,6 +160,18 @@ export default new Transformer<Config>({
       ssr: false,
       importSources: DEFAULT_IMPORT_SOURCES,
     };
+
+    // Pre-load the browserslist config during setup().
+    // If we don't do this, calling transformAsync() will cause Babel's
+    // @babel/helper-compilation-targets to walk up the directory
+    // tree reading browserslist package.json files on every transform, causing
+    // cache bailouts for every file.
+    // Internally, babel resolves configs relative to CWD. We do the same for parity.
+    const cwd = '.';
+    const absoluteCwd = path.resolve(cwd);
+    let browserslistConfig: string[] | undefined = browserslist.loadConfig({
+      path: absoluteCwd,
+    });
 
     if (conf) {
       if (conf.filePath.endsWith('.js')) {
@@ -218,6 +237,7 @@ export default new Transformer<Config>({
         mode: options.mode,
         projectRoot: options.projectRoot,
         resolverCacheKey,
+        browserslist: browserslistConfig,
       },
       conditions: {
         codeMatch: contents.importSources,
@@ -292,14 +312,10 @@ export default new Transformer<Config>({
       filename: asset.filePath,
       babelrc: false,
       configFile: false,
-      // Disable browserslist config file lookup to prevent FS operations on every transform.
-      // Browserslist walks up directory tree reading package.json files to find browserslist config,
-      // which causes cache bailouts. The Compiled transformer doesn't need browser targets for its
-      // AST transformation - it only transforms CSS-in-JS syntax.
+      // Disable browserslistConfigFile because we pass the browserslist config via the targets option
+      // to prevent FS reads while resolving browserslist config.
       browserslistConfigFile: false,
-      // Provide empty targets to prevent Babel from trying to infer them.
-      // The actual browser targeting is handled by downstream tools (bundler, autoprefixer).
-      targets: {},
+      targets: config.browserslist ?? {},
       sourceMaps: !!asset.env.sourceMap,
       compact: false,
       plugins: [
