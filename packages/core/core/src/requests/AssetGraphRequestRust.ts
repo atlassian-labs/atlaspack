@@ -325,7 +325,13 @@ export function getAssetGraph(
 
       if (node.used_symbols_up) {
         for (let usedSymbol of node.used_symbols_up) {
-          usedSymbolsUp.set(usedSymbol.symbol, usedSymbol);
+          // Transform Rust UsedSymbol { symbol: Symbol, asset: string }
+          // to JS format { symbol: string, asset: string } where symbol is the exported name
+          const exportedName = usedSymbol.symbol.exported;
+          usedSymbolsUp.set(exportedName, {
+            asset: usedSymbol.asset,
+            symbol: exportedName,
+          });
         }
       }
 
