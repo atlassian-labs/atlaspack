@@ -243,12 +243,11 @@ export default new Transformer({
       ];
     }
 
-    // Add File dependencies for any imported style files
+    // Register file dependencies for any imported style files (mixins)
+    // This ensures the asset will be re-transformed when mixin files change
     if (result.includedFiles && result.includedFiles.length > 0) {
       for (const includedFile of result.includedFiles) {
-        asset.addIncludedFile({
-          filePath: includedFile,
-        });
+        asset.invalidateOnFileChange(includedFile);
       }
     }
 
