@@ -166,7 +166,7 @@ jobs:
     strategy:
       matrix:
         os: ['ubuntu-22.04', 'macos-15']
-        node: [22, 24]
+        node: [24]
         exclude:
           # Seems to have an error - in theory we have enough coverage with the other tests / variations
           - os: macos-15
@@ -198,7 +198,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-22.04, macos-15]
-        node: [22, 24]
+        node: [24]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -229,7 +229,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-22.04, macos-15]
-        node: [22, 24]
+        node: [24]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Collect Workflow Telemetry
@@ -293,7 +293,7 @@ jobs:
     timeout-minutes: 35
     strategy:
       matrix:
-        node: [22, 24]
+        node: [24]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -318,7 +318,7 @@ jobs:
       - build_native
     strategy:
       matrix:
-        node: [22, 24]
+        node: [24]
         os: ['ubuntu-22.04']
         project: ['@atlaspack/inspector', '@atlaspack/inspector-frontend']
 
@@ -346,7 +346,7 @@ jobs:
       - build_native
     strategy:
       matrix:
-        node: [22, 24]
+        node: [24]
         os: ['ubuntu-22.04']
 
     runs-on: ${{ matrix.os }}
