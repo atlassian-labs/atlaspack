@@ -110,6 +110,16 @@ export const DEFAULT_FEATURE_FLAGS = {
    */
   inlineBundlesSourceMapFixes: false,
 
+  /**
+   * When enabled, tracks HASH_REF replacements during bundle write and adjusts
+   * the source map column offsets so mappings remain correct after placeholder
+   * replacement. Disabled to minimise cost when not needed.
+   *
+   * @since 2025-02-10
+   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
+   */
+  fixSourceMapHashRefs: false,
+
   /** Enable patch project paths. This will patch the project paths to be relative to the project root.
    * This feature is experimental and should not be used in production. It will used to test downloadble cache artefacts.
    *

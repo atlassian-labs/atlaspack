@@ -40,9 +40,18 @@ import {PluginTracer, tracer} from '@atlaspack/profiler';
 import {requestTypes} from '../RequestTracker';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {fromEnvironmentId} from '../EnvironmentManager';
+import SourceMap from '@atlaspack/source-map';
 
 const HASH_REF_PREFIX_LEN = HASH_REF_PREFIX.length;
 const BOUNDARY_LENGTH = HASH_REF_PREFIX.length + 32 - 1;
+const HASH_REF_PLACEHOLDER_LEN = HASH_REF_PREFIX_LEN + HASH_REF_HASH_LEN;
+
+export type HashRefReplacement = {
+  line: number;
+  column: number;
+  originalLength: number;
+  newLength: number;
+};
 
 type WriteBundleRequestInput = {
   bundleGraph: BundleGraph;
@@ -158,6 +167,9 @@ async function run({input, options, api}) {
   let {devDeps, invalidDevDeps} = await getDevDepRequests(api);
   invalidateDevDeps(invalidDevDeps, options, config);
 
+  const bundleReplacements = getFeatureFlag('fixSourceMapHashRefs')
+    ? []
+    : undefined;
   await writeFiles(
     contentStream,
     info,
@@ -169,17 +181,49 @@ async function run({input, options, api}) {
     writeOptions,
     devDeps,
     api,
+    bundleReplacements,
   );
 
   const hasSourceMap = getFeatureFlag('cachePerformanceImprovements')
     ? await options.cache.hasLargeBlob(mapKey)
     : await options.cache.has(mapKey);
   if (mapKey && env.sourceMap && !env.sourceMap.inline && hasSourceMap) {
-    const mapEntry = getFeatureFlag('cachePerformanceImprovements')
-      ? await options.cache.getLargeBlob(mapKey)
-      : await options.cache.getBlob(mapKey);
+    let mapStream: Readable;
+    if (
+      getFeatureFlag('fixSourceMapHashRefs') &&
+      bundleReplacements &&
+      bundleReplacements.length > 0
+    ) {
+      const mapEntry = getFeatureFlag('cachePerformanceImprovements')
+        ? await options.cache.getLargeBlob(mapKey)
+        : await options.cache.getBlob(mapKey);
+      const mapBuffer = Buffer.isBuffer(mapEntry)
+        ? mapEntry
+        : Buffer.from(mapEntry);
+      const projectRoot =
+        typeof options.projectRoot === 'string'
+          ? options.projectRoot
+          : String(options.projectRoot);
+      const sourceMap = new SourceMap(projectRoot, mapBuffer);
+      applyReplacementsToSourceMap(sourceMap, bundleReplacements);
+      const mapJson = await sourceMap.stringify({
+        format: 'string',
+        file: name,
+      });
+      mapStream = blobToStream(
+        Buffer.from(
+          typeof mapJson === 'string' ? mapJson : JSON.stringify(mapJson),
+          'utf8',
+        ),
+      );
+    } else {
+      const mapEntry = getFeatureFlag('cachePerformanceImprovements')
+        ? await options.cache.getLargeBlob(mapKey)
+        : await options.cache.getBlob(mapKey);
+      mapStream = blobToStream(mapEntry);
+    }
     await writeFiles(
-      blobToStream(mapEntry),
+      mapStream,
       info,
       hashRefToNameHash,
       options,
@@ -206,6 +250,38 @@ async function run({input, options, api}) {
   return res;
 }
 
+function applyReplacementsToSourceMap(
+  sourceMap: SourceMap,
+  replacements: HashRefReplacement[],
+): void {
+  if (replacements.length === 0) return;
+  const sorted = [...replacements].sort(
+    (a, b) => a.line - b.line || a.column - b.column,
+  );
+  const runningDeltaByLine = new Map<number, number>();
+  for (const r of sorted) {
+    const runningDelta = runningDeltaByLine.get(r.line) ?? 0;
+    let adjustedColumn = r.column - runningDelta;
+    const delta = r.newLength - r.originalLength;
+    if (delta !== 0) {
+      // Source map is in pre-replacement (original) coordinates. Only shift mappings
+      // that start at or after the end of the placeholder, not inside it.
+      const columnAfterPlaceholder = adjustedColumn + r.originalLength;
+      const offsetStartColumn = Math.max(
+        0,
+        delta < 0
+          ? Math.max(columnAfterPlaceholder, -delta)
+          : columnAfterPlaceholder,
+      );
+      const line1Based = r.line + 1;
+      if (line1Based >= 1 && offsetStartColumn + delta >= 0) {
+        sourceMap.offsetColumns(line1Based, offsetStartColumn, delta);
+      }
+    }
+    runningDeltaByLine.set(r.line, runningDelta + delta);
+  }
+}
+
 async function writeFiles(
   // @ts-expect-error TS2503
   inputStream: stream.Readable,
@@ -218,6 +294,7 @@ async function writeFiles(
   writeOptions: FileOptions | null | undefined,
   devDeps: Map<string, string>,
   api: RunAPI<PackagedBundleInfo>,
+  bundleReplacements?: HashRefReplacement[],
 ) {
   let compressors = await config.getCompressors(
     fromProjectPathRelative(filePath),
@@ -225,7 +302,7 @@ async function writeFiles(
   let fullPath = fromProjectPath(options.projectRoot, filePath);
 
   let stream = info.hashReferences.length
-    ? inputStream.pipe(replaceStream(hashRefToNameHash))
+    ? inputStream.pipe(replaceStream(hashRefToNameHash, bundleReplacements))
     : inputStream;
 
   let promises: Array<Promise<undefined>> = [];
@@ -314,9 +391,30 @@ async function runCompressor(
   }
 }
 
-function replaceStream(hashRefToNameHash: Map<string, string>) {
+function advanceLineColumn(
+  line: number,
+  column: number,
+  buf: Buffer,
+): {line: number; column: number} {
+  for (let i = 0; i < buf.length; i++) {
+    if (buf[i] === 0x0a) {
+      line++;
+      column = 0;
+    } else {
+      column++;
+    }
+  }
+  return {line, column};
+}
+
+function replaceStream(
+  hashRefToNameHash: Map<string, string>,
+  replacements?: HashRefReplacement[],
+) {
   let boundaryStr = Buffer.alloc(0);
   let replaced = Buffer.alloc(0);
+  let outputLine = 0;
+  let outputColumn = 0;
   return new Transform({
     transform(
       chunk: Buffer | string,
@@ -347,6 +445,19 @@ function replaceStream(hashRefToNameHash: Map<string, string>) {
             .subarray(matchI, matchI + HASH_REF_PREFIX_LEN + HASH_REF_HASH_LEN)
             .toString();
           let replacement = Buffer.from(hashRefToNameHash.get(match) ?? match);
+          if (replacements) {
+            const pos = advanceLineColumn(
+              outputLine,
+              outputColumn,
+              replaced.subarray(0, replacedLength),
+            );
+            replacements.push({
+              line: pos.line,
+              column: pos.column,
+              originalLength: HASH_REF_PLACEHOLDER_LEN,
+              newLength: replacement.byteLength,
+            });
+          }
           replaced.set(str.subarray(lastMatchI, matchI), replacedLength);
           replacedLength += matchI - lastMatchI;
           replaced.set(replacement, replacedLength);
@@ -355,14 +466,20 @@ function replaceStream(hashRefToNameHash: Map<string, string>) {
         }
       }
 
+      const pushLen = replacedLength - BOUNDARY_LENGTH;
+      const pushed = advanceLineColumn(
+        outputLine,
+        outputColumn,
+        replaced.subarray(0, pushLen),
+      );
+      outputLine = pushed.line;
+      outputColumn = pushed.column;
+
       boundaryStr = replaced.subarray(
         replacedLength - BOUNDARY_LENGTH,
         replacedLength,
       );
-      let strUpToBoundary = replaced.subarray(
-        0,
-        replacedLength - BOUNDARY_LENGTH,
-      );
+      let strUpToBoundary = replaced.subarray(0, pushLen);
       cb(null, strUpToBoundary);
     },
 
