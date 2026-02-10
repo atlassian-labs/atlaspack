@@ -180,7 +180,8 @@ impl Bundler for IdealGraphBundler {
         &mut materialized_bundle_nodes,
       )?;
 
-      // Create a bundle group for non-entry bundles (async/shared).
+      // Create a bundle group for async bundles (not shared bundles).
+      // Shared bundles (root_asset_id == None) are added to existing bundle groups later.
       if let Some(root_asset_id) = &ideal_bundle.root_asset_id {
         let bundle_group_id = format!("bundle_group:{}{}", default_target.name, root_asset_id);
         let bundle_group_node_id = bundle_graph.add_bundle_group(
@@ -260,6 +261,46 @@ impl Bundler for IdealGraphBundler {
                   }
                 }
               }
+            }
+          }
+        }
+      }
+    }
+
+    // Wire shared bundles into the bundle groups of the async bundles that depend on them.
+    // Shared bundles don't have their own bundle groups - they're siblings in existing groups.
+    for (ideal_bundle_id, ideal_bundle) in &ideal_graph.bundles {
+      if ideal_bundle.root_asset_id.is_some() {
+        continue; // Not a shared bundle.
+      }
+
+      let Some(&shared_bundle_node_id) = materialized_bundle_nodes.get(&ideal_bundle_id.0) else {
+        continue;
+      };
+
+      // Find which bundles depend on this shared bundle via bundle_edges.
+      for (from_id, to_id, _edge_type) in &ideal_graph.bundle_edges {
+        if to_id != ideal_bundle_id {
+          continue;
+        }
+
+        // `from_id` is a bundle that depends on this shared bundle.
+        // Find that bundle's root asset and its bundle group.
+        if let Some(from_bundle) = ideal_graph.bundles.get(from_id) {
+          if let Some(from_root_asset_id) = &from_bundle.root_asset_id {
+            let bg_key = format!("bundle_group:{}{}", default_target.name, from_root_asset_id);
+            if let Some(&bg_node_id) = bundle_graph.get_node_id_by_content_key(&bg_key) {
+              // Add the shared bundle as a sibling in this bundle group.
+              bundle_graph.add_edge(
+                &bg_node_id,
+                &shared_bundle_node_id,
+                NativeBundleGraphEdgeType::Null,
+              );
+              bundle_graph.add_edge(
+                &bg_node_id,
+                &shared_bundle_node_id,
+                NativeBundleGraphEdgeType::Bundle,
+              );
             }
           }
         }
@@ -459,17 +500,25 @@ fn materialize_ideal_bundle(
     target.dist_dir.display()
   ));
 
+  let hash_reference = format!("HASH_REF_{}", &bundle_id[..16]);
+
   let entry_asset_id = ideal_bundle.root_asset_id.clone();
+  let is_shared_bundle = entry_asset_id.is_none();
 
   let bundle = Bundle {
     id: bundle_id.clone(),
     public_id: None,
-    hash_reference: bundle_id.clone(),
+    hash_reference,
     bundle_type: ideal_bundle.bundle_type.clone(),
     env: (*target.env).clone(),
     entry_asset_ids: entry_asset_id.clone().into_iter().collect(),
     main_entry_id: entry_asset_id,
-    needs_stable_name: Some(entry_dep.needs_stable_name),
+    // Shared bundles don't need stable names - they're loaded as siblings.
+    needs_stable_name: Some(if is_shared_bundle {
+      false
+    } else {
+      entry_dep.needs_stable_name
+    }),
     bundle_behavior: ideal_bundle.behavior,
     is_splittable: Some(false),
     manual_shared_bundle: None,

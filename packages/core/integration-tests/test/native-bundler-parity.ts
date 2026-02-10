@@ -122,4 +122,118 @@ describe('Native bundling ready', function () {
     ]);
     await run(b);
   });
+
+  it('creates a shared bundle for a common dependency', async function () {
+    await fsFixture(overlayFS, __dirname)`
+      native-bundling-smoke-shared
+        index.js:
+          import('./foo');
+          import('./bar');
+          export default 1;
+        foo.js:
+          import shared from './shared';
+          export default shared + 'foo';
+        bar.js:
+          import shared from './shared';
+          export default shared + 'bar';
+        shared.js:
+          export default 'shared';
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "minBundles": 0,
+              "minBundleSize": 0,
+              "maxParallelRequests": 100
+            }
+          }
+        yarn.lock: {}
+    `;
+
+    let b = await bundle(
+      path.join(__dirname, 'native-bundling-smoke-shared/index.js'),
+      {
+        mode: 'production',
+        defaultTargetOptions: {shouldScopeHoist: false},
+        inputFS: overlayFS,
+      },
+    );
+
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        type: 'js',
+        assets: [
+          'index.js',
+          'esmodule-helpers.js',
+          'bundle-url.js',
+          'cacheLoader.js',
+          'js-loader.js',
+          'bundle-manifest.js',
+        ],
+      },
+      {type: 'js', assets: ['foo.js']},
+      {type: 'js', assets: ['bar.js']},
+      {type: 'js', assets: ['shared.js']},
+    ]);
+    await run(b);
+  });
+
+  it('creates a shared bundle for multiple common dependencies', async function () {
+    await fsFixture(overlayFS, __dirname)`
+      native-bundling-smoke-shared-multi
+        index.js:
+          import('./foo');
+          import('./bar');
+          export default 1;
+        foo.js:
+          import a from './a';
+          import b from './b';
+          export default a + b + 'foo';
+        bar.js:
+          import a from './a';
+          import b from './b';
+          export default a + b + 'bar';
+        a.js:
+          export default 'a';
+        b.js:
+          export default 'b';
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "minBundles": 0,
+              "minBundleSize": 0,
+              "maxParallelRequests": 100
+            }
+          }
+        yarn.lock: {}
+    `;
+
+    let b = await bundle(
+      path.join(__dirname, 'native-bundling-smoke-shared-multi/index.js'),
+      {
+        mode: 'production',
+        defaultTargetOptions: {shouldScopeHoist: false},
+        inputFS: overlayFS,
+      },
+    );
+
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        type: 'js',
+        assets: [
+          'index.js',
+          'esmodule-helpers.js',
+          'bundle-url.js',
+          'cacheLoader.js',
+          'js-loader.js',
+          'bundle-manifest.js',
+        ],
+      },
+      {type: 'js', assets: ['foo.js']},
+      {type: 'js', assets: ['bar.js']},
+      {type: 'js', assets: ['a.js', 'b.js']},
+    ]);
+    await run(b);
+  });
 });
