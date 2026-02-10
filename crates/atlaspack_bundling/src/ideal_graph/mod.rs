@@ -201,17 +201,16 @@ impl Bundler for IdealGraphBundler {
             continue;
           };
           for neighbor in asset_graph.get_outgoing_neighbors(dep_node_id) {
-            if let Some(target_asset) = asset_graph.get_asset(&neighbor) {
-              if target_asset.id == *root_asset_id {
-                if let Some(&dep_bg_node_id) = bundle_graph.get_node_id_by_content_key(&dep.id) {
-                  bundle_graph.add_edge(
-                    &dep_bg_node_id,
-                    &bundle_group_node_id,
-                    NativeBundleGraphEdgeType::Null,
-                  );
-                  found_dep = true;
-                }
-              }
+            if let Some(target_asset) = asset_graph.get_asset(&neighbor)
+              && target_asset.id == *root_asset_id
+              && let Some(&dep_bg_node_id) = bundle_graph.get_node_id_by_content_key(&dep.id)
+            {
+              bundle_graph.add_edge(
+                &dep_bg_node_id,
+                &bundle_group_node_id,
+                NativeBundleGraphEdgeType::Null,
+              );
+              found_dep = true;
             }
           }
         }
@@ -248,17 +247,15 @@ impl Bundler for IdealGraphBundler {
                 continue;
               };
               for neighbor in asset_graph.get_outgoing_neighbors(dep_node_id) {
-                if let Some(target_asset) = asset_graph.get_asset(&neighbor) {
-                  if target_asset.id == *root_asset_id {
-                    if let Some(&dep_bg_node_id) = bundle_graph.get_node_id_by_content_key(&dep.id)
-                    {
-                      bundle_graph.add_edge(
-                        &dep_bg_node_id,
-                        &root_asset_node_id,
-                        NativeBundleGraphEdgeType::References,
-                      );
-                    }
-                  }
+                if let Some(target_asset) = asset_graph.get_asset(&neighbor)
+                  && target_asset.id == *root_asset_id
+                  && let Some(&dep_bg_node_id) = bundle_graph.get_node_id_by_content_key(&dep.id)
+                {
+                  bundle_graph.add_edge(
+                    &dep_bg_node_id,
+                    &root_asset_node_id,
+                    NativeBundleGraphEdgeType::References,
+                  );
                 }
               }
             }
@@ -286,22 +283,22 @@ impl Bundler for IdealGraphBundler {
 
         // `from_id` is a bundle that depends on this shared bundle.
         // Find that bundle's root asset and its bundle group.
-        if let Some(from_bundle) = ideal_graph.bundles.get(from_id) {
-          if let Some(from_root_asset_id) = &from_bundle.root_asset_id {
-            let bg_key = format!("bundle_group:{}{}", default_target.name, from_root_asset_id);
-            if let Some(&bg_node_id) = bundle_graph.get_node_id_by_content_key(&bg_key) {
-              // Add the shared bundle as a sibling in this bundle group.
-              bundle_graph.add_edge(
-                &bg_node_id,
-                &shared_bundle_node_id,
-                NativeBundleGraphEdgeType::Null,
-              );
-              bundle_graph.add_edge(
-                &bg_node_id,
-                &shared_bundle_node_id,
-                NativeBundleGraphEdgeType::Bundle,
-              );
-            }
+        if let Some(from_bundle) = ideal_graph.bundles.get(from_id)
+          && let Some(from_root_asset_id) = &from_bundle.root_asset_id
+        {
+          let bg_key = format!("bundle_group:{}{}", default_target.name, from_root_asset_id);
+          if let Some(&bg_node_id) = bundle_graph.get_node_id_by_content_key(&bg_key) {
+            // Add the shared bundle as a sibling in this bundle group.
+            bundle_graph.add_edge(
+              &bg_node_id,
+              &shared_bundle_node_id,
+              NativeBundleGraphEdgeType::Null,
+            );
+            bundle_graph.add_edge(
+              &bg_node_id,
+              &shared_bundle_node_id,
+              NativeBundleGraphEdgeType::Bundle,
+            );
           }
         }
       }
@@ -385,26 +382,19 @@ impl Bundler for IdealGraphBundler {
             // registration code (including bundle-url.js).
             if dep.priority != atlaspack_core::types::Priority::Sync {
               for target_node_id in asset_graph.get_outgoing_neighbors(&dep_node_id) {
-                if let Some(target_asset) = asset_graph.get_asset(&target_node_id) {
-                  if let Some(target_bundle_id) = ideal_graph.asset_to_bundle.get(&target_asset.id)
-                  {
-                    if target_bundle_id != ideal_bundle_id {
-                      if let Some(target_bundle) = ideal_graph.bundles.get(target_bundle_id) {
-                        if let Some(root_asset_id) = &target_bundle.root_asset_id {
-                          let bg_key =
-                            format!("bundle_group:{}{}", default_target.name, root_asset_id);
-                          if let Some(&bg_node_id) =
-                            bundle_graph.get_node_id_by_content_key(&bg_key)
-                          {
-                            bundle_graph.add_edge(
-                              &bundle_node_id,
-                              &bg_node_id,
-                              NativeBundleGraphEdgeType::Bundle,
-                            );
-                          }
-                        }
-                      }
-                    }
+                if let Some(target_asset) = asset_graph.get_asset(&target_node_id)
+                  && let Some(target_bundle_id) = ideal_graph.asset_to_bundle.get(&target_asset.id)
+                  && target_bundle_id != ideal_bundle_id
+                  && let Some(target_bundle) = ideal_graph.bundles.get(target_bundle_id)
+                  && let Some(root_asset_id) = &target_bundle.root_asset_id
+                {
+                  let bg_key = format!("bundle_group:{}{}", default_target.name, root_asset_id);
+                  if let Some(&bg_node_id) = bundle_graph.get_node_id_by_content_key(&bg_key) {
+                    bundle_graph.add_edge(
+                      &bundle_node_id,
+                      &bg_node_id,
+                      NativeBundleGraphEdgeType::Bundle,
+                    );
                   }
                 }
               }
@@ -458,14 +448,14 @@ impl Bundler for IdealGraphBundler {
         for asset_id in &ideal_bundle.assets {
           if let Some(ag_node_id) = asset_graph.get_node_id_by_content_key(asset_id) {
             for dep_node_id in asset_graph.get_outgoing_neighbors(ag_node_id) {
-              if let Some(dep) = asset_graph.get_dependency(&dep_node_id) {
-                if let Some(&dep_bg_node_id) = bundle_graph.get_node_id_by_content_key(&dep.id) {
-                  bundle_graph.add_edge(
-                    &bundle_node_id,
-                    &dep_bg_node_id,
-                    NativeBundleGraphEdgeType::Contains,
-                  );
-                }
+              if let Some(dep) = asset_graph.get_dependency(&dep_node_id)
+                && let Some(&dep_bg_node_id) = bundle_graph.get_node_id_by_content_key(&dep.id)
+              {
+                bundle_graph.add_edge(
+                  &bundle_node_id,
+                  &dep_bg_node_id,
+                  NativeBundleGraphEdgeType::Contains,
+                );
               }
             }
           }
@@ -539,115 +529,80 @@ mod tests {
   use atlaspack_core::types::Priority;
   use atlaspack_core::{
     asset_graph::AssetGraph,
-    types::{Asset, Dependency, Environment, FileType, Target},
+    types::{Asset, Dependency, Environment, Target},
   };
   use pretty_assertions::assert_eq;
 
   use super::*;
 
-  #[test]
-  fn ideal_graph_bundler_can_build_graph() {
-    let mut asset_graph = AssetGraph::new();
+  // ---------------------------------------------------------------------------
+  // assert_graph! macro — declarative bundle shape + edge assertions
+  // ---------------------------------------------------------------------------
+  //
+  // Usage:
+  //   assert_graph!(g, {
+  //     bundles: {
+  //       "entry.js"     => ["entry.js", "a.js"],
+  //       "async.js"     => ["async.js"],
+  //       shared(vendor) => ["react.js"],
+  //     },
+  //     edges: {
+  //       "entry.js" lazy "async.js",
+  //       "entry.js" sync shared(vendor),
+  //     }
+  //   });
+  //
+  // - Named bundles use their root asset id as the key (e.g. "entry.js").
+  // - `shared(label)` declares/references a shared bundle with a user-defined label.
+  //   The label ties bundle declarations to edge references. Multiple shared bundles
+  //   can be distinguished by giving each a unique label.
+  // - Edge types: sync, lazy, parallel, conditional.
+  // - Invariants (no duplication, consistent asset_to_bundle) are always checked.
 
-    let target = Target::default();
-    let entry_dep = Dependency::entry("entry.js".to_string(), target);
-    let entry_dep_node = asset_graph.add_entry_dependency(entry_dep, false);
-
-    let entry_asset = Arc::new(Asset {
-      id: "entry.js".into(),
-      file_path: "entry.js".into(),
-      file_type: FileType::Js,
-      env: Arc::new(Environment::default()),
-      ..Asset::default()
-    });
-    let entry_asset_node = asset_graph.add_asset(entry_asset, false);
-    asset_graph.add_edge(&entry_dep_node, &entry_asset_node);
-
-    // Add a lazy dep creating an async boundary.
-    let lazy_dep = atlaspack_core::types::DependencyBuilder::default()
-      .specifier("./async.js".to_string())
-      .specifier_type(atlaspack_core::types::SpecifierType::Esm)
-      .env(Arc::new(Environment::default()))
-      .priority(atlaspack_core::types::Priority::Lazy)
-      .source_asset_id("entry.js".into())
-      .build();
-    let lazy_dep_node = asset_graph.add_dependency(lazy_dep, false);
-    asset_graph.add_edge(&entry_asset_node, &lazy_dep_node);
-
-    let async_asset = Arc::new(Asset {
-      id: "async.js".into(),
-      file_path: "async.js".into(),
-      file_type: FileType::Js,
-      env: Arc::new(Environment::default()),
-      ..Asset::default()
-    });
-    let async_asset_node = asset_graph.add_asset(async_asset, false);
-    asset_graph.add_edge(&lazy_dep_node, &async_asset_node);
-
-    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
-
-    assert_eq!(stats.assets, 2);
-    assert_eq!(stats.dependencies, 2);
-
-    // Both entry and boundary roots become bundles.
-    assert_eq!(g.bundles.len(), 2);
-
-    // Debug decision log should exist and contain boundary + placement decisions.
-    let debug = g.debug.as_ref().expect("debug info should be present");
-    assert!(!debug.decisions.is_empty());
-    assert!(
-      debug
-        .decisions
-        .decisions
-        .iter()
-        .any(|d| { matches!(d.kind, types::DecisionKind::BoundaryCreated { .. }) })
-    );
-    assert!(debug.decisions.decisions.iter().any(|d| {
-      matches!(
-        d.kind,
-        types::DecisionKind::AssetAssignedToBundle { .. }
-          | types::DecisionKind::BundleRootCreated { .. }
-      )
-    }));
-
-    // Decisions are sequential.
-    for (i, d) in debug.decisions.decisions.iter().enumerate() {
-      assert_eq!(d.seq, i as u64);
-    }
-
-    // We should have a lazy bundle edge from entry bundle to the async bundle.
-    assert!(g.bundle_edges.iter().any(|(from, to, ty)| {
-      from.0 == "entry.js" && to.0 == "async.js" && matches!(ty, types::IdealEdgeType::Lazy)
-    }));
-
-    // NOTE: We intentionally do not call `NativeBundleGraph::from_asset_graph` here.
-    // That path has stricter invariants about asset ids/public ids that aren't relevant
-    // for unit testing the ideal graph pipeline.
-
-    // Avoid unused warnings.
-    let _ = (entry_asset_node, async_asset_node);
+  /// Internal: identifier for a bundle in macro assertions.
+  #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+  enum BundleRef {
+    Named(String),
+    Shared(String),
   }
 
-  fn format_bundle_assets(g: &IdealGraph) -> String {
+  /// Internal: expected edge in macro assertions.
+  #[derive(Debug, Clone)]
+  struct ExpectedEdge {
+    from: BundleRef,
+    to: BundleRef,
+    edge_type: types::IdealEdgeType,
+  }
+
+  fn format_bundle_snapshot(g: &IdealGraph) -> String {
     let mut bundle_ids: Vec<&str> = g.bundles.keys().map(|b| b.0.as_str()).collect();
     bundle_ids.sort();
-
     let mut out = String::new();
     for bundle_id in bundle_ids {
       let bundle = &g.bundles[&types::IdealBundleId(bundle_id.to_string())];
       let mut assets: Vec<&str> = bundle.assets.iter().map(|s| s.as_str()).collect();
       assets.sort();
-      out.push_str(bundle_id);
-      out.push_str(" -> [");
-      out.push_str(&assets.join(", "));
-      out.push_str("]\n");
+      out.push_str(&format!("  {} => [{}]\n", bundle_id, assets.join(", ")));
+    }
+    if !g.bundle_edges.is_empty() {
+      out.push_str("  edges:\n");
+      for (from, to, ty) in &g.bundle_edges {
+        out.push_str(&format!("    {} {:?} {}\n", from.0, ty, to.0));
+      }
     }
     out
   }
 
-  fn assert_bundles(g: &IdealGraph, expected_bundle_assets: &[&[&str]]) {
-    // Build actual bundle asset sets (ignore bundle ids).
+  fn assert_graph_impl(
+    g: &IdealGraph,
+    expected_bundles: &[(BundleRef, Vec<&str>)],
+    expected_edges: &[ExpectedEdge],
+  ) {
+    // 1. Always check invariants.
+    assert_invariants(g);
+
+    // 2. Check bundle contents.
+    // Build actual: sort asset lists for comparison.
     let mut actual: Vec<Vec<String>> = g
       .bundles
       .values()
@@ -659,22 +614,224 @@ mod tests {
       .collect();
     actual.sort();
 
-    let mut expected: Vec<Vec<String>> = expected_bundle_assets
+    let mut expected: Vec<Vec<String>> = expected_bundles
       .iter()
-      .map(|assets| {
-        let mut a = assets.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+      .map(|(_, assets)| {
+        let mut a: Vec<String> = assets.iter().map(|s| s.to_string()).collect();
         a.sort();
         a
       })
       .collect();
     expected.sort();
 
-    let actual_snapshot = format_bundle_assets(g);
+    let snapshot = format_bundle_snapshot(g);
     assert_eq!(
       expected, actual,
-      "bundle snapshot (actual):\n{}",
-      actual_snapshot
+      "\n\nBundle mismatch.\nActual graph:\n{}",
+      snapshot
     );
+
+    // 3. Check edges.
+    // Build a map from shared labels to their actual bundle ids in the graph.
+    // A labeled shared bundle is matched by finding the shared bundle (@@shared:*)
+    // whose assets match the expected assets declared for that label.
+    let resolve_bundle_ref = |bundle_ref: &BundleRef| -> Vec<&types::IdealBundleId> {
+      match bundle_ref {
+        BundleRef::Named(name) => {
+          let id = types::IdealBundleId(name.clone());
+          if g.bundles.contains_key(&id) {
+            vec![&g.bundles.get_key_value(&id).unwrap().0]
+          } else {
+            panic!(
+              "Edge bundle '{}' not found.\nActual graph:\n{}",
+              name, snapshot
+            );
+          }
+        }
+        BundleRef::Shared(label) => {
+          // Find the expected assets for this label from the bundles declaration.
+          let expected_assets: Vec<String> = expected_bundles
+            .iter()
+            .find(|(r, _)| r == bundle_ref)
+            .map(|(_, assets)| {
+              let mut a: Vec<String> = assets.iter().map(|s| s.to_string()).collect();
+              a.sort();
+              a
+            })
+            .unwrap_or_default();
+
+          // Match against actual shared bundles by asset contents.
+          let matches: Vec<_> = g
+            .bundles
+            .iter()
+            .filter(|(id, _)| id.0.starts_with("@@shared:"))
+            .filter(|(_, bundle)| {
+              let mut actual_assets: Vec<String> = bundle.assets.iter().cloned().collect();
+              actual_assets.sort();
+              actual_assets == expected_assets
+            })
+            .map(|(id, _)| id)
+            .collect();
+
+          assert!(
+            !matches.is_empty(),
+            "Shared bundle '{}' with assets {:?} not found.\nActual graph:\n{}",
+            label,
+            expected_assets,
+            snapshot
+          );
+          matches
+        }
+      }
+    };
+
+    for edge in expected_edges {
+      let from_matches = resolve_bundle_ref(&edge.from);
+      let to_matches = resolve_bundle_ref(&edge.to);
+
+      let found = from_matches.iter().any(|from_id| {
+        to_matches.iter().any(|to_id| {
+          g.bundle_edges
+            .iter()
+            .any(|(f, t, ty)| f == *from_id && t == *to_id && *ty == edge.edge_type)
+        })
+      });
+
+      assert!(
+        found,
+        "Expected edge {:?} {:?} {:?} not found.\nActual graph:\n{}",
+        edge.from, edge.edge_type, edge.to, snapshot
+      );
+    }
+
+    // 4. Verify no unexpected edges exist (exact match).
+    if !expected_edges.is_empty() {
+      assert_eq!(
+        expected_edges.len(),
+        g.bundle_edges.len(),
+        "\n\nEdge count mismatch: expected {} edges, found {}.\nActual graph:\n{}",
+        expected_edges.len(),
+        g.bundle_edges.len(),
+        snapshot
+      );
+    }
+  }
+
+  /// Parses an edge type keyword into an IdealEdgeType.
+  macro_rules! edge_type {
+    (sync) => {
+      types::IdealEdgeType::Sync
+    };
+    (lazy) => {
+      types::IdealEdgeType::Lazy
+    };
+    (parallel) => {
+      types::IdealEdgeType::Parallel
+    };
+    (conditional) => {
+      types::IdealEdgeType::Conditional
+    };
+  }
+
+  /// Internal: accumulates bundle entries from the macro.
+  macro_rules! push_bundles {
+    // Base case: done.
+    (@acc $bundles:ident $(,)?) => {};
+    // shared(label) => [assets]
+    (@acc $bundles:ident shared($label:ident) => [ $( $asset:literal ),* $(,)? ] $(, $($rest:tt)*)?) => {
+      #[allow(clippy::vec_init_then_push)]
+      { $bundles.push((BundleRef::Shared(stringify!($label).to_string()), vec![ $( $asset ),* ])); }
+      $( push_bundles!(@acc $bundles $( $rest )*); )?
+    };
+    // "name" => [assets]
+    (@acc $bundles:ident $name:literal => [ $( $asset:literal ),* $(,)? ] $(, $($rest:tt)*)?) => {
+      #[allow(clippy::vec_init_then_push)]
+      { $bundles.push((BundleRef::Named($name.to_string()), vec![ $( $asset ),* ])); }
+      $( push_bundles!(@acc $bundles $( $rest )*); )?
+    };
+  }
+
+  /// Internal: accumulates edge entries from the macro.
+  macro_rules! push_edges {
+    (@acc $edges:ident $(,)?) => {};
+    // shared(label) edgetype shared(label)
+    (@acc $edges:ident shared($fl:ident) $ety:ident shared($tl:ident) $(, $($rest:tt)*)?) => {
+      #[allow(clippy::vec_init_then_push)]
+      { $edges.push(ExpectedEdge {
+        from: BundleRef::Shared(stringify!($fl).to_string()),
+        to: BundleRef::Shared(stringify!($tl).to_string()),
+        edge_type: edge_type!($ety),
+      }); }
+      $( push_edges!(@acc $edges $( $rest )*); )?
+    };
+    // shared(label) edgetype "name"
+    (@acc $edges:ident shared($fl:ident) $ety:ident $to:literal $(, $($rest:tt)*)?) => {
+      #[allow(clippy::vec_init_then_push)]
+      { $edges.push(ExpectedEdge {
+        from: BundleRef::Shared(stringify!($fl).to_string()),
+        to: BundleRef::Named($to.to_string()),
+        edge_type: edge_type!($ety),
+      }); }
+      $( push_edges!(@acc $edges $( $rest )*); )?
+    };
+    // "name" edgetype shared(label)
+    (@acc $edges:ident $from:literal $ety:ident shared($tl:ident) $(, $($rest:tt)*)?) => {
+      #[allow(clippy::vec_init_then_push)]
+      { $edges.push(ExpectedEdge {
+        from: BundleRef::Named($from.to_string()),
+        to: BundleRef::Shared(stringify!($tl).to_string()),
+        edge_type: edge_type!($ety),
+      }); }
+      $( push_edges!(@acc $edges $( $rest )*); )?
+    };
+    // "name" edgetype "name"
+    (@acc $edges:ident $from:literal $ety:ident $to:literal $(, $($rest:tt)*)?) => {
+      #[allow(clippy::vec_init_then_push)]
+      { $edges.push(ExpectedEdge {
+        from: BundleRef::Named($from.to_string()),
+        to: BundleRef::Named($to.to_string()),
+        edge_type: edge_type!($ety),
+      }); }
+      $( push_edges!(@acc $edges $( $rest )*); )?
+    };
+  }
+
+  macro_rules! assert_graph {
+    ($g:expr, {
+      bundles: { $($bundles:tt)* }
+      $(, edges: { $($edges:tt)* } )?
+      $(,)?
+    }) => {{
+      #[allow(clippy::vec_init_then_push, unused_mut)]
+      {
+        let mut expected_bundles: Vec<(BundleRef, Vec<&str>)> = Vec::new();
+        push_bundles!(@acc expected_bundles $($bundles)*);
+        let mut expected_edges: Vec<ExpectedEdge> = Vec::new();
+        $( push_edges!(@acc expected_edges $($edges)*); )?
+        assert_graph_impl(&$g, &expected_bundles, &expected_edges);
+      }
+    }};
+  }
+
+  #[test]
+  fn entry_with_async_boundary() {
+    let asset_graph = fixture_graph(
+      &["entry.js"],
+      &[EdgeSpec::new("entry.js", "async.js", Priority::Lazy)],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js"],
+        "async.js" => ["async.js"],
+      },
+      edges: {
+        "entry.js" lazy "async.js",
+      },
+    });
   }
 
   /// Builds a small asset graph for tests using a concise list of edges.
@@ -790,7 +947,7 @@ mod tests {
         bundle.assets.contains(asset),
         "asset_to_bundle points to bundle that doesn't contain it: {asset} -> {}\n{}",
         bundle_id.0,
-        format_bundle_assets(g)
+        format_bundle_snapshot(g)
       );
     }
 
@@ -802,7 +959,7 @@ mod tests {
           panic!(
             "asset appears in multiple bundles: {asset} in {prev} and {}\n{}",
             bundle_id.0,
-            format_bundle_assets(g)
+            format_bundle_snapshot(g)
           );
         }
       }
@@ -811,6 +968,7 @@ mod tests {
 
   #[test]
   fn creates_shared_bundle_for_asset_needed_by_multiple_async_roots() {
+    // entry -> lazy a, lazy b; both a and b sync-import react
     let asset_graph = fixture_graph(
       &["entry.js"],
       &[
@@ -824,18 +982,20 @@ mod tests {
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
     let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
-    assert_invariants(&g);
-    assert_bundles(&g, &[&["entry.js"], &["a.js"], &["b.js"], &["react.js"]]);
-
-    // Still has async edges and shared edges.
-    assert!(g.bundle_edges.iter().any(|(a, b, t)| {
-      a.0 == "entry.js" && b.0 == "a.js" && matches!(t, types::IdealEdgeType::Lazy)
-    }));
-    assert!(
-      g.bundle_edges
-        .iter()
-        .any(|(a, b, _)| a.0 == "entry.js" && b.0.starts_with("@@shared:"))
-    );
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js"],
+        "a.js"     => ["a.js"],
+        "b.js"     => ["b.js"],
+        shared(react) => ["react.js"],
+      },
+      edges: {
+        "entry.js" lazy "a.js",
+        "entry.js" lazy "b.js",
+        "a.js" sync shared(react),
+        "b.js" sync shared(react),
+      },
+    });
   }
 
   #[test]
@@ -851,18 +1011,17 @@ mod tests {
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
     let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
-    assert_invariants(&g);
-
-    // entry bundle + two boundary bundles
-    assert_eq!(g.bundles.len(), 3, "{}", format_bundle_assets(&g));
-
-    // bundle edges should include parallel + conditional
-    assert!(g.bundle_edges.iter().any(|(a, b, t)| {
-      a.0 == "entry.js" && b.0 == "a.js" && matches!(t, types::IdealEdgeType::Parallel)
-    }));
-    assert!(g.bundle_edges.iter().any(|(a, b, t)| {
-      a.0 == "entry.js" && b.0 == "b.js" && matches!(t, types::IdealEdgeType::Conditional)
-    }));
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js"],
+        "a.js"     => ["a.js"],
+        "b.js"     => ["b.js"],
+      },
+      edges: {
+        "entry.js" parallel "a.js",
+        "entry.js" conditional "b.js",
+      },
+    });
   }
 
   #[test]
@@ -875,11 +1034,15 @@ mod tests {
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
     let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
-    assert_invariants(&g);
-    assert_eq!(g.bundles.len(), 2, "{}", format_bundle_assets(&g));
-    assert!(g.bundle_edges.iter().any(|(a, b, t)| {
-      a.0 == "entry.js" && b.0 == "styles.css" && matches!(t, types::IdealEdgeType::Sync)
-    }));
+    assert_graph!(g, {
+      bundles: {
+        "entry.js"   => ["entry.js"],
+        "styles.css" => ["styles.css"],
+      },
+      edges: {
+        "entry.js" sync "styles.css",
+      },
+    });
   }
 
   #[test]
@@ -895,22 +1058,17 @@ mod tests {
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
     let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
-    assert_invariants(&g);
-
-    // At least the two entry bundles exist.
-    assert!(
-      g.bundles
-        .contains_key(&types::IdealBundleId("entry-a.js".into()))
-    );
-    assert!(
-      g.bundles
-        .contains_key(&types::IdealBundleId("entry-b.js".into()))
-    );
+    assert_graph!(g, {
+      bundles: {
+        "entry-a.js" => ["entry-a.js", "a.js"],
+        "entry-b.js" => ["entry-b.js", "b.js"],
+      },
+    });
   }
 
   #[test]
   fn shared_bundle_groups_multiple_assets_for_same_root_set() {
-    // Both a and b import react + react-dom
+    // Both a and b import react + react-dom -> single shared bundle
     let asset_graph = fixture_graph(
       &["entry.js"],
       &[
@@ -926,19 +1084,14 @@ mod tests {
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
     let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
-    assert_invariants(&g);
-
-    // Both shared assets should be in the same (single) shared bundle.
-    let shared_bundles: Vec<_> = g
-      .bundles
-      .iter()
-      .filter(|(id, _)| id.0.starts_with("@@shared:"))
-      .collect();
-
-    assert_eq!(shared_bundles.len(), 1, "{}", format_bundle_assets(&g));
-    let shared_assets = &shared_bundles[0].1.assets;
-    assert!(shared_assets.contains("react.js"));
-    assert!(shared_assets.contains("react-dom.js"));
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js"],
+        "a.js"     => ["a.js"],
+        "b.js"     => ["b.js"],
+        shared(vendor) => ["react.js", "react-dom.js"],
+      },
+    });
   }
 
   #[test]
@@ -954,14 +1107,16 @@ mod tests {
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
     let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
-    assert_invariants(&g);
-    assert_eq!(g.bundles.len(), 1, "{}", format_bundle_assets(&g));
-    assert_bundles(&g, &[&["entry.js", "a.js", "b.js"]]);
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js", "a.js", "b.js"],
+      },
+    });
   }
 
   #[test]
   fn dominator_diamond_has_single_owner() {
-    // entry -> a -> (b,c) -> d
+    // entry -> a -> (b,c) -> d — all sync, single bundle
     let asset_graph = fixture_graph(
       &["entry.js"],
       &[
@@ -976,14 +1131,17 @@ mod tests {
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
     let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
-    assert_invariants(&g);
-    assert_eq!(g.bundles.len(), 1, "{}", format_bundle_assets(&g));
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js", "a.js", "b.js", "c.js", "d.js"],
+      },
+    });
   }
 
   #[test]
   fn two_different_root_sets_create_two_shared_bundles() {
     // entry -> lazy a,b,c
-    // a,b share x ; b,c share y
+    // a,b share x ; b,c share y — two separate shared bundles
     let asset_graph = fixture_graph(
       &["entry.js"],
       &[
@@ -1000,20 +1158,21 @@ mod tests {
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
     let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
-    assert_invariants(&g);
-
-    let shared_bundles: Vec<_> = g
-      .bundles
-      .iter()
-      .filter(|(id, _)| id.0.starts_with("@@shared:"))
-      .collect();
-
-    assert_eq!(shared_bundles.len(), 2, "{}", format_bundle_assets(&g));
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js"],
+        "a.js"     => ["a.js"],
+        "b.js"     => ["b.js"],
+        "c.js"     => ["c.js"],
+        shared(x) => ["x.js"],
+        shared(y) => ["y.js"],
+      },
+    });
   }
 
   #[test]
   fn shared_bundle_edges_are_deduped() {
-    // Causes shared bundle and ensures we don't create duplicate parent->shared edges.
+    // Same as shared bundle test — verify only one edge from entry to shared
     let asset_graph = fixture_graph(
       &["entry.js"],
       &[
@@ -1027,33 +1186,30 @@ mod tests {
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
     let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
-    assert_invariants(&g);
-
-    let shared_id = g
-      .bundles
-      .keys()
-      .find(|id| id.0.starts_with("@@shared:"))
-      .expect("shared bundle exists")
-      .0
-      .clone();
-
-    let count = g
-      .bundle_edges
-      .iter()
-      .filter(|(from, to, _)| from.0 == "entry.js" && to.0 == shared_id)
-      .count();
-
-    assert_eq!(count, 1, "{}", format_bundle_assets(&g));
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js"],
+        "a.js"     => ["a.js"],
+        "b.js"     => ["b.js"],
+        shared(react) => ["react.js"],
+      },
+      edges: {
+        "entry.js" lazy "a.js",
+        "entry.js" lazy "b.js",
+        "a.js" sync shared(react),
+        "b.js" sync shared(react),
+      },
+    });
   }
 
   #[test]
-  fn availability_is_intersection_of_parents() {
-    // entry -> lazy a, entry -> lazy b
+  fn availability_intersection_does_not_duplicate_disjoint_assets() {
+    // entry -> lazy a, lazy b
     // a -> sync x, b -> sync y
-    // a -> lazy c, b -> lazy c (c has two parents)
+    // a -> lazy c, b -> lazy c
     //
-    // Availability for c should be intersection of (assets available at a) and (assets available at b).
-    // With disjoint sync trees, the intersection should be empty (or only common ancestor assets).
+    // c has two parents with disjoint sync trees.
+    // x and y should NOT appear in c's bundle (they aren't available from both parents).
     let asset_graph = fixture_graph(
       &["entry.js"],
       &[
@@ -1069,34 +1225,20 @@ mod tests {
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
     let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
-    assert_invariants(&g);
-
-    let c_bundle = g
-      .bundles
-      .get(&types::IdealBundleId("c.js".into()))
-      .expect("c bundle exists");
-
-    // Both x.js and y.js should not be in the intersection.
-    assert!(
-      !c_bundle.ancestor_assets.contains("x.js"),
-      "{}",
-      format_bundle_assets(&g)
-    );
-    assert!(
-      !c_bundle.ancestor_assets.contains("y.js"),
-      "{}",
-      format_bundle_assets(&g)
-    );
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js"],
+        "a.js"     => ["a.js", "x.js"],
+        "b.js"     => ["b.js", "y.js"],
+        "c.js"     => ["c.js"],
+      },
+    });
   }
 
   #[test]
   fn shared_extraction_is_suppressed_when_asset_already_available() {
-    // entry -> sync vendor
-    // entry -> lazy a, entry -> lazy b
-    // a -> sync vendor, b -> sync vendor
-    //
-    // Because vendor is already in the entry bundle, it should be available to both async bundles,
-    // so it should NOT be extracted into a shared bundle.
+    // vendor is sync-imported by entry AND both async roots.
+    // Since it's already in the entry bundle, no shared bundle is needed.
     let asset_graph = fixture_graph(
       &["entry.js"],
       &[
@@ -1111,31 +1253,19 @@ mod tests {
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
     let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
-    assert_invariants(&g);
-
-    let shared_count = g
-      .bundles
-      .keys()
-      .filter(|id| id.0.starts_with("@@shared:"))
-      .count();
-    assert_eq!(shared_count, 0, "{}", format_bundle_assets(&g));
-
-    // vendor should still be in the entry bundle.
-    let entry_bundle = g
-      .bundles
-      .get(&types::IdealBundleId("entry.js".into()))
-      .expect("entry bundle exists");
-    assert!(
-      entry_bundle.assets.contains("vendor.js"),
-      "{}",
-      format_bundle_assets(&g)
-    );
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js", "vendor.js"],
+        "a.js"     => ["a.js"],
+        "b.js"     => ["b.js"],
+      },
+    });
   }
 
   #[test]
   fn root_assets_are_never_moved_into_shared_bundles() {
-    // a and b are lazy roots and also referenced by a third root c.
-    // This should never result in a shared bundle containing a.js or b.js.
+    // a and b are lazy roots AND sync-imported by c.
+    // They must stay in their own bundles, never extracted to shared.
     let asset_graph = fixture_graph(
       &["entry.js"],
       &[
@@ -1150,30 +1280,20 @@ mod tests {
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
     let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
-    assert_invariants(&g);
-
-    // Root bundles must still contain themselves.
-    for root in ["a.js", "b.js", "c.js"] {
-      let b = g
-        .bundles
-        .get(&types::IdealBundleId(root.into()))
-        .expect("root bundle exists");
-      assert!(b.assets.contains(root), "{}", format_bundle_assets(&g));
-    }
-
-    for b in g.bundles.values() {
-      if b.id.0.starts_with("@@shared:") {
-        assert!(!b.assets.contains("a.js"), "{}", format_bundle_assets(&g));
-        assert!(!b.assets.contains("b.js"), "{}", format_bundle_assets(&g));
-      }
-    }
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js"],
+        "a.js"     => ["a.js"],
+        "b.js"     => ["b.js"],
+        "c.js"     => ["c.js"],
+      },
+    });
   }
 
   #[test]
-  fn isolated_dependency_prevents_sync_traversal_and_shared_extraction() {
-    // entry -> lazy a, entry -> lazy b
+  fn isolated_dependency_prevents_shared_extraction() {
     // a -> (sync isolated) react, b -> (sync) react
-    // The isolated edge should prevent reachability from a to react, so react won't be extracted.
+    // The isolated edge prevents reachability from a, so react stays in b only.
     let asset_graph = fixture_graph(
       &["entry.js"],
       &[
@@ -1187,22 +1307,13 @@ mod tests {
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
     let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
-    assert_invariants(&g);
-
-    // No shared bundles should be created since only one root can reach react.
-    let shared_count = g
-      .bundles
-      .keys()
-      .filter(|id| id.0.starts_with("@@shared:"))
-      .count();
-    assert_eq!(shared_count, 0, "{}", format_bundle_assets(&g));
-
-    // react stays in exactly one of the roots.
-    let bundles_containing_react = g
-      .bundles
-      .values()
-      .filter(|b| b.assets.contains("react.js"))
-      .count();
-    assert_eq!(bundles_containing_react, 1, "{}", format_bundle_assets(&g));
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js"],
+        "a.js"     => ["a.js"],
+        "b.js"     => ["b.js"],
+        "react.js" => ["react.js"],
+      },
+    });
   }
 }

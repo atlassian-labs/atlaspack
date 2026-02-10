@@ -83,11 +83,6 @@ pub enum DecisionKind {
     from_bundle_root: AssetKey,
     shared_bundle_root: AssetKey,
   },
-  BundleEdgeRewritten {
-    from_bundle_root: AssetKey,
-    to_bundle_root: AssetKey,
-    via_shared_bundle_root: AssetKey,
-  },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -276,10 +271,10 @@ impl IdealGraph {
   ) -> anyhow::Result<Option<IdealBundleId>> {
     let prev = self.asset_to_bundle.get(asset_id).cloned();
 
-    if let Some(prev_bundle) = &prev {
-      if let Some(b) = self.bundles.get_mut(prev_bundle) {
-        b.assets.remove(asset_id);
-      }
+    if let Some(prev_bundle) = &prev
+      && let Some(b) = self.bundles.get_mut(prev_bundle)
+    {
+      b.assets.remove(asset_id);
     }
 
     let to_bundle = self

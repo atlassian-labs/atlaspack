@@ -214,7 +214,7 @@ mod tests {
 
     let mut bundle_graph = NativeBundleGraph::from_asset_graph(&asset_graph);
 
-    let bundler = MonolithicBundler::default();
+    let bundler = MonolithicBundler;
     bundler.bundle(&asset_graph, &mut bundle_graph).unwrap();
 
     let mut bundle_count = 0;

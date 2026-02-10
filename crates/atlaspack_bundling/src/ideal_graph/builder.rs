@@ -188,10 +188,10 @@ impl IdealGraphBuilder {
       };
 
       for maybe_entry_asset in asset_graph.get_outgoing_neighbors(&dep_node_id) {
-        if let Some(asset) = asset_graph.get_asset(&maybe_entry_asset) {
-          if let Some(key) = self.assets.key_for(&asset.id) {
-            entries.push(key);
-          }
+        if let Some(asset) = asset_graph.get_asset(&maybe_entry_asset)
+          && let Some(key) = self.assets.key_for(&asset.id)
+        {
+          entries.push(key);
         }
       }
     }
@@ -1126,32 +1126,9 @@ impl IdealGraphBuilder {
       //
       // Important: we do NOT retarget/remove the existing edges to the roots (e.g. Lazy edges from
       // an entry bundle to an async bundle root). Those edges encode load ordering and must remain.
-      let roots_set: HashSet<IdealBundleId> = roots
-        .iter()
-        .map(|r| IdealBundleId(self.assets.id_for(*r).to_string()))
-        .collect();
-
-      // For each existing (parent -> root) edge, also add (parent -> shared) with the same edge type.
-      let existing_edges = ideal.bundle_edges.clone();
-      for (from, to, ty) in existing_edges {
-        if roots_set.contains(&to) {
-          ideal.add_bundle_edge(from.clone(), shared_bundle_id.clone(), ty);
-
-          let from_root = self
-            .assets
-            .key_for(&from.0)
-            .unwrap_or(super::types::AssetKey(u32::MAX));
-
-          self.decision(
-            "shared",
-            super::types::DecisionKind::BundleEdgeRewritten {
-              from_bundle_root: from_root,
-              to_bundle_root: shared_key,
-              via_shared_bundle_root: shared_key,
-            },
-          );
-        }
-      }
+      // The shared bundle is loaded as a sibling within the async bundle groups, not independently
+      // from the entry. The sync edges from each root to the shared bundle (added below) are
+      // sufficient to express the dependency.
 
       // Ensure each source root itself depends on the shared bundle (Sync).
       for root in roots {
