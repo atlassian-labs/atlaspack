@@ -87,8 +87,10 @@ pub enum DecisionKind {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AssetAssignmentReason {
-  Dominator,
-  MultipleRootsFallback,
+  /// Asset is dominated by exactly one bundle root in the dominator tree.
+  DominatorSubtree,
+  /// Asset is reachable from multiple roots but only one is eligible after availability filtering.
+  SingleEligibleRoot,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

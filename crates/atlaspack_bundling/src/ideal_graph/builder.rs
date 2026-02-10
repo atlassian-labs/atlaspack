@@ -78,10 +78,6 @@ pub struct IdealGraphBuilder {
   // Entry roots.
   entry_roots: HashSet<super::types::AssetKey>,
 
-  // Assets reachable from any entry root by following *sync-only* edges.
-  // Used to break ties for multi-root assets in a deterministic way.
-  entry_sync_reachable: HashSet<super::types::AssetKey>,
-
   // Bundle roots are either entry assets or boundary assets.
   bundle_roots: HashSet<super::types::AssetKey>,
 }
@@ -135,20 +131,23 @@ impl IdealGraphBuilder {
     // Phase 3: compute dominators.
     self.compute_dominators()?;
 
-    // Phase 4: asset placement (zero duplication).
-    let mut ideal = self.assign_assets_to_bundles(asset_graph, &entry_assets)?;
+    // Phase 4: create bundle root shells (no non-root asset placement yet).
+    let mut ideal = self.create_bundle_roots(asset_graph, &entry_assets)?;
 
     // Phase 5: bundle dependency graph (edge types).
     self.build_bundle_edges(asset_graph, &mut ideal)?;
 
-    // Phase 6: availability propagation.
+    // Phase 6: derive reachability from dominator tree + sync graph.
+    let reachability = self.compute_reachability_from_dominators()?;
+
+    // Phase 7: place single-root assets into their dominating bundle.
+    self.place_single_root_assets(&reachability, &mut ideal)?;
+
+    // Phase 8a: availability propagation (now includes placed single-root assets).
     self.compute_availability(&mut ideal)?;
 
-    // Phase 7: reachability per bundle root (sync graph traversal).
-    let reachability = self.compute_reachability(asset_graph, &ideal)?;
-
-    // Phase 8: shared bundle extraction (rewrite ideal graph, still zero-duplication).
-    self.create_shared_bundles(asset_graph, &reachability, &mut ideal)?;
+    // Phase 8b: extract shared bundles for multi-root assets.
+    self.create_shared_bundles(&reachability, &mut ideal)?;
 
     // Phase 9: availability propagation again after shared bundle insertion.
     self.compute_availability(&mut ideal)?;
@@ -368,31 +367,9 @@ impl IdealGraphBuilder {
       }
     }
 
-    // Compute reachability from entry roots in the sync graph.
-    self.entry_sync_reachable.clear();
-    let mut stack: Vec<NodeIndex> = Vec::new();
-    for &entry in entry_assets {
-      if let Some(&idx) = self.asset_to_sync_node.get(&entry) {
-        stack.push(idx);
-      }
-    }
-    let mut visited_nodes: HashSet<NodeIndex> = HashSet::new();
-    while let Some(n) = stack.pop() {
-      if !visited_nodes.insert(n) {
-        continue;
-      }
-      if let Some(SyncNode::Asset(k)) = self.sync_graph.node_weight(n).copied() {
-        self.entry_sync_reachable.insert(k);
-      }
-      for out in self.sync_graph.neighbors_directed(n, Direction::Outgoing) {
-        stack.push(out);
-      }
-    }
-
     debug!(
       sync_nodes = self.sync_graph.node_count(),
       sync_edges = self.sync_graph.edge_count(),
-      entry_sync_reachable = self.entry_sync_reachable.len(),
       "ideal graph: built sync graph"
     );
     Ok(())
@@ -413,37 +390,16 @@ impl IdealGraphBuilder {
     Ok(())
   }
 
-  fn immediate_dominator_asset_key(&self, asset_key: AssetKey) -> anyhow::Result<Option<AssetKey>> {
-    let Some(doms) = &self.dominators else {
-      return Ok(None);
-    };
-    let Some(&node) = self.asset_to_sync_node.get(&asset_key) else {
-      return Ok(None);
-    };
-
-    let idom = doms.immediate_dominator(node);
-    let Some(idom) = idom else {
-      return Ok(None);
-    };
-
-    let idom_node = self
-      .sync_graph
-      .node_weight(idom)
-      .copied()
-      .context("idom node missing in sync graph")?;
-
-    match idom_node {
-      SyncNode::VirtualRoot => Ok(None),
-      SyncNode::Asset(k) => Ok(Some(k)),
-    }
-  }
-
   // ----------------------------
   // Phase 4: Placement
   // ----------------------------
 
+  /// Phase 4: Create bundle root shells only.
+  ///
+  /// Non-root assets are left unplaced; they will be assigned in Phase 8 using
+  /// dominator subtree information combined with availability/reachability data.
   #[instrument(level = "debug", skip_all, fields(entries = entry_assets.len()))]
-  fn assign_assets_to_bundles(
+  fn create_bundle_roots(
     &mut self,
     asset_graph: &AssetGraph,
     entry_assets: &[AssetKey],
@@ -456,7 +412,6 @@ impl IdealGraphBuilder {
 
     let mut ideal = IdealGraph::default();
 
-    // Create bundles for all bundle roots.
     for root_key in self.bundle_roots.clone() {
       let root_asset_id = self.assets.id_for(root_key).to_string();
 
@@ -473,7 +428,6 @@ impl IdealGraphBuilder {
           root_asset_id: Some(root_asset_id.clone()),
           assets: HashSet::from([root_asset_id.clone()]),
           bundle_type: asset.file_type.clone(),
-          // TODO: derive env/target from entries/graph once available.
           needs_stable_name: false,
           behavior: asset.bundle_behavior,
           ancestor_assets: HashSet::new(),
@@ -492,93 +446,11 @@ impl IdealGraphBuilder {
       );
     }
 
-    // Assign all other assets by walking up dominators until we hit a bundle root.
-    for asset in asset_graph.get_assets() {
-      if ideal.asset_to_bundle.contains_key(&asset.id) {
-        continue;
-      }
-
-      let bundle_id = self.find_dominating_bundle_root(&asset.id)?;
-      let bundle = ideal
-        .bundles
-        .get_mut(&bundle_id)
-        .context("dominating bundle root missing")?;
-
-      bundle.assets.insert(asset.id.clone());
-      ideal
-        .asset_to_bundle
-        .insert(asset.id.clone(), bundle_id.clone());
-
-      let asset_key = self
-        .assets
-        .key_for(&asset.id)
-        .context("asset not interned")?;
-
-      self.decision(
-        "placement",
-        super::types::DecisionKind::AssetAssignedToBundle {
-          asset: asset_key,
-          bundle_root: self
-            .assets
-            .key_for(&bundle_id.0)
-            .context("bundle root not interned")?,
-          reason: super::types::AssetAssignmentReason::Dominator,
-        },
-      );
-    }
-
     debug!(
       bundles = ideal.bundles.len(),
-      assets = ideal.asset_to_bundle.len(),
-      "ideal graph: assigned assets to bundles"
+      "ideal graph: created bundle root shells"
     );
     Ok(ideal)
-  }
-
-  fn find_dominating_bundle_root(&self, asset_id: &str) -> anyhow::Result<IdealBundleId> {
-    let Some(mut current) = self.assets.key_for(asset_id) else {
-      anyhow::bail!("asset id not interned: {asset_id}");
-    };
-
-    loop {
-      if self.bundle_roots.contains(&current) {
-        return Ok(IdealBundleId(self.assets.id_for(current).to_string()));
-      }
-
-      let current_id = self.assets.id_for(current).to_string();
-
-      let Some(idom) = self
-        .immediate_dominator_asset_key(current)
-        .with_context(|| format!("computing idom for {current_id}"))?
-      else {
-        // Asset is reachable from multiple roots (no single dominator).
-        // Place it deterministically in the smallest bundle root for now.
-        // If the asset is reachable from an entry via sync edges, prefer placing in an entry root.
-        // This avoids hoisting "core" sync graph assets into async roots just because they are
-        // also referenced from those roots.
-        let fallback = if self.entry_sync_reachable.contains(&current) {
-          self
-            .entry_roots
-            .iter()
-            .copied()
-            .min()
-            .context("no entry roots")?
-        } else {
-          // Otherwise, prefer a non-entry root so shared extraction can later hoist multi-root assets.
-          self
-            .bundle_roots
-            .iter()
-            .copied()
-            .filter(|r| !self.entry_roots.contains(r))
-            .min()
-            .or_else(|| self.entry_roots.iter().copied().min())
-            .context("no bundle roots")?
-        };
-        return Ok(IdealBundleId(self.assets.id_for(fallback).to_string()));
-      };
-
-      current = idom;
-    }
   }
 
   // ----------------------------
@@ -890,148 +762,272 @@ impl IdealGraphBuilder {
   }
 
   // ----------------------------
-  // Phase 7: Reachability
+  // Phase 7: Dominator-based reachability
   // ----------------------------
 
+  /// Derive reachability from the dominator tree structure.
+  ///
+  /// For each non-root asset:
+  /// - Walk up the dominator tree. If we hit a bundle root before reaching virtual_root,
+  ///   that asset is dominated by (and reachable from) exactly that one root.
+  /// - If idom chain reaches virtual_root, the asset is reachable from multiple roots.
+  ///   We find those roots via a reverse walk on the sync graph.
+  ///
+  /// Returns a map of asset -> set of bundle roots that can reach it.
   #[instrument(level = "debug", skip_all)]
-  fn compute_reachability(
+  fn compute_reachability_from_dominators(
     &mut self,
-    asset_graph: &AssetGraph,
-    _ideal: &IdealGraph,
   ) -> anyhow::Result<HashMap<AssetKey, HashSet<AssetKey>>> {
-    // Reachable assets per bundle root (sync traversal only, per research doc).
-    let mut reachability: HashMap<AssetKey, HashSet<AssetKey>> = HashMap::new();
+    let doms = self
+      .dominators
+      .as_ref()
+      .context("dominators not computed")?;
+
+    let virtual_root = self
+      .virtual_root
+      .context("sync graph virtual root not initialized")?;
+
+    // Build dominator tree child lists for efficient subtree traversal.
+    // parent_node -> [child_nodes]
+    let mut dom_children: HashMap<NodeIndex, Vec<NodeIndex>> = HashMap::new();
+    for (&asset_key, &node_idx) in &self.asset_to_sync_node {
+      // Skip bundle roots -- they are placed in Phase 4 already.
+      if self.bundle_roots.contains(&asset_key) {
+        continue;
+      }
+      if let Some(idom) = doms.immediate_dominator(node_idx) {
+        dom_children.entry(idom).or_default().push(node_idx);
+      }
+    }
+
+    // For each bundle root, collect the assets in its dominator subtree.
+    // These are assets dominated by that root and reachable only from it.
+    let mut asset_roots: HashMap<AssetKey, HashSet<AssetKey>> = HashMap::new();
 
     let roots: Vec<AssetKey> = self.bundle_roots.iter().copied().collect();
+    for root_key in &roots {
+      let Some(&root_idx) = self.asset_to_sync_node.get(root_key) else {
+        continue;
+      };
 
-    for root_key in roots {
-      let root_id = self.assets.id_for(root_key).to_string();
-      let mut visited: HashSet<AssetKey> = HashSet::new();
-      let mut stack: Vec<AssetKey> = vec![root_key];
-
-      while let Some(cur) = stack.pop() {
-        if !visited.insert(cur) {
-          continue;
-        }
-
-        let cur_id = self.assets.id_for(cur);
-        let Some(cur_node_id) = asset_graph.get_node_id_by_content_key(cur_id).copied() else {
-          continue;
-        };
-
-        // Traverse asset -> dep -> asset edges, but only through sync deps, and do not traverse
-        // past bundle boundaries.
-        for dep_node in asset_graph.get_outgoing_neighbors(&cur_node_id) {
-          let Some(dep) = asset_graph.get_dependency(&dep_node) else {
-            continue;
-          };
-
-          if dep.priority != Priority::Sync {
-            continue;
-          }
-
-          if dep.bundle_behavior == Some(BundleBehavior::Isolated)
-            || dep.bundle_behavior == Some(BundleBehavior::InlineIsolated)
-          {
-            continue;
-          }
-
-          for target_node in asset_graph.get_outgoing_neighbors(&dep_node) {
-            let Some(target_asset) = asset_graph.get_asset(&target_node) else {
-              continue;
-            };
-
-            let Some(target_key) = self.assets.key_for(&target_asset.id) else {
-              continue;
-            };
-
-            if self.bundle_boundaries.contains(&target_key) {
-              continue;
+      // DFS through dominator subtree of this root.
+      let mut stack = vec![root_idx];
+      while let Some(node) = stack.pop() {
+        if let Some(children) = dom_children.get(&node) {
+          for &child in children {
+            if let Some(SyncNode::Asset(child_key)) = self.sync_graph.node_weight(child).copied() {
+              asset_roots.entry(child_key).or_default().insert(*root_key);
             }
-
-            stack.push(target_key);
+            stack.push(child);
           }
         }
       }
+    }
 
+    for &root_key in &roots {
       self.decision(
         "reachability",
         super::types::DecisionKind::ReachabilityComputed {
           bundle_root: root_key,
-          reachable_assets_len: visited.len(),
+          reachable_assets_len: asset_roots
+            .values()
+            .filter(|r| r.contains(&root_key))
+            .count(),
         },
       );
-
-      debug!(
-        bundle_root = root_id,
-        reachable = visited.len(),
-        "ideal graph: reachability computed"
-      );
-      reachability.insert(root_key, visited);
     }
 
-    // Ensure all roots have an entry.
+    // For assets whose idom is virtual_root (multi-root), the dominator subtree
+    // traversal above won't find them under any single root. Their idom children
+    // sit directly under virtual_root. We need to find which roots can reach them
+    // via a reverse walk on the sync graph.
+    if let Some(vr_children) = dom_children.get(&virtual_root) {
+      // Collect all multi-root assets: virtual_root's subtree in the dominator tree.
+      let mut multi_root_assets: Vec<AssetKey> = Vec::new();
+      let mut stack: Vec<NodeIndex> = vr_children.clone();
+      while let Some(node) = stack.pop() {
+        if let Some(SyncNode::Asset(key)) = self.sync_graph.node_weight(node).copied()
+          && !self.bundle_roots.contains(&key)
+        {
+          multi_root_assets.push(key);
+        }
+        if let Some(children) = dom_children.get(&node) {
+          stack.extend(children);
+        }
+      }
+
+      // For each multi-root asset, reverse-walk the sync graph to find which bundle
+      // roots can reach it.
+      for asset_key in multi_root_assets {
+        let Some(&asset_idx) = self.asset_to_sync_node.get(&asset_key) else {
+          continue;
+        };
+
+        let mut reaching_roots: HashSet<AssetKey> = HashSet::new();
+        let mut visited: HashSet<NodeIndex> = HashSet::new();
+        let mut rev_stack: Vec<NodeIndex> = vec![asset_idx];
+
+        while let Some(n) = rev_stack.pop() {
+          if !visited.insert(n) {
+            continue;
+          }
+          if let Some(SyncNode::Asset(k)) = self.sync_graph.node_weight(n).copied()
+            && self.bundle_roots.contains(&k)
+          {
+            reaching_roots.insert(k);
+            continue; // Don't walk past bundle roots.
+          }
+          // Walk predecessors (incoming edges in sync graph).
+          for pred in self.sync_graph.neighbors_directed(n, Direction::Incoming) {
+            // Skip virtual root.
+            if pred == virtual_root {
+              continue;
+            }
+            rev_stack.push(pred);
+          }
+        }
+
+        asset_roots.insert(asset_key, reaching_roots);
+      }
+    }
+
     debug!(
-      roots = reachability.len(),
-      "ideal graph: computed reachability for roots"
+      assets_with_reachability = asset_roots.len(),
+      "ideal graph: computed dominator-based reachability"
     );
-    Ok(reachability)
+    Ok(asset_roots)
+  }
+
+  // ----------------------------
+  // Phase 7: Single-root asset placement
+  // ----------------------------
+
+  /// Place assets that are reachable from exactly one bundle root into that root's bundle.
+  ///
+  /// This covers:
+  /// - Assets dominated by a single non-entry root (dominator subtree).
+  /// - Assets reachable from a single entry root only.
+  /// - Assets reachable from multiple roots but where all are entry roots (placed in first entry).
+  ///
+  /// Multi-root assets (reachable from >1 non-entry roots) are left unplaced for Phase 8.
+  #[instrument(level = "debug", skip_all)]
+  fn place_single_root_assets(
+    &mut self,
+    reachability: &HashMap<AssetKey, HashSet<AssetKey>>,
+    ideal: &mut IdealGraph,
+  ) -> anyhow::Result<()> {
+    for (&asset, roots) in reachability {
+      // Bundle roots are already placed.
+      if self.bundle_roots.contains(&asset) {
+        continue;
+      }
+
+      let entry_roots: Vec<AssetKey> = roots
+        .iter()
+        .copied()
+        .filter(|r| self.entry_roots.contains(r))
+        .collect();
+
+      let non_entry_roots: Vec<AssetKey> = roots
+        .iter()
+        .copied()
+        .filter(|r| !self.entry_roots.contains(r))
+        .collect();
+
+      // If the asset is reachable from any entry root, place it in the entry bundle now.
+      // Entry bundles are "always loaded", so placing here ensures availability propagation
+      // in Phase 8a correctly suppresses redundant shared bundle extraction.
+      let (target_root, reason) = if !entry_roots.is_empty() {
+        let entry_root = entry_roots.iter().copied().min().unwrap();
+        (
+          entry_root,
+          super::types::AssetAssignmentReason::SingleEligibleRoot,
+        )
+      } else if non_entry_roots.len() > 1 {
+        // Multi-root asset with no entry roots -> deferred to Phase 8.
+        continue;
+      } else if non_entry_roots.len() == 1 {
+        // Single non-entry root -> place directly.
+        (
+          non_entry_roots[0],
+          super::types::AssetAssignmentReason::DominatorSubtree,
+        )
+      } else {
+        // No roots at all (shouldn't happen).
+        continue;
+      };
+
+      let bundle_id = IdealBundleId(self.assets.id_for(target_root).to_string());
+      let bundle = ideal
+        .bundles
+        .get_mut(&bundle_id)
+        .context("bundle missing for single-root placement")?;
+      let asset_id_str = self.assets.id_for(asset).to_string();
+      bundle.assets.insert(asset_id_str.clone());
+      ideal.asset_to_bundle.insert(asset_id_str, bundle_id);
+
+      self.decision(
+        "placement",
+        super::types::DecisionKind::AssetAssignedToBundle {
+          asset,
+          bundle_root: target_root,
+          reason,
+        },
+      );
+    }
+
+    debug!(
+      placed = ideal.asset_to_bundle.len(),
+      "ideal graph: placed single-root assets"
+    );
+    Ok(())
   }
 
   // ----------------------------
   // Phase 8: Shared bundle creation
   // ----------------------------
 
+  /// Extract shared bundles for multi-root assets (reachable from >1 non-entry roots).
+  ///
+  /// After availability is computed over placed single-root assets (Phase 8a),
+  /// we filter multi-root assets by availability and either:
+  /// - Place into a single eligible root (if availability reduces to 1).
+  /// - Extract into a shared bundle.
   #[instrument(level = "debug", skip_all)]
   fn create_shared_bundles(
     &mut self,
-    _asset_graph: &AssetGraph,
     reachability: &HashMap<AssetKey, HashSet<AssetKey>>,
     ideal: &mut IdealGraph,
   ) -> anyhow::Result<()> {
-    // Initial conservative implementation:
-    // - For each asset, compute roots that reach it.
-    // - Filter roots where the asset is already available via availability intersection.
-    // - If >1 roots remain, create one shared bundle for that asset set and move assets.
-    //
-    // This will be refined to match the JS algorithm more closely.
-
-    // 1) Invert reachability: asset -> roots.
-    let mut roots_by_asset: HashMap<AssetKey, Vec<AssetKey>> = HashMap::new();
-    for (root, reachable) in reachability {
-      for &asset in reachable {
-        roots_by_asset.entry(asset).or_default().push(*root);
-      }
-    }
-
-    // 2) Filter by availability: only keep roots where asset is NOT already available.
-    // Note: availability currently stored per bundle as `ancestor_assets` (strings). Convert to keys.
     let mut eligible_roots_by_asset: HashMap<AssetKey, Vec<AssetKey>> = HashMap::new();
 
-    for (asset, roots) in roots_by_asset {
-      // Never move bundle root assets into shared bundles.
+    for (&asset, roots) in reachability {
       if self.bundle_roots.contains(&asset) {
         continue;
       }
 
+      // Only process multi-root assets (those skipped in Phase 7).
+      let non_entry_roots: Vec<AssetKey> = roots
+        .iter()
+        .copied()
+        .filter(|r| !self.entry_roots.contains(r))
+        .collect();
+
+      if non_entry_roots.len() <= 1 {
+        continue; // Already placed in Phase 7.
+      }
+
       let asset_id = self.assets.id_for(asset);
 
+      // Filter by availability: only keep roots where asset is NOT already available.
       let mut eligible: Vec<AssetKey> = Vec::new();
-      for root in roots {
-        // Do not consider entry roots for shared extraction.
-        // Entry bundles are "always-on" and act as the baseline; extracting from them tends
-        // to create redundant shared bundles.
-        if self.entry_roots.contains(&root) {
-          continue;
-        }
-
+      for &root in &non_entry_roots {
         let root_id = self.assets.id_for(root);
-        let bundle_id = super::types::IdealBundleId(root_id.to_string());
+        let bundle_id = IdealBundleId(root_id.to_string());
         let Some(bundle) = ideal.bundles.get(&bundle_id) else {
           continue;
         };
 
-        // If already available when this bundle loads (from ancestors), skip.
         if bundle.ancestor_assets.contains(asset_id) {
           continue;
         }
@@ -1043,7 +1039,28 @@ impl IdealGraphBuilder {
         eligible.sort();
         eligible.dedup();
         eligible_roots_by_asset.insert(asset, eligible);
+      } else if eligible.len() == 1 {
+        // Availability reduced to single root -> place directly.
+        let root = eligible[0];
+        let bundle_id = IdealBundleId(self.assets.id_for(root).to_string());
+        let bundle = ideal
+          .bundles
+          .get_mut(&bundle_id)
+          .context("bundle missing for single-eligible placement")?;
+        let asset_id_str = self.assets.id_for(asset).to_string();
+        bundle.assets.insert(asset_id_str.clone());
+        ideal.asset_to_bundle.insert(asset_id_str, bundle_id);
+
+        self.decision(
+          "placement",
+          super::types::DecisionKind::AssetAssignedToBundle {
+            asset,
+            bundle_root: root,
+            reason: super::types::AssetAssignmentReason::SingleEligibleRoot,
+          },
+        );
       }
+      // else: available from all roots -> no placement needed.
     }
 
     if eligible_roots_by_asset.is_empty() {
@@ -1051,19 +1068,16 @@ impl IdealGraphBuilder {
       return Ok(());
     }
 
-    // 3) Group assets by eligible root set (so we create fewer shared bundles).
+    // Group assets by eligible root set (so we create fewer shared bundles).
     let mut assets_by_root_set: HashMap<Vec<AssetKey>, Vec<AssetKey>> = HashMap::new();
     for (asset, roots) in eligible_roots_by_asset {
       assets_by_root_set.entry(roots).or_default().push(asset);
     }
 
-    // 4) For each group, create a shared bundle and move assets into it.
     for (mut roots, assets) in assets_by_root_set {
       roots.sort();
       roots.dedup();
 
-      // Shared bundle id: deterministic synthetic key derived from roots.
-      // We allocate a new synthetic AssetKey by appending to `asset_ids` table.
       let shared_name = format!(
         "@@shared:{}",
         roots
@@ -1073,7 +1087,6 @@ impl IdealGraphBuilder {
           .join(",")
       );
 
-      // Extend interner (note: this changes key space only within this build).
       let shared_key = {
         let next = super::types::AssetKey(u32::try_from(self.assets.ids.len()).unwrap());
         self.assets.by_id.insert(shared_name.clone(), next);
@@ -1102,14 +1115,18 @@ impl IdealGraphBuilder {
         },
       );
 
-      // Move each asset into the shared bundle.
       for asset in assets {
         let asset_id = self.assets.id_for(asset).to_string();
 
-        // Move to shared.
-        let _prev = ideal.move_asset_to_bundle(&asset_id, &shared_bundle_id)?;
+        let bundle = ideal
+          .bundles
+          .get_mut(&shared_bundle_id)
+          .context("shared bundle missing")?;
+        bundle.assets.insert(asset_id.clone());
+        ideal
+          .asset_to_bundle
+          .insert(asset_id, shared_bundle_id.clone());
 
-        // Record decisions for moves (use first root as a representative 'from').
         if let Some(&from_root) = roots.first() {
           self.decision(
             "shared",
@@ -1122,15 +1139,7 @@ impl IdealGraphBuilder {
         }
       }
 
-      // Add edges to ensure the shared bundle is loaded before any bundle roots that require it.
-      //
-      // Important: we do NOT retarget/remove the existing edges to the roots (e.g. Lazy edges from
-      // an entry bundle to an async bundle root). Those edges encode load ordering and must remain.
-      // The shared bundle is loaded as a sibling within the async bundle groups, not independently
-      // from the entry. The sync edges from each root to the shared bundle (added below) are
-      // sufficient to express the dependency.
-
-      // Ensure each source root itself depends on the shared bundle (Sync).
+      // Sync edges from each source root to the shared bundle.
       for root in roots {
         let from_id = IdealBundleId(self.assets.id_for(root).to_string());
         ideal.add_bundle_edge(from_id, shared_bundle_id.clone(), IdealEdgeType::Sync);
