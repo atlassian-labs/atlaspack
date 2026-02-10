@@ -294,8 +294,12 @@ export class AtlaspackWorker {
       cacheBailouts.push(`Env access: ${variable}`);
     }
 
-    for (let {method, path} of sideEffects.fsUsage) {
-      cacheBailouts.push(`FS usage: ${method}(${path})`);
+    for (let {method, path, stack} of sideEffects.fsUsage) {
+      if (stack && path?.endsWith('package.json')) {
+        cacheBailouts.push(`FS usage: ${method}(${path})\n${stack}`);
+      } else {
+        cacheBailouts.push(`FS usage: ${method}(${path})`);
+      }
     }
 
     assert(

@@ -44,16 +44,16 @@ describe.v3('Native cache', function () {
     });
 
     let buildOne = await instance.run();
-    assert.equal(buildOne.nativeCacheStats.hits, 0);
-    assert.equal(buildOne.nativeCacheStats.misses, 2);
+    assert.equal(buildOne.nativeCacheStats.transformerPipelines?.hits, 0);
+    assert.equal(buildOne.nativeCacheStats.transformerPipelines?.misses, 2);
 
     let output = await run(buildOne.bundleGraph);
     assert.equal(output.default, 'should not fail');
 
     let buildTwo = await instance.run();
     // Two hits: one for index.js, one for the esmodule-helpers.js
-    assert.equal(buildTwo.nativeCacheStats.hits, 2);
-    assert.equal(buildTwo.nativeCacheStats.misses, 0);
+    assert.equal(buildTwo.nativeCacheStats.transformerPipelines?.hits, 2);
+    assert.equal(buildTwo.nativeCacheStats.transformerPipelines?.misses, 0);
 
     output = await run(buildTwo.bundleGraph);
     assert.equal(output.default, 'should not fail');
@@ -103,7 +103,10 @@ describe.v3('Native cache', function () {
     });
 
     let buildOne = await instance.run();
-    assert.equal(buildOne.nativeCacheStats.uncacheables, 2);
+    assert.equal(
+      buildOne.nativeCacheStats.transformerPipelines?.uncacheables,
+      2,
+    );
 
     let output = await run(buildOne.bundleGraph);
     assert.equal(output.default, 'should not cache');
@@ -153,7 +156,19 @@ describe.v3('Native cache', function () {
     });
 
     let buildOne = await instance.run();
-    assert.equal(buildOne.nativeCacheStats.bailouts, 2);
+    assert.equal(buildOne.nativeCacheStats.transformerPipelines?.bailouts, 2);
+
+    // Verify bailouts are tracked by transformer name
+    const bailoutsByTransformer =
+      buildOne.nativeCacheStats.transformerPipelines?.bailoutsByTransformer;
+    assert.ok(bailoutsByTransformer, 'bailoutsByTransformer should be defined');
+    const transformerBailouts =
+      bailoutsByTransformer['./transformer-plugin-2.ts'];
+    assert.equal(
+      transformerBailouts,
+      2,
+      'transformer-plugin-2.ts should have 2 bailouts',
+    );
 
     let output = await run(buildOne.bundleGraph);
     assert.equal(output.default, 'should not true');
@@ -206,7 +221,19 @@ describe.v3('Native cache', function () {
     });
 
     let buildOne = await instance.run();
-    assert.equal(buildOne.nativeCacheStats.bailouts, 2);
+    assert.equal(buildOne.nativeCacheStats.transformerPipelines?.bailouts, 2);
+
+    // Verify bailouts are tracked by transformer name
+    const bailoutsByTransformer =
+      buildOne.nativeCacheStats.transformerPipelines?.bailoutsByTransformer;
+    assert.ok(bailoutsByTransformer, 'bailoutsByTransformer should be defined');
+    const transformerBailouts =
+      bailoutsByTransformer['./transformer-plugin-3.ts'];
+    assert.equal(
+      transformerBailouts,
+      2,
+      'transformer-plugin-3.ts should have 2 bailouts',
+    );
 
     let output = await run(buildOne.bundleGraph);
     assert.equal(output.default, 'should not cache');
@@ -256,7 +283,7 @@ describe.v3('Native cache', function () {
     });
 
     let buildOne = await instance.run();
-    assert.equal(buildOne.nativeCacheStats.misses, 2);
+    assert.equal(buildOne.nativeCacheStats.transformerPipelines?.misses, 2);
 
     let output = await run(buildOne.bundleGraph);
     assert.equal(output.default, 'should not true');
@@ -311,14 +338,20 @@ describe.v3('Native cache', function () {
     let buildOne = await instance.run();
 
     // Transformer explicitly disabled caching via disableCache: true
-    assert.equal(buildOne.nativeCacheStats.uncacheables, 2);
+    assert.equal(
+      buildOne.nativeCacheStats.transformerPipelines?.uncacheables,
+      2,
+    );
 
     let output = await run(buildOne.bundleGraph);
     assert.equal(output.default, 'should not cache');
 
     // Second build should also be uncacheable (no cache hits)
     let buildTwo = await instance.run();
-    assert.equal(buildTwo.nativeCacheStats.uncacheables, 2);
-    assert.equal(buildTwo.nativeCacheStats.hits, 0);
+    assert.equal(
+      buildTwo.nativeCacheStats.transformerPipelines?.uncacheables,
+      2,
+    );
+    assert.equal(buildTwo.nativeCacheStats.transformerPipelines?.hits, 0);
   });
 });

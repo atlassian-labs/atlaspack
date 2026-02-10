@@ -34,6 +34,8 @@ pub struct RunPipelineOutput {
   pub pipeline_result: PipelineResult,
   pub project_root: PathBuf,
   cache_bailout: bool,
+  /// Names of transformers that caused bailouts in this pipeline.
+  pub bailout_transformers: Vec<String>,
 }
 
 #[tracing::instrument(level = "trace", skip_all)]
@@ -53,12 +55,18 @@ pub async fn run_pipeline(input: RunPipelineInput) -> anyhow::Result<RunPipeline
   let original_asset_type = current_asset.file_type.clone();
 
   let mut cache_bailout = false;
+  let mut bailout_transformers = Vec::new();
 
   for transformer in pipeline.transformers() {
     let transform_result = transformer.transform(current_asset).await?;
 
     if transform_result.cache_bailout {
       cache_bailout = true;
+    }
+
+    // Collect transformer names that caused bailouts
+    if let Some(transformer_name) = transform_result.bailout_transformer {
+      bailout_transformers.push(transformer_name);
     }
 
     current_asset = transform_result.asset;
@@ -88,6 +96,7 @@ pub async fn run_pipeline(input: RunPipelineInput) -> anyhow::Result<RunPipeline
           pipeline_result: PipelineResult::TypeChange(current_asset, dependencies),
           project_root: project_root.clone(),
           cache_bailout,
+          bailout_transformers,
         });
       }
     }
@@ -99,6 +108,7 @@ pub async fn run_pipeline(input: RunPipelineInput) -> anyhow::Result<RunPipeline
     pipeline_result: PipelineResult::Complete(current_asset, dependencies),
     project_root: project_root.clone(),
     cache_bailout,
+    bailout_transformers,
   })
 }
 
@@ -335,6 +345,7 @@ impl<'de> Deserialize<'de> for RunPipelineOutput {
           pipeline_result,
           project_root,
           cache_bailout: false, // Default value since it's not serialized
+          bailout_transformers: Vec::new(), // Default value since it's not serialized
         })
       }
     }
