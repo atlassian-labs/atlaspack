@@ -130,6 +130,8 @@ pub(crate) fn convert_result(
             .map(|sym| sym.local.clone())
             .unwrap_or_else(|| format!("${}$re_export${}", asset.id, symbol.local));
 
+          let is_weak = existing.map(|e| e.is_weak).unwrap_or(true);
+
           let dependency_symbol = Symbol {
             exported: symbol.imported.as_ref().into(),
             local: re_export_fake_local_key.clone(),
@@ -138,7 +140,7 @@ pub(crate) fn convert_result(
               asset_file_path.clone(),
               &symbol.loc,
             )),
-            is_weak: existing.map(|e| e.is_weak).unwrap_or(true),
+            is_weak,
             ..Symbol::default()
           };
 
@@ -156,7 +158,7 @@ pub(crate) fn convert_result(
               asset_file_path.clone(),
               &symbol.loc,
             )),
-            is_weak: false,
+            is_weak,
             ..Symbol::default()
           });
         }

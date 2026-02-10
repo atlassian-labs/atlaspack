@@ -4,7 +4,7 @@ use serde::Serialize;
 use super::source::SourceLocation;
 
 /// A map of export names to the corresponding local variable names
-#[derive(Clone, PartialEq, Debug, Default, Deserialize, Hash, Serialize)]
+#[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Hash, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Symbol {
   /// The IMPORTED name. Most of the time this is the mangled symbol the transformer has replaced
@@ -26,6 +26,7 @@ pub struct Symbol {
   /// The star symbol is a special case for "all" exports and should be modeled by a separate ADT
   /// case in the future
   pub loc: Option<SourceLocation>,
+  /// If true, means that the symbol is not used by the parent asset itself and is merely reexported
   pub is_weak: bool,
   /// Only on ESM exports, this will be set to true
   pub is_esm_export: bool,

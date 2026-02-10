@@ -105,6 +105,8 @@ impl fmt::Display for DependencyKind {
   }
 }
 
+pub type DependencyId = String;
+
 #[allow(clippy::too_many_arguments)]
 pub fn create_dependency_id(
   source_asset_id: Option<&AssetId>,
@@ -116,7 +118,7 @@ pub fn create_dependency_id(
   bundle_behavior: &MaybeBundleBehavior,
   priority: &Priority,
   package_conditions: &ExportsCondition,
-) -> String {
+) -> DependencyId {
   let mut hasher = IdentifierHasher::new();
 
   source_asset_id.hash(&mut hasher);
@@ -150,7 +152,7 @@ pub struct Dependency {
   pub env: Arc<Environment>,
 
   #[builder(setter(skip))]
-  pub id: String,
+  pub id: DependencyId,
 
   /// The location within the source file where the dependency was found
   pub loc: Option<SourceLocation>,
@@ -343,7 +345,7 @@ impl DependencyBuilder {
 }
 
 impl Dependency {
-  pub fn id(&self) -> String {
+  pub fn id(&self) -> DependencyId {
     self.id.clone()
   }
 
