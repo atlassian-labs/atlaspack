@@ -159,7 +159,7 @@ impl DependencyCollector<'_> {
       } else {
         specifier
       };
-      return Expr::Call(self.create_require(specifier));
+      return Expr::Call(self.create_require(specifier, Some(span)));
     }
 
     // For library builds, we need to create something that can be statically analyzed by another bundler,
@@ -193,15 +193,16 @@ impl DependencyCollector<'_> {
     )
   }
 
-  fn create_require(&mut self, specifier: Atom) -> CallExpr {
-    let mut res = create_require(specifier, self.unresolved_mark);
+  fn create_require(&mut self, specifier: Atom, attribution_span: Option<Span>) -> CallExpr {
+    let mut res = create_require(specifier, self.unresolved_mark, attribution_span);
 
     // For scripts, we replace with __parcel__require__, which is later replaced
     // by a real atlaspackRequire of the resolved asset in the packager.
     if self.config.source_type == SourceType::Script {
+      let span = res.span;
       res.callee = Callee::Expr(Box::new(Expr::Ident(Ident::new_no_ctxt(
         "__parcel__require__".into(),
-        DUMMY_SP,
+        span,
       ))));
     }
     res
