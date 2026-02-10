@@ -951,16 +951,34 @@ mod tests {
       );
     }
 
-    // no asset appears in more than one bundle
+    // No asset appears in more than one non-entry bundle.
+    // Duplication across entry bundles is expected (each entry must be self-contained).
+    let entry_bundles: std::collections::HashSet<&str> = g
+      .bundles
+      .values()
+      .filter(|b| {
+        b.root_asset_id
+          .as_deref()
+          .map_or(false, |r| b.assets.contains(r))
+      })
+      .filter(|b| b.needs_stable_name || b.root_asset_id.is_some())
+      .map(|b| b.id.0.as_str())
+      .collect();
+
     let mut seen: std::collections::HashMap<&str, &str> = std::collections::HashMap::new();
     for (bundle_id, bundle) in &g.bundles {
       for asset in &bundle.assets {
         if let Some(prev) = seen.insert(asset, &bundle_id.0) {
-          panic!(
-            "asset appears in multiple bundles: {asset} in {prev} and {}\n{}",
-            bundle_id.0,
-            format_bundle_snapshot(g)
-          );
+          // Allow duplication if both bundles are entry bundles.
+          let both_entries =
+            entry_bundles.contains(prev) && entry_bundles.contains(bundle_id.0.as_str());
+          if !both_entries {
+            panic!(
+              "asset appears in multiple non-entry bundles: {asset} in {prev} and {}\n{}",
+              bundle_id.0,
+              format_bundle_snapshot(g)
+            );
+          }
         }
       }
     }
@@ -1231,6 +1249,30 @@ mod tests {
         "a.js"     => ["a.js", "x.js"],
         "b.js"     => ["b.js", "y.js"],
         "c.js"     => ["c.js"],
+      },
+    });
+  }
+
+  #[test]
+  fn multi_entry_shared_asset_is_duplicated_into_all_entries() {
+    // entry-a and entry-b both sync-import shared.js.
+    // Each entry must independently contain shared.js because either entry
+    // could be loaded on its own. This must be duplication, not a shared bundle.
+    let asset_graph = fixture_graph(
+      &["entry-a.js", "entry-b.js"],
+      &[
+        EdgeSpec::new("entry-a.js", "shared.js", Priority::Sync),
+        EdgeSpec::new("entry-b.js", "shared.js", Priority::Sync),
+      ],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    assert_graph!(g, {
+      bundles: {
+        "entry-a.js" => ["entry-a.js", "shared.js"],
+        "entry-b.js" => ["entry-b.js", "shared.js"],
       },
     });
   }

@@ -922,7 +922,7 @@ impl IdealGraphBuilder {
         continue;
       }
 
-      let entry_roots: Vec<AssetKey> = roots
+      let reaching_entries: Vec<AssetKey> = roots
         .iter()
         .copied()
         .filter(|r| self.entry_roots.contains(r))
@@ -934,46 +934,67 @@ impl IdealGraphBuilder {
         .filter(|r| !self.entry_roots.contains(r))
         .collect();
 
-      // If the asset is reachable from any entry root, place it in the entry bundle now.
-      // Entry bundles are "always loaded", so placing here ensures availability propagation
-      // in Phase 8a correctly suppresses redundant shared bundle extraction.
-      let (target_root, reason) = if !entry_roots.is_empty() {
-        let entry_root = entry_roots.iter().copied().min().unwrap();
-        (
-          entry_root,
-          super::types::AssetAssignmentReason::SingleEligibleRoot,
-        )
-      } else if non_entry_roots.len() > 1 {
+      let asset_id_str = self.assets.id_for(asset).to_string();
+
+      // Duplicate asset into ALL reaching entry bundles (matching JS algorithm).
+      // Each entry must independently contain every sync-reachable asset because
+      // entries can be loaded in isolation.
+      for &entry_root in &reaching_entries {
+        let bundle_id = IdealBundleId(self.assets.id_for(entry_root).to_string());
+        let bundle = ideal
+          .bundles
+          .get_mut(&bundle_id)
+          .context("entry bundle missing for duplication")?;
+        bundle.assets.insert(asset_id_str.clone());
+
+        self.decision(
+          "placement",
+          super::types::DecisionKind::AssetAssignedToBundle {
+            asset,
+            bundle_root: entry_root,
+            reason: super::types::AssetAssignmentReason::SingleEligibleRoot,
+          },
+        );
+      }
+
+      // Track canonical bundle assignment (smallest entry for determinism).
+      if !reaching_entries.is_empty() {
+        let canonical = reaching_entries.iter().copied().min().unwrap();
+        let bundle_id = IdealBundleId(self.assets.id_for(canonical).to_string());
+        ideal
+          .asset_to_bundle
+          .insert(asset_id_str.clone(), bundle_id);
+      }
+
+      // If already placed in entry bundles, non-entry roots will get it via
+      // availability propagation. No further action for this asset.
+      if !reaching_entries.is_empty() {
+        continue;
+      }
+
+      if non_entry_roots.len() > 1 {
         // Multi-root asset with no entry roots -> deferred to Phase 8.
         continue;
       } else if non_entry_roots.len() == 1 {
-        // Single non-entry root -> place directly.
-        (
-          non_entry_roots[0],
-          super::types::AssetAssignmentReason::DominatorSubtree,
-        )
-      } else {
-        // No roots at all (shouldn't happen).
-        continue;
-      };
+        // Single non-entry root, no entries -> place directly.
+        let root = non_entry_roots[0];
+        let bundle_id = IdealBundleId(self.assets.id_for(root).to_string());
+        let bundle = ideal
+          .bundles
+          .get_mut(&bundle_id)
+          .context("bundle missing for single-root placement")?;
+        bundle.assets.insert(asset_id_str.clone());
+        ideal.asset_to_bundle.insert(asset_id_str, bundle_id);
 
-      let bundle_id = IdealBundleId(self.assets.id_for(target_root).to_string());
-      let bundle = ideal
-        .bundles
-        .get_mut(&bundle_id)
-        .context("bundle missing for single-root placement")?;
-      let asset_id_str = self.assets.id_for(asset).to_string();
-      bundle.assets.insert(asset_id_str.clone());
-      ideal.asset_to_bundle.insert(asset_id_str, bundle_id);
-
-      self.decision(
-        "placement",
-        super::types::DecisionKind::AssetAssignedToBundle {
-          asset,
-          bundle_root: target_root,
-          reason,
-        },
-      );
+        self.decision(
+          "placement",
+          super::types::DecisionKind::AssetAssignedToBundle {
+            asset,
+            bundle_root: root,
+            reason: super::types::AssetAssignmentReason::DominatorSubtree,
+          },
+        );
+      }
     }
 
     debug!(
