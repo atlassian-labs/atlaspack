@@ -1293,7 +1293,8 @@ mod tests {
   #[test]
   fn isolated_dependency_prevents_shared_extraction() {
     // a -> (sync isolated) react, b -> (sync) react
-    // The isolated edge prevents reachability from a, so react stays in b only.
+    // The isolated edge creates a boundary for react, making it a named bundle.
+    // Without isolated, react would be in a shared bundle instead.
     let asset_graph = fixture_graph(
       &["entry.js"],
       &[
@@ -1307,12 +1308,20 @@ mod tests {
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
     let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
+    // react.js is a named bundle (boundary from isolated dep), NOT a shared bundle.
+    // The edges show react.js is only reachable from b.js, not from a.js.
     assert_graph!(g, {
       bundles: {
         "entry.js" => ["entry.js"],
         "a.js"     => ["a.js"],
         "b.js"     => ["b.js"],
         "react.js" => ["react.js"],
+      },
+      edges: {
+        "entry.js" lazy "a.js",
+        "entry.js" lazy "b.js",
+        "a.js" sync "react.js",
+        "b.js" sync "react.js",
       },
     });
   }
