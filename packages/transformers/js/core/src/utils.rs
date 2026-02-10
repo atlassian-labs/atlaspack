@@ -3,6 +3,7 @@ use std::cmp::Ordering;
 use atlassian_swc_compiled_css::TransformError;
 use serde::Deserialize;
 use serde::Serialize;
+use swc_core::common::BytePos;
 use swc_core::common::DUMMY_SP;
 use swc_core::common::Mark;
 use swc_core::common::SourceMap;
@@ -61,26 +62,43 @@ pub fn match_member_expr(expr: &ast::MemberExpr, idents: Vec<&str>, unresolved_m
   false
 }
 
+/// Span for synthesized code when no attribution is available. Codegen emits a
+/// dedicated source map entry (instead of reusing the next node's), avoiding
+/// the DUMMY_SP bug (GH swc-project/swc#6767).
+const SYNTHESIZED_SP: Span = Span {
+  lo: BytePos::SYNTHESIZED,
+  hi: BytePos::SYNTHESIZED,
+};
+
+/// When attribution_span is Some(s), the created CallExpr (and thus the emitted
+/// source mapping) uses s. When None, uses SYNTHESIZED_SP so synthetic code
+/// gets its own mapping instead of reusing the next node's (GH swc-project/swc#6767).
 pub fn create_require(
   specifier: swc_core::ecma::atoms::Atom,
   unresolved_mark: Mark,
+  attribution_span: Option<Span>,
 ) -> ast::CallExpr {
   let mut normalized_specifier = specifier;
   if normalized_specifier.starts_with("node:") {
     normalized_specifier = normalized_specifier.replace("node:", "").into();
   }
+  let span = attribution_span.unwrap_or(SYNTHESIZED_SP);
 
   ast::CallExpr {
     callee: ast::Callee::Expr(Box::new(ast::Expr::Ident(ast::Ident::new(
       "require".into(),
-      DUMMY_SP,
+      span,
       SyntaxContext::empty().apply_mark(unresolved_mark),
     )))),
     args: vec![ast::ExprOrSpread {
-      expr: Box::new(ast::Expr::Lit(ast::Lit::Str(normalized_specifier.into()))),
+      expr: Box::new(ast::Expr::Lit(ast::Lit::Str(ast::Str {
+        span,
+        value: normalized_specifier,
+        raw: None,
+      }))),
       spread: None,
     }],
-    span: DUMMY_SP,
+    span,
     ctxt: SyntaxContext::empty(),
     type_args: None,
   }
@@ -217,27 +235,30 @@ pub fn match_import_cond(node: &ast::Expr, ignore_mark: Mark) -> Option<(Atom, A
   }
 }
 
+/// When attribution_span is Some(s), the created VarDecl uses s so the emitted
+/// source mapping points to that location instead of reusing the next node's
+/// (SWC GH#6767).
 // `name` must not be an existing binding.
 pub fn create_global_decl_stmt(
   name: swc_core::ecma::atoms::Atom,
   init: ast::Expr,
   global_mark: Mark,
+  attribution_span: Option<Span>,
 ) -> (ast::Stmt, SyntaxContext) {
   // The correct value would actually be `DUMMY_SP.apply_mark(Mark::fresh(Mark::root()))`.
   // But this saves us from running the resolver again in some cases.
   let ctxt = SyntaxContext::empty().apply_mark(global_mark);
+  let span = attribution_span.unwrap_or(SYNTHESIZED_SP);
 
   (
     ast::Stmt::Decl(ast::Decl::Var(Box::new(ast::VarDecl {
       kind: ast::VarDeclKind::Var,
       declare: false,
-      span: DUMMY_SP,
+      span,
       ctxt,
       decls: vec![ast::VarDeclarator {
-        name: ast::Pat::Ident(ast::BindingIdent::from(ast::Ident::new(
-          name, DUMMY_SP, ctxt,
-        ))),
-        span: DUMMY_SP,
+        name: ast::Pat::Ident(ast::BindingIdent::from(ast::Ident::new(name, span, ctxt))),
+        span,
         definite: false,
         init: Some(Box::new(init)),
       }],
