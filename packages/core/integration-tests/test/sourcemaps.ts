@@ -207,6 +207,77 @@ describe('sourcemaps', function () {
     });
   });
 
+  it('Should produce correct sourcemap when bundle has HASH_REF replacement (fixSourceMapHashRefs)', async function () {
+    const dir = path.join(__dirname, 'sourcemap-hashref');
+    await overlayFS.mkdirp(dir);
+
+    await fsFixture(overlayFS, dir)`
+      image.svg:
+        <svg></svg>
+
+      index.ts:
+        import thing from './thing.ts';
+
+        console.log("imageRef:",thing()); // this is what we'll search for
+
+      thing.ts:
+        import image from './image.svg';
+        export default function() {
+          return "image:" + image;
+        }
+
+      package.json:
+        {
+          "name":"atlaspack-sourcemap-hashref-test",
+          "version":"1.0.0",
+          "private":true
+        }
+
+      .parcelrc:
+        {
+          "extends": "@atlaspack/config-default",
+          "transformers": {
+            "*.svg": ["@atlaspack/transformer-raw"]
+          }
+        }
+    `;
+
+    const b = await bundle(path.join(dir, 'index.ts'), {
+      featureFlags: {fixSourceMapHashRefs: true},
+      inputFS: overlayFS,
+      mode: 'production',
+    });
+
+    const filename = nullthrows(b.getBundles()[0].filePath);
+    const raw = await outputFS.readFile(filename, 'utf8');
+
+    const mapUrlData = await loadSourceMapUrl(outputFS, filename, raw);
+    if (!mapUrlData) {
+      throw new Error('Could not load map');
+    }
+    const map = mapUrlData.map;
+    const sourceMap = new SourceMap('/');
+    sourceMap.addVLQMap(map);
+    const input = await overlayFS.readFile(path.join(dir, 'index.ts'), 'utf8');
+
+    require('fs').writeFileSync('/tmp/index.js', raw, 'utf8');
+    require('fs').writeFileSync(
+      '/tmp/index.js.map',
+      JSON.stringify(mapUrlData.map, null, 2),
+      'utf8',
+    );
+
+    // With fixSourceMapHashRefs enabled, code after the image require (HASH_REF replacement) maps correctly.
+    // When the flag is disabled, bundles that contain hash ref replacements get incorrect source map columns.
+    checkSourceMapping({
+      map: sourceMap,
+      source: input,
+      generated: raw,
+      str: 'console.log("imageRef:"',
+      sourcePath: 'sourcemap-hashref/index.ts',
+    });
+  });
+
   it.v2(
     'Should create a basic browser sourcemap when serving',
     async function () {

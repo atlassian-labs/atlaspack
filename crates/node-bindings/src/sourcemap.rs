@@ -22,7 +22,26 @@ impl JsSourceMap {
   pub fn new(project_root: String, buffer: Option<Buffer>) -> Result<Self> {
     let project_root_path = Path::new(&project_root);
     let source_map = match buffer {
-      Some(buffer) => SourceMap::from_buffer(project_root_path, &buffer).map_err(to_napi_error)?,
+      Some(buffer) => {
+        if buffer.is_empty() {
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "SourceMap buffer is empty",
+          ));
+        }
+        // Cache stores map as JSON (from map.stringify()); rkyv binary starts with a different byte.
+        if buffer[0] == b'{' {
+          let json_str = std::str::from_utf8(&buffer).map_err(|e| {
+            napi::Error::new(
+              napi::Status::InvalidArg,
+              format!("SourceMap JSON is not valid UTF-8: {}", e),
+            )
+          })?;
+          SourceMap::from_json(project_root_path, json_str).map_err(to_napi_error)?
+        } else {
+          SourceMap::from_buffer(project_root_path, &buffer).map_err(to_napi_error)?
+        }
+      }
       None => SourceMap::new(project_root_path),
     };
     Ok(JsSourceMap { source_map })
