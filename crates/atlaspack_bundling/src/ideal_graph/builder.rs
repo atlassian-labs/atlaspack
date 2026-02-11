@@ -1093,6 +1093,10 @@ impl IdealGraphBuilder {
       let asset_id = self.assets.id_for(asset);
 
       // Filter by availability: only keep roots where asset is NOT already available.
+      // An asset is considered available from root R if:
+      // 1. It's in R's ancestor_assets (already in an ancestor bundle), OR
+      // 2. Another root in the reachable set is an ancestor of R (the asset will
+      //    be placed in that ancestor's bundle, making it available via bundle reuse).
       let mut eligible: Vec<AssetKey> = Vec::new();
       for &root in &splittable_roots {
         let root_id = self.assets.id_for(root);
@@ -1101,7 +1105,28 @@ impl IdealGraphBuilder {
           continue;
         };
 
+        // Check 1: standard availability.
         if bundle.ancestor_assets.contains(asset_id) {
+          continue;
+        }
+
+        // Check 2: bundle reuse / subgraph detection.
+        // If there's a bundle edge path from this root to another reachable root
+        // that dominates the asset, the asset will be in that other root's bundle.
+        // This root can load it via the edge rather than needing a shared bundle.
+        let available_via_reuse = splittable_roots.iter().any(|&other_root| {
+          if other_root == root {
+            return false;
+          }
+          let other_bundle_id = IdealBundleId(self.assets.id_for(other_root).to_string());
+          // Check if there's any bundle edge from this root to the other root.
+          ideal
+            .bundle_edges
+            .iter()
+            .any(|(from, to, _)| *from == bundle_id && *to == other_bundle_id)
+        });
+
+        if available_via_reuse {
           continue;
         }
 

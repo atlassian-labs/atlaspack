@@ -1411,6 +1411,81 @@ mod tests {
   }
 
   #[test]
+  fn reuse_bundle_when_async_root_is_subgraph_of_another() {
+    // entry -> lazy a -> sync x
+    // entry -> lazy b -> sync x
+    //          b -> lazy a
+    //
+    // x is reachable from both a and b. But b also lazy-loads a, so a's bundle
+    // (containing x) is available when b loads. No shared bundle should be created.
+    let asset_graph = fixture_graph(
+      &["entry.js"],
+      &[
+        EdgeSpec::new("entry.js", "a.js", Priority::Lazy),
+        EdgeSpec::new("entry.js", "b.js", Priority::Lazy),
+        EdgeSpec::new("a.js", "x.js", Priority::Sync),
+        EdgeSpec::new("b.js", "x.js", Priority::Sync),
+        EdgeSpec::new("b.js", "a.js", Priority::Lazy),
+      ],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js"],
+        "a.js"     => ["a.js", "x.js"],
+        "b.js"     => ["b.js"],
+      },
+      edges: {
+        "entry.js" lazy "a.js",
+        "entry.js" lazy "b.js",
+        "b.js" lazy "a.js",
+      },
+    });
+  }
+
+  #[test]
+  fn reuse_existing_bundle_instead_of_creating_shared() {
+    // entry -> lazy a, lazy b, lazy c
+    // a -> sync c, b -> sync c
+    //
+    // c.js is a bundle root (lazy from entry) AND sync-reachable from a and b.
+    // Instead of creating a shared bundle for c.js, we should reuse c.js's
+    // existing bundle -- a and b just need sync edges to it.
+    let asset_graph = fixture_graph(
+      &["entry.js"],
+      &[
+        EdgeSpec::new("entry.js", "a.js", Priority::Lazy),
+        EdgeSpec::new("entry.js", "b.js", Priority::Lazy),
+        EdgeSpec::new("entry.js", "c.js", Priority::Lazy),
+        EdgeSpec::new("a.js", "c.js", Priority::Sync),
+        EdgeSpec::new("b.js", "c.js", Priority::Sync),
+      ],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js"],
+        "a.js"     => ["a.js"],
+        "b.js"     => ["b.js"],
+        "c.js"     => ["c.js"],
+      },
+      edges: {
+        "entry.js" lazy "a.js",
+        "entry.js" lazy "b.js",
+        "entry.js" lazy "c.js",
+        "a.js" sync "c.js",
+        "b.js" sync "c.js",
+      },
+    });
+  }
+
+  #[test]
   fn shared_extraction_is_suppressed_when_asset_already_available() {
     // vendor is sync-imported by entry AND both async roots.
     // Since it's already in the entry bundle, no shared bundle is needed.
