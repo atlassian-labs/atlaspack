@@ -83,6 +83,9 @@ pub enum DecisionKind {
     from_bundle_root: AssetKey,
     shared_bundle_root: AssetKey,
   },
+  BundleInternalized {
+    bundle_root: AssetKey,
+  },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -238,6 +241,21 @@ impl IdealGraph {
 
   pub fn remove_bundle_edge(&mut self, from: &IdealBundleId, to: &IdealBundleId) {
     self.bundle_edges.retain(|(a, b, _)| a != from || b != to);
+  }
+
+  /// Remove a bundle entirely: delete the bundle, remove all edges to/from it,
+  /// and remove its assets from `asset_to_bundle`.
+  pub fn remove_bundle(&mut self, bundle_id: &IdealBundleId) {
+    if let Some(bundle) = self.bundles.remove(bundle_id) {
+      for asset_id in &bundle.assets {
+        if self.asset_to_bundle.get(asset_id) == Some(bundle_id) {
+          self.asset_to_bundle.remove(asset_id);
+        }
+      }
+    }
+    self
+      .bundle_edges
+      .retain(|(a, b, _)| a != bundle_id && b != bundle_id);
   }
 
   /// Retarget all bundle edges whose `to` is in `targets` to instead point at `new_to`.

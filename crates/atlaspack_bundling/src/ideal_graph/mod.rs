@@ -1350,6 +1350,67 @@ mod tests {
   }
 
   #[test]
+  fn internalize_async_bundle_when_root_already_available() {
+    // entry -> sync a -> lazy b
+    // entry -> sync b
+    //
+    // b.js is both sync-imported by entry and async-imported by a.
+    // Since b.js is already in the entry bundle (sync reachable), the async
+    // bundle for b.js is redundant and should be internalized (deleted).
+    let asset_graph = fixture_graph(
+      &["entry.js"],
+      &[
+        EdgeSpec::new("entry.js", "a.js", Priority::Sync),
+        EdgeSpec::new("a.js", "b.js", Priority::Lazy),
+        EdgeSpec::new("entry.js", "b.js", Priority::Sync),
+      ],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    // b.js should NOT exist as a separate bundle.
+    // It should be in the entry bundle since it's sync-reachable.
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js", "a.js", "b.js"],
+      },
+    });
+  }
+
+  #[test]
+  fn do_not_internalize_when_root_not_available_from_all_parents() {
+    // entry -> lazy a, lazy b
+    // a -> sync c
+    // b -> sync c
+    //
+    // c.js is an async boundary from both a and b, but it's NOT available
+    // from the entry bundle. The async bundle for c should NOT be internalized.
+    let asset_graph = fixture_graph(
+      &["entry.js"],
+      &[
+        EdgeSpec::new("entry.js", "a.js", Priority::Lazy),
+        EdgeSpec::new("entry.js", "b.js", Priority::Lazy),
+        EdgeSpec::new("a.js", "c.js", Priority::Sync),
+        EdgeSpec::new("b.js", "c.js", Priority::Sync),
+      ],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    // c.js should be in a shared bundle, not internalized.
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js"],
+        "a.js" => ["a.js"],
+        "b.js" => ["b.js"],
+        shared(c) => ["c.js"],
+      },
+    });
+  }
+
+  #[test]
   fn shared_extraction_is_suppressed_when_asset_already_available() {
     // vendor is sync-imported by entry AND both async roots.
     // Since it's already in the entry bundle, no shared bundle is needed.

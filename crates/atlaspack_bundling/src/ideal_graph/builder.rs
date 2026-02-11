@@ -164,6 +164,9 @@ impl IdealGraphBuilder {
     // Phase 9: availability propagation again after shared bundle insertion.
     self.compute_availability(&mut ideal)?;
 
+    // Phase 10: internalize async bundles whose root is already available from all parents.
+    self.internalize_async_bundles(asset_graph, &mut ideal)?;
+
     // Always attach debug info. Decision payloads are compact and avoid String cloning.
     ideal.debug = Some(super::types::IdealGraphDebug {
       decisions: std::mem::take(&mut self.decisions),
@@ -1230,8 +1233,208 @@ impl IdealGraphBuilder {
   }
 
   // ----------------------------
+  // Phase 10: Internalization
+  // ----------------------------
+
+  /// Internalize async bundles whose root asset is already available from all parent bundles.
+  ///
+  /// An async bundle is redundant if every parent bundle that references it already has the
+  /// bundle root asset available (either directly in the bundle or via ancestor availability).
+  /// In that case, the async bundle is deleted -- the parent will resolve the import internally.
+  ///
+  /// Matches the JS algorithm's "Step Internalize async bundles" behavior.
+  #[instrument(level = "debug", skip_all)]
+  fn internalize_async_bundles(
+    &mut self,
+    asset_graph: &AssetGraph,
+    ideal: &mut IdealGraph,
+  ) -> anyhow::Result<()> {
+    // Collect async bundle roots: non-entry bundle boundaries that became
+    // boundaries due to a lazy/async dependency (not just type change).
+    // We check the asset graph's incoming dependencies directly.
+    let async_roots: Vec<AssetKey> = self
+      .bundle_boundaries
+      .iter()
+      .copied()
+      .filter(|k| {
+        if self.entry_roots.contains(k) {
+          return false;
+        }
+        let asset_id = self.assets.id_for(*k);
+        // Check if any dependency targeting this asset is lazy (async).
+        asset_graph.get_dependencies().any(|dep| {
+          dep.priority == Priority::Lazy
+            && asset_graph
+              .get_node_id_by_content_key(&dep.id)
+              .map(|dep_node| {
+                asset_graph
+                  .get_outgoing_neighbors(dep_node)
+                  .iter()
+                  .any(|n| {
+                    asset_graph
+                      .get_asset(n)
+                      .map(|a| a.id == asset_id)
+                      .unwrap_or(false)
+                  })
+              })
+              .unwrap_or(false)
+        })
+      })
+      .collect();
+
+    let mut internalized: Vec<IdealBundleId> = Vec::new();
+
+    for root_key in async_roots {
+      let root_id = self.assets.id_for(root_key).to_string();
+      let bundle_id = IdealBundleId(root_id.clone());
+
+      let Some(bundle) = ideal.bundles.get(&bundle_id) else {
+        continue;
+      };
+
+      // Don't internalize isolated bundles.
+      if bundle.behavior == Some(BundleBehavior::Isolated)
+        || bundle.behavior == Some(BundleBehavior::InlineIsolated)
+      {
+        continue;
+      }
+
+      // Find all parent bundles (bundles with an edge TO this bundle).
+      let parent_bundle_ids: Vec<IdealBundleId> = ideal
+        .bundle_edges
+        .iter()
+        .filter(|(_, to, _)| *to == bundle_id)
+        .map(|(from, _, _)| from.clone())
+        .collect();
+
+      if parent_bundle_ids.is_empty() {
+        continue;
+      }
+
+      // Check if the bundle root asset is available from ALL parents.
+      // An asset is "available" from a parent if:
+      // 1. It's directly in the parent bundle's assets, OR
+      // 2. It's in the parent bundle's ancestor_assets, OR
+      // 3. The parent can sync-reach the bundle root (via sync graph walk).
+      let mut can_internalize = true;
+      for parent_id in &parent_bundle_ids {
+        let Some(parent_bundle) = ideal.bundles.get(parent_id) else {
+          can_internalize = false;
+          break;
+        };
+
+        let in_bundle = parent_bundle.assets.contains(&root_id);
+        let in_ancestors = parent_bundle.ancestor_assets.contains(&root_id);
+
+        let reachable_from_parent = if !in_bundle && !in_ancestors {
+          // Check if the parent bundle root can sync-reach this async root
+          // via the asset graph (the sync graph excludes boundary edges).
+          self.is_sync_reachable_in_asset_graph(asset_graph, &parent_id.0, &root_id)
+        } else {
+          true
+        };
+
+        if !reachable_from_parent {
+          can_internalize = false;
+          break;
+        }
+      }
+
+      if can_internalize {
+        internalized.push(bundle_id);
+        self.decision(
+          "internalization",
+          super::types::DecisionKind::BundleInternalized {
+            bundle_root: root_key,
+          },
+        );
+      }
+    }
+
+    // Remove internalized bundles and place their assets into parent bundles.
+    for bundle_id in &internalized {
+      // Collect the bundle's assets before removing it.
+      let bundle_assets: Vec<String> = ideal
+        .bundles
+        .get(bundle_id)
+        .map(|b| b.assets.iter().cloned().collect())
+        .unwrap_or_default();
+
+      // Find parent bundles (those with edges TO this bundle).
+      let parents: Vec<IdealBundleId> = ideal
+        .bundle_edges
+        .iter()
+        .filter(|(_, to, _)| to == bundle_id)
+        .map(|(from, _, _)| from.clone())
+        .collect();
+
+      // Add the internalized bundle's assets to each parent bundle.
+      for parent_id in &parents {
+        if let Some(parent_bundle) = ideal.bundles.get_mut(parent_id) {
+          for asset_id in &bundle_assets {
+            parent_bundle.assets.insert(asset_id.clone());
+          }
+        }
+      }
+
+      ideal.remove_bundle(bundle_id);
+    }
+
+    if !internalized.is_empty() {
+      debug!(
+        internalized = internalized.len(),
+        "ideal graph: internalized async bundles"
+      );
+    }
+
+    Ok(())
+  }
+
+  // ----------------------------
   // Helpers
   // ----------------------------
+
+  /// Check if `from_id` can sync-reach `to_id` in the asset graph.
+  /// Unlike the sync graph, this traversal crosses bundle boundaries.
+  fn is_sync_reachable_in_asset_graph(
+    &self,
+    asset_graph: &AssetGraph,
+    from_id: &str,
+    to_id: &str,
+  ) -> bool {
+    let Some(from_node) = asset_graph.get_node_id_by_content_key(from_id).copied() else {
+      return false;
+    };
+
+    let mut visited: HashSet<NodeId> = HashSet::new();
+    let mut stack = vec![from_node];
+
+    while let Some(node) = stack.pop() {
+      if !visited.insert(node) {
+        continue;
+      }
+
+      // Traverse asset -> dep -> asset edges, only through sync deps.
+      for dep_node in asset_graph.get_outgoing_neighbors(&node) {
+        let Some(dep) = asset_graph.get_dependency(&dep_node) else {
+          continue;
+        };
+        if dep.priority != Priority::Sync {
+          continue;
+        }
+        for target_node in asset_graph.get_outgoing_neighbors(&dep_node) {
+          let Some(target) = asset_graph.get_asset(&target_node) else {
+            continue;
+          };
+          if target.id == to_id {
+            return true;
+          }
+          stack.push(target_node);
+        }
+      }
+    }
+    false
+  }
 
   fn asset_node_ids(&self, asset_graph: &AssetGraph) -> Vec<NodeId> {
     // We don't have direct access to internal indices, so we resolve from content-key map.
