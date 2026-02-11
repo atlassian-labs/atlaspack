@@ -640,33 +640,113 @@ impl IdealGraphBuilder {
     ideal: &mut IdealGraph,
     order: Vec<NodeIndex>,
   ) -> anyhow::Result<()> {
-    for node in order {
+    // First pass: for each node in topological order, compute the availability
+    // that the parent itself offers (parent's own assets + parent's ancestor_assets).
+    // Then propagate to children, accounting for parallel sibling availability.
+    //
+    // This matches the JS algorithm: for each parent, iterate children in order.
+    // Parallel siblings accumulate availability -- later parallel siblings can
+    // see earlier ones' assets.
+
+    // We'll store computed availability per node, then assign at the end.
+    let mut node_availability: HashMap<NodeIndex, Option<HashSet<String>>> = HashMap::new();
+
+    for parent_node in &order {
+      let parent_id = g
+        .node_weight(*parent_node)
+        .cloned()
+        .context("parent node missing")?;
+
+      // What this parent makes available to its children.
+      let parent_available = ideal
+        .bundles
+        .get(&parent_id)
+        .map(|b| b.all_assets_available_from_here())
+        .unwrap_or_default();
+
+      // Collect children grouped by edge type, maintaining stable order.
+      let mut children: Vec<(NodeIndex, IdealEdgeType)> = Vec::new();
+      for child_node in g.neighbors_directed(*parent_node, Direction::Outgoing) {
+        if let Some(edge) = g.find_edge(*parent_node, child_node)
+          && let Some(edge_type) = g.edge_weight(edge)
+        {
+          children.push((child_node, *edge_type));
+        }
+      }
+
+      // Sort children deterministically for parallel ordering.
+      children.sort_by(|(a, _), (b, _)| {
+        let a_id = g.node_weight(*a).map(|id| id.0.as_str()).unwrap_or("");
+        let b_id = g.node_weight(*b).map(|id| id.0.as_str()).unwrap_or("");
+        a_id.cmp(b_id)
+      });
+
+      // Track parallel sibling availability (running union of earlier parallel siblings).
+      let mut parallel_availability: HashSet<String> = HashSet::new();
+
+      for (child_node, edge_type) in children {
+        let child_id = g
+          .node_weight(child_node)
+          .cloned()
+          .context("child node missing")?;
+
+        // Skip children with bundle behavior (isolated, etc).
+        let child_is_isolated = ideal
+          .bundles
+          .get(&child_id)
+          .map(|b| {
+            b.behavior == Some(BundleBehavior::Isolated)
+              || b.behavior == Some(BundleBehavior::InlineIsolated)
+          })
+          .unwrap_or(false);
+
+        if child_is_isolated {
+          // Isolated bundles get empty availability.
+          node_availability.insert(child_node, Some(HashSet::new()));
+          continue;
+        }
+
+        // Compute what this parent offers to this specific child.
+        let current_available = if edge_type == IdealEdgeType::Parallel {
+          // Parallel children get parent availability + earlier parallel siblings.
+          parent_available
+            .union(&parallel_availability)
+            .cloned()
+            .collect()
+        } else {
+          parent_available.clone()
+        };
+
+        // Intersect with any previously computed availability (from other parents).
+        let existing = node_availability.get(&child_node).cloned().flatten();
+        let merged = match existing {
+          None => current_available,
+          Some(prev) => prev.intersection(&current_available).cloned().collect(),
+        };
+        node_availability.insert(child_node, Some(merged));
+
+        // If this child is parallel, add its assets to parallel availability
+        // for subsequent parallel siblings.
+        if edge_type == IdealEdgeType::Parallel
+          && let Some(child_bundle) = ideal.bundles.get(&child_id)
+        {
+          parallel_availability.extend(child_bundle.assets.iter().cloned());
+        }
+      }
+    }
+
+    // Assign computed availability to bundles.
+    for node in &order {
       let bundle_id = g
-        .node_weight(node)
+        .node_weight(*node)
         .cloned()
         .context("bundle node missing")?;
 
-      let parents: Vec<IdealBundleId> = g
-        .neighbors_directed(node, Direction::Incoming)
-        .filter_map(|p| g.node_weight(p).cloned())
-        .collect();
-
-      let mut availability: Option<HashSet<String>> = None;
-
-      for parent in parents {
-        let parent_assets = ideal
-          .bundles
-          .get(&parent)
-          .map(|b| b.all_assets_available_from_here())
-          .unwrap_or_default();
-
-        availability = Some(match availability {
-          None => parent_assets,
-          Some(prev) => prev.intersection(&parent_assets).cloned().collect(),
-        });
-      }
-
-      let availability = availability.unwrap_or_default();
+      let availability = node_availability
+        .get(node)
+        .cloned()
+        .flatten()
+        .unwrap_or_default();
 
       let bundle = ideal
         .bundles
@@ -1127,6 +1207,30 @@ impl IdealGraphBuilder {
         });
 
         if available_via_reuse {
+          continue;
+        }
+
+        // Check 3: parallel sibling availability.
+        // If this root has a parallel sibling that also reaches the asset and
+        // comes before it in deterministic ordering, the asset will be placed
+        // in the earlier sibling's bundle and available via parallel loading.
+        let available_via_parallel = splittable_roots.iter().any(|&other_root| {
+          if other_root >= root {
+            // Only earlier siblings (deterministic order) provide availability.
+            return false;
+          }
+          let other_bundle_id = IdealBundleId(self.assets.id_for(other_root).to_string());
+          // Check if both roots share a common parent via parallel edges.
+          ideal.bundle_edges.iter().any(|(parent, to, ty)| {
+            *to == other_bundle_id
+              && *ty == IdealEdgeType::Parallel
+              && ideal.bundle_edges.iter().any(|(p2, t2, ty2)| {
+                p2 == parent && *t2 == bundle_id && *ty2 == IdealEdgeType::Parallel
+              })
+          })
+        });
+
+        if available_via_parallel {
           continue;
         }
 

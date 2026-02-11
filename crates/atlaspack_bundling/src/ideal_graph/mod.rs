@@ -1486,6 +1486,36 @@ mod tests {
   }
 
   #[test]
+  fn parallel_sibling_availability_prevents_shared_bundle() {
+    // entry -> parallel a -> sync shared
+    // entry -> parallel b -> sync shared
+    //
+    // a and b load in parallel. Since a is ordered before b (deterministic),
+    // b should see a's assets as available. shared.js should be in a's bundle
+    // and available to b via parallel sibling availability -- no shared bundle needed.
+    let asset_graph = fixture_graph(
+      &["entry.js"],
+      &[
+        EdgeSpec::new("entry.js", "a.js", Priority::Parallel),
+        EdgeSpec::new("entry.js", "b.js", Priority::Parallel),
+        EdgeSpec::new("a.js", "shared.js", Priority::Sync),
+        EdgeSpec::new("b.js", "shared.js", Priority::Sync),
+      ],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js"],
+        "a.js"     => ["a.js", "shared.js"],
+        "b.js"     => ["b.js"],
+      },
+    });
+  }
+
+  #[test]
   fn shared_extraction_is_suppressed_when_asset_already_available() {
     // vendor is sync-imported by entry AND both async roots.
     // Since it's already in the entry bundle, no shared bundle is needed.
