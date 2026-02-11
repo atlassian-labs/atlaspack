@@ -489,6 +489,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "atlaspack_core",
+ "fixedbitset",
  "petgraph",
  "pretty_assertions",
  "serde_json",

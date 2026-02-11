@@ -1,5 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
+use fixedbitset::FixedBitSet;
+
 #[derive(Debug, Default)]
 struct AssetKeyInterner {
   by_id: HashMap<String, super::types::AssetKey>,
@@ -27,6 +29,15 @@ impl AssetKeyInterner {
 
   fn id_for(&self, key: super::types::AssetKey) -> &str {
     &self.ids[key.0 as usize]
+  }
+
+  fn len(&self) -> usize {
+    self.ids.len()
+  }
+
+  /// Convert a FixedBitSet back to a HashSet<String>.
+  fn strings_from_bitset(&self, bs: &FixedBitSet) -> HashSet<String> {
+    bs.ones().map(|i| self.ids[i].clone()).collect()
   }
 }
 
@@ -634,22 +645,34 @@ impl IdealGraphBuilder {
     Ok(())
   }
 
+  /// Compute a FixedBitSet representing all assets available when a bundle loads
+  /// (its own assets + ancestor_assets).
+  fn bundle_available_bitset(&self, bundle: &IdealBundle) -> FixedBitSet {
+    let capacity = self.assets.len();
+    let mut bs = FixedBitSet::with_capacity(capacity);
+    for id in &bundle.assets {
+      if let Some(key) = self.assets.key_for(id) {
+        bs.insert(key.0 as usize);
+      }
+    }
+    for id in &bundle.ancestor_assets {
+      if let Some(key) = self.assets.key_for(id) {
+        bs.insert(key.0 as usize);
+      }
+    }
+    bs
+  }
+
   fn compute_availability_dag(
     &mut self,
     g: &StableDiGraph<IdealBundleId, IdealEdgeType>,
     ideal: &mut IdealGraph,
     order: Vec<NodeIndex>,
   ) -> anyhow::Result<()> {
-    // First pass: for each node in topological order, compute the availability
-    // that the parent itself offers (parent's own assets + parent's ancestor_assets).
-    // Then propagate to children, accounting for parallel sibling availability.
-    //
-    // This matches the JS algorithm: for each parent, iterate children in order.
-    // Parallel siblings accumulate availability -- later parallel siblings can
-    // see earlier ones' assets.
+    let capacity = self.assets.len();
 
-    // We'll store computed availability per node, then assign at the end.
-    let mut node_availability: HashMap<NodeIndex, Option<HashSet<String>>> = HashMap::new();
+    // Store computed availability per node as FixedBitSet.
+    let mut node_availability: HashMap<NodeIndex, Option<FixedBitSet>> = HashMap::new();
 
     for parent_node in &order {
       let parent_id = g
@@ -657,12 +680,12 @@ impl IdealGraphBuilder {
         .cloned()
         .context("parent node missing")?;
 
-      // What this parent makes available to its children.
+      // What this parent makes available to its children (bitset).
       let parent_available = ideal
         .bundles
         .get(&parent_id)
-        .map(|b| b.all_assets_available_from_here())
-        .unwrap_or_default();
+        .map(|b| self.bundle_available_bitset(b))
+        .unwrap_or_else(|| FixedBitSet::with_capacity(capacity));
 
       // Collect children grouped by edge type, maintaining stable order.
       let mut children: Vec<(NodeIndex, IdealEdgeType)> = Vec::new();
@@ -682,7 +705,7 @@ impl IdealGraphBuilder {
       });
 
       // Track parallel sibling availability (running union of earlier parallel siblings).
-      let mut parallel_availability: HashSet<String> = HashSet::new();
+      let mut parallel_availability = FixedBitSet::with_capacity(capacity);
 
       for (child_node, edge_type) in children {
         let child_id = g
@@ -701,36 +724,38 @@ impl IdealGraphBuilder {
           .unwrap_or(false);
 
         if child_is_isolated {
-          // Isolated bundles get empty availability.
-          node_availability.insert(child_node, Some(HashSet::new()));
+          node_availability.insert(child_node, Some(FixedBitSet::with_capacity(capacity)));
           continue;
         }
 
         // Compute what this parent offers to this specific child.
         let current_available = if edge_type == IdealEdgeType::Parallel {
-          // Parallel children get parent availability + earlier parallel siblings.
-          parent_available
-            .union(&parallel_availability)
-            .cloned()
-            .collect()
+          let mut combined = parent_available.clone();
+          combined.union_with(&parallel_availability);
+          combined
         } else {
           parent_available.clone()
         };
 
         // Intersect with any previously computed availability (from other parents).
-        let existing = node_availability.get(&child_node).cloned().flatten();
-        let merged = match existing {
+        let merged = match node_availability.remove(&child_node).flatten() {
           None => current_available,
-          Some(prev) => prev.intersection(&current_available).cloned().collect(),
+          Some(mut prev) => {
+            prev.intersect_with(&current_available);
+            prev
+          }
         };
         node_availability.insert(child_node, Some(merged));
 
-        // If this child is parallel, add its assets to parallel availability
-        // for subsequent parallel siblings.
+        // If this child is parallel, add its assets to parallel availability.
         if edge_type == IdealEdgeType::Parallel
           && let Some(child_bundle) = ideal.bundles.get(&child_id)
         {
-          parallel_availability.extend(child_bundle.assets.iter().cloned());
+          for id in &child_bundle.assets {
+            if let Some(key) = self.assets.key_for(id) {
+              parallel_availability.insert(key.0 as usize);
+            }
+          }
         }
       }
     }
@@ -744,8 +769,8 @@ impl IdealGraphBuilder {
 
       let availability = node_availability
         .get(node)
-        .cloned()
-        .flatten()
+        .and_then(|v| v.as_ref())
+        .map(|bs| self.assets.strings_from_bitset(bs))
         .unwrap_or_default();
 
       let bundle = ideal
@@ -816,8 +841,11 @@ impl IdealGraphBuilder {
       }
     };
 
-    // Compute an "available set" per SCC as we traverse.
-    let mut available_for_scc: Vec<HashSet<String>> = vec![HashSet::new(); sccs.len()];
+    let capacity = self.assets.len();
+
+    // Compute an "available set" per SCC as FixedBitSet.
+    let mut available_for_scc: Vec<FixedBitSet> =
+      vec![FixedBitSet::with_capacity(capacity); sccs.len()];
 
     for scc_node in scc_order {
       let scc_idx = *scc_graph
@@ -830,15 +858,19 @@ impl IdealGraphBuilder {
         .filter_map(|p| scc_graph.node_weight(p).copied())
         .collect();
 
-      let mut availability: Option<HashSet<String>> = None;
+      let mut availability: Option<FixedBitSet> = None;
       for p in parents {
-        let parent_assets = available_for_scc[p].clone();
+        let parent_bits = available_for_scc[p].clone();
         availability = Some(match availability {
-          None => parent_assets,
-          Some(prev) => prev.intersection(&parent_assets).cloned().collect(),
+          None => parent_bits,
+          Some(mut prev) => {
+            prev.intersect_with(&parent_bits);
+            prev
+          }
         });
       }
-      let availability = availability.unwrap_or_default();
+      let availability_bs = availability.unwrap_or_else(|| FixedBitSet::with_capacity(capacity));
+      let availability_strings = self.assets.strings_from_bitset(&availability_bs);
 
       // Assign availability to each bundle in the SCC.
       for &bundle_node in &sccs[scc_idx] {
@@ -857,7 +889,7 @@ impl IdealGraphBuilder {
         {
           bundle.ancestor_assets = HashSet::new();
         } else {
-          bundle.ancestor_assets = availability.clone();
+          bundle.ancestor_assets = availability_strings.clone();
         }
 
         self.decision(
@@ -873,15 +905,15 @@ impl IdealGraphBuilder {
       }
 
       // After we assign ancestor assets for SCC, compute what becomes available to children SCCs.
-      // We conservatively use the union of `all_assets_available_from_here()` across bundles in SCC.
-      let mut scc_available: HashSet<String> = HashSet::new();
+      // We conservatively use the union of all assets available from bundles in this SCC.
+      let mut scc_available = FixedBitSet::with_capacity(capacity);
       for &bundle_node in &sccs[scc_idx] {
         let bundle_id = g
           .node_weight(bundle_node)
           .cloned()
           .context("bundle node missing")?;
         if let Some(b) = ideal.bundles.get(&bundle_id) {
-          scc_available.extend(b.all_assets_available_from_here());
+          scc_available.union_with(&self.bundle_available_bitset(b));
         }
       }
 

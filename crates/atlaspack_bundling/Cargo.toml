@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 anyhow = { workspace = true }
 atlaspack_core = { path = "../atlaspack_core" }
+fixedbitset = "0.5"
 serde_json = { workspace = true }
 petgraph = { workspace = true }
 tracing = { workspace = true }
