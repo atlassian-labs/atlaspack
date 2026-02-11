@@ -80,6 +80,9 @@ pub struct IdealGraphBuilder {
 
   // Bundle roots are either entry assets or boundary assets.
   bundle_roots: HashSet<super::types::AssetKey>,
+
+  // Asset key -> file type, populated during Phase 1.
+  asset_file_types: HashMap<super::types::AssetKey, atlaspack_core::types::FileType>,
 }
 
 impl IdealGraphBuilder {
@@ -102,6 +105,11 @@ impl IdealGraphBuilder {
     asset_graph: &AssetGraph,
   ) -> anyhow::Result<(IdealGraph, IdealGraphBuildStats)> {
     self.assets = AssetKeyInterner::from_asset_graph(asset_graph);
+    for asset in asset_graph.get_assets() {
+      if let Some(key) = self.assets.key_for(&asset.id) {
+        self.asset_file_types.insert(key, asset.file_type.clone());
+      }
+    }
     debug!(
       interned_assets = self.assets.ids.len(),
       "ideal graph: interned asset ids"
@@ -1117,11 +1125,17 @@ impl IdealGraphBuilder {
 
       let shared_bundle_id = super::types::IdealBundleId(shared_name.clone());
 
+      // Derive bundle type from the first asset in the group.
+      let bundle_type = assets
+        .first()
+        .and_then(|a| self.asset_file_types.get(a).cloned())
+        .unwrap_or(atlaspack_core::types::FileType::Js);
+
       ideal.create_bundle(super::types::IdealBundle {
         id: shared_bundle_id.clone(),
         root_asset_id: None,
         assets: HashSet::new(),
-        bundle_type: atlaspack_core::types::FileType::Js,
+        bundle_type,
         needs_stable_name: false,
         behavior: None,
         ancestor_assets: HashSet::new(),
