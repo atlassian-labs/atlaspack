@@ -1,8 +1,6 @@
 import {Resolver} from '@atlaspack/plugin';
 import NodeResolver from '@atlaspack/node-resolver-core';
-import {basename, dirname, extname, isAbsolute, join} from 'path';
-import {FileSystem} from '@atlaspack/types-internal';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
+import {isAbsolute, join} from 'path';
 
 interface TesseractResolverConfig {
   /** Modules to replace with empty stubs during resolution. */
@@ -16,9 +14,6 @@ interface TesseractResolverConfig {
 
   /** Node.js built-in aliases for Tesseract-specific implementations. */
   builtinAliases?: Record<string, string>;
-
-  /** Server file suffixes checked in priority order. */
-  serverSuffixes?: Array<string>;
 
   /** Enable React DOM Server specific behavior. */
   handleReactDomServer?: boolean;
@@ -51,46 +46,6 @@ const getIgnoreModules = (
   return ignoreModules;
 };
 
-async function checkForServerFile(
-  inputFS: FileSystem,
-  resolvedPath: string,
-  suffix?: string,
-) {
-  const dir = dirname(resolvedPath);
-  const ext = extname(resolvedPath);
-  const base = basename(resolvedPath, ext);
-
-  const serverPath = suffix
-    ? join(dir, `${base}.server-${suffix}${ext}`)
-    : join(dir, `${base}.server${ext}`);
-  const isExist = await inputFS.exists(serverPath);
-  return {
-    isExist,
-    serverPath,
-  };
-}
-
-async function checkForServerFileWithOptionalSuffixes(
-  inputFS: FileSystem,
-  resolvedPath: string,
-  suffixes: Array<string>,
-) {
-  if (suffixes) {
-    // if there are multiple suffixes, the left-most takes precedence
-    for (const suffix of suffixes) {
-      const withSuffix = await checkForServerFile(
-        inputFS,
-        resolvedPath,
-        suffix,
-      );
-      if (withSuffix.isExist) {
-        return withSuffix;
-      }
-    }
-  }
-  return checkForServerFile(inputFS, resolvedPath);
-}
-
 export default new Resolver({
   async loadConfig({config, options, logger}) {
     // Load configuration from package.json
@@ -103,7 +58,6 @@ export default new Resolver({
       ? new Map(Object.entries(userConfig.preResolved))
       : new Map<string, string>();
     const builtinAliases = userConfig.builtinAliases || {};
-    const serverSuffixes = userConfig.serverSuffixes || [];
     const ignoreModules = userConfig.ignoreModules || [];
     const browserResolvedNodeBuiltins =
       userConfig.browserResolvedNodeBuiltins || [];
@@ -132,7 +86,6 @@ export default new Resolver({
     return {
       nodeResolver,
       browserResolver,
-      serverSuffixes,
       preResolved,
       builtinAliases,
       ignoreModules,
@@ -149,7 +102,6 @@ export default new Resolver({
       browserResolvedNodeBuiltins,
       preResolved,
       builtinAliases,
-      serverSuffixes,
       handleReactDomServer,
       unsupportedExtensions,
     } = config;
@@ -263,40 +215,6 @@ export default new Resolver({
           packageConditions,
         });
 
-    if (getFeatureFlag('skipServerFileCheck')) {
-      return promise;
-    }
-    return promise
-      .then(async (result) => {
-        const resolvedPath = result?.filePath;
-
-        if (!resolvedPath) {
-          return result;
-        }
-
-        const {isExist, serverPath} =
-          await checkForServerFileWithOptionalSuffixes(
-            options.inputFS,
-            resolvedPath,
-            serverSuffixes,
-          );
-
-        if (isExist) {
-          const newResult = {
-            sideEffects: result.sideEffects,
-            filePath: serverPath,
-            meta: {
-              isServerFile: true,
-              resolveTo: serverPath,
-            },
-          };
-
-          return newResult;
-        }
-        return result;
-      })
-      .catch((e) => {
-        throw e;
-      });
+    return promise;
   },
 }) as Resolver<unknown>;
