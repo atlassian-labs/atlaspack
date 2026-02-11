@@ -872,7 +872,30 @@ mod tests {
     atlaspack_core::types::FileType::from_extension(ext)
   }
 
+  #[derive(Clone, Debug)]
+  struct AssetOptions {
+    is_bundle_splittable: bool,
+  }
+
+  fn fixture_graph_with_options(
+    entries: &[&str],
+    edges: &[EdgeSpec<'_>],
+    asset_options: &[(&str, AssetOptions)],
+  ) -> AssetGraph {
+    let options_map: std::collections::HashMap<&str, &AssetOptions> =
+      asset_options.iter().map(|(k, v)| (*k, v)).collect();
+    fixture_graph_inner(entries, edges, &options_map)
+  }
+
   fn fixture_graph(entries: &[&str], edges: &[EdgeSpec<'_>]) -> AssetGraph {
+    fixture_graph_inner(entries, edges, &std::collections::HashMap::new())
+  }
+
+  fn fixture_graph_inner(
+    entries: &[&str],
+    edges: &[EdgeSpec<'_>],
+    asset_options: &std::collections::HashMap<&str, &AssetOptions>,
+  ) -> AssetGraph {
     let mut asset_graph = AssetGraph::new();
 
     let mut asset_nodes: std::collections::HashMap<String, usize> =
@@ -884,14 +907,18 @@ mod tests {
       let entry_dep = Dependency::entry((*entry).to_string(), target);
       let entry_dep_node = asset_graph.add_entry_dependency(entry_dep, false);
 
-      let entry_asset = Arc::new(Asset {
+      let mut asset = Asset {
         id: (*entry).into(),
         file_path: (*entry).into(),
         file_type: infer_file_type(entry),
         env: Arc::new(Environment::default()),
+        is_bundle_splittable: true,
         ..Asset::default()
-      });
-      let entry_asset_node = asset_graph.add_asset(entry_asset, false);
+      };
+      if let Some(opts) = asset_options.get(entry) {
+        asset.is_bundle_splittable = opts.is_bundle_splittable;
+      }
+      let entry_asset_node = asset_graph.add_asset(Arc::new(asset), false);
       asset_graph.add_edge(&entry_dep_node, &entry_asset_node);
 
       asset_nodes.insert((*entry).to_string(), entry_asset_node);
@@ -904,14 +931,18 @@ mod tests {
           continue;
         }
 
-        let asset = Arc::new(Asset {
+        let mut asset = Asset {
           id: id.into(),
           file_path: id.into(),
           file_type: infer_file_type(id),
           env: Arc::new(Environment::default()),
+          is_bundle_splittable: true,
           ..Asset::default()
-        });
-        let node = asset_graph.add_asset(asset, false);
+        };
+        if let Some(opts) = asset_options.get(id) {
+          asset.is_bundle_splittable = opts.is_bundle_splittable;
+        }
+        let node = asset_graph.add_asset(Arc::new(asset), false);
         asset_nodes.insert(id.into(), node);
       }
     }
@@ -951,17 +982,14 @@ mod tests {
       );
     }
 
-    // No asset appears in more than one non-entry bundle.
-    // Duplication across entry bundles is expected (each entry must be self-contained).
-    let entry_bundles: std::collections::HashSet<&str> = g
+    // No asset appears in more than one splittable bundle.
+    // Duplication across entry-like bundles (entries, non-splittable, isolated,
+    // needs-stable-name) is expected -- they must be self-contained.
+    // For simplicity, we allow duplication across any non-shared rooted bundles.
+    let entry_like_bundles: std::collections::HashSet<&str> = g
       .bundles
       .values()
-      .filter(|b| {
-        b.root_asset_id
-          .as_deref()
-          .map_or(false, |r| b.assets.contains(r))
-      })
-      .filter(|b| b.needs_stable_name || b.root_asset_id.is_some())
+      .filter(|b| b.root_asset_id.is_some())
       .map(|b| b.id.0.as_str())
       .collect();
 
@@ -969,12 +997,12 @@ mod tests {
     for (bundle_id, bundle) in &g.bundles {
       for asset in &bundle.assets {
         if let Some(prev) = seen.insert(asset, &bundle_id.0) {
-          // Allow duplication if both bundles are entry bundles.
-          let both_entries =
-            entry_bundles.contains(prev) && entry_bundles.contains(bundle_id.0.as_str());
-          if !both_entries {
+          // Allow duplication if both bundles are entry-like (non-shared).
+          let both_entry_like =
+            entry_like_bundles.contains(prev) && entry_like_bundles.contains(bundle_id.0.as_str());
+          if !both_entry_like {
             panic!(
-              "asset appears in multiple non-entry bundles: {asset} in {prev} and {}\n{}",
+              "asset appears in multiple bundles unexpectedly: {asset} in {prev} and {}\n{}",
               bundle_id.0,
               format_bundle_snapshot(g)
             );
@@ -1273,6 +1301,50 @@ mod tests {
       bundles: {
         "entry-a.js" => ["entry-a.js", "shared.js"],
         "entry-b.js" => ["entry-b.js", "shared.js"],
+      },
+    });
+  }
+
+  #[test]
+  fn non_splittable_bundles_receive_duplicated_assets_like_entries() {
+    // entry -> lazy a, lazy b
+    // a -> sync react.js, b -> sync react.js
+    // a is non-splittable (isBundleSplittable = false)
+    //
+    // The JS algorithm treats non-splittable bundles like entries: assets are
+    // duplicated into them. Since a is non-splittable, react.js should be
+    // placed in a AND in a shared bundle for b (or just in b if only one
+    // non-entry root remains after filtering).
+    let asset_graph = fixture_graph_with_options(
+      &["entry.js"],
+      &[
+        EdgeSpec::new("entry.js", "a.js", Priority::Lazy),
+        EdgeSpec::new("entry.js", "b.js", Priority::Lazy),
+        EdgeSpec::new("a.js", "react.js", Priority::Sync),
+        EdgeSpec::new("b.js", "react.js", Priority::Sync),
+      ],
+      &[(
+        "a.js",
+        AssetOptions {
+          is_bundle_splittable: false,
+        },
+      )],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    // react.js must be in a.js's bundle (duplicated like an entry).
+    // b.js is the only remaining splittable root, so react.js goes directly into b.js.
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js"],
+        "a.js"     => ["a.js", "react.js"],
+        "b.js"     => ["b.js", "react.js"],
+      },
+      edges: {
+        "entry.js" lazy "a.js",
+        "entry.js" lazy "b.js",
       },
     });
   }

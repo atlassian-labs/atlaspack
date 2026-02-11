@@ -81,8 +81,12 @@ pub struct IdealGraphBuilder {
   // Bundle roots are either entry assets or boundary assets.
   bundle_roots: HashSet<super::types::AssetKey>,
 
-  // Asset key -> file type, populated during Phase 1.
+  // Asset key -> file type, populated during asset interning.
   asset_file_types: HashMap<super::types::AssetKey, atlaspack_core::types::FileType>,
+
+  // Bundle roots that should be treated like entries (assets duplicated into them).
+  // Includes entries, non-splittable, isolated, and stable-name bundle roots.
+  entry_like_roots: HashSet<super::types::AssetKey>,
 }
 
 impl IdealGraphBuilder {
@@ -418,6 +422,8 @@ impl IdealGraphBuilder {
       .bundle_roots
       .extend(self.bundle_boundaries.iter().cloned());
 
+    self.entry_like_roots = self.entry_roots.clone();
+
     let mut ideal = IdealGraph::default();
 
     for root_key in self.bundle_roots.clone() {
@@ -426,6 +432,39 @@ impl IdealGraphBuilder {
       let asset = self
         .find_asset_by_id(asset_graph, &root_asset_id)
         .context("bundle root asset missing from graph")?;
+
+      // Determine if this root should be treated like an entry (assets duplicated into it).
+      let is_entry = self.entry_roots.contains(&root_key);
+      let is_isolated = asset.bundle_behavior == Some(BundleBehavior::Isolated)
+        || asset.bundle_behavior == Some(BundleBehavior::InlineIsolated);
+
+      // Look up the dependency that targets this asset to check needs_stable_name.
+      let dep_needs_stable_name = asset_graph
+        .get_dependencies()
+        .filter(|dep| !dep.is_entry)
+        .any(|dep| {
+          dep.needs_stable_name
+            && asset_graph
+              .get_node_id_by_content_key(&dep.id)
+              .map(|dep_node| {
+                asset_graph
+                  .get_outgoing_neighbors(dep_node)
+                  .iter()
+                  .any(|n| {
+                    asset_graph
+                      .get_asset(n)
+                      .map(|a| a.id == root_asset_id)
+                      .unwrap_or(false)
+                  })
+              })
+              .unwrap_or(false)
+        });
+
+      let needs_stable_name = is_entry || dep_needs_stable_name;
+
+      if !asset.is_bundle_splittable || is_isolated || dep_needs_stable_name {
+        self.entry_like_roots.insert(root_key);
+      }
 
       let bundle_id = IdealBundleId(root_asset_id.clone());
 
@@ -436,7 +475,7 @@ impl IdealGraphBuilder {
           root_asset_id: Some(root_asset_id.clone()),
           assets: HashSet::from([root_asset_id.clone()]),
           bundle_type: asset.file_type.clone(),
-          needs_stable_name: false,
+          needs_stable_name,
           behavior: asset.bundle_behavior,
           ancestor_assets: HashSet::new(),
         },
@@ -930,62 +969,64 @@ impl IdealGraphBuilder {
         continue;
       }
 
-      let reaching_entries: Vec<AssetKey> = roots
+      // Entry-like roots: entries, non-splittable, isolated, needs-stable-name.
+      // These get assets duplicated into them (same as entries in JS algorithm).
+      let reaching_entry_like: Vec<AssetKey> = roots
         .iter()
         .copied()
-        .filter(|r| self.entry_roots.contains(r))
+        .filter(|r| self.entry_like_roots.contains(r))
         .collect();
 
-      let non_entry_roots: Vec<AssetKey> = roots
+      let splittable_roots: Vec<AssetKey> = roots
         .iter()
         .copied()
-        .filter(|r| !self.entry_roots.contains(r))
+        .filter(|r| !self.entry_like_roots.contains(r))
         .collect();
 
       let asset_id_str = self.assets.id_for(asset).to_string();
 
-      // Duplicate asset into ALL reaching entry bundles (matching JS algorithm).
-      // Each entry must independently contain every sync-reachable asset because
-      // entries can be loaded in isolation.
-      for &entry_root in &reaching_entries {
-        let bundle_id = IdealBundleId(self.assets.id_for(entry_root).to_string());
+      // Duplicate asset into ALL reaching entry-like bundles (matching JS algorithm).
+      // Each entry-like bundle must independently contain every sync-reachable asset
+      // because they can be loaded in isolation.
+      for &root in &reaching_entry_like {
+        let bundle_id = IdealBundleId(self.assets.id_for(root).to_string());
         let bundle = ideal
           .bundles
           .get_mut(&bundle_id)
-          .context("entry bundle missing for duplication")?;
+          .context("entry-like bundle missing for duplication")?;
         bundle.assets.insert(asset_id_str.clone());
 
         self.decision(
           "placement",
           super::types::DecisionKind::AssetAssignedToBundle {
             asset,
-            bundle_root: entry_root,
+            bundle_root: root,
             reason: super::types::AssetAssignmentReason::SingleEligibleRoot,
           },
         );
       }
 
-      // Track canonical bundle assignment (smallest entry for determinism).
-      if !reaching_entries.is_empty() {
-        let canonical = reaching_entries.iter().copied().min().unwrap();
+      // Track canonical bundle assignment (smallest entry-like for determinism).
+      if !reaching_entry_like.is_empty() {
+        let canonical = reaching_entry_like.iter().copied().min().unwrap();
         let bundle_id = IdealBundleId(self.assets.id_for(canonical).to_string());
         ideal
           .asset_to_bundle
           .insert(asset_id_str.clone(), bundle_id);
       }
 
-      // If already placed in entry bundles, non-entry roots will get it via
-      // availability propagation. No further action for this asset.
-      if !reaching_entries.is_empty() {
+      // If placed in entry-like bundles and no splittable roots remain (or multiple
+      // that need shared extraction), defer to Phase 8.
+      if !reaching_entry_like.is_empty() && splittable_roots.len() != 1 {
         continue;
       }
 
-      if non_entry_roots.len() > 1 {
-        // Multi-root asset with no entry roots -> deferred to Phase 8.
+      if splittable_roots.len() > 1 {
+        // Multi-root asset with no entry-like roots -> deferred to Phase 8.
         continue;
-      } else if non_entry_roots.len() == 1 {
-        // Single non-entry root, no entries -> place directly.
-        let root = non_entry_roots[0];
+      } else if splittable_roots.len() == 1 {
+        // Single splittable root -> place directly.
+        let root = splittable_roots[0];
         let bundle_id = IdealBundleId(self.assets.id_for(root).to_string());
         let bundle = ideal
           .bundles
@@ -1036,13 +1077,13 @@ impl IdealGraphBuilder {
       }
 
       // Only process multi-root assets (those skipped in Phase 7).
-      let non_entry_roots: Vec<AssetKey> = roots
+      let splittable_roots: Vec<AssetKey> = roots
         .iter()
         .copied()
-        .filter(|r| !self.entry_roots.contains(r))
+        .filter(|r| !self.entry_like_roots.contains(r))
         .collect();
 
-      if non_entry_roots.len() <= 1 {
+      if splittable_roots.len() <= 1 {
         continue; // Already placed in Phase 7.
       }
 
@@ -1050,7 +1091,7 @@ impl IdealGraphBuilder {
 
       // Filter by availability: only keep roots where asset is NOT already available.
       let mut eligible: Vec<AssetKey> = Vec::new();
-      for &root in &non_entry_roots {
+      for &root in &splittable_roots {
         let root_id = self.assets.id_for(root);
         let bundle_id = IdealBundleId(root_id.to_string());
         let Some(bundle) = ideal.bundles.get(&bundle_id) else {
