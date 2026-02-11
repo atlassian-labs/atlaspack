@@ -191,14 +191,14 @@ jobs:
     name: Integration tests (${{ matrix.os }}, Node ${{ matrix.node }}, Slice ${{ matrix.slice_num }}/${{ matrix.slice_total }})
     needs:
       - build_native
-    timeout-minutes: 45
+    timeout-minutes: 20
     strategy:
       # These tend to be quite flakey, so one failed instance shouldn't stop
       # others from potentially succeeding
       fail-fast: false
       matrix:
-        slice_num: [1, 2]
-        slice_total: [2]
+        slice_num: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+        slice_total: [16]
         os: [ubuntu-22.04, macos-15]
         node: [22, 24]
     runs-on: ${{ matrix.os }}
@@ -220,6 +220,7 @@ jobs:
         env:
           SLICE_NUM: ${{ matrix.slice_num }}
           SLICE_TOTAL: ${{ matrix.slice_total }}
+          ATLASPACK_MOCHA_HANG_DEBUG: 'true'
           RUST_BACKTRACE: full
 
   integration_tests_v3:
@@ -232,8 +233,8 @@ jobs:
       # others from potentially succeeding
       fail-fast: false
       matrix:
-        slice_num: [1, 2]
-        slice_total: [2]
+        slice_num: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+        slice_total: [16]
         os: [ubuntu-22.04, macos-15]
         node: [22, 24]
     runs-on: ${{ matrix.os }}
@@ -271,6 +272,7 @@ jobs:
           ATLASPACK_V3: true
           SLICE_NUM: ${{ matrix.slice_num }}
           SLICE_TOTAL: ${{ matrix.slice_total }}
+          ATLASPACK_MOCHA_HANG_DEBUG: 'true'
           ISOLATE_TESTS: 'false'
           RUST_BACKTRACE: full
       - name: Collect core dumps (Linux only)
