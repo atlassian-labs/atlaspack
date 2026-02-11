@@ -237,6 +237,19 @@ export class ScopeHoistingPackager {
     lineCount += preludeLines;
     // @ts-expect-error TS2339 - offsetLines method exists but missing from @parcel/source-map type definitions
     sourceMap?.offsetLines(1, preludeLines);
+    // Add explicit mappings for prelude lines so (1, col) doesn't fall through to the
+    // first asset's mapping when the consumer looks up "closest" mapping for prelude code.
+    const mapForPrelude = sourceMap;
+    if (mapForPrelude != null && preludeLines > 0) {
+      const preludeSourceContent =
+        preludeLines === 1 ? '' : '\n'.repeat(preludeLines - 1);
+      // @ts-expect-error TS2339 - addEmptyMap exists on NodeSourceMap
+      mapForPrelude.addEmptyMap(
+        path.join(this.options.projectRoot, '<prelude>'),
+        preludeSourceContent,
+        0,
+      );
+    }
 
     let entries = this.bundle.getEntryAssets();
     let mainEntry = this.bundle.getMainEntry();
@@ -700,6 +713,8 @@ export class ScopeHoistingPackager {
         ? new SourceMap(this.options.projectRoot, map)
         : null;
 
+    // #endregion
+
     // If this asset is skipped, just add dependencies and not the asset's content.
     if (this.shouldSkipAsset(asset)) {
       let depCode = '';
@@ -901,6 +916,7 @@ export class ScopeHoistingPackager {
                 lineCount += lines;
               }
             }
+            offset += replacement.length - m.length;
             return replacement;
           }
 

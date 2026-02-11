@@ -44,6 +44,24 @@ impl VisitMut for IdentifierReplacementVisitor {
     // // and
     // new (0, getValue()).default() // => this works and uses `default` as the constructor
     // ```
+    let original_span = ident.span;
     *n = swc_core::quote!("(0, $expr)" as Expr, expr: Expr = replacement_expression.clone());
+
+    // Propagate the original identifier's span to wrapper nodes so source maps
+    // correctly attribute the replacement to the original identifier's location.
+    // Without this, the quote! macro creates nodes with DUMMY_SP, causing
+    // fragmented forward mappings (source -> bundle) in source map visualizers.
+    match n {
+      Expr::Paren(paren) => {
+        paren.span = original_span;
+        if let Expr::Seq(seq) = &mut *paren.expr {
+          seq.span = original_span;
+        }
+      }
+      Expr::Seq(seq) => {
+        seq.span = original_span;
+      }
+      _ => {}
+    }
   }
 }
