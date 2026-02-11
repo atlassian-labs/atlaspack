@@ -7,6 +7,21 @@
   "references": [
     {
       "path": "../core/tsconfig.json"
+    },
+    {
+      "path": "../test-utils/tsconfig.json"
+    },
+    {
+      "path": "../types/tsconfig.json"
+    },
+    {
+      "path": "../plugin/tsconfig.json"
+    },
+    {
+      "path": "../rust/tsconfig.json"
+    },
+    {
+      "path": "../../transformers/compiled-external/tsconfig.json"
     }
   ]
 }

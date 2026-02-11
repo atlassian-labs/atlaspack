@@ -1,5 +1,32 @@
 # @atlaspack/e2e-tests
 
+## 2.14.8
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/transformer-compiled-external@0.2.7
+
+## 2.14.7
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/transformer-compiled-external@0.2.6
+
+## 2.14.6
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/transformer-compiled-external@0.2.5
+
+## 2.14.5
+
+### Patch Changes
+
+- [#792](https://github.com/atlassian-labs/atlaspack/pull/792) [`e27dd64`](https://github.com/atlassian-labs/atlaspack/commit/e27dd64267fbf38cfc75383a3b407fa40de96e94) Thanks [@JakeLane](https://github.com/JakeLane)! - Add conditional bundling sync fallback behaviour suitable for production
+
 ## 2.14.4
 
 ### Patch Changes

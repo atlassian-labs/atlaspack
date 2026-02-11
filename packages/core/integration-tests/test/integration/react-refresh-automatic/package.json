@@ -1,6 +1,11 @@
 {
-    "dependencies": {
-        "react": "^17.0.0",
-        "react-dom": "^17.0.0"
+  "dependencies": {
+      "react": "^17.0.0",
+      "react-dom": "^17.0.0"
+  },
+  "@atlaspack/transformer-js": {
+    "jsx": {
+      "automaticRuntime": true
     }
+  }
 }

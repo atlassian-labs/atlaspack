@@ -2,6 +2,7 @@ import type {Diagnostic} from '@atlaspack/diagnostic';
 import type {PluginOptions} from '@atlaspack/types-internal';
 
 import formatCodeFrame from '@atlaspack/codeframe';
+import logger from '@atlaspack/logger';
 import _mdAnsi from '@atlaspack/markdown-ansi';
 import _chalk from 'chalk';
 import path from 'path';
@@ -27,12 +28,12 @@ export type AnsiDiagnosticResult = {
   documentation: string;
 };
 
-export default async function prettyDiagnostic(
+export function prettyDiagnosticSync(
   diagnostic: Diagnostic,
   options?: PluginOptions,
   terminalWidth?: number,
   format: 'ansi' | 'html' = 'ansi',
-): Promise<AnsiDiagnosticResult> {
+): AnsiDiagnosticResult {
   let {
     origin,
     message,
@@ -86,7 +87,16 @@ export default async function prettyDiagnostic(
       let highlights = codeFrame.codeHighlights;
       let code = codeFrame.code;
       if (code == null && options && filePath != null) {
-        code = await options.inputFS.readFile(filePath, 'utf8');
+        try {
+          code = options.inputFS.readFileSync(filePath, 'utf8');
+        } catch (e) {
+          // In strange cases this can fail and hide the underlying error.
+          logger.warn({
+            origin: '@atlaspack/utils',
+            message: `Failed to read file for generating codeframe: "${filePath}"`,
+            skipFormatting: true,
+          });
+        }
       }
 
       let formattedCodeFrame = '';
@@ -139,4 +149,15 @@ export default async function prettyDiagnostic(
   }
 
   return result;
+}
+
+export default function prettyDiagnostic(
+  diagnostic: Diagnostic,
+  options?: PluginOptions,
+  terminalWidth?: number,
+  format: 'ansi' | 'html' = 'ansi',
+): Promise<AnsiDiagnosticResult> {
+  return Promise.resolve(
+    prettyDiagnosticSync(diagnostic, options, terminalWidth, format),
+  );
 }

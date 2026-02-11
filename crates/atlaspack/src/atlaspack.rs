@@ -1,14 +1,20 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use atlaspack_config::atlaspack_rc_config_loader::{AtlaspackRcConfigLoader, LoadConfigOptions};
-use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode, AssetNode};
+use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode};
+use atlaspack_core::bundle_graph::bundle_graph_from_js::{
+  BundleGraphEdgeType, BundleGraphFromJs, BundleGraphNode,
+};
 use atlaspack_core::config_loader::ConfigLoader;
+use atlaspack_core::package_result::PackageResult;
 use atlaspack_core::plugin::{PluginContext, PluginLogger, PluginOptions};
-use atlaspack_core::types::{AtlaspackOptions, SourceField, Targets};
+use atlaspack_core::types::{AtlaspackOptions, Environment, SourceField, Targets};
 use atlaspack_filesystem::{FileSystemRef, os_file_system::OsFileSystem};
+use atlaspack_memoization_cache::{CacheHandler, CacheMode, LmdbCacheReaderWriter, StatsSnapshot};
 use atlaspack_package_manager::{NodePackageManager, PackageManagerRef};
+use atlaspack_packager_js::JsPackager;
 use atlaspack_plugin_rpc::{RpcFactoryRef, RpcWorkerRef};
 use lmdb_js_lite::DatabaseHandle;
 use tokio::runtime::Runtime;
@@ -17,9 +23,10 @@ use tokio::sync::RwLock;
 use crate::WatchEvents;
 use crate::plugins::{PluginsRef, config_plugins::ConfigPlugins};
 use crate::project_root::infer_project_root;
-use crate::request_tracker::RequestTracker;
-use crate::requests::{AssetGraphRequest, RequestResult};
-
+use crate::request_tracker::{DynCacheHandler, RequestNode, RequestTracker};
+use crate::requests::{
+  AssetGraphRequest, BundleGraphRequest, BundleGraphRequestOutput, RequestResult,
+};
 pub struct AtlaspackInitOptions {
   pub db: Arc<DatabaseHandle>,
   pub fs: Option<FileSystemRef>,
@@ -39,6 +46,10 @@ pub struct Atlaspack {
   pub config_loader: Arc<ConfigLoader>,
   pub plugins: PluginsRef,
   pub request_tracker: Arc<RwLock<RequestTracker>>,
+  /// The bundle graph deserialised from JS. Used temporarily until we have a native
+  /// bundle graph implementation. Starts empty and is populated via `load_bundle_graph`.
+  /// Uses non-async RwLock so the packager (and any Rayon threads) can take a read lock when needed.
+  pub bundle_graph: Arc<parking_lot::RwLock<BundleGraphFromJs>>,
 }
 
 impl Atlaspack {
@@ -94,8 +105,7 @@ impl Atlaspack {
 
     let rpc_worker = rpc.start()?;
 
-    let rc_config_loader =
-      AtlaspackRcConfigLoader::new(Arc::clone(&fs), Arc::clone(&package_manager));
+    let rc_config_loader = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager.clone());
 
     let (config, _files) = rc_config_loader.load(
       &project_root,
@@ -105,6 +115,8 @@ impl Atlaspack {
         fallback_config: resolved_options.fallback_config.as_deref(),
       },
     )?;
+
+    let unstable_alias = config.unstable_alias.clone();
 
     let config_loader = Arc::new(ConfigLoader {
       fs: Arc::clone(&fs),
@@ -126,11 +138,20 @@ impl Atlaspack {
           project_root: project_root.clone(),
           feature_flags: resolved_options.feature_flags.clone(),
           hmr_options: resolved_options.hmr_options.clone(),
+          unstable_alias,
         }),
         // TODO Initialise actual logger
         logger: PluginLogger::default(),
       },
+      package_manager,
     )?);
+
+    let cache_mode = if resolved_options.feature_flags.bool_enabled("v3Caching") {
+      // Validate 1 in 1000 cache requests
+      CacheMode::On(0.001)
+    } else {
+      CacheMode::Off
+    };
 
     let request_tracker = RequestTracker::new(
       config_loader.clone(),
@@ -138,6 +159,10 @@ impl Atlaspack {
       Arc::new(resolved_options.clone()),
       plugins.clone(),
       project_root.clone(),
+      Arc::new(DynCacheHandler::Lmdb(CacheHandler::new(
+        LmdbCacheReaderWriter::new(db.clone()),
+        cache_mode,
+      ))),
     );
 
     Ok(Self {
@@ -151,28 +176,120 @@ impl Atlaspack {
       config_loader,
       plugins,
       request_tracker: Arc::new(RwLock::new(request_tracker)),
+      bundle_graph: Arc::new(parking_lot::RwLock::new(BundleGraphFromJs::default())),
     })
   }
 }
 
 impl Atlaspack {
-  pub fn build_asset_graph(&self) -> anyhow::Result<AssetGraph> {
+  pub fn build_asset_graph(&self) -> anyhow::Result<(Arc<AssetGraph>, bool)> {
     self.runtime.block_on(async move {
-      let request_result = self
-        .request_tracker
-        .write()
-        .await
-        .run_request(AssetGraphRequest {})
+      // Notify all resolver plugins that a new build is starting
+      for resolver in self.plugins.resolvers()? {
+        resolver.on_new_build();
+      }
+
+      let mut request_tracker = self.request_tracker.write().await;
+
+      let prev_asset_graph = request_tracker
+        .get_cached_request_result(AssetGraphRequest::default())
+        .map(|result| {
+          let RequestResult::AssetGraph(asset_graph_request_output) = result.as_ref() else {
+            panic!("Something went wrong with the request tracker")
+          };
+          asset_graph_request_output.graph.clone()
+        });
+
+      let incrementally_bundled_assets = request_tracker
+        .get_invalid_nodes()
+        .try_fold(
+          Vec::new(),
+          |mut invalid_nodes, invalid_node| match invalid_node {
+            RequestNode::Invalid(Some(result)) => match result.as_ref() {
+              RequestResult::Asset(_) => {
+                invalid_nodes.push(result.clone());
+                Ok(invalid_nodes)
+              }
+              RequestResult::AssetGraph(_) => Ok(invalid_nodes),
+              _ => Err(()),
+            },
+            _ => Err(()),
+          },
+        )
+        .ok();
+
+      let had_previous_graph = prev_asset_graph.is_some();
+
+      let request_result = request_tracker
+        .run_request(AssetGraphRequest {
+          prev_asset_graph,
+          incrementally_bundled_assets,
+        })
         .await?;
 
-      let RequestResult::AssetGraph(asset_graph_request_output) = request_result else {
+      let RequestResult::AssetGraph(asset_graph_request_output) = request_result.as_ref() else {
         panic!("Something went wrong with the request tracker")
       };
 
-      let asset_graph = asset_graph_request_output.graph;
-      self.commit_assets(asset_graph.nodes().collect())?;
-      Ok(asset_graph)
+      let asset_graph = asset_graph_request_output.graph.clone();
+
+      Ok((asset_graph, had_previous_graph))
     })
+  }
+
+  #[tracing::instrument(
+    level = "info",
+    skip_all,
+    fields(nodes = nodes.len(), edges = edges.len(), asset_id_map_size = public_id_by_asset_id.len(), environments = environments.len())
+  )]
+  pub fn load_bundle_graph(
+    &self,
+    nodes: Vec<BundleGraphNode>,
+    edges: Vec<(u32, u32, BundleGraphEdgeType)>,
+    public_id_by_asset_id: HashMap<String, String>,
+    environments: Vec<Environment>,
+  ) -> anyhow::Result<()> {
+    *self.bundle_graph.write() =
+      BundleGraphFromJs::new(nodes, edges, public_id_by_asset_id, environments);
+    Ok(())
+  }
+
+  #[tracing::instrument(level = "info", skip_all)]
+  pub fn build_bundle_graph(
+    &self,
+  ) -> anyhow::Result<(Arc<AssetGraph>, BundleGraphRequestOutput, bool)> {
+    // First, build the asset graph
+    let (asset_graph, had_previous_graph) = self.build_asset_graph()?;
+
+    // Then run the bundle graph request
+    let asset_graph_for_request = asset_graph.clone();
+    let bundle_delta = self.runtime.block_on(async move {
+      tracing::debug!("build_bundle_graph_with_asset_graph: running BundleGraphRequest");
+
+      let mut request_tracker = self.request_tracker.write().await;
+
+      let request_result = request_tracker
+        .run_request(BundleGraphRequest {
+          asset_graph: asset_graph_for_request,
+        })
+        .await?;
+
+      let RequestResult::BundleGraph(bundle_graph_output) = request_result.as_ref() else {
+        anyhow::bail!("Unexpected request result from BundleGraphRequest");
+      };
+
+      Ok::<_, anyhow::Error>(bundle_graph_output.clone())
+    })?;
+
+    Ok((asset_graph, bundle_delta, had_previous_graph))
+  }
+
+  #[tracing::instrument(level = "info", skip_all)]
+  pub fn package(&self, bundle_id: String) -> anyhow::Result<PackageResult> {
+    // This possibly could be persistent between pacakges? But right now with SSR builds only we're talking about a few packages at most
+    // so we can worry about that refactor later.
+    let packager = JsPackager::new(Arc::clone(&self.db), Arc::clone(&self.bundle_graph));
+    packager.package(&bundle_id)
   }
 
   pub fn respond_to_fs_events(&self, events: WatchEvents) -> anyhow::Result<bool> {
@@ -187,12 +304,25 @@ impl Atlaspack {
     })
   }
 
+  /// Get cache statistics
+  pub async fn complete_cache_session(&self) -> Option<StatsSnapshot> {
+    match self.request_tracker.read().await.cache.complete_session() {
+      Ok(stats) => Some(stats),
+      Err(_) => {
+        tracing::warn!("Failed to complete cache session. Cache potentially in an invalid state.");
+        None
+      }
+    }
+  }
+
   #[tracing::instrument(level = "info", skip_all)]
-  fn commit_assets(&self, assets: Vec<&AssetGraphNode>) -> anyhow::Result<()> {
+  pub fn commit_assets(&self, graph: &AssetGraph) -> anyhow::Result<()> {
     let mut txn = self.db.database().write_txn()?;
 
-    for asset_node in assets {
-      let AssetGraphNode::Asset(AssetNode { asset, .. }) = asset_node else {
+    let nodes = graph.new_nodes().chain(graph.updated_nodes());
+
+    for node in nodes {
+      let AssetGraphNode::Asset(asset) = node else {
         continue;
       };
 
@@ -205,7 +335,7 @@ impl Atlaspack {
         self.db.database().put(
           &mut txn,
           &format!("map:{}", asset.id),
-          map.to_json()?.as_bytes(),
+          map.clone().to_json(None)?.as_bytes(),
         )?;
       }
     }
@@ -218,7 +348,7 @@ impl Atlaspack {
 
 #[cfg(test)]
 mod tests {
-  use std::{collections::HashSet, env::temp_dir};
+  use std::env::temp_dir;
 
   use atlaspack_core::types::{Asset, Code};
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
@@ -254,22 +384,19 @@ mod tests {
     })?;
 
     let assets_names = ["foo", "bar", "baz"];
-    let assets = assets_names
-      .iter()
-      .enumerate()
-      .map(|(idx, asset)| {
-        AssetGraphNode::Asset(AssetNode {
-          asset: Asset {
-            id: idx.to_string(),
-            code: Code::from(asset.to_string()),
-            ..Asset::default()
-          },
-          requested_symbols: HashSet::new(),
-        })
-      })
-      .collect::<Vec<AssetGraphNode>>();
+    let mut asset_graph = AssetGraph::new();
+    assets_names.iter().enumerate().for_each(|(idx, asset)| {
+      asset_graph.add_asset(
+        Arc::new(Asset {
+          id: idx.to_string(),
+          code: Code::from(asset.to_string()),
+          ..Asset::default()
+        }),
+        false,
+      );
+    });
 
-    atlaspack.commit_assets(assets.iter().collect())?;
+    atlaspack.commit_assets(&asset_graph)?;
 
     let txn = db.database().read_txn()?;
     for (idx, asset) in assets_names.iter().enumerate() {

@@ -1,5 +1,43 @@
 # @atlaspack/integration-tests
 
+## 2.20.3
+
+### Patch Changes
+
+- [#995](https://github.com/atlassian-labs/atlaspack/pull/995) [`3a3885c`](https://github.com/atlassian-labs/atlaspack/commit/3a3885cb08e26752c65c7f64c6dc38abd488d036) Thanks [@emzeidan](https://github.com/emzeidan)! - Fix symbol collection with multiple exports of same function
+
+## 2.20.2
+
+### Patch Changes
+
+- [#921](https://github.com/atlassian-labs/atlaspack/pull/921) [`f33f9c4`](https://github.com/atlassian-labs/atlaspack/commit/f33f9c48dd24b319df352d197e4a83cbb1b053bc) Thanks [@JakeLane](https://github.com/JakeLane)! - Update Compiled CSS-in-JS SWC transformer to be more accurate
+
+## 2.20.1
+
+### Patch Changes
+
+- [#942](https://github.com/atlassian-labs/atlaspack/pull/942) [`695339e`](https://github.com/atlassian-labs/atlaspack/commit/695339e4fd46df9590013c2ef4de74cb22225927) Thanks [@marcins](https://github.com/marcins)! - Improve error handling in Tokens transform
+
+- [#943](https://github.com/atlassian-labs/atlaspack/pull/943) [`6152999`](https://github.com/atlassian-labs/atlaspack/commit/61529999f8ab3131c591362c88b65e697e0bd9b8) Thanks [@emzeidan](https://github.com/emzeidan)! - Update TesseractResolver.ts to add new `unsupportedExtensions` config option to allow fallback
+
+## 2.20.0
+
+### Minor Changes
+
+- [#916](https://github.com/atlassian-labs/atlaspack/pull/916) [`e55c80c`](https://github.com/atlassian-labs/atlaspack/commit/e55c80cd0ae3cc40356fe063cb7d45fbb9095356) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Add Atlaspack V3 config parsing for `typeof_replacer`, `global_aliaser`, `lazy_loading_transformer`, `react_hooks_remover`, `react_async_import_lift`, `static_prevaluator`, `dead_returns_remover`, `unused_bindings_remover`
+
+## 2.19.0
+
+### Minor Changes
+
+- [#789](https://github.com/atlassian-labs/atlaspack/pull/789) [`73168c2`](https://github.com/atlassian-labs/atlaspack/commit/73168c275a5d9abff9907bcf536b340bca1ed5f0) Thanks [@marcins](https://github.com/marcins)! - Use an in-sourced version of @parcel/source-map, as @atlaspack/source-map
+
+## 2.18.0
+
+### Minor Changes
+
+- [#777](https://github.com/atlassian-labs/atlaspack/pull/777) [`cfb39a0`](https://github.com/atlassian-labs/atlaspack/commit/cfb39a0d729eb620cf2ca1611750a2bf7a080d08) Thanks [@matt-koko](https://github.com/matt-koko)! - Added logic to rust JS transformer to account for JSX transformations in scenarios when the file extension of the asset is NOT .jsx or .tsx. The logic to determine whether the file should be treated as JSX syntax now mirrors that of the existing v2 behaviour. Several unit tests and integration tests have been introduced to ensure this parity is maintained.
+
 ## 2.17.2
 
 ### Patch Changes

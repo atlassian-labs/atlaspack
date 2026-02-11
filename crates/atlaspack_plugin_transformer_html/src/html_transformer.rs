@@ -10,16 +10,15 @@ use html5ever::tendril::TendrilSink;
 use html5ever::{ParseOpts, serialize};
 use markup5ever_rcdom::{RcDom, SerializableHandle};
 
-use atlaspack_core::plugin::{PluginContext, TransformContext, TransformResult, TransformerPlugin};
+use crate::dom_visitor::walk;
+use crate::hmr_visitor::HMRVisitor;
+use crate::html_dependencies_visitor::HtmlDependenciesVisitor;
+use atlaspack_core::plugin::{PluginContext, TransformResult, TransformerPlugin};
 use atlaspack_core::types::{
   Asset, AssetId, AssetWithDependencies, BundleBehavior, Code, Dependency, Environment,
 };
 
-use crate::dom_visitor::walk;
-use crate::hmr_visitor::HMRVisitor;
-use crate::html_dependencies_visitor::HtmlDependenciesVisitor;
-
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 pub struct AtlaspackHtmlTransformerPlugin {
   project_root: PathBuf,
 }
@@ -34,17 +33,13 @@ impl AtlaspackHtmlTransformerPlugin {
 
 #[async_trait]
 impl TransformerPlugin for AtlaspackHtmlTransformerPlugin {
-  async fn transform(
-    &self,
-    context: TransformContext,
-    input: Asset,
-  ) -> Result<TransformResult, Error> {
+  async fn transform(&self, input: Asset) -> Result<TransformResult, Error> {
     let bytes: &[u8] = input.code.bytes();
     let mut dom = parse_html(bytes)?;
     let context = HTMLTransformationContext {
       // TODO: Where is this?
       enable_hmr: false,
-      env: context.env().clone(),
+      env: input.env.clone(),
       project_root: self.project_root.clone(),
       side_effects: input.side_effects,
       source_asset_id: input.id.clone(),
@@ -137,7 +132,9 @@ fn run_html_transformations(
 
 #[cfg(test)]
 mod test {
-  use atlaspack_core::types::{FileType, JSONObject, SourceType};
+  use atlaspack_core::types::{
+    DependencyBuilder, FileType, JSONObject, Priority, SourceType, SpecifierType,
+  };
   use pretty_assertions::assert_eq;
 
   use super::*;
@@ -241,18 +238,21 @@ mod test {
       ..Environment::default()
     });
 
+    let expected_dependency = DependencyBuilder::default()
+      .bundle_behavior(Some(BundleBehavior::Inline))
+      .env(env.clone())
+      .source_asset_id("test".to_string())
+      .source_asset_type(FileType::Html)
+      .source_path(PathBuf::from("main.html"))
+      .specifier("16f87d7beed96467".to_string())
+      .specifier_type(SpecifierType::default())
+      .priority(Priority::default())
+      .build();
+
     assert_eq!(
       transformation,
       HtmlTransformation {
-        dependencies: vec![Dependency {
-          bundle_behavior: Some(BundleBehavior::Inline),
-          env: env.clone(),
-          source_asset_id: Some(String::from("test")),
-          source_asset_type: Some(FileType::Html),
-          source_path: Some(PathBuf::from("main.html")),
-          specifier: String::from("16f87d7beed96467"),
-          ..Dependency::default()
-        }],
+        dependencies: vec![expected_dependency],
         discovered_assets: vec![AssetWithDependencies {
           asset: Asset {
             bundle_behavior: Some(BundleBehavior::Inline),
@@ -263,8 +263,9 @@ mod test {
             id: String::from("b0deada2a458cc5f"),
             is_bundle_splittable: true,
             is_source: true,
-            meta: JSONObject::from_iter([(String::from("type"), "tag".into())]),
+            meta: JSONObject::new(),
             unique_key: Some(String::from("16f87d7beed96467")),
+            css_dependency_type: Some("tag".into()),
             ..Asset::default()
           },
           dependencies: Vec::new()
@@ -311,18 +312,21 @@ mod test {
       ..Environment::default()
     });
 
+    let expected_dependency = DependencyBuilder::default()
+      .bundle_behavior(Some(BundleBehavior::InlineIsolated))
+      .env(env.clone())
+      .source_asset_id("test".to_string())
+      .source_asset_type(FileType::Html)
+      .source_path(PathBuf::from("main.html"))
+      .specifier("16f87d7beed96467".to_string())
+      .specifier_type(SpecifierType::default())
+      .priority(Priority::default())
+      .build();
+
     assert_eq!(
       transformation,
       HtmlTransformation {
-        dependencies: vec![Dependency {
-          bundle_behavior: Some(BundleBehavior::InlineIsolated),
-          env: env.clone(),
-          source_asset_id: Some(String::from("test")),
-          source_asset_type: Some(FileType::Html),
-          source_path: Some(PathBuf::from("main.html")),
-          specifier: String::from("16f87d7beed96467"),
-          ..Dependency::default()
-        }],
+        dependencies: vec![expected_dependency],
         discovered_assets: vec![AssetWithDependencies {
           asset: Asset {
             bundle_behavior: Some(BundleBehavior::InlineIsolated),
@@ -333,8 +337,9 @@ mod test {
             id: transformation.discovered_assets[0].asset.id.clone(),
             is_bundle_splittable: true,
             is_source: true,
-            meta: JSONObject::from_iter([(String::from("type"), "tag".into())]),
+            meta: JSONObject::new(),
             unique_key: Some(String::from("16f87d7beed96467")),
+            css_dependency_type: Some("tag".into()),
             ..Asset::default()
           },
           dependencies: Vec::new()
@@ -370,16 +375,20 @@ mod test {
       ))
     );
 
+    let expected_dependency = DependencyBuilder::default()
+      .source_asset_id("test".to_string())
+      .source_asset_type(FileType::Html)
+      .source_path(PathBuf::from("main.html"))
+      .specifier("16f87d7beed96467".to_string())
+      .env(Arc::new(Environment::default()))
+      .specifier_type(SpecifierType::default())
+      .priority(Priority::default())
+      .build();
+
     assert_eq!(
       transformation,
       HtmlTransformation {
-        dependencies: vec![Dependency {
-          source_asset_id: Some(String::from("test")),
-          source_asset_type: Some(FileType::Html),
-          source_path: Some(PathBuf::from("main.html")),
-          specifier: String::from("16f87d7beed96467"),
-          ..Dependency::default()
-        }],
+        dependencies: vec![expected_dependency],
         discovered_assets: vec![AssetWithDependencies {
           asset: Asset {
             bundle_behavior: Some(BundleBehavior::Inline),
@@ -389,8 +398,9 @@ mod test {
             id: transformation.discovered_assets[0].asset.id.clone(),
             is_bundle_splittable: true,
             is_source: true,
-            meta: JSONObject::from_iter([(String::from("type"), "tag".into())]),
+            meta: JSONObject::new(),
             unique_key: Some(String::from("16f87d7beed96467")),
+            css_dependency_type: Some("tag".into()),
             ..Asset::default()
           },
           dependencies: Vec::new()

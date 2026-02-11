@@ -10,7 +10,6 @@
 coverage/
 dist/
 **/lib/**
-!**/lib/**/*.js.flow
 logs/
 node_modules/
 tmp
@@ -33,3 +32,5 @@ debug-symbols/
 /databases
 
 mocha-cpu-profiles/
+*.trace
+packaging-output/

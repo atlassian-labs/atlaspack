@@ -23,7 +23,11 @@ export class NapiWorkerPool implements INapiWorkerPool {
   constructor({workerCount}: NapiWorkerPoolOptions = {workerCount: undefined}) {
     // @ts-expect-error TS2322
     this.#workerCount =
-      workerCount ?? ATLASPACK_NAPI_WORKERS ?? getAvailableThreads();
+      workerCount ??
+      ATLASPACK_NAPI_WORKERS ??
+      // Default to a maximum of 4 workers as performance worsens beyond that
+      // point in most cases
+      Math.min(getAvailableThreads(), 4);
     if (!this.#workerCount) {
       // TODO use main thread if workerCount is 0
     }
@@ -40,6 +44,35 @@ export class NapiWorkerPool implements INapiWorkerPool {
         ),
       );
     }
+  }
+
+  clearAllWorkerState(): Promise<void[]> {
+    return Promise.all(
+      this.#workers.map(
+        (worker) =>
+          new Promise<void>((res) => {
+            worker.postMessage('clearState');
+
+            // Set up a message handler that only resolves on 'stateCleared'
+            // and ignores all other messages (like the initial napiWorker Transferable)
+            const messageHandler = (message: unknown) => {
+              if (message === 'stateCleared') {
+                worker.removeListener('message', messageHandler);
+                res();
+              } else {
+                // Log unexpected messages for debugging
+                // eslint-disable-next-line no-console
+                console.warn(
+                  `[NapiWorkerPool] Received unexpected message during clearAllWorkerState: ${JSON.stringify(message)} (type: ${typeof message})`,
+                );
+                // Keep listening for 'stateCleared' - don't remove the listener
+              }
+            };
+
+            worker.on('message', messageHandler);
+          }),
+      ),
+    );
   }
 
   workerCount(): number {

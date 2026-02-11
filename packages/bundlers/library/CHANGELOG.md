@@ -1,5 +1,159 @@
 # @atlaspack/bundler-library
 
+## 2.12.55
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.53
+
+## 2.12.54
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.52
+
+## 2.12.53
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.51
+
+## 2.12.52
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.50
+
+## 2.12.51
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.49
+
+## 2.12.50
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.48
+
+## 2.12.49
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.47
+
+## 2.12.48
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.46
+
+## 2.12.47
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.45
+
+## 2.12.46
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.44
+
+## 2.12.45
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.43
+
+## 2.12.44
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.42
+
+## 2.12.43
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.41
+
+## 2.12.42
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.40
+
+## 2.12.41
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.39
+
+## 2.12.40
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.38
+
+## 2.12.39
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.37
+
+## 2.12.38
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.36
+
+## 2.12.37
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.35
+
+## 2.12.36
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.34
+
+## 2.12.35
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.33
+
+## 2.12.34
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.32
+
 ## 2.12.33
 
 ### Patch Changes

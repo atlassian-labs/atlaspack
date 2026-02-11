@@ -1,0 +1,12 @@
+[package]
+name = "atlaspack_test_fixtures"
+version = "0.1.0"
+authors = ["Matt Jones<mattjones701@gmail.com>"]
+edition = { workspace = true }
+
+[lints]
+workspace = true
+
+[dependencies]
+atlaspack_filesystem = { path = "../atlaspack_filesystem" }
+indoc = "2.0"

@@ -7,6 +7,21 @@ const rule = require('../../src/rules/feature-flag-author');
 process.env.ESLINT_TEST_USER_NAME = 'Test User';
 process.env.ESLINT_TEST_USER_EMAIL = 'test.user@atlassian.com';
 
+// Mock Date to return a consistent date for testing
+const MOCK_DATE = '2000-01-01';
+const mockTime = new Date(MOCK_DATE).getTime();
+global.Date = new Proxy(Date, {
+  construct(target, args) {
+    return args.length === 0 ? new target(mockTime) : new target(...args);
+  },
+  get(target, prop) {
+    if (prop === 'now') {
+      return () => mockTime;
+    }
+    return Reflect.get(target, prop);
+  },
+});
+
 const ruleTester = new RuleTester({
   parserOptions: {
     ecmaVersion: 2018,
@@ -16,13 +31,14 @@ const ruleTester = new RuleTester({
 
 ruleTester.run('feature-flag-author', rule, {
   valid: [
-    // Valid feature flag with proper @author
+    // Valid feature flag with proper @author and @since
     {
       code: `
         export const DEFAULT_FEATURE_FLAGS = {
           /**
            * Test feature flag
            * @author John Doe <jdoe@atlassian.com>
+           * @since 2025-01-15
            */
           testFeature: false,
         };
@@ -42,6 +58,7 @@ ruleTester.run('feature-flag-author', rule, {
         export const DEFAULT_FEATURE_FLAGS = {
           /**
            * @author John Doe <jdoe@atlassian.com>
+           * @since 2025-01-15
            */
           exampleFeature: false,
         };
@@ -53,10 +70,12 @@ ruleTester.run('feature-flag-author', rule, {
         export const DEFAULT_FEATURE_FLAGS = {
           /**
            * @author Jane Smith <jsmith@atlassian.com>
+           * @since 2025-02-10
            */
           feature1: true,
           /**
            * @author Bob Johnson <bjohnson@atlassian.com>
+           * @since 2025-03-05
            */
           feature2: 'NEW',
         };
@@ -72,7 +91,7 @@ ruleTester.run('feature-flag-author', rule, {
     },
   ],
   invalid: [
-    // Missing @author
+    // Missing @author and @since
     {
       code: `
         export const DEFAULT_FEATURE_FLAGS = {
@@ -82,13 +101,14 @@ ruleTester.run('feature-flag-author', rule, {
       errors: [
         {
           message:
-            'Feature flag "testFeature" is missing @author documentation. Add a comment with "@author Name <email@atlassian.com>" before the property.',
+            'Feature flag "testFeature" is missing @author and @since documentation. Add a comment with "@author Name <email@atlassian.com>" and "@since YYYY-MM-DD" before the property.',
         },
       ],
       output: `
         export const DEFAULT_FEATURE_FLAGS = {
           /**
            * @author Test User <test.user@atlassian.com>
+           * @since ${MOCK_DATE}
            */
           testFeature: false,
         };
@@ -107,7 +127,7 @@ ruleTester.run('feature-flag-author', rule, {
       errors: [
         {
           message:
-            'Feature flag "testFeatureWithComment" is missing @author documentation. Add a comment with "@author Name <email@atlassian.com>" before the property.',
+            'Feature flag "testFeatureWithComment" is missing @author and @since documentation. Add a comment with "@author Name <email@atlassian.com>" and "@since YYYY-MM-DD" before the property.',
         },
       ],
       output: `
@@ -115,6 +135,7 @@ ruleTester.run('feature-flag-author', rule, {
           /**
            * This is a feature flag description
            * @author Test User <test.user@atlassian.com>
+           * @since ${MOCK_DATE}
            */
           testFeatureWithComment: false,
         };
@@ -140,6 +161,7 @@ ruleTester.run('feature-flag-author', rule, {
         export const DEFAULT_FEATURE_FLAGS = {
           /**
            * @author Test User <test.user@atlassian.com>
+           * @since ${MOCK_DATE}
            */
           testFeature: false,
         };
@@ -165,6 +187,7 @@ ruleTester.run('feature-flag-author', rule, {
         export const DEFAULT_FEATURE_FLAGS = {
           /**
            * @author Test User <test.user@atlassian.com>
+           * @since ${MOCK_DATE}
            */
           testFeature: false,
         };
@@ -190,6 +213,7 @@ ruleTester.run('feature-flag-author', rule, {
         export const DEFAULT_FEATURE_FLAGS = {
           /**
            * @author Test User <test.user@atlassian.com>
+           * @since ${MOCK_DATE}
            */
           testFeature: false,
         };
@@ -202,6 +226,7 @@ ruleTester.run('feature-flag-author', rule, {
           /**
            * Correct flag
            * @author Joe Bloggs <jbloggs@atlassian.com>
+           * @since 2025-01-01
            */
           correctFlag: true,
           incorrectFlag: false,
@@ -210,7 +235,7 @@ ruleTester.run('feature-flag-author', rule, {
       errors: [
         {
           message:
-            'Feature flag "incorrectFlag" is missing @author documentation. Add a comment with "@author Name <email@atlassian.com>" before the property.',
+            'Feature flag "incorrectFlag" is missing @author and @since documentation. Add a comment with "@author Name <email@atlassian.com>" and "@since YYYY-MM-DD" before the property.',
         },
       ],
       output: `
@@ -218,12 +243,100 @@ ruleTester.run('feature-flag-author', rule, {
           /**
            * Correct flag
            * @author Joe Bloggs <jbloggs@atlassian.com>
+           * @since 2025-01-01
            */
           correctFlag: true,
           /**
            * @author Test User <test.user@atlassian.com>
+           * @since ${MOCK_DATE}
            */
           incorrectFlag: false,
+        };
+      `,
+    },
+    // Missing @since (has @author)
+    {
+      code: `
+        export const DEFAULT_FEATURE_FLAGS = {
+          /**
+           * Feature with only author
+           * @author John Doe <jdoe@atlassian.com>
+           */
+          testFeature: false,
+        };
+      `,
+      errors: [
+        {
+          message:
+            'Feature flag "testFeature" is missing @since or format is invalid. Expected format: "@since YYYY-MM-DD"',
+        },
+      ],
+      output: `
+        export const DEFAULT_FEATURE_FLAGS = {
+          /**
+           * Feature with only author
+           * @author John Doe <jdoe@atlassian.com>
+           * @since ${MOCK_DATE}
+           */
+          testFeature: false,
+        };
+      `,
+    },
+    // Invalid @since format
+    {
+      code: `
+        export const DEFAULT_FEATURE_FLAGS = {
+          /**
+           * Feature with invalid date
+           * @author John Doe <jdoe@atlassian.com>
+           * @since invalid-date
+           */
+          testFeature: false,
+        };
+      `,
+      errors: [
+        {
+          message:
+            'Feature flag "testFeature" is missing @since or format is invalid. Expected format: "@since YYYY-MM-DD"',
+        },
+      ],
+      output: `
+        export const DEFAULT_FEATURE_FLAGS = {
+          /**
+           * Feature with invalid date
+           * @author John Doe <jdoe@atlassian.com>
+           * @since ${MOCK_DATE}
+           */
+          testFeature: false,
+        };
+      `,
+    },
+    // Invalid @since date (February 30th)
+    {
+      code: `
+        export const DEFAULT_FEATURE_FLAGS = {
+          /**
+           * Feature with impossible date
+           * @author John Doe <jdoe@atlassian.com>
+           * @since 2025-02-30
+           */
+          testFeature: false,
+        };
+      `,
+      errors: [
+        {
+          message:
+            'Feature flag "testFeature" @since date is invalid: 2025-02-30',
+        },
+      ],
+      output: `
+        export const DEFAULT_FEATURE_FLAGS = {
+          /**
+           * Feature with impossible date
+           * @author John Doe <jdoe@atlassian.com>
+           * @since ${MOCK_DATE}
+           */
+          testFeature: false,
         };
       `,
     },

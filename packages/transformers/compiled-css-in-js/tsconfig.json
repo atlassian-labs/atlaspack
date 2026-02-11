@@ -1,0 +1,30 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "include": ["./src/", "./package.json"],
+  "compilerOptions": {
+    "composite": true
+  },
+  "references": [
+    {
+      "path": "../../core/plugin/tsconfig.json"
+    },
+    {
+      "path": "../../core/rust/tsconfig.json"
+    },
+    {
+      "path": "../../core/feature-flags/tsconfig.json"
+    },
+    {
+      "path": "../../core/source-map/tsconfig.json"
+    },
+    {
+      "path": "../../core/diagnostic/tsconfig.json"
+    },
+    {
+      "path": "../../core/utils/tsconfig.json"
+    },
+    {
+      "path": "../js/tsconfig.json"
+    }
+  ]
+}

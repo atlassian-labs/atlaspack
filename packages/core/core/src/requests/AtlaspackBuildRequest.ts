@@ -9,6 +9,7 @@ import type BundleGraph from '../BundleGraph';
 import createBundleGraphRequest, {
   BundleGraphResult,
 } from './BundleGraphRequest';
+import createBundleGraphRequestRust from './BundleGraphRequestRust';
 import createWriteBundlesRequest from './WriteBundlesRequest';
 import {assertSignalNotAborted} from '../utils';
 import dumpGraphToGraphViz from '../dumpGraphToGraphViz';
@@ -20,6 +21,9 @@ import {assetFromValue} from '../public/Asset';
 
 import {tracer} from '@atlaspack/profiler';
 import {requestTypes} from '../RequestTracker';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
+import {fromEnvironmentId} from '../EnvironmentManager';
+import invariant from 'assert';
 
 type AtlaspackBuildRequestInput = {
   optionsRef: SharedReference;
@@ -32,6 +36,10 @@ export type AtlaspackBuildRequestResult = {
   bundleInfo: Map<string, PackagedBundleInfo>;
   changedAssets: Map<string, Asset>;
   assetRequests: Array<AssetGroup>;
+  scopeHoistingStats?: {
+    totalAssets: number;
+    wrappedAssets: number;
+  };
 };
 
 type RunInput<TResult> = {
@@ -58,15 +66,26 @@ export default function createAtlaspackBuildRequest(
   };
 }
 
-// @ts-expect-error TS7031
-async function run({input, api, options, rustAtlaspack}) {
+async function run({
+  input,
+  api,
+  options,
+  rustAtlaspack,
+}: RunInput<AtlaspackBuildRequestResult>) {
   let {optionsRef, requestedAssetIds, signal} = input;
 
-  let bundleGraphRequest = createBundleGraphRequest({
-    optionsRef,
-    requestedAssetIds,
-    signal,
-  });
+  let bundleGraphRequest =
+    getFeatureFlag('nativeBundling') && rustAtlaspack
+      ? createBundleGraphRequestRust({
+          optionsRef,
+          requestedAssetIds,
+          signal,
+        })
+      : createBundleGraphRequest({
+          optionsRef,
+          requestedAssetIds,
+          signal,
+        });
 
   let {bundleGraph, changedAssets, assetRequests}: BundleGraphResult =
     await api.runRequest(bundleGraphRequest, {
@@ -74,6 +93,26 @@ async function run({input, api, options, rustAtlaspack}) {
         Boolean(rustAtlaspack) ||
         (options.shouldBuildLazily && requestedAssetIds.size > 0),
     });
+
+  if (
+    getFeatureFlag('nativePackager') &&
+    getFeatureFlag('nativePackagerSSRDev') &&
+    rustAtlaspack
+  ) {
+    let hasSupportedTarget = false;
+    bundleGraph.traverseBundles((bundle, ctx, actions) => {
+      if (
+        fromEnvironmentId(bundle.env).context === 'tesseract' &&
+        bundle.type === 'js'
+      ) {
+        hasSupportedTarget = true;
+        actions.stop();
+      }
+    });
+    if (hasSupportedTarget) {
+      await rustAtlaspack.loadBundleGraph(bundleGraph);
+    }
+  }
 
   // @ts-expect-error TS2345
   dumpGraphToGraphViz(bundleGraph._graph, 'BundleGraph', bundleGraphEdgeTypes);
@@ -102,9 +141,16 @@ async function run({input, api, options, rustAtlaspack}) {
     optionsRef,
   });
 
-  let bundleInfo = await api.runRequest(writeBundlesRequest);
+  let {bundleInfo, scopeHoistingStats} =
+    await api.runRequest(writeBundlesRequest);
   packagingMeasurement && packagingMeasurement.end();
   assertSignalNotAborted(signal);
 
-  return {bundleGraph, bundleInfo, changedAssets, assetRequests};
+  return {
+    bundleGraph,
+    bundleInfo,
+    changedAssets,
+    assetRequests,
+    scopeHoistingStats,
+  };
 }

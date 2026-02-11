@@ -13,6 +13,10 @@ import nullthrows from 'nullthrows';
 import {runConfigRequest} from './ConfigRequest';
 import {getDevDepRequests, runDevDepRequest} from './DevDepRequest';
 import createAtlaspackConfigRequest from './AtlaspackConfigRequest';
+import {fromEnvironmentId} from '../EnvironmentManager';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
+import logger from '@atlaspack/logger';
+import ThrowableDiagnostic, {Diagnostic} from '@atlaspack/diagnostic';
 
 type PackageRequestInput = {
   bundleGraph: BundleGraph;
@@ -46,22 +50,42 @@ export function createPackageRequest(
   };
 }
 
-// @ts-expect-error TS7031
-async function run({input, api, farm}) {
+async function run({input, api, farm, rustAtlaspack}: RunInput<BundleInfo>) {
   let {bundleGraphReference, optionsRef, bundle, useMainThread} = input;
+
   let runPackage = farm.createHandle('runPackage', useMainThread);
 
   let start = Date.now();
   let {devDeps, invalidDevDeps} = await getDevDepRequests(api);
   let {cachePath} = nullthrows(
-    // @ts-expect-error TS2347
     await api.runRequest<null, ConfigAndCachePath>(
       createAtlaspackConfigRequest(),
     ),
   );
 
-  let {devDepRequests, configRequests, bundleInfo, invalidations} =
-    (await runPackage({
+  let packagingResult: RunPackagerRunnerResult;
+  if (
+    getFeatureFlag('nativePackager') &&
+    getFeatureFlag('nativePackagerSSRDev') &&
+    rustAtlaspack &&
+    fromEnvironmentId(bundle.env).context === 'tesseract' &&
+    bundle.type === 'js'
+  ) {
+    // Once this actually does something, the code below will be in an `else` block (i.e. we'll only run one or the other)
+    let result = await rustAtlaspack.package(bundle.id);
+    let error: Diagnostic | null = null;
+    [packagingResult, error] = result;
+    if (error) {
+      throw new ThrowableDiagnostic({
+        diagnostic: error,
+      });
+    }
+    logger.verbose({
+      message: JSON.stringify(packagingResult, null, 2),
+      origin: '@atlaspack/core',
+    });
+  } else {
+    packagingResult = (await runPackage({
       bundle,
       bundleGraphReference,
       optionsRef,
@@ -70,7 +94,10 @@ async function run({input, api, farm}) {
       invalidDevDeps,
       previousInvalidations: api.getInvalidations(),
     })) as RunPackagerRunnerResult;
+  }
 
+  let {devDepRequests, configRequests, bundleInfo, invalidations} =
+    packagingResult;
   for (let devDepRequest of devDepRequests) {
     await runDevDepRequest(api, devDepRequest);
   }

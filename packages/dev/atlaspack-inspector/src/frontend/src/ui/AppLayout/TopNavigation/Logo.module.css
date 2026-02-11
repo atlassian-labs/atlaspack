@@ -1,0 +1,12 @@
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logoText {
+  color: var(--ds-text);
+  font-size: 20px;
+  font-weight: 600;
+  text-decoration: none !important;
+}

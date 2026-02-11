@@ -19,13 +19,25 @@ pub mod js_tracing;
 
 #[cfg(not(target_arch = "wasm32"))]
 mod atlaspack;
+mod diagnostics;
 #[cfg(not(test))]
 pub mod lmdb;
 mod optimizers;
+mod plugin_compiled_css_in_js;
 mod resolver;
+mod sourcemap;
 mod string_ops;
 mod transformer;
 pub mod vcs;
+
+mod plugin_tokens;
+
+// Re-export memory profiling functions
+pub use atlaspack_memory_profiler::{
+  get_native_memory_stats, reset_memory_tracking, sample_native_memory,
+};
+pub use atlassian_swc_compiled_css::config::CompiledCssInJsTransformConfig;
+pub use plugin_compiled_css_in_js::is_safe_from_js;
 
 #[cfg(target_arch = "wasm32")]
 #[no_mangle]

@@ -1,4 +1,7 @@
+import {getFeatureFlag} from '@atlaspack/feature-flags';
+
 import {createBuildCache} from './buildCache';
+import {LargeMap} from './LargeMap';
 import {serializeRaw, deserializeRaw} from './serializerCore';
 
 export {serializeRaw, deserializeRaw} from './serializerCore';
@@ -64,9 +67,21 @@ function shouldContinueMapping(value: any) {
   return value && typeof value === 'object' && value.$$raw !== true;
 }
 
+interface MapLike<K, V> {
+  get(key: K): V | undefined;
+  set(key: K, value: V): unknown;
+  has(key: K): boolean;
+}
+
 function mapObject(object: any, fn: (val?: any) => any, preOrder = false): any {
-  let cache = new Map();
-  let memo = new Map();
+  // Use LargeMap to work around Node 24's Map size limit
+  // when the feature flag is enabled
+  let cache: MapLike<any, any> = getFeatureFlag('useLargeMapInBuildCache')
+    ? new LargeMap<any, any>()
+    : new Map<any, any>();
+  let memo: MapLike<any, any> = getFeatureFlag('useLargeMapInBuildCache')
+    ? new LargeMap<any, any>()
+    : new Map<any, any>();
 
   // Memoize the passed function to ensure it always returns the exact same
   // output by reference for the same input. This is important to maintain

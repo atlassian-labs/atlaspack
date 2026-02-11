@@ -1,7 +1,6 @@
 import {Resolver} from '@atlaspack/plugin';
 import NodeResolver from '@atlaspack/node-resolver-core';
-import {basename, dirname, extname, isAbsolute, join} from 'path';
-import {FileSystem} from '@atlaspack/types-internal';
+import {isAbsolute, join} from 'path';
 
 interface TesseractResolverConfig {
   /** Modules to replace with empty stubs during resolution. */
@@ -16,12 +15,14 @@ interface TesseractResolverConfig {
   /** Node.js built-in aliases for Tesseract-specific implementations. */
   builtinAliases?: Record<string, string>;
 
-  /** Server file suffixes checked in priority order. */
-  serverSuffixes?: Array<string>;
+  /** Enable React DOM Server specific behavior. */
+  handleReactDomServer?: boolean;
+
+  /** Unsupported extensions, configure to fallback to default behaviour */
+  unsupportedExtensions?: Array<string>;
 }
 
 const IGNORE_MODULES_REGEX = /(mock|mocks|\.woff|\.woff2|\.mp3|\.ogg)$/;
-
 const IGNORE_PATH = join(__dirname, 'data', 'empty-module.js');
 
 /**
@@ -36,52 +37,14 @@ const getIgnoreModules = (
   env: typeof process.env,
   ignoreModules: Array<string>,
 ) => {
-  if (env.PILLAR_LOCAL_DEVELOPMENT === 'true') {
-    return [...ignoreModules, '@atlassiansox/analytics-web-client'];
+  if (env.SSR_IGNORE_MODULES) {
+    const additionalIgnoreModules = env.SSR_IGNORE_MODULES.split(',')
+      .map((module) => module.trim())
+      .filter((module) => module.length > 0);
+    return [...ignoreModules, ...additionalIgnoreModules];
   }
-
   return ignoreModules;
 };
-
-async function checkForServerFile(
-  inputFS: FileSystem,
-  resolvedPath: string,
-  suffix?: string,
-) {
-  const dir = dirname(resolvedPath);
-  const ext = extname(resolvedPath);
-  const base = basename(resolvedPath, ext);
-
-  const serverPath = suffix
-    ? join(dir, `${base}.server-${suffix}${ext}`)
-    : join(dir, `${base}.server${ext}`);
-  const isExist = await inputFS.exists(serverPath);
-  return {
-    isExist,
-    serverPath,
-  };
-}
-
-async function checkForServerFileWithOptionalSuffixes(
-  inputFS: FileSystem,
-  resolvedPath: string,
-  suffixes: Array<string>,
-) {
-  if (suffixes) {
-    // if there are multiple suffixes, the left-most takes precedence
-    for (const suffix of suffixes) {
-      const withSuffix = await checkForServerFile(
-        inputFS,
-        resolvedPath,
-        suffix,
-      );
-      if (withSuffix.isExist) {
-        return withSuffix;
-      }
-    }
-  }
-  return checkForServerFile(inputFS, resolvedPath);
-}
 
 export default new Resolver({
   async loadConfig({config, options, logger}) {
@@ -95,11 +58,11 @@ export default new Resolver({
       ? new Map(Object.entries(userConfig.preResolved))
       : new Map<string, string>();
     const builtinAliases = userConfig.builtinAliases || {};
-    const serverSuffixes = userConfig.serverSuffixes || [];
     const ignoreModules = userConfig.ignoreModules || [];
     const browserResolvedNodeBuiltins =
       userConfig.browserResolvedNodeBuiltins || [];
-
+    const handleReactDomServer = userConfig.handleReactDomServer || false;
+    const unsupportedExtensions = userConfig.unsupportedExtensions || [];
     const nodeResolver = new NodeResolver({
       fs: options.inputFS,
       projectRoot: options.projectRoot,
@@ -123,11 +86,12 @@ export default new Resolver({
     return {
       nodeResolver,
       browserResolver,
-      serverSuffixes,
       preResolved,
       builtinAliases,
       ignoreModules,
       browserResolvedNodeBuiltins,
+      handleReactDomServer,
+      unsupportedExtensions,
     };
   },
   resolve({dependency, specifier, config, options}) {
@@ -138,10 +102,18 @@ export default new Resolver({
       browserResolvedNodeBuiltins,
       preResolved,
       builtinAliases,
-      serverSuffixes,
+      handleReactDomServer,
+      unsupportedExtensions,
     } = config;
 
-    if (isAbsolute(specifier)) {
+    if (
+      unsupportedExtensions.some((ext) => dependency.specifier.endsWith(ext))
+    ) {
+      // fallback to atlaspack's default resolver
+      return null;
+    }
+
+    if (!specifier.startsWith('//') && isAbsolute(specifier)) {
       return {
         filePath: specifier,
         code: undefined,
@@ -192,70 +164,57 @@ export default new Resolver({
       (options.env.STATIC_FALLBACK === 'true' &&
         STATIC_FALLBACK_MODULES.includes(specifier));
 
+    const snapvmEnv = new Proxy(dependency.env, {
+      get(target, property) {
+        if (handleReactDomServer && specifier.includes('react-dom/server')) {
+          if (property === 'isNode') {
+            return () => true;
+          }
+          if (property === 'isBrowser') {
+            return () => false;
+          }
+          if (property === 'isWorker') {
+            return () => false;
+          }
+        }
+
+        if (property === 'isLibrary') {
+          return false;
+        }
+
+        if (typeof property === 'string') {
+          const value = target[property as keyof typeof target];
+          const ret = typeof value === 'function' ? value.bind(target) : value;
+          return ret;
+        }
+
+        return Reflect.get(target, property);
+      },
+    });
+
+    const packageConditions =
+      handleReactDomServer && specifier.includes('react-dom/server')
+        ? ['default']
+        : ['ssr', 'require'];
+
     const promise = useBrowser
       ? browserResolver.resolve({
           sourcePath: dependency.sourcePath,
           parent: dependency.resolveFrom,
           filename: aliasSpecifier || specifier,
           specifierType: dependency.specifierType,
-          env: new Proxy(dependency.env, {
-            get(target, property) {
-              if (property === 'isLibrary') {
-                return false;
-              }
-
-              if (typeof property === 'string') {
-                const value = target[property as keyof typeof target];
-                const ret =
-                  typeof value === 'function' ? value.bind(target) : value;
-                return ret;
-              }
-
-              return Reflect.get(target, property);
-            },
-          }),
-          packageConditions: ['ssr', 'require'],
+          env: snapvmEnv,
+          packageConditions,
         })
       : nodeResolver.resolve({
           sourcePath: dependency.sourcePath,
           parent: dependency.resolveFrom,
           filename: aliasSpecifier || specifier,
           specifierType: dependency.specifierType,
-          env: dependency.env,
-          packageConditions: ['ssr', 'require'],
+          env: handleReactDomServer ? snapvmEnv : dependency.env,
+          packageConditions,
         });
 
-    return promise
-      .then(async (result) => {
-        const resolvedPath = result?.filePath;
-
-        if (!resolvedPath) {
-          return result;
-        }
-
-        const {isExist, serverPath} =
-          await checkForServerFileWithOptionalSuffixes(
-            options.inputFS,
-            resolvedPath,
-            serverSuffixes,
-          );
-
-        if (isExist) {
-          const newResult = {
-            sideEffects: result.sideEffects,
-            filePath: serverPath,
-            meta: {
-              isServerFile: true,
-              resolveTo: serverPath,
-            },
-          };
-
-          return newResult;
-        }
-        return result;
-      })
-      .catch((e) => {
-        throw e;
-      });
+    return promise;
   },
 }) as Resolver<unknown>;

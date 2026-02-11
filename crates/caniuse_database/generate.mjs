@@ -15,7 +15,7 @@ await $`wget https://raw.githubusercontent.com/Fyrd/caniuse/main/data.json`;
 // import data from './data.json' with { type: "json" };
 
 const data = (await import('./data.json', {
-  assert: {type: 'json'},
+  with: {type: 'json'},
 })).default;
 
 const write = console.log;

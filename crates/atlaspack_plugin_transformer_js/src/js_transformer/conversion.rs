@@ -2,16 +2,18 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use atlaspack_core::diagnostic;
+use atlaspack_sourcemap::SourceMapError;
 use indexmap::IndexMap;
 use std::collections::{BTreeMap, HashMap};
-use swc_core::atoms::{Atom, JsWord};
+use swc_core::atoms::Atom;
 
-use atlaspack_core::plugin::{PluginOptions, TransformResult};
+use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::types::engines::EnvironmentFeature;
 use atlaspack_core::types::{
-  Asset, BundleBehavior, Code, CodeFrame, CodeHighlight, Dependency, Diagnostic, DiagnosticBuilder,
-  Environment, EnvironmentContext, File, FileType, IncludeNodeModules, OutputFormat,
-  SourceLocation, SourceMap, SourceType, SpecifierType, Symbol,
+  Asset, BuildMode, BundleBehavior, Code, CodeFrame, CodeHighlight, Dependency, DependencyBuilder,
+  DependencyKind, Diagnostic, DiagnosticBuilder, Environment, EnvironmentContext, File, FileType,
+  IncludeNodeModules, OutputFormat, Priority, SourceLocation, SourceMap, SourceType, SpecifierType,
+  Symbol,
 };
 
 use crate::js_transformer::conversion::dependency_kind::{
@@ -22,6 +24,7 @@ use crate::js_transformer::conversion::symbol::{
   transformer_collect_imported_symbol_to_symbol, transformer_exported_symbol_into_symbol,
   transformer_imported_symbol_to_symbol,
 };
+use crate::react_refresh;
 
 mod dependency_kind;
 mod loc;
@@ -32,17 +35,18 @@ pub(crate) fn convert_result(
   mut asset: Asset,
   transformer_config: &atlaspack_js_swc_core::Config,
   result: atlaspack_js_swc_core::TransformResult,
-  options: &PluginOptions,
+  project_root: &Path,
+  mode: &BuildMode,
+  core_path: &Path,
+  hmr_options: &Option<atlaspack_core::plugin::HmrOptions>,
 ) -> Result<TransformResult, Vec<Diagnostic>> {
   let asset_file_path = asset.file_path.to_path_buf();
   let asset_environment = asset.env.clone();
 
-  if let Some(shebang) = result.shebang {
-    asset.set_interpreter(shebang);
-  }
+  asset.interpreter = result.shebang;
 
   let (mut dependency_by_specifier, invalidate_on_file_change) = convert_dependencies(
-    &options.project_root,
+    project_root,
     transformer_config,
     result.dependencies,
     result.magic_comments,
@@ -51,7 +55,7 @@ pub(crate) fn convert_result(
 
   if result.needs_esm_helpers {
     let dependency = make_esm_helpers_dependency(
-      options,
+      core_path,
       &asset_file_path,
       (*asset_environment).clone(),
       &asset.id,
@@ -73,16 +77,14 @@ pub(crate) fn convert_result(
 
     // Collect all exported variable names
     for symbol in &hoist_result.exported_symbols {
-      let symbol =
-        transformer_exported_symbol_into_symbol(&options.project_root, &asset_file_path, symbol);
+      let symbol = transformer_exported_symbol_into_symbol(project_root, &asset_file_path, symbol);
       asset_symbols.push(symbol);
     }
 
     // Collect all imported symbols into each of the corresponding dependencies' symbols array
     for symbol in hoist_result.imported_symbols {
       if let Some(dependency) = dependency_by_specifier.get_mut(&symbol.source) {
-        let symbol =
-          transformer_imported_symbol_to_symbol(&options.project_root, &asset_file_path, &symbol);
+        let symbol = transformer_imported_symbol_to_symbol(project_root, &asset_file_path, &symbol);
         if let Some(symbols) = dependency.symbols.as_mut() {
           symbols.push(symbol);
         } else {
@@ -95,7 +97,7 @@ pub(crate) fn convert_result(
       if let Some(dependency) = dependency_by_specifier.get_mut(&symbol.source) {
         if is_re_export_all_symbol(&symbol) {
           let loc = Some(convert_loc(
-            &options.project_root,
+            project_root,
             asset_file_path.clone(),
             &symbol.loc,
           ));
@@ -132,7 +134,7 @@ pub(crate) fn convert_result(
             exported: symbol.imported.as_ref().into(),
             local: re_export_fake_local_key.clone(),
             loc: Some(convert_loc(
-              &options.project_root,
+              project_root,
               asset_file_path.clone(),
               &symbol.loc,
             )),
@@ -150,7 +152,7 @@ pub(crate) fn convert_result(
             exported: symbol.local.as_ref().into(),
             local: re_export_fake_local_key.clone(),
             loc: Some(convert_loc(
-              &options.project_root,
+              project_root,
               asset_file_path.clone(),
               &symbol.loc,
             )),
@@ -162,14 +164,14 @@ pub(crate) fn convert_result(
     }
 
     for specifier in hoist_result.wrapped_requires {
-      if let Some(dependency) = dependency_by_specifier.get_mut(&JsWord::new(specifier)) {
-        dependency.set_should_wrap(true);
+      if let Some(dependency) = dependency_by_specifier.get_mut(&Atom::new(specifier)) {
+        dependency.should_wrap = true;
       }
     }
 
     for (name, specifier) in hoist_result.dynamic_imports {
       if let Some(dependency) = dependency_by_specifier.get_mut(&specifier) {
-        dependency.set_promise_symbol(&*name);
+        dependency.promise_symbol = Some(name.to_string());
       }
     }
 
@@ -195,25 +197,22 @@ pub(crate) fn convert_result(
     // Add * symbol if there are CJS exports, no imports/exports at all
     // (and the asset has side effects), or the asset is wrapped.
     // This allows accessing symbols that don't exist without errors in symbol propagation.
-    if (hoist_result.has_cjs_exports
+    if hoist_result.has_cjs_exports
       || (!hoist_result.is_esm
         && asset.side_effects
         && dependency_by_specifier.is_empty()
         && hoist_result.exported_symbols.is_empty())
-      || hoist_result.should_wrap)
-      && !asset_symbols.as_slice().iter().any(|s| s.exported == "*")
+      || (hoist_result.should_wrap && !asset_symbols.as_slice().iter().any(|s| s.exported == "*"))
     {
       if result.is_empty_or_empty_export {
-        asset
-          .meta
-          .insert("emptyFileStarReexport".to_string(), true.into());
+        asset.empty_file_star_reexport = Some(true);
       }
       asset_symbols.push(make_export_star_symbol(&asset.id));
     }
 
-    asset.set_has_cjs_exports(hoist_result.has_cjs_exports);
-    asset.set_static_exports(hoist_result.static_cjs_exports);
-    asset.set_should_wrap(hoist_result.should_wrap);
+    asset.has_cjs_exports = hoist_result.has_cjs_exports;
+    asset.static_exports = hoist_result.static_cjs_exports;
+    asset.should_wrap = hoist_result.should_wrap;
   } else {
     if let Some(symbol_result) = result.symbol_result {
       asset_symbols.reserve(symbol_result.exports.len() + 1);
@@ -227,11 +226,7 @@ pub(crate) fn convert_result(
           let symbol = Symbol {
             exported: sym.local.as_ref().into(),
             local: local.clone(),
-            loc: Some(convert_loc(
-              &options.project_root,
-              asset_file_path.clone(),
-              &sym.loc,
-            )),
+            loc: Some(convert_loc(project_root, asset_file_path.clone(), &sym.loc)),
             is_weak: true,
             ..Symbol::default()
           };
@@ -250,11 +245,7 @@ pub(crate) fn convert_result(
         asset_symbols.push(Symbol {
           exported: sym.exported.as_ref().into(),
           local,
-          loc: Some(convert_loc(
-            &options.project_root,
-            asset_file_path.clone(),
-            &sym.loc,
-          )),
+          loc: Some(convert_loc(project_root, asset_file_path.clone(), &sym.loc)),
           is_weak,
           ..Symbol::default()
         });
@@ -262,11 +253,8 @@ pub(crate) fn convert_result(
 
       for sym in symbol_result.imports {
         if let Some(dependency) = dependency_by_specifier.get_mut(&sym.source) {
-          let symbol = transformer_collect_imported_symbol_to_symbol(
-            &options.project_root,
-            &asset_file_path,
-            &sym,
-          );
+          let symbol =
+            transformer_collect_imported_symbol_to_symbol(project_root, &asset_file_path, &sym);
           if let Some(symbols) = dependency.symbols.as_mut() {
             symbols.push(symbol);
           } else {
@@ -277,11 +265,7 @@ pub(crate) fn convert_result(
 
       for sym in symbol_result.exports_all {
         if let Some(dependency) = dependency_by_specifier.get_mut(&sym.source) {
-          let loc = Some(convert_loc(
-            &options.project_root,
-            asset_file_path.clone(),
-            &sym.loc,
-          ));
+          let loc = Some(convert_loc(project_root, asset_file_path.clone(), &sym.loc));
           let symbol = make_export_all_symbol(loc);
           if let Some(symbols) = dependency.symbols.as_mut() {
             symbols.push(symbol);
@@ -334,28 +318,80 @@ pub(crate) fn convert_result(
     asset.symbols = Some(asset_symbols);
   }
 
-  asset.set_has_node_replacements(result.has_node_replacements);
-  asset.set_is_constant_module(result.is_constant_module);
+  asset.has_node_replacements = result.has_node_replacements;
+  asset.is_constant_module = result.is_constant_module;
+
   if transformer_config.conditional_bundling {
-    asset.set_conditions(result.conditions);
+    asset.conditions = result.conditions;
   }
 
   asset.file_type = FileType::Js;
-  asset.code = Code::new(result.code);
+
+  let mut final_code = result.code;
+
+  // Apply React refresh wrapping if needed
+  let react_refresh_map_offset = if transformer_config.react_refresh {
+    if let Some((wrapped_code, refresh_dependency, source_map_offset)) =
+      react_refresh::wrap_with_react_refresh(
+        &asset,
+        &final_code,
+        mode,
+        hmr_options.is_some(),
+        &dependency_by_specifier,
+        transformer_config.hmr_improvements,
+      )
+    {
+      final_code = wrapped_code;
+
+      dependency_by_specifier.insert(
+        refresh_dependency.specifier.as_str().into(),
+        refresh_dependency,
+      );
+
+      Some(source_map_offset)
+    } else {
+      None
+    }
+  } else {
+    None
+  };
+
+  asset.code = Code::new(final_code);
   // Updating the file_type to JS will cause the asset id to be updated.
   // However, the packager needs to be aware of the original id when creating
   // symbols replacements in scope hoisting. That's why we store the id before
   // it get's updated on the meta object.
-  asset.set_meta_id(asset.id.clone());
+  asset.packaging_id = Some(asset.id.clone());
 
   if let Some(map) = result.map {
-    // TODO: Fix diagnostic error handling
-    let mut source_map = SourceMap::from_json(&options.project_root, &map).map_err(|_| vec![])?;
+    let source_map_error_to_diagnostic = |error: SourceMapError| {
+      vec![
+        DiagnosticBuilder::default()
+          .origin(Some("@atlaspack/transformer-js".into()))
+          .message(format!(
+            "Error building SourceMap for {}: {}",
+            asset.file_path.display(),
+            error
+          ))
+          .build()
+          .unwrap(),
+      ]
+    };
+
+    let mut source_map =
+      SourceMap::from_json(project_root, &map).map_err(source_map_error_to_diagnostic)?;
 
     if let Some(original_map) = asset.map {
       source_map
         .extends(&mut original_map.clone())
-        .map_err(|_| vec![])?;
+        .map_err(source_map_error_to_diagnostic)?
+    }
+
+    // Adjust source map if React refresh wrapping was applied
+    if let Some((start_column, offset_lines)) = react_refresh_map_offset {
+      source_map
+        .offset_lines(start_column, offset_lines)
+        .map_err(source_map_error_to_diagnostic)?
     }
 
     asset.map = Some(source_map);
@@ -416,10 +452,7 @@ pub(crate) fn convert_dependencies(
     match result {
       DependencyConversionResult::Dependency(mut dependency) => {
         if let Some(chunk_name) = magic_comments.get(&dependency.specifier) {
-          dependency.meta.insert(
-            "chunkNameMagicComment".to_string(),
-            chunk_name.clone().into(),
-          );
+          dependency.chunk_name_magic_comment = Some(chunk_name.clone());
         }
         dependency_by_specifier.insert(placeholder, dependency);
       }
@@ -444,27 +477,26 @@ fn make_export_star_symbol(asset_id: &str) -> Symbol {
 }
 
 fn make_esm_helpers_dependency(
-  options: &PluginOptions,
+  core_path: &Path,
   #[allow(clippy::ptr_arg)] asset_file_path: &PathBuf,
   asset_environment: Environment,
   asset_id: &str,
 ) -> Dependency {
-  Dependency {
-    source_asset_id: Some(asset_id.to_string()),
-    specifier: "@atlaspack/transformer-js/src/esmodule-helpers.js".into(),
-    specifier_type: SpecifierType::Esm,
-    source_path: Some(asset_file_path.clone()),
-    env: Environment {
+  DependencyBuilder::default()
+    .source_asset_id(asset_id.to_string())
+    .specifier("@atlaspack/transformer-js/src/esmodule-helpers.js".to_string())
+    .specifier_type(SpecifierType::Esm)
+    .source_path(asset_file_path.clone())
+    .env(Arc::new(Environment {
       include_node_modules: IncludeNodeModules::Map(BTreeMap::from([(
         "@atlaspack/transformer-js".into(),
         true,
       )])),
       ..asset_environment.clone()
-    }
-    .into(),
-    resolve_from: Some(options.core_path.as_path().into()),
-    ..Default::default()
-  }
+    }))
+    .resolve_from(core_path.into())
+    .priority(Priority::default())
+    .build()
 }
 
 /// This will replace the hoist result symbols that `is_re_export_all` returns true for as well
@@ -497,32 +529,25 @@ fn convert_dependency(
   asset: &Asset,
   transformer_dependency: atlaspack_js_swc_core::DependencyDescriptor,
 ) -> Result<DependencyConversionResult, Vec<Diagnostic>> {
-  use atlaspack_js_swc_core::DependencyKind;
-
   let loc = convert_loc(
     project_root,
     asset.file_path.clone(),
     &transformer_dependency.loc,
   );
-  let mut base_dependency = Dependency {
-    bundle_behavior: match transformer_dependency.kind {
+  let dependency = DependencyBuilder::default()
+    .bundle_behavior(match transformer_dependency.kind {
       DependencyKind::Url => Some(BundleBehavior::Isolated),
       _ => None,
-    },
-    env: asset.env.clone(),
-    loc: Some(loc.clone()),
-    priority: convert_priority(&transformer_dependency),
-    source_asset_id: Some(asset.id.to_string()),
-    source_asset_type: Some(asset.file_type.clone()),
-    source_path: Some(asset.file_path.clone()),
-    specifier: transformer_dependency.specifier.as_ref().into(),
-    specifier_type: convert_specifier_type(&transformer_dependency),
-    ..Dependency::default()
-  };
-
-  if let Some(placeholder) = &transformer_dependency.placeholder {
-    base_dependency.set_placeholder(placeholder.clone());
-  }
+    })
+    .env(asset.env.clone())
+    .loc(loc.clone())
+    .priority(convert_priority(&transformer_dependency))
+    .source_asset_id(asset.id.to_string())
+    .source_asset_type(asset.file_type.clone())
+    .source_path(asset.file_path.clone())
+    .specifier(transformer_dependency.specifier.as_ref().to_string())
+    .specifier_type(convert_specifier_type(&transformer_dependency))
+    .placeholder_option(transformer_dependency.placeholder.clone());
 
   let source_type = convert_source_type(&transformer_dependency.source_type);
   match transformer_dependency.kind {
@@ -555,10 +580,8 @@ fn convert_dependency(
         output_format = OutputFormat::Global;
       }
 
-      base_dependency.set_is_webworker();
-
-      let dependency = Dependency {
-        env: Arc::new(Environment {
+      let dependency = dependency
+        .env(Arc::new(Environment {
           context: EnvironmentContext::WebWorker,
           engines: asset.env.engines.clone(),
           include_node_modules: asset.env.include_node_modules.clone(),
@@ -568,15 +591,16 @@ fn convert_dependency(
           source_type,
           custom_env: asset.env.custom_env.clone(),
           ..*asset.env.clone()
-        }),
-        ..base_dependency
-      };
+        }))
+        .is_webworker(true)
+        .kind(DependencyKind::WebWorker)
+        .build();
 
       Ok(DependencyConversionResult::Dependency(dependency))
     }
     DependencyKind::ServiceWorker => {
-      let dependency = Dependency {
-        env: Arc::new(Environment {
+      let dependency = dependency
+        .env(Arc::new(Environment {
           context: EnvironmentContext::ServiceWorker,
           engines: asset.env.engines.clone(),
           include_node_modules: asset.env.include_node_modules.clone(),
@@ -586,17 +610,16 @@ fn convert_dependency(
           source_type,
           custom_env: asset.env.custom_env.clone(),
           ..*asset.env.clone()
-        }),
-        needs_stable_name: true,
-        // placeholder: dep.placeholder.map(|s| s.into()),
-        ..base_dependency
-      };
+        }))
+        .needs_stable_name(true)
+        .kind(DependencyKind::ServiceWorker)
+        .build();
 
       Ok(DependencyConversionResult::Dependency(dependency))
     }
     DependencyKind::Worklet => {
-      let dependency = Dependency {
-        env: Arc::new(Environment {
+      let dependency = dependency
+        .env(Arc::new(Environment {
           context: EnvironmentContext::Worklet,
           engines: asset.env.engines.clone(),
           include_node_modules: asset.env.include_node_modules.clone(),
@@ -606,21 +629,17 @@ fn convert_dependency(
           source_type: SourceType::Module,
           custom_env: asset.env.custom_env.clone(),
           ..*asset.env.clone()
-        }),
-        // placeholder: dep.placeholder.map(|s| s.into()),
-        // promise_symbol: None,
-        ..base_dependency
-      };
+        }))
+        .kind(DependencyKind::Worklet)
+        .build();
 
       Ok(DependencyConversionResult::Dependency(dependency))
     }
     DependencyKind::Url => {
-      let dependency = Dependency {
-        env: asset.env.clone(),
-        bundle_behavior: Some(BundleBehavior::Isolated),
-        // placeholder: dep.placeholder.map(|s| s.into()),
-        ..base_dependency
-      };
+      let dependency = dependency
+        .bundle_behavior(Some(BundleBehavior::Isolated))
+        .kind(DependencyKind::Url)
+        .build();
 
       Ok(DependencyConversionResult::Dependency(dependency))
     }
@@ -633,17 +652,21 @@ fn convert_dependency(
     )),
     _ => {
       let mut env = asset.env.clone();
-      base_dependency.set_kind(format!("{}", transformer_dependency.kind));
+      let dependency = dependency.kind(transformer_dependency.kind.clone());
+
+      let mut import_attributes = BTreeMap::new();
 
       if let Some(attributes) = transformer_dependency.attributes {
         for attr in ["preload", "prefetch"] {
           let attr_atom = Into::<Atom>::into(attr);
           if attributes.contains_key(&attr_atom) {
             let attr_key = Into::<String>::into(attr);
-            base_dependency.set_add_import_attibute(attr_key);
+            import_attributes.insert(attr_key.to_string(), true);
           }
         }
       }
+
+      let dependency = dependency.import_attributes(import_attributes);
 
       if transformer_dependency.kind == DependencyKind::DynamicImport {
         // https://html.spec.whatwg.org/multipage/webappapis.html#hostimportmoduledynamically(referencingscriptormodule,-modulerequest,-promisecapability)
@@ -701,16 +724,14 @@ fn convert_dependency(
         }
       }
 
-      let dependency = Dependency {
-        env,
-        is_optional: transformer_dependency.is_optional,
-        is_esm: matches!(
+      let dependency = dependency
+        .env(env)
+        .is_optional(transformer_dependency.is_optional)
+        .is_esm(matches!(
           transformer_dependency.kind,
           DependencyKind::Import | DependencyKind::Export
-        ),
-        placeholder: transformer_dependency.placeholder.clone(),
-        ..base_dependency
-      };
+        ))
+        .build();
 
       Ok(DependencyConversionResult::Dependency(dependency))
     }

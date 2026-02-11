@@ -7,7 +7,7 @@
     "start": "atlaspack src/index.html --https --open"
   },
   "devDependencies": {
-    "@atlaspack/cli": "2.14.10"
+    "@atlaspack/cli": "2.15.14"
   },
   "dependencies": {
     "react": "^17.0.2",

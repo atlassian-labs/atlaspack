@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/namer-default",
-  "version": "2.14.31",
+  "version": "2.14.53",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/plugin": "2.14.31",
+    "@atlaspack/plugin": "2.14.53",
     "nullthrows": "^1.1.1"
   },
   "type": "commonjs",

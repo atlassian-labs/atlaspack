@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "module": "NodeNext",
+    "outDir": "./lib",
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "jsx": "react",
+    "strict": true,
+    "target": "es2021",
+    "rootDir": "./src"
+  },
+  "exclude": ["src/frontend", "test"]
+}

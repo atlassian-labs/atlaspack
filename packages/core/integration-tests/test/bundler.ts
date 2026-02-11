@@ -1354,12 +1354,12 @@ describe('bundler', function () {
   describe('manual shared bundles', () => {
     const dir = path.join(__dirname, 'manual-bundle');
 
-    beforeEach(() => {
-      overlayFS.mkdirp(dir);
+    beforeEach(async () => {
+      await overlayFS.mkdirp(dir);
     });
 
-    afterEach(() => {
-      overlayFS.rimraf(dir);
+    afterEach(async () => {
+      await overlayFS.rimraf(dir);
     });
 
     it('should support manual shared bundles via glob config option for different types', async function () {

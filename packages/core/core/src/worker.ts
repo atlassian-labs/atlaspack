@@ -21,7 +21,7 @@ import Validation, {ValidationOpts} from './Validation';
 import {AtlaspackConfig} from './AtlaspackConfig';
 import {registerCoreWithSerializer} from './registerCoreWithSerializer';
 import {clearBuildCaches} from '@atlaspack/build-cache';
-import {init as initSourcemaps} from '@parcel/source-map';
+import {init as initSourcemaps} from '@atlaspack/source-map';
 // @ts-expect-error TS2305
 import {init as initRust} from '@atlaspack/rust';
 import WorkerFarm from '@atlaspack/workers';
@@ -38,14 +38,6 @@ export type Diff<T extends U, U extends object> = Pick<
   SetComplement<keyof T, keyof U>
 >;
 // /flow-to-ts helpers
-
-// @ts-expect-error TS2339
-if (process.env.ATLASPACK_BUILD_REPL && process.browser) {
-  /* eslint-disable import/no-extraneous-dependencies, monorepo/no-internal-import */
-  require('@atlaspack/repl/src/atlaspack/BrowserPackageManager.js');
-  require('@atlaspack/repl/src/atlaspack/ExtendedMemoryFS.js');
-  /* eslint-enable import/no-extraneous-dependencies, monorepo/no-internal-import */
-}
 
 registerCoreWithSerializer();
 

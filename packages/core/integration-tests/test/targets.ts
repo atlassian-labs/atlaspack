@@ -25,7 +25,7 @@ describe('targets', () => {
               ]
             }
           }
-          
+
         common.js:
           export const common = 'my env is: MY_ENV';
 
@@ -72,7 +72,6 @@ describe('targets', () => {
         },
         featureFlags: {
           allowExplicitTargetEntries: true,
-          customEnvInTargets: true,
         },
       },
     );

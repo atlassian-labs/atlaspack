@@ -22,6 +22,12 @@
     },
     {
       "path": "../../core/utils/tsconfig.json"
+    },
+    {
+      "path": "../../core/source-map/tsconfig.json"
+    },
+    {
+      "path": "../../core/logger/tsconfig.json"
     }
   ]
 }

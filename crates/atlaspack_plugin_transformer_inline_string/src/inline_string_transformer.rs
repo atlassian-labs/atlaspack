@@ -1,9 +1,9 @@
 use anyhow::Error;
 use async_trait::async_trait;
-use atlaspack_core::plugin::{PluginContext, TransformContext, TransformResult, TransformerPlugin};
+use atlaspack_core::plugin::{PluginContext, TransformResult, TransformerPlugin};
 use atlaspack_core::types::{Asset, BundleBehavior};
 
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 pub struct AtlaspackInlineStringTransformerPlugin {}
 
 impl AtlaspackInlineStringTransformerPlugin {
@@ -14,17 +14,11 @@ impl AtlaspackInlineStringTransformerPlugin {
 
 #[async_trait]
 impl TransformerPlugin for AtlaspackInlineStringTransformerPlugin {
-  async fn transform(
-    &self,
-    _context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, Error> {
+  async fn transform(&self, asset: Asset) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
     asset.bundle_behavior = Some(BundleBehavior::Inline);
-    asset
-      .meta
-      .insert(String::from("inlineType"), "string".into());
+    asset.inline_type = Some("string".into());
 
     Ok(TransformResult {
       asset,
@@ -40,7 +34,6 @@ mod tests {
   use atlaspack_core::{
     config_loader::ConfigLoader,
     plugin::{PluginLogger, PluginOptions},
-    types::JSONObject,
   };
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
 
@@ -61,18 +54,14 @@ mod tests {
     });
 
     let asset = Asset::default();
-    let context = TransformContext::default();
 
     assert_ne!(asset.bundle_behavior, Some(BundleBehavior::Inline));
     assert_eq!(
-      plugin
-        .transform(context, asset)
-        .await
-        .map_err(|e| e.to_string()),
+      plugin.transform(asset).await.map_err(|e| e.to_string()),
       Ok(TransformResult {
         asset: Asset {
           bundle_behavior: Some(BundleBehavior::Inline),
-          meta: JSONObject::from_iter([(String::from("inlineType"), "string".into())]),
+          inline_type: Some("string".into()),
           ..Asset::default()
         },
         ..Default::default()

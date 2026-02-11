@@ -29,10 +29,13 @@ for (const workspace of rootPkg.workspaces) {
   }
 }
 
+let hasMismatches = false;
+
 for (const [pkgPath, pkg] of packages.entries()) {
   for (const [packageName, version] of Object.entries(pkg.dependencies || {})) {
     const current = packagesVersions.get(packageName);
     if (current && version !== '*' && version != current) {
+      hasMismatches = true;
       console.log(
         `Miss\n\tExpected ${packageName}@${current}\n\tGot      ${packageName}@${version}\n\t${pkgPath}`,
       );
@@ -44,6 +47,7 @@ for (const [pkgPath, pkg] of packages.entries()) {
   )) {
     const current = packagesVersions.get(packageName);
     if (current && version !== '*' && version != current) {
+      hasMismatches = true;
       console.log(
         `Miss\n\tExpected ${packageName}@${current}\n\tGot      ${packageName}@${version}\n\t${pkgPath}`,
       );
@@ -55,9 +59,17 @@ for (const [pkgPath, pkg] of packages.entries()) {
   )) {
     const current = packagesVersions.get(packageName);
     if (current && version !== '*' && version != current) {
+      hasMismatches = true;
       console.log(
         `Miss\n\tExpected ${packageName}@${current}\n\tGot      ${packageName}@${version}\n\t${pkgPath}`,
       );
     }
   }
+}
+
+if (hasMismatches) {
+  console.log('Mismatches found');
+  console.log('Please update the versions in the package.json files');
+  console.log('and run `yarn` to fix the issues');
+  process.exit(1);
 }

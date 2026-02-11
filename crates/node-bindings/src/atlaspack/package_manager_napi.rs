@@ -4,7 +4,7 @@ use anyhow::anyhow;
 use napi::{Env, JsObject};
 
 use atlaspack_napi_helpers::js_callable::JsCallable;
-use atlaspack_package_manager::{PackageManager, Resolution};
+use atlaspack_package_manager::{DevDep, PackageManager, Resolution};
 
 pub struct PackageManagerNapi {
   resolve_fn: JsCallable,
@@ -24,5 +24,14 @@ impl PackageManager for PackageManagerNapi {
       .resolve_fn
       .call_serde_blocking((specifier.to_owned(), from.to_path_buf()))
       .map_err(|e| anyhow!(e))
+  }
+
+  fn resolve_dev_dependency(
+    &self,
+    _package_name: &str,
+    _resolve_from: &Path,
+    _ignore_startup_invalidations: bool,
+  ) -> anyhow::Result<DevDep> {
+    unimplemented!()
   }
 }

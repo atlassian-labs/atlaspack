@@ -11,8 +11,8 @@ use swc_core::common::Mark;
 use swc_core::common::Span;
 use swc_core::common::SyntaxContext;
 use swc_core::ecma::ast::*;
-use swc_core::ecma::atoms::JsWord;
-use swc_core::ecma::atoms::js_word;
+use swc_core::ecma::atoms::Atom;
+use swc_core::ecma::atoms::atom;
 use swc_core::ecma::utils::stack_size::maybe_grow_default;
 use swc_core::ecma::visit::Fold;
 use swc_core::ecma::visit::FoldWith;
@@ -69,9 +69,9 @@ pub fn hoist(
 pub struct ExportedSymbol {
   /// The mangled name the transformer has generated and replaced the variable
   /// uses with
-  pub local: JsWord,
+  pub local: Atom,
   /// The original source name that was exported
-  pub exported: JsWord,
+  pub exported: Atom,
   /// The location of this export
   pub loc: SourceLocation,
   pub is_esm: bool,
@@ -98,13 +98,13 @@ pub struct ExportedSymbol {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct ImportedSymbol {
   /// The specifier for a certain dependency this symbol comes from
-  pub source: JsWord,
+  pub source: Atom,
   /// The (usually mangled) local name for a certain imported symbol
   ///
   /// On re-exports, this is rather the rename for the import. See `HoistResult::re_exports`.
-  pub local: JsWord,
+  pub local: Atom,
   /// The original name for a certain imported symbol
-  pub imported: JsWord,
+  pub imported: Atom,
   /// A location in the import site
   pub loc: SourceLocation,
   /// The type of import this symbol is coming from
@@ -116,17 +116,17 @@ struct Hoist<'a> {
   module_id: &'a str,
   collect: &'a Collect,
   module_items: Vec<ModuleItem>,
-  export_decls: HashSet<JsWord>,
-  hoisted_imports: IndexMap<JsWord, ModuleItem>,
+  export_decls: HashSet<Atom>,
+  hoisted_imports: IndexMap<Atom, ModuleItem>,
   /// See [`HoistResult::imported_symbols`]
   imported_symbols: Vec<ImportedSymbol>,
   /// See [`HoistResult::exported_symbols`]
   exported_symbols: Vec<ExportedSymbol>,
   re_exports: Vec<ImportedSymbol>,
   /// See [`HoistResult::self_references`]
-  self_references: HashSet<JsWord>,
+  self_references: HashSet<Atom>,
   /// See [`HoistResult::dynamic_imports`]
-  dynamic_imports: HashMap<JsWord, JsWord>,
+  dynamic_imports: HashMap<Atom, Atom>,
   in_function_scope: bool,
   diagnostics: Vec<Diagnostic>,
   unresolved_mark: Mark,
@@ -286,7 +286,7 @@ pub struct HoistResult {
   ///     return $abc$export$6a5cdcad01c973fa;
   /// };
   /// ```
-  pub self_references: HashSet<JsWord>,
+  pub self_references: HashSet<Atom>,
   /// When require statements are used programmatically, their sources will be collected here.
   ///
   /// These would be the module names of dynamically imported or required modules.
@@ -330,7 +330,7 @@ pub struct HoistResult {
   ///
   /// In other words, the keys are the generated identifier names, inserted by the transformer and
   /// the values, the specifiers on the original source code.
-  pub dynamic_imports: HashMap<JsWord, JsWord>,
+  pub dynamic_imports: HashMap<Atom, Atom>,
   pub static_cjs_exports: bool,
   pub has_cjs_exports: bool,
   pub is_esm: bool,
@@ -475,7 +475,7 @@ impl Fold for Hoist<'_> {
                       self.re_exports.push(ImportedSymbol {
                         source: src.value.clone(),
                         local: default.exported.sym,
-                        imported: js_word!("default"),
+                        imported: atom!("default"),
                         loc: SourceLocation::from(&self.collect.source_map, default.exported.span),
                         kind: ImportKind::Import,
                       });
@@ -590,8 +590,10 @@ impl Fold for Hoist<'_> {
             ModuleDecl::ExportDefaultDecl(export) => {
               let decl = match export.decl {
                 DefaultDecl::Class(class) => Decl::Class(ClassDecl {
-                  ident: if self.collect.should_wrap && class.ident.is_some() {
-                    class.ident.unwrap()
+                  ident: if self.collect.should_wrap
+                    && let Some(ident) = class.ident
+                  {
+                    ident
                   } else {
                     self.get_export_ident(DUMMY_SP, &"default".into())
                   },
@@ -599,8 +601,10 @@ impl Fold for Hoist<'_> {
                   class: class.class.fold_with(self),
                 }),
                 DefaultDecl::Fn(func) => Decl::Fn(FnDecl {
-                  ident: if self.collect.should_wrap && func.ident.is_some() {
-                    func.ident.unwrap()
+                  ident: if self.collect.should_wrap
+                    && let Some(ident) = func.ident
+                  {
+                    ident
                   } else {
                     self.get_export_ident(DUMMY_SP, &"default".into())
                   },
@@ -860,7 +864,7 @@ impl Fold for Hoist<'_> {
                 && !self.collect.non_static_requires.contains(source)
               {
                 if *kind == ImportKind::DynamicImport {
-                  let name: JsWord = format!(
+                  let name: Atom = format!(
                     "${}$importAsync${:x}${:x}",
                     self.module_id,
                     hash!(source),
@@ -957,7 +961,7 @@ impl Fold for Hoist<'_> {
 
         if let Some(source) = match_import(&node) {
           self.add_require(&source, ImportKind::DynamicImport);
-          let name: JsWord = format!("${}$importAsync${:x}", self.module_id, hash!(source)).into();
+          let name: Atom = format!("${}$importAsync${:x}", self.module_id, hash!(source)).into();
           self.dynamic_imports.insert(name.clone(), source.clone());
           if self.collect.non_static_requires.contains(&source) || self.collect.should_wrap {
             self.imported_symbols.push(ImportedSymbol {
@@ -974,8 +978,7 @@ impl Fold for Hoist<'_> {
         if let Some((source_true, source_false)) =
           match_import_cond(&node, self.collect.ignore_mark)
         {
-          let name: JsWord =
-            format!("${}$importCond${}", self.module_id, hash!(source_true)).into();
+          let name: Atom = format!("${}$importCond${}", self.module_id, hash!(source_true)).into();
           self.add_require(&source_true, ImportKind::ConditionalImport);
           self.add_require(&source_false, ImportKind::ConditionalImport);
 
@@ -1087,7 +1090,7 @@ impl Fold for Hoist<'_> {
       if !self.collect.non_static_requires.contains(source) {
         if *kind == ImportKind::DynamicImport {
           if specifier != "*" {
-            let name: JsWord = format!(
+            let name: Atom = format!(
               "${}$importAsync${:x}${:x}",
               self.module_id,
               hash!(source),
@@ -1102,8 +1105,7 @@ impl Fold for Hoist<'_> {
               kind: *kind,
             });
           } else if self.collect.non_static_access.contains_key(&id!(node)) {
-            let name: JsWord =
-              format!("${}$importAsync${:x}", self.module_id, hash!(source)).into();
+            let name: Atom = format!("${}$importAsync${:x}", self.module_id, hash!(source)).into();
             self.imported_symbols.push(ImportedSymbol {
               source: source.clone(),
               local: name,
@@ -1152,7 +1154,7 @@ impl Fold for Hoist<'_> {
       return self.get_export_ident(node.span, &"*".into());
     }
 
-    if node.sym == js_word!("global") && is_unresolved(&node, self.unresolved_mark) {
+    if node.sym == atom!("global") && is_unresolved(&node, self.unresolved_mark) {
       return Ident::new("$parcel$global".into(), node.span, node.ctxt);
     }
 
@@ -1160,7 +1162,7 @@ impl Fold for Hoist<'_> {
       && !is_unresolved(&node, self.unresolved_mark)
       && !self.collect.should_wrap
     {
-      let new_name: JsWord = format!("${}$var${}", self.module_id, node.sym).into();
+      let new_name: Atom = format!("${}$var${}", self.module_id, node.sym).into();
       return Ident::new(new_name, node.span, node.ctxt);
     }
 
@@ -1195,7 +1197,7 @@ impl Fold for Hoist<'_> {
       };
 
       if is_cjs_exports {
-        let key: JsWord = if self.collect.static_cjs_exports {
+        let key: Atom = if self.collect.static_cjs_exports {
           if let Some((name, _)) = match_property_name(member) {
             name
           } else {
@@ -1289,7 +1291,7 @@ impl Fold for Hoist<'_> {
 }
 
 impl Hoist<'_> {
-  fn add_require(&mut self, source: &JsWord, import_kind: ImportKind) {
+  fn add_require(&mut self, source: &Atom, import_kind: ImportKind) {
     let src = match import_kind {
       ImportKind::Import => format!("{}:{}:{}", self.module_id, source, "esm"),
       ImportKind::DynamicImport | ImportKind::Require | ImportKind::ConditionalImport => {
@@ -1308,7 +1310,7 @@ impl Hoist<'_> {
       })));
   }
 
-  fn get_import_name(&self, source: &JsWord, local: &JsWord) -> JsWord {
+  fn get_import_name(&self, source: &Atom, local: &Atom) -> Atom {
     if local == "*" {
       format!("${}$import${:x}", self.module_id, hash!(source)).into()
     } else {
@@ -1325,8 +1327,8 @@ impl Hoist<'_> {
   fn get_import_ident(
     &mut self,
     span: Span,
-    source: &JsWord,
-    imported: &JsWord,
+    source: &Atom,
+    imported: &Atom,
     loc: SourceLocation,
     kind: ImportKind,
   ) -> Ident {
@@ -1341,15 +1343,15 @@ impl Hoist<'_> {
     Ident::new_no_ctxt(new_name, span)
   }
 
-  fn get_require_ident(&self, local: &JsWord) -> Ident {
+  fn get_require_ident(&self, local: &Atom) -> Ident {
     Ident::new_no_ctxt(
       format!("${}$require${}", self.module_id, local).into(),
       DUMMY_SP,
     )
   }
 
-  fn get_export_ident(&mut self, span: Span, exported: &JsWord) -> Ident {
-    let new_name: JsWord = if exported == "*" {
+  fn get_export_ident(&mut self, span: Span, exported: &Atom) -> Ident {
+    let new_name: Atom = if exported == "*" {
       format!("${}$exports", self.module_id).into()
     } else {
       format!("${}$export${:x}", self.module_id, hash!(exported)).into()
@@ -1379,7 +1381,7 @@ impl Hoist<'_> {
     Ident::new_no_ctxt(new_name, span)
   }
 
-  fn handle_non_const_require(&mut self, v: &VarDeclarator, source: &JsWord) {
+  fn handle_non_const_require(&mut self, v: &VarDeclarator, source: &Atom) {
     // If any of the bindings in this declarator are not constant, we need to create
     // a local variable referencing them so that we can safely re-assign the local variable
     // without affecting the original export. This is only possible in CommonJS since ESM
@@ -1486,10 +1488,10 @@ mod tests {
         other_default_symbol(),
         other_default_symbol(),
         PartialImportedSymbol {
-          imported: js_word!("*"),
+          imported: atom!("*"),
           kind: ImportKind::Require,
-          local: js_word!("$abc$import$d141bba7fdc215a3"),
-          source: js_word!("x"),
+          local: atom!("$abc$import$d141bba7fdc215a3"),
+          source: atom!("x"),
         },
         bar_default_symbol(),
       ],
@@ -1545,37 +1547,37 @@ mod tests {
 
     fn other_foo_symbol() -> PartialImportedSymbol {
       PartialImportedSymbol {
-        imported: js_word!("foo"),
+        imported: atom!("foo"),
         kind: ImportKind::Import,
-        local: js_word!("$abc$import$70a00e0a8474f72a$6a5cdcad01c973fa"),
-        source: js_word!("other"),
+        local: atom!("$abc$import$70a00e0a8474f72a$6a5cdcad01c973fa"),
+        source: atom!("other"),
       }
     }
 
     fn other_bar_symbol() -> PartialImportedSymbol {
       PartialImportedSymbol {
-        imported: js_word!("bar"),
+        imported: atom!("bar"),
         kind: ImportKind::Import,
-        local: js_word!("$abc$import$70a00e0a8474f72a$d927737047eb3867"),
-        source: js_word!("other"),
+        local: atom!("$abc$import$70a00e0a8474f72a$d927737047eb3867"),
+        source: atom!("other"),
       }
     }
 
     fn other_default_symbol() -> PartialImportedSymbol {
       PartialImportedSymbol {
-        imported: js_word!("default"),
+        imported: atom!("default"),
         kind: ImportKind::Import,
-        local: js_word!("$abc$import$70a00e0a8474f72a$2e2bcd8739ae039"),
-        source: js_word!("other"),
+        local: atom!("$abc$import$70a00e0a8474f72a$2e2bcd8739ae039"),
+        source: atom!("other"),
       }
     }
 
     fn bar_default_symbol() -> PartialImportedSymbol {
       PartialImportedSymbol {
-        imported: js_word!("default"),
+        imported: atom!("default"),
         kind: ImportKind::Import,
-        local: js_word!("$abc$import$d927737047eb3867$2e2bcd8739ae039"),
-        source: js_word!("bar"),
+        local: atom!("$abc$import$d927737047eb3867$2e2bcd8739ae039"),
+        source: atom!("bar"),
       }
     }
   }
@@ -1597,10 +1599,7 @@ mod tests {
 
       assert_eq!(
         hoist.dynamic_imports,
-        HashMap::from([(
-          js_word!("$abc$importAsync$70a00e0a8474f72a"),
-          js_word!("other")
-        )])
+        HashMap::from([(atom!("$abc$importAsync$70a00e0a8474f72a"), atom!("other"))])
       );
     }
 
@@ -1783,19 +1782,19 @@ mod tests {
 
     fn foo_symbol() -> PartialImportedSymbol {
       PartialImportedSymbol {
-        imported: js_word!("foo"),
+        imported: atom!("foo"),
         kind: ImportKind::DynamicImport,
-        local: js_word!("$abc$importAsync$70a00e0a8474f72a$6a5cdcad01c973fa"),
-        source: js_word!("other"),
+        local: atom!("$abc$importAsync$70a00e0a8474f72a$6a5cdcad01c973fa"),
+        source: atom!("other"),
       }
     }
 
     fn star_symbol() -> PartialImportedSymbol {
       PartialImportedSymbol {
-        imported: js_word!("*"),
+        imported: atom!("*"),
         kind: ImportKind::DynamicImport,
-        local: js_word!("$abc$importAsync$70a00e0a8474f72a"),
-        source: js_word!("other"),
+        local: atom!("$abc$importAsync$70a00e0a8474f72a"),
+        source: atom!("other"),
       }
     }
   }
@@ -1986,10 +1985,10 @@ mod tests {
         if (condition) $abc$import$407448d2b89b1813;
       "#},
       vec![PartialImportedSymbol {
-        imported: js_word!("*"),
+        imported: atom!("*"),
         kind: ImportKind::Require,
-        local: js_word!("$abc$import$407448d2b89b1813"),
-        source: js_word!("a"),
+        local: atom!("$abc$import$407448d2b89b1813"),
+        source: atom!("a"),
       }],
     );
 
@@ -2002,10 +2001,10 @@ mod tests {
         for(let x = $abc$import$4a5767248b18ef41; x < 5; x++){}
       "#},
       vec![PartialImportedSymbol {
-        imported: js_word!("*"),
+        imported: atom!("*"),
         kind: ImportKind::Require,
-        local: js_word!("$abc$import$4a5767248b18ef41"),
-        source: js_word!("y"),
+        local: atom!("$abc$import$4a5767248b18ef41"),
+        source: atom!("y"),
       }],
     );
 
@@ -2022,10 +2021,10 @@ mod tests {
         console.log($abc$require$bar);
       "#},
       vec![PartialImportedSymbol {
-        imported: js_word!("bar"),
+        imported: atom!("bar"),
         kind: ImportKind::Require,
-        local: js_word!("$abc$import$70a00e0a8474f72a$d927737047eb3867"),
-        source: js_word!("other"),
+        local: atom!("$abc$import$70a00e0a8474f72a$d927737047eb3867"),
+        source: atom!("other"),
       }],
     );
 
@@ -2041,10 +2040,10 @@ mod tests {
         console.log($abc$import$70a00e0a8474f72a$d927737047eb3867);
       "#},
       vec![PartialImportedSymbol {
-        imported: js_word!("bar"),
+        imported: atom!("bar"),
         kind: ImportKind::Require,
-        local: js_word!("$abc$import$70a00e0a8474f72a$d927737047eb3867"),
-        source: js_word!("other"),
+        local: atom!("$abc$import$70a00e0a8474f72a$d927737047eb3867"),
+        source: atom!("other"),
       }],
     );
 
@@ -2139,35 +2138,35 @@ mod tests {
 
     fn foo_symbol() -> PartialImportedSymbol {
       PartialImportedSymbol {
-        imported: js_word!("foo"),
+        imported: atom!("foo"),
         kind: ImportKind::Require,
-        local: js_word!("$abc$import$70a00e0a8474f72a$6a5cdcad01c973fa"),
-        source: js_word!("other"),
+        local: atom!("$abc$import$70a00e0a8474f72a$6a5cdcad01c973fa"),
+        source: atom!("other"),
       }
     }
 
     fn star_symbol() -> PartialImportedSymbol {
       PartialImportedSymbol {
-        imported: js_word!("*"),
+        imported: atom!("*"),
         kind: ImportKind::Require,
-        local: js_word!("$abc$import$70a00e0a8474f72a"),
-        source: js_word!("other"),
+        local: atom!("$abc$import$70a00e0a8474f72a"),
+        source: atom!("other"),
       }
     }
 
     fn a_b_imported_symbols() -> Vec<PartialImportedSymbol> {
       vec![
         PartialImportedSymbol {
-          imported: js_word!("*"),
+          imported: atom!("*"),
           kind: ImportKind::Require,
-          local: js_word!("$abc$import$407448d2b89b1813"),
-          source: js_word!("a"),
+          local: atom!("$abc$import$407448d2b89b1813"),
+          source: atom!("a"),
         },
         PartialImportedSymbol {
-          imported: js_word!("*"),
+          imported: atom!("*"),
           kind: ImportKind::Require,
-          local: js_word!("$abc$import$8b22cf2602fb60ce"),
-          source: js_word!("b"),
+          local: atom!("$abc$import$8b22cf2602fb60ce"),
+          source: atom!("b"),
         },
       ]
     }
@@ -2283,29 +2282,29 @@ mod tests {
       "},
       vec![
         PartialExportedSymbol {
-          exported: js_word!("x"),
+          exported: atom!("x"),
           is_esm: true,
-          local: js_word!("$abc$export$d141bba7fdc215a3"),
+          local: atom!("$abc$export$d141bba7fdc215a3"),
         },
         PartialExportedSymbol {
-          exported: js_word!("y"),
+          exported: atom!("y"),
           is_esm: true,
-          local: js_word!("$abc$export$4a5767248b18ef41"),
+          local: atom!("$abc$export$4a5767248b18ef41"),
         },
         PartialExportedSymbol {
-          exported: js_word!("p"),
+          exported: atom!("p"),
           is_esm: true,
-          local: js_word!("$abc$export$ffb5f4729a158638"),
+          local: atom!("$abc$export$ffb5f4729a158638"),
         },
         PartialExportedSymbol {
-          exported: js_word!("q"),
+          exported: atom!("q"),
           is_esm: true,
-          local: js_word!("$abc$export$9e5f44173e64f162"),
+          local: atom!("$abc$export$9e5f44173e64f162"),
         },
         PartialExportedSymbol {
-          exported: js_word!("x"),
+          exported: atom!("x"),
           is_esm: true,
-          local: js_word!("$abc$export$d141bba7fdc215a3"),
+          local: atom!("$abc$export$d141bba7fdc215a3"),
         },
       ],
     );
@@ -2316,9 +2315,9 @@ mod tests {
         function $abc$export$e0969da9b8fb378d() {}
       "},
       vec![PartialExportedSymbol {
-        exported: js_word!("test"),
+        exported: atom!("test"),
         is_esm: true,
-        local: js_word!("$abc$export$e0969da9b8fb378d"),
+        local: atom!("$abc$export$e0969da9b8fb378d"),
       }],
     );
 
@@ -2329,9 +2328,9 @@ mod tests {
         }
       "},
       vec![PartialExportedSymbol {
-        exported: js_word!("Test"),
+        exported: atom!("Test"),
         is_esm: true,
-        local: js_word!("$abc$export$1b16fc9eb974a84d"),
+        local: atom!("$abc$export$1b16fc9eb974a84d"),
       }],
     );
 
@@ -2353,25 +2352,25 @@ mod tests {
 
     fn default_symbol() -> PartialExportedSymbol {
       PartialExportedSymbol {
-        exported: js_word!("default"),
+        exported: atom!("default"),
         is_esm: true,
-        local: js_word!("$abc$export$2e2bcd8739ae039"),
+        local: atom!("$abc$export$2e2bcd8739ae039"),
       }
     }
 
     fn x_symbol() -> PartialExportedSymbol {
       PartialExportedSymbol {
-        exported: js_word!("x"),
+        exported: atom!("x"),
         is_esm: true,
-        local: js_word!("$abc$export$d141bba7fdc215a3"),
+        local: atom!("$abc$export$d141bba7fdc215a3"),
       }
     }
 
     fn y_symbol() -> PartialExportedSymbol {
       PartialExportedSymbol {
-        exported: js_word!("y"),
+        exported: atom!("y"),
         is_esm: true,
-        local: js_word!("$abc$export$4a5767248b18ef41"),
+        local: atom!("$abc$export$4a5767248b18ef41"),
       }
     }
   }
@@ -2410,10 +2409,10 @@ mod tests {
       "#},
       vec![],
       vec![PartialImportedSymbol {
-        imported: js_word!("foo"),
+        imported: atom!("foo"),
         kind: ImportKind::Import,
-        local: js_word!("bar"),
-        source: js_word!("./foo"),
+        local: atom!("bar"),
+        source: atom!("./foo"),
       }],
     );
 
@@ -2427,15 +2426,15 @@ mod tests {
         const $abc$export$6a5cdcad01c973fa = 1;
       "#},
       vec![PartialExportedSymbol {
-        exported: js_word!("foo"),
+        exported: atom!("foo"),
         is_esm: true,
-        local: js_word!("$abc$export$6a5cdcad01c973fa"),
+        local: atom!("$abc$export$6a5cdcad01c973fa"),
       }],
       vec![PartialImportedSymbol {
-        imported: js_word!("foo"),
+        imported: atom!("foo"),
         kind: ImportKind::Import,
-        local: js_word!("bar"),
-        source: js_word!("./foo"),
+        local: atom!("bar"),
+        source: atom!("./foo"),
       }],
     );
   }
@@ -2446,7 +2445,7 @@ mod tests {
       input_code: &str,
       expected_code: &str,
       exported_symbols: Vec<PartialExportedSymbol>,
-      self_references: HashSet<JsWord>,
+      self_references: HashSet<Atom>,
     ) {
       let (code, hoist) = run_hoist(input_code);
 
@@ -2483,7 +2482,7 @@ mod tests {
             sideEffects($abc$exports);
           ", input_code.replace("module.", "")},
           vec![star_symbol(), star_symbol()],
-          HashSet::from([js_word!("*")]),
+          HashSet::from([atom!("*")]),
         );
       }
 
@@ -2500,7 +2499,7 @@ mod tests {
           sideEffects($abc$export$6a5cdcad01c973fa);
         "},
         vec![foo_symbol(), foo_symbol(), foo_symbol()],
-        HashSet::from([js_word!("foo")]),
+        HashSet::from([atom!("foo")]),
       );
 
       assert_cjs_exports(
@@ -2516,7 +2515,7 @@ mod tests {
           sideEffects($abc$export$d927737047eb3867);
         "},
         vec![foo_symbol(), foo_symbol(), bar_symbol()],
-        HashSet::from([js_word!("foo"), js_word!("bar")]),
+        HashSet::from([atom!("foo"), atom!("bar")]),
       );
 
       assert_cjs_exports(
@@ -2542,7 +2541,7 @@ mod tests {
           sideEffects($abc$exports[foo]);
         "},
         vec![star_symbol(), star_symbol(), star_symbol(), star_symbol()],
-        HashSet::from([js_word!("*")]),
+        HashSet::from([atom!("*")]),
       );
 
       assert_cjs_exports(
@@ -2570,7 +2569,7 @@ mod tests {
           sideEffects($abc$exports);
         "},
         vec![star_symbol(), star_symbol()],
-        HashSet::from([js_word!("*")]),
+        HashSet::from([atom!("*")]),
       );
 
       assert_cjs_exports(
@@ -2589,7 +2588,7 @@ mod tests {
           };
         "},
         vec![foo_symbol(), bar_symbol(), foo_symbol()],
-        HashSet::from([js_word!("foo")]),
+        HashSet::from([atom!("foo")]),
       );
 
       assert_cjs_exports(
@@ -2630,25 +2629,25 @@ mod tests {
 
     fn foo_symbol() -> PartialExportedSymbol {
       PartialExportedSymbol {
-        exported: js_word!("foo"),
+        exported: atom!("foo"),
         is_esm: false,
-        local: js_word!("$abc$export$6a5cdcad01c973fa"),
+        local: atom!("$abc$export$6a5cdcad01c973fa"),
       }
     }
 
     fn bar_symbol() -> PartialExportedSymbol {
       PartialExportedSymbol {
-        exported: js_word!("bar"),
+        exported: atom!("bar"),
         is_esm: false,
-        local: js_word!("$abc$export$d927737047eb3867"),
+        local: atom!("$abc$export$d927737047eb3867"),
       }
     }
 
     fn star_symbol() -> PartialExportedSymbol {
       PartialExportedSymbol {
-        exported: js_word!("*"),
+        exported: atom!("*"),
         is_esm: false,
-        local: js_word!("$abc$exports"),
+        local: atom!("$abc$exports"),
       }
     }
   }
@@ -2668,9 +2667,9 @@ mod tests {
     assert_eq!(hoist.exported_symbols.len(), 1);
     assert_eq!(
       hoist.exported_symbols[0].local,
-      js_word!("$abc$export$6a5cdcad01c973fa")
+      atom!("$abc$export$6a5cdcad01c973fa")
     );
-    assert_eq!(hoist.exported_symbols[0].exported, js_word!("foo"));
+    assert_eq!(hoist.exported_symbols[0].exported, atom!("foo"));
   }
 
   #[test]
@@ -2709,10 +2708,10 @@ mod tests {
 
   #[derive(Debug, Eq, Hash, PartialEq)]
   struct PartialImportedSymbol {
-    imported: JsWord,
+    imported: Atom,
     kind: ImportKind,
-    local: JsWord,
-    source: JsWord,
+    local: Atom,
+    source: Atom,
   }
 
   impl From<ImportedSymbol> for PartialImportedSymbol {
@@ -2728,9 +2727,9 @@ mod tests {
 
   #[derive(Debug, Eq, Hash, PartialEq)]
   struct PartialExportedSymbol {
-    exported: JsWord,
+    exported: Atom,
     is_esm: bool,
-    local: JsWord,
+    local: Atom,
   }
 
   impl From<ExportedSymbol> for PartialExportedSymbol {

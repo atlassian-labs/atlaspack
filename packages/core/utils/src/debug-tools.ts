@@ -13,12 +13,14 @@ type DebugTools = {
   ['asset-file-names-in-output']: boolean;
   ['simple-cli-reporter']: boolean;
   ['bundle-stats']: boolean;
+  ['scope-hoisting-stats']: boolean;
 };
 
 export let debugTools: DebugTools = {
   'asset-file-names-in-output': false,
   'simple-cli-reporter': false,
   'bundle-stats': false,
+  'scope-hoisting-stats': false,
 };
 
 const envVarValue = process.env.ATLASPACK_DEBUG_TOOLS ?? '';
@@ -36,8 +38,9 @@ for (let tool of envVarValue.split(',')) {
   } else if (tool === '') {
     continue;
   } else {
-    throw new Error(
-      `Invalid debug tool option: ${tool}. Valid options are: ${Object.keys(
+    // eslint-disable-next-line no-console
+    console.warn(
+      `Unknown debug tool option: ${tool}. Valid options are: ${Object.keys(
         debugTools,
       ).join(', ')}`,
     );

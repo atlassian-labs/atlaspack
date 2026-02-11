@@ -12,6 +12,10 @@ const BASE_REF = process.env.GITHUB_BASE_REF ?? 'main';
  */
 function getBaselineCommit() {
   try {
+    console.log(`Getting merge base between origin/${BASE_REF} and HEAD...`);
+    console.log(`Working directory: ${WORKSPACE_PATH}`);
+    console.log(`BASE_REF: ${BASE_REF}`);
+
     // Get the merge base between the base branch and current HEAD
     const mergeBase = execSync(`git merge-base origin/${BASE_REF} HEAD`, {
       encoding: 'utf8',
@@ -21,9 +25,19 @@ function getBaselineCommit() {
     console.log(
       `Baseline commit: ${mergeBase} (merge base with origin/${BASE_REF})`,
     );
+
+    // Also log current HEAD for comparison
+    const currentHead = execSync('git rev-parse HEAD', {
+      encoding: 'utf8',
+      cwd: WORKSPACE_PATH,
+    }).trim();
+    console.log(`Current HEAD: ${currentHead}`);
+
     return mergeBase;
   } catch (error) {
     console.error('Failed to get baseline commit:', error.message);
+    console.error('Error output:', error.stdout?.toString());
+    console.error('Error stderr:', error.stderr?.toString());
     return null;
   }
 }
@@ -35,26 +49,27 @@ function getBaselineCommit() {
  */
 function runTypeCoverage(commitSha = null) {
   const originalBranch = commitSha ? getCurrentBranch() : null;
+  const originalCommit = commitSha ? getCurrentCommit() : null;
 
   try {
     if (commitSha) {
       console.log(`Checking out commit ${commitSha} for baseline coverage...`);
       execSync(`git checkout ${commitSha}`, {
         cwd: WORKSPACE_PATH,
-        stdio: 'pipe',
+        stdio: 'inherit',
       });
 
       // Reinstall dependencies and rebuild if needed
       console.log('Installing dependencies for baseline...');
       execSync('yarn install --frozen-lockfile', {
         cwd: WORKSPACE_PATH,
-        stdio: 'pipe',
+        stdio: 'inherit',
       });
 
       console.log('Building TypeScript references for baseline...');
-      execSync('yarn update-ts-references --frozen', {
+      execSync('yarn build:ts', {
         cwd: WORKSPACE_PATH,
-        stdio: 'pipe',
+        stdio: 'inherit',
       });
     }
 
@@ -66,6 +81,7 @@ function runTypeCoverage(commitSha = null) {
     });
 
     const data = JSON.parse(output);
+
     if (data?.succeeded) {
       console.log(
         `Coverage${commitSha ? ' (baseline)' : ''}: ${data.percentString}%`,
@@ -85,31 +101,36 @@ function runTypeCoverage(commitSha = null) {
     );
     return null;
   } finally {
-    if (commitSha && originalBranch) {
+    if (commitSha && (originalBranch || originalCommit)) {
       try {
-        console.log(`Switching back to ${originalBranch}...`);
-        execSync(`git checkout ${originalBranch}`, {
+        // In GitHub Actions, we might be in detached HEAD state, so use commit SHA if branch is "HEAD"
+        const targetToCheckout =
+          originalBranch === 'HEAD' ? originalCommit : originalBranch;
+        console.log(`Switching back to ${targetToCheckout}...`);
+        execSync(`git checkout ${targetToCheckout}`, {
           cwd: WORKSPACE_PATH,
-          stdio: 'pipe',
+          stdio: 'inherit',
         });
 
         // Reinstall dependencies for current state
         console.log('Reinstalling dependencies for current state...');
         execSync('yarn install --frozen-lockfile', {
           cwd: WORKSPACE_PATH,
-          stdio: 'pipe',
+          stdio: 'inherit',
         });
 
         console.log('Rebuilding TypeScript references for current state...');
-        execSync('yarn update-ts-references --frozen', {
+        execSync('yarn build:ts', {
           cwd: WORKSPACE_PATH,
-          stdio: 'pipe',
+          stdio: 'inherit',
         });
       } catch (switchError) {
         console.error(
           'Failed to switch back to original branch:',
           switchError.message,
         );
+        console.error('Switch error output:', switchError.stdout?.toString());
+        console.error('Switch error stderr:', switchError.stderr?.toString());
       }
     }
   }
@@ -121,12 +142,36 @@ function runTypeCoverage(commitSha = null) {
  */
 function getCurrentBranch() {
   try {
-    return execSync('git rev-parse --abbrev-ref HEAD', {
+    const branch = execSync('git rev-parse --abbrev-ref HEAD', {
       encoding: 'utf8',
       cwd: WORKSPACE_PATH,
     }).trim();
+    console.log(`Current branch: ${branch}`);
+    return branch;
   } catch (error) {
     console.error('Failed to get current branch:', error.message);
+    console.error('Error output:', error.stdout?.toString());
+    console.error('Error stderr:', error.stderr?.toString());
+    return null;
+  }
+}
+
+/**
+ * Get the current commit SHA
+ * @returns {string|null} The current commit SHA or null if failed
+ */
+function getCurrentCommit() {
+  try {
+    const commit = execSync('git rev-parse HEAD', {
+      encoding: 'utf8',
+      cwd: WORKSPACE_PATH,
+    }).trim();
+    console.log(`Current commit: ${commit}`);
+    return commit;
+  } catch (error) {
+    console.error('Failed to get current commit:', error.message);
+    console.error('Error output:', error.stdout?.toString());
+    console.error('Error stderr:', error.stderr?.toString());
     return null;
   }
 }
@@ -229,7 +274,6 @@ function formatTypeCoverageComment(currentData, baselineData) {
     comment += `| **Correctly Typed** | ${baselineData.correctCount.toLocaleString()} | ${currentData.correctCount.toLocaleString()} | ${currentData.correctCount - baselineData.correctCount >= 0 ? '+' : ''}${(currentData.correctCount - baselineData.correctCount).toLocaleString()} |\n`;
     comment += `| **Total Expressions** | ${baselineData.totalCount.toLocaleString()} | ${currentData.totalCount.toLocaleString()} | ${currentData.totalCount - baselineData.totalCount >= 0 ? '+' : ''}${(currentData.totalCount - baselineData.totalCount).toLocaleString()} |\n`;
     comment += `| **Untyped Expressions** | ${(baselineData.totalCount - baselineData.correctCount).toLocaleString()} | ${(currentData.totalCount - currentData.correctCount).toLocaleString()} | ${untypedDiff >= 0 ? '+' : ''}${untypedDiff.toLocaleString()} |\n\n`;
-    comment += `| **Status** | ${currentData.succeeded ? '✅ Success' : '❌ Failed'} |\n\n`;
   } else {
     comment += `### Overall Coverage\n`;
     comment += `| Metric | Value |\n`;
@@ -238,7 +282,6 @@ function formatTypeCoverageComment(currentData, baselineData) {
     comment += `| **Correctly Typed** | ${currentData.correctCount.toLocaleString()} |\n`;
     comment += `| **Total Expressions** | ${currentData.totalCount.toLocaleString()} |\n`;
     comment += `| **Untyped Expressions** | ${(currentData.totalCount - currentData.correctCount).toLocaleString()} |\n`;
-    comment += `| **Status** | ${currentData.succeeded ? '✅ Success' : '❌ Failed'} |\n\n`;
 
     comment += `**Note**: No baseline data available to compare with.\n\n`;
   }

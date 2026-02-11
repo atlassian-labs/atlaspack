@@ -7,7 +7,7 @@ use super::environment::Environment;
 use super::file_type::FileType;
 use super::target::Target;
 
-#[derive(Clone, Debug, Deserialize, Hash, Serialize)]
+#[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Bundle {
   /// Controls the behavior of the bundle to determine when the bundle loads
@@ -42,7 +42,7 @@ pub struct Bundle {
   /// than referring to other bundles. This may result in assets being duplicated between
   /// multiple bundles, but can be useful for things like server side rendering.
   ///
-  pub is_splittable: bool,
+  pub is_splittable: Option<bool>,
 
   /// The main entry of the bundle, which will provide the bundle exports
   ///
@@ -59,7 +59,7 @@ pub struct Bundle {
   pub name: Option<String>,
 
   /// Indicates that the name should be stable over time, even when the content of the bundle changes
-  pub needs_stable_name: bool,
+  pub needs_stable_name: Option<bool>,
 
   /// The pipeline associated with the bundle
   pub pipeline: Option<String>,

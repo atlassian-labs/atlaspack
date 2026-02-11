@@ -87,6 +87,9 @@ pub trait ResolverPlugin: Any + Debug + Send + Sync {
   }
   /// Determines what the dependency specifier resolves to
   async fn resolve(&self, ctx: ResolveContext) -> Result<Resolved, anyhow::Error>;
+
+  /// Called when a new build is started. No-op by default.
+  fn on_new_build(&self) {}
 }
 
 #[cfg(test)]

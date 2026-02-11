@@ -46,13 +46,13 @@ import UncommittedAsset from './UncommittedAsset';
 import {createAsset} from './assetUtils';
 import summarizeRequest from './summarizeRequest';
 import PluginOptions from './public/PluginOptions';
-import {fromEnvironmentId} from './EnvironmentManager';
 import {optionsProxy} from './utils';
 import {createConfig} from './InternalConfig';
 import {
   loadPluginConfig,
   getConfigRequests,
   ConfigRequest,
+  loadPluginSetup,
 } from './requests/ConfigRequest';
 import {
   createDevDependency,
@@ -69,6 +69,9 @@ import {
 import {invalidateOnFileCreateToInternal, createInvalidations} from './utils';
 import invariant from 'assert';
 import {tracer, PluginTracer} from '@atlaspack/profiler';
+import SourceMap from '@atlaspack/source-map';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
+import {createBuildCache} from '@atlaspack/build-cache';
 
 type GenerateFunc = (input: UncommittedAsset) => Promise<GenerateOutput>;
 
@@ -90,6 +93,10 @@ export type TransformationResult = {
   invalidations: Invalidations;
   devDepRequests: Array<DevDepRequest | DevDepRequestRef>;
 };
+
+// Global setup config are not file-specific, so we only need to
+// load them once per build.
+const setupConfig = createBuildCache<string, Config>();
 
 export default class Transformation {
   request: TransformationRequest;
@@ -164,7 +171,9 @@ export default class Transformation {
       // If no existing sourcemap was found, initialize asset.sourceContent
       // with the original contents. This will be used when the transformer
       // calls setMap to ensure the source content is in the sourcemap.
-      asset.sourceContent = await asset.getCode();
+      if (!getFeatureFlag('omitSourcesContentInMemory')) {
+        asset.sourceContent = await asset.getCode();
+      }
     }
 
     invalidateDevDeps(
@@ -457,7 +466,7 @@ export default class Transformation {
           if (asset.isASTDirty && asset.generate) {
             let output = await asset.generate();
             asset.content = output.content;
-            asset.mapBuffer = output.map?.toBuffer();
+            asset.mapBuffer = SourceMap.safeToBuffer(output.map);
           }
 
           asset.clearAST();
@@ -536,12 +545,42 @@ export default class Transformation {
     transformer: LoadedPlugin<Transformer<unknown>>,
     isSource: boolean,
   ): Promise<Config | null | undefined> {
+    // Only load setup config for a transformer once per build.
+    let config = setupConfig.get(transformer.name);
+
+    if (config == null && transformer.plugin.setup != null) {
+      config = createConfig({
+        plugin: transformer.name,
+        searchPath: toProjectPathUnsafe('index'),
+        // Consider project setup config as source
+        isSource: true,
+      });
+
+      await loadPluginSetup(
+        transformer.name,
+        transformer.plugin.setup,
+        config,
+        this.options,
+      );
+
+      setupConfig.set(transformer.name, config);
+    }
+
+    if (config != null) {
+      for (let devDep of config.devDeps) {
+        await this.addDevDependency(devDep);
+      }
+
+      // `loadConfig` is not called for setup configs
+      return config;
+    }
+
     let loadConfig = transformer.plugin.loadConfig;
     if (!loadConfig) {
       return;
     }
 
-    let config = createConfig({
+    config = createConfig({
       plugin: transformer.name,
       isSource,
       // @ts-expect-error TS2322
@@ -631,7 +670,7 @@ export default class Transformation {
     ) {
       let output = await asset.generate();
       asset.content = output.content;
-      asset.mapBuffer = output.map?.toBuffer();
+      asset.mapBuffer = SourceMap.safeToBuffer(output.map);
     }
 
     // Load config for the transformer.

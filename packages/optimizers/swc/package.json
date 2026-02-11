@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/optimizer-swc",
-  "version": "2.14.31",
+  "version": "2.15.14",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -17,9 +17,9 @@
   },
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/plugin": "2.14.31",
-    "@parcel/source-map": "^2.1.1",
-    "@atlaspack/utils": "2.19.3",
+    "@atlaspack/plugin": "2.14.53",
+    "@atlaspack/source-map": "3.2.8",
+    "@atlaspack/utils": "3.3.5",
     "@swc/core": "^1.10.0",
     "nullthrows": "^1.1.1"
   },

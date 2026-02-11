@@ -29,8 +29,10 @@ pub struct AtlaspackOptions {
   #[serde(default)]
   pub default_target_options: DefaultTargetOptions,
 
+  pub serve_options: ServeOptions,
+
   pub entries: Vec<String>,
-  pub env: Option<BTreeMap<String, String>>,
+  pub env: BTreeMap<String, String>,
 
   #[serde(rename = "defaultConfig")]
   pub fallback_config: Option<String>,
@@ -49,6 +51,28 @@ pub struct AtlaspackOptions {
   pub feature_flags: FeatureFlags,
 
   pub hmr_options: Option<HmrOptions>,
+}
+
+#[derive(Clone, Debug, Hash, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum ServeOptions {
+  Options(FullServerOptions),
+  Disabled(bool),
+}
+
+impl Default for ServeOptions {
+  fn default() -> Self {
+    ServeOptions::Disabled(false)
+  }
+}
+
+#[derive(Clone, Debug, Deserialize, Hash, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FullServerOptions {
+  pub dist_dir: PathBuf,
+  pub host: Option<String>,
+  pub port: u16,
+  pub public_url: Option<String>,
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Deserialize, Serialize)]

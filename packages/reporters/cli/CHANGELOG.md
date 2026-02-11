@@ -1,5 +1,207 @@
 # @atlaspack/reporter-cli
 
+## 2.17.35
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.3.5
+  - @atlaspack/plugin@2.14.53
+  - @atlaspack/types@2.15.43
+
+## 2.17.34
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.52
+  - @atlaspack/types@2.15.42
+  - @atlaspack/utils@3.3.4
+
+## 2.17.33
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.3.3
+  - @atlaspack/types@2.15.41
+  - @atlaspack/plugin@2.14.51
+
+## 2.17.32
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.3.2
+  - @atlaspack/plugin@2.14.50
+  - @atlaspack/types@2.15.40
+
+## 2.17.31
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.3.1
+  - @atlaspack/plugin@2.14.49
+  - @atlaspack/types@2.15.39
+
+## 2.17.30
+
+### Patch Changes
+
+- Updated dependencies [[`47aa84e`](https://github.com/atlassian-labs/atlaspack/commit/47aa84e44c61066072a5bf3d57678565b9d2c5a3)]:
+  - @atlaspack/utils@3.3.0
+  - @atlaspack/types@2.15.38
+  - @atlaspack/plugin@2.14.48
+
+## 2.17.29
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.2.8
+  - @atlaspack/types@2.15.37
+  - @atlaspack/plugin@2.14.47
+
+## 2.17.28
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.2.7
+  - @atlaspack/plugin@2.14.46
+  - @atlaspack/types@2.15.36
+
+## 2.17.27
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.2.6
+  - @atlaspack/plugin@2.14.45
+  - @atlaspack/types@2.15.35
+
+## 2.17.26
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.2.5
+  - @atlaspack/plugin@2.14.44
+  - @atlaspack/types@2.15.34
+
+## 2.17.25
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.43
+  - @atlaspack/types@2.15.33
+  - @atlaspack/utils@3.2.4
+
+## 2.17.24
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.2.3
+  - @atlaspack/plugin@2.14.42
+  - @atlaspack/types@2.15.32
+
+## 2.17.23
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.2.2
+  - @atlaspack/plugin@2.14.41
+  - @atlaspack/types@2.15.31
+
+## 2.17.22
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.2.1
+  - @atlaspack/plugin@2.14.40
+  - @atlaspack/types@2.15.30
+
+## 2.17.21
+
+### Patch Changes
+
+- Updated dependencies [[`73168c2`](https://github.com/atlassian-labs/atlaspack/commit/73168c275a5d9abff9907bcf536b340bca1ed5f0), [`617a318`](https://github.com/atlassian-labs/atlaspack/commit/617a318ddc9419b38360257353fec50b9051ee13)]:
+  - @atlaspack/utils@3.2.0
+  - @atlaspack/plugin@2.14.39
+  - @atlaspack/types@2.15.29
+
+## 2.17.20
+
+### Patch Changes
+
+- Updated dependencies [[`7d7a55d`](https://github.com/atlassian-labs/atlaspack/commit/7d7a55dd6395ec391a2e4c33b3dec0d1ea477d4c)]:
+  - @atlaspack/utils@3.1.2
+  - @atlaspack/plugin@2.14.38
+  - @atlaspack/types@2.15.28
+
+## 2.17.19
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.1.1
+  - @atlaspack/plugin@2.14.37
+  - @atlaspack/types@2.15.27
+
+## 2.17.18
+
+### Patch Changes
+
+- Updated dependencies [[`5776be2`](https://github.com/atlassian-labs/atlaspack/commit/5776be21f70a3f2b9471ba33da3ba1a883f21f1a)]:
+  - @atlaspack/utils@3.1.0
+  - @atlaspack/plugin@2.14.36
+  - @atlaspack/types@2.15.26
+
+## 2.17.17
+
+### Patch Changes
+
+- [#810](https://github.com/atlassian-labs/atlaspack/pull/810) [`c372f3f`](https://github.com/atlassian-labs/atlaspack/commit/c372f3fd6fce8200d5cf47f41bc7895c6cbb5558) Thanks [@benjervis](https://github.com/benjervis)! - Add the `scope-hosting-stats` debug tool to report on the percentage of assets that were able to be scope hoisted during the build.
+
+- Updated dependencies [[`c372f3f`](https://github.com/atlassian-labs/atlaspack/commit/c372f3fd6fce8200d5cf47f41bc7895c6cbb5558), [`17dfea9`](https://github.com/atlassian-labs/atlaspack/commit/17dfea9e9f3169807808520df9c09ebf70dc8b10)]:
+  - @atlaspack/utils@3.0.3
+  - @atlaspack/plugin@2.14.35
+  - @atlaspack/types@2.15.25
+
+## 2.17.16
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types@2.15.24
+  - @atlaspack/utils@3.0.2
+  - @atlaspack/plugin@2.14.34
+
+## 2.17.15
+
+### Patch Changes
+
+- Updated dependencies [[`236e546`](https://github.com/atlassian-labs/atlaspack/commit/236e5465863dca6044a7191e05260a5b924c342e)]:
+  - @atlaspack/utils@3.0.1
+  - @atlaspack/types@2.15.23
+  - @atlaspack/plugin@2.14.33
+
+## 2.17.14
+
+### Patch Changes
+
+- [#793](https://github.com/atlassian-labs/atlaspack/pull/793) [`a4f887b`](https://github.com/atlassian-labs/atlaspack/commit/a4f887b8c45386b058650c41ad38ac675deee27d) Thanks [@benjervis](https://github.com/benjervis)! - Fixes the cliProgressReportingImprovements, which were previously being overwritten by the existing packaging messaging. With this fix, now only the progress messages are shown during packaging.
+
+- Updated dependencies [[`1180103`](https://github.com/atlassian-labs/atlaspack/commit/118010351ed444f8178988afb3f77807154dd933)]:
+  - @atlaspack/utils@3.0.0
+  - @atlaspack/plugin@2.14.32
+  - @atlaspack/types@2.15.22
+
 ## 2.17.13
 
 ### Patch Changes

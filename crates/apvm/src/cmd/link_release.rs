@@ -61,7 +61,13 @@ pub fn link_release(
 
   // Recreate node_modules/@atlaspack
   fs_ext::create_dir_if_not_exists(&node_modules_atlaspack)?;
-  for entry in fs::read_dir(&node_modules_atlaspack)? {
+  for entry in fs::read_dir(&node_modules_atlaspack).map_err(|e| {
+    anyhow::anyhow!(
+      "Failed to read node_modules/@atlaspack directory {:?} in link_release.rs: {}",
+      node_modules_atlaspack,
+      e
+    )
+  })? {
     let entry_path = entry?.path();
     if entry_path.try_file_stem()?.contains("apvm") {
       continue;
@@ -70,7 +76,13 @@ pub fn link_release(
   }
 
   // Map super package to target directory
-  for entry in fs::read_dir(&dir_package_node_modules_atlaspack)? {
+  for entry in fs::read_dir(&dir_package_node_modules_atlaspack).map_err(|e| {
+    anyhow::anyhow!(
+      "Failed to read package node_modules/@atlaspack directory {:?} in link_release.rs: {}",
+      dir_package_node_modules_atlaspack,
+      e
+    )
+  })? {
     let entry = entry?;
     let entry_path = entry.path();
     let entry_basename = entry.file_name().try_to_string()?;

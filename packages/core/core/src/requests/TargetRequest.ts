@@ -1151,6 +1151,7 @@ export class TargetResolver {
             shouldScopeHoist:
               shouldScopeHoist && descriptor.scopeHoist !== false,
             sourceMap: normalizeSourceMap(this.options, descriptor.sourceMap),
+            customEnv: descriptor.env,
           }),
           loc: toInternalSourceLocation(this.options.projectRoot, loc),
         });

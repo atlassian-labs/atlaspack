@@ -11,7 +11,7 @@ import type {Asset, Dependency, AtlaspackOptions, Invalidations} from './types';
 
 import invariant from 'assert';
 import {Readable} from 'stream';
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 import {serializeRaw} from '@atlaspack/build-cache';
 import {
   blobToStream,
@@ -249,7 +249,7 @@ export default class UncommittedAsset {
 
     if (map) {
       this.map = map;
-      this.mapBuffer = map.toBuffer();
+      this.mapBuffer = SourceMap.safeToBuffer(map);
       this.setCode(code.replace(SOURCEMAP_RE, ''));
     }
 
@@ -425,7 +425,7 @@ export default class UncommittedAsset {
       content,
       ast: result.ast,
       isASTDirty: result.ast === this.ast ? this.isASTDirty : true,
-      mapBuffer: result.map ? result.map.toBuffer() : null,
+      mapBuffer: SourceMap.safeToBuffer(result.map),
       code: this.code,
       invalidations: this.invalidations,
     });

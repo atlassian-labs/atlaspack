@@ -14,8 +14,9 @@ import {
   countLines,
   normalizeSeparators,
   debugTools,
+  globToRegex,
 } from '@atlaspack/utils';
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 import nullthrows from 'nullthrows';
 import invariant, {AssertionError} from 'assert';
 import ThrowableDiagnostic, {
@@ -81,6 +82,15 @@ export interface OutputFormat {
   buildBundlePostlude(): [string, number];
 }
 
+export type PackageResult = {
+  contents: string;
+  map: SourceMap | null | undefined;
+  scopeHoistingStats?: {
+    totalAssets: number;
+    wrappedAssets: number;
+  };
+};
+
 export class ScopeHoistingPackager {
   options: PluginOptions;
   bundleGraph: BundleGraph<NamedBundle>;
@@ -90,14 +100,14 @@ export class ScopeHoistingPackager {
   outputFormat: OutputFormat;
   isAsyncBundle: boolean;
   globalNames: ReadonlySet<string>;
-  // @ts-expect-error TS2564
+  manualStaticBindingExports: RegExp[] | null;
   assetOutputs: Map<
-    string,
+    Asset,
     {
       code: string;
       map: Buffer | null | undefined;
     }
-  >;
+  > = new Map();
   exportedSymbols: Map<
     string,
     {
@@ -109,9 +119,10 @@ export class ScopeHoistingPackager {
   > = new Map();
   externals: Map<string, Map<string, string>> = new Map();
   topLevelNames: Map<string, number> = new Map();
-  seenAssets: Set<string> = new Set();
-  wrappedAssets: Set<string> = new Set();
-  hoistedRequires: Map<string, Map<string, string>> = new Map();
+  seenAssets: Set<Asset> = new Set();
+  wrappedAssets: Set<Asset> = new Set();
+  constantAssets: Set<Asset> = new Set();
+  hoistedRequires: Map<Dependency, Map<Asset, string>> = new Map();
   seenHoistedRequires: Set<string> = new Set();
   needsPrelude: boolean = false;
   usedHelpers: Set<string> = new Set();
@@ -120,6 +131,7 @@ export class ScopeHoistingPackager {
   useBothScopeHoistingImprovements: boolean =
     getFeatureFlag('applyScopeHoistingImprovementV2') ||
     getFeatureFlag('applyScopeHoistingImprovement');
+  referencedAssetsCache: Map<string, Set<Asset>> = new Map();
 
   constructor(
     options: PluginOptions,
@@ -127,6 +139,7 @@ export class ScopeHoistingPackager {
     bundle: NamedBundle,
     parcelRequireName: string,
     useAsyncBundleRuntime: boolean,
+    manualStaticBindingExports: string[] | null,
     logger: PluginLogger,
   ) {
     this.options = options;
@@ -134,6 +147,8 @@ export class ScopeHoistingPackager {
     this.bundle = bundle;
     this.parcelRequireName = parcelRequireName;
     this.useAsyncBundleRuntime = useAsyncBundleRuntime;
+    this.manualStaticBindingExports =
+      manualStaticBindingExports?.map((glob) => globToRegex(glob)) ?? null;
     this.logger = logger;
 
     let OutputFormat = OUTPUT_FORMATS[this.bundle.env.outputFormat];
@@ -148,12 +163,8 @@ export class ScopeHoistingPackager {
     this.globalNames = GLOBALS_BY_CONTEXT[bundle.env.context];
   }
 
-  async package(): Promise<{
-    contents: string;
-    map: SourceMap | null | undefined;
-  }> {
-    let {wrapped: wrappedAssets, constant: constantAssets} =
-      await this.loadAssets();
+  async package(): Promise<PackageResult> {
+    await this.loadAssets();
     this.buildExportedSymbols();
 
     // If building a library, the target is actually another bundler rather
@@ -174,13 +185,11 @@ export class ScopeHoistingPackager {
 
     let res = '';
     let lineCount = 0;
-    // @ts-expect-error TS7034
-    let sourceMap = null;
+    let sourceMap: SourceMap | null | undefined = null;
     let processAsset = (asset: Asset) => {
       this.seenHoistedRequires.clear();
       let [content, map, lines] = this.visitAsset(asset);
 
-      // @ts-expect-error TS7005
       if (sourceMap && map) {
         sourceMap.addSourceMap(map, lineCount);
       } else if (this.bundle.env.sourceMap) {
@@ -196,8 +205,8 @@ export class ScopeHoistingPackager {
       this.useBothScopeHoistingImprovements
     ) {
       // Write out all constant modules used by this bundle
-      for (let asset of constantAssets) {
-        if (!this.seenAssets.has(asset.id)) {
+      for (let asset of this.constantAssets) {
+        if (!this.seenAssets.has(asset)) {
           processAsset(asset);
         }
       }
@@ -205,8 +214,8 @@ export class ScopeHoistingPackager {
 
     // Hoist wrapped asset to the top of the bundle to ensure that they are registered
     // before they are used.
-    for (let asset of wrappedAssets) {
-      if (!this.seenAssets.has(asset.id)) {
+    for (let asset of this.wrappedAssets) {
+      if (!this.seenAssets.has(asset)) {
         processAsset(asset);
       }
     }
@@ -214,7 +223,7 @@ export class ScopeHoistingPackager {
     // Add each asset that is directly connected to the bundle. Dependencies will be handled
     // by replacing `import` statements in the code.
     this.bundle.traverseAssets((asset, _, actions) => {
-      if (this.seenAssets.has(asset.id)) {
+      if (this.seenAssets.has(asset)) {
         actions.skipChildren();
         return;
       }
@@ -226,7 +235,7 @@ export class ScopeHoistingPackager {
     let [prelude, preludeLines] = this.buildBundlePrelude();
     res = prelude + res;
     lineCount += preludeLines;
-    // @ts-expect-error TS2339
+    // @ts-expect-error TS2339 - offsetLines method exists but missing from @parcel/source-map type definitions
     sourceMap?.offsetLines(1, preludeLines);
 
     let entries = this.bundle.getEntryAssets();
@@ -255,7 +264,7 @@ export class ScopeHoistingPackager {
 
     // If any of the entry assets are wrapped, call parcelRequire so they are executed.
     for (let entry of entries) {
-      if (this.wrappedAssets.has(entry.id) && !this.isScriptEntry(entry)) {
+      if (this.wrappedAssets.has(entry) && !this.isScriptEntry(entry)) {
         let parcelRequire = `parcelRequire(${JSON.stringify(
           this.bundleGraph.getAssetPublicId(entry),
         )});\n`;
@@ -299,9 +308,7 @@ export class ScopeHoistingPackager {
       lineCount++;
 
       let mainEntry = nullthrows(this.bundle.getMainEntry());
-      let {code, map: mapBuffer} = nullthrows(
-        this.assetOutputs.get(mainEntry.id),
-      );
+      let {code, map: mapBuffer} = nullthrows(this.assetOutputs.get(mainEntry));
       let map;
       if (mapBuffer) {
         map = new SourceMap(this.options.projectRoot, mapBuffer);
@@ -314,15 +321,21 @@ export class ScopeHoistingPackager {
         this.parcelRequireName,
       );
       if (sourceMap && map) {
-        // @ts-expect-error TS2339
+        // @ts-expect-error TS2339 - addSourceMap method exists but missing from @parcel/source-map type definitions
         sourceMap.addSourceMap(map, lineCount);
       }
     }
 
-    return {
-      contents: res,
-      map: sourceMap,
-    };
+    const result: PackageResult = {contents: res, map: sourceMap};
+
+    if (debugTools['scope-hoisting-stats']) {
+      result.scopeHoistingStats = {
+        totalAssets: this.assetOutputs.size,
+        wrappedAssets: this.wrappedAssets.size,
+      };
+    }
+
+    return result;
   }
 
   shouldBundleQueue(bundle: NamedBundle): boolean {
@@ -399,13 +412,43 @@ export class ScopeHoistingPackager {
     return `$parcel$global.rwr(${params.join(', ')});`;
   }
 
-  async loadAssets(): Promise<{
-    wrapped: Array<Asset>;
-    constant: Array<Asset>;
-  }> {
-    let queue = new PromiseQueue({maxConcurrent: 32});
-    let wrapped: Array<Asset> = [];
-    let constant: Array<Asset> = [];
+  // Helper to check if an asset is referenced, with cache-first + fast-check hybrid approach
+  isAssetReferencedInBundle(bundle: NamedBundle, asset: Asset): boolean {
+    // STEP 1: Check expensive computation cache first (fastest when it hits)
+
+    let bundleId = bundle.id;
+    let referencedAssets = this.referencedAssetsCache.get(bundleId);
+
+    if (referencedAssets) {
+      // Cache hit - fastest path (~0.001ms)
+      return referencedAssets.has(asset);
+    }
+
+    // STEP 2: Cache miss - try fast checks (~0.01ms)
+    let fastCheckResult = this.bundleGraph.isAssetReferencedFastCheck(
+      bundle,
+      asset,
+    );
+
+    if (fastCheckResult === true) {
+      // Fast check succeeded - asset is referenced
+      return true;
+    }
+
+    // STEP 3: Need expensive computation (~20-2000ms)
+
+    // Compute and cache expensive results for this bundle
+    referencedAssets = this.bundleGraph.getReferencedAssets(bundle);
+    this.referencedAssetsCache.set(bundleId, referencedAssets);
+
+    return referencedAssets.has(asset);
+  }
+
+  async loadAssets() {
+    type QueueItem = [Asset, {code: string; map: Buffer | undefined | null}];
+    let queue = new PromiseQueue<QueueItem>({
+      maxConcurrent: 32,
+    });
 
     this.bundle.traverseAssets((asset) => {
       queue.add(async () => {
@@ -414,13 +457,13 @@ export class ScopeHoistingPackager {
           this.bundle.env.sourceMap ? asset.getMapBuffer() : null,
         ]);
 
-        return [asset.id, {code, map}];
+        return [asset, {code, map}];
       });
 
       if (
         asset.meta.shouldWrap ||
         this.bundle.env.sourceType === 'script' ||
-        this.bundleGraph.isAssetReferenced(this.bundle, asset) ||
+        this.isAssetReferencedInBundle(this.bundle, asset) ||
         this.bundleGraph
           .getIncomingDependencies(asset)
           .some((dep) => dep.meta.shouldWrap && dep.specifierType !== 'url')
@@ -432,14 +475,13 @@ export class ScopeHoistingPackager {
             .getIncomingDependencies(asset)
             .some((dep) => dep.priority === 'lazy')
         ) {
-          this.wrappedAssets.add(asset.id);
-          wrapped.push(asset);
+          this.wrappedAssets.add(asset);
         } else if (
           (getFeatureFlag('inlineConstOptimisationFix') ||
             this.useBothScopeHoistingImprovements) &&
           asset.meta.isConstantModule
         ) {
-          constant.push(asset);
+          this.constantAssets.add(asset);
         }
       }
     });
@@ -453,20 +495,21 @@ export class ScopeHoistingPackager {
       if (!getFeatureFlag('applyScopeHoistingImprovementV2')) {
         // Make all entry assets wrapped, to avoid any top level hoisting
         for (let entryAsset of this.bundle.getEntryAssets()) {
-          if (!this.wrappedAssets.has(entryAsset.id)) {
-            this.wrappedAssets.add(entryAsset.id);
-            wrapped.push(entryAsset);
+          if (!this.wrappedAssets.has(entryAsset)) {
+            this.wrappedAssets.add(entryAsset);
           }
         }
       }
 
-      let moduleGroupParents = [...wrapped];
+      // We need to make a new copy here so that we can add to the list and
+      // iterate the newly added items, without mutating the wrappedAssets set
+      let moduleGroupParents = [...this.wrappedAssets.values()];
 
       if (getFeatureFlag('applyScopeHoistingImprovementV2')) {
         // The main entry needs to be check to find assets that would have gone in
         // the top level scope
         let mainEntry = this.bundle.getMainEntry();
-        if (mainEntry && !this.wrappedAssets.has(mainEntry.id)) {
+        if (mainEntry && !this.wrappedAssets.has(mainEntry)) {
           moduleGroupParents.unshift(mainEntry);
         }
       }
@@ -477,7 +520,7 @@ export class ScopeHoistingPackager {
             return;
           }
 
-          if (this.wrappedAssets.has(asset.id)) {
+          if (this.wrappedAssets.has(asset)) {
             actions.skipChildren();
             return;
           }
@@ -486,8 +529,7 @@ export class ScopeHoistingPackager {
             !asset.meta.isConstantModule &&
             (assignedAssets.has(asset) || this.isReExported(asset))
           ) {
-            wrapped.push(asset);
-            this.wrappedAssets.add(asset.id);
+            this.wrappedAssets.add(asset);
 
             // This also needs to be added to the traversal so that we iterate
             // it during this check.
@@ -501,28 +543,25 @@ export class ScopeHoistingPackager {
         }, moduleGroupParentAsset);
       }
     } else {
-      for (let wrappedAssetRoot of [...wrapped]) {
+      for (let wrappedAssetRoot of this.wrappedAssets) {
         this.bundle.traverseAssets((asset, _, actions) => {
           if (asset === wrappedAssetRoot) {
             return;
           }
 
-          if (this.wrappedAssets.has(asset.id)) {
+          if (this.wrappedAssets.has(asset)) {
             actions.skipChildren();
             return;
           }
 
           if (!asset.meta.isConstantModule) {
-            this.wrappedAssets.add(asset.id);
-            wrapped.push(asset);
+            this.wrappedAssets.add(asset);
           }
         }, wrappedAssetRoot);
       }
     }
 
-    // @ts-expect-error TS2769
     this.assetOutputs = new Map(await queue.run());
-    return {wrapped, constant};
   }
 
   isReExported(asset: Asset): boolean {
@@ -555,7 +594,7 @@ export class ScopeHoistingPackager {
 
     // TODO: handle ESM exports of wrapped entry assets...
     let entry = this.bundle.getMainEntry();
-    if (entry && !this.wrappedAssets.has(entry.id)) {
+    if (entry && !this.wrappedAssets.has(entry)) {
       let hasNamespace = entry.symbols.hasExportSymbol('*');
 
       for (let {
@@ -637,10 +676,10 @@ export class ScopeHoistingPackager {
   }
 
   visitAsset(asset: Asset): [string, SourceMap | null | undefined, number] {
-    invariant(!this.seenAssets.has(asset.id), 'Already visited asset');
-    this.seenAssets.add(asset.id);
+    invariant(!this.seenAssets.has(asset), 'Already visited asset');
+    this.seenAssets.add(asset);
 
-    let {code, map} = nullthrows(this.assetOutputs.get(asset.id));
+    let {code, map} = nullthrows(this.assetOutputs.get(asset));
     return this.buildAsset(asset, code, map);
   }
 
@@ -653,7 +692,7 @@ export class ScopeHoistingPackager {
     code: string,
     map?: Buffer | null,
   ): [string, SourceMap | null | undefined, number] {
-    let shouldWrap = this.wrappedAssets.has(asset.id);
+    let shouldWrap = this.wrappedAssets.has(asset);
     let deps = this.bundleGraph.getDependencies(asset);
 
     let sourceMap =
@@ -680,17 +719,29 @@ export class ScopeHoistingPackager {
           continue;
         }
 
-        if (
-          this.bundle.hasAsset(resolved) &&
-          !this.seenAssets.has(resolved.id)
-        ) {
-          let [code, map, lines] = this.visitAsset(resolved);
-          depCode += code + '\n';
-          if (sourceMap && map) {
-            // @ts-expect-error TS2551
-            sourceMap.addSourceMap(map, lineCount);
+        if (this.bundle.hasAsset(resolved) && !this.seenAssets.has(resolved)) {
+          if (
+            this.useBothScopeHoistingImprovements &&
+            this.wrappedAssets.has(resolved)
+          ) {
+            if (this.wrappedAssets.has(asset)) {
+              // If both the asset and the dep are wrapped there's no need to
+              // drop a side-effect require. This is an extremely rare case.
+              continue;
+            }
+
+            // When the dep is wrapped then we just need to drop a side effect
+            // require instead of inlining
+            depCode += `parcelRequire("${this.bundleGraph.getAssetPublicId(resolved)}");\n`;
+            lineCount += 1;
+          } else {
+            let [code, map, lines] = this.visitAsset(resolved);
+            depCode += code + '\n';
+            if (sourceMap && map) {
+              sourceMap.addSourceMap(map, lineCount);
+            }
+            lineCount += lines + 1;
           }
-          lineCount += lines + 1;
         }
       }
 
@@ -724,9 +775,7 @@ export class ScopeHoistingPackager {
     code += append;
 
     let lineCount = 0;
-    // @ts-expect-error TS2552
-    let depContent: Array<[string, NodeSourceMap | null | undefined, number]> =
-      [];
+    let depContent: Array<[string, SourceMap | null | undefined, number]> = [];
     if (depMap.size === 0 && replacements.size === 0) {
       // If there are no dependencies or replacements, use a simple function to count the number of lines.
       lineCount = countLines(code) - 1;
@@ -785,7 +834,7 @@ export class ScopeHoistingPackager {
 
                 if (
                   this.bundle.hasAsset(resolved) &&
-                  !this.seenAssets.has(resolved.id)
+                  !this.seenAssets.has(resolved)
                 ) {
                   // If this asset is wrapped, we need to hoist the code for the dependency
                   // outside our parcelRequire.register wrapper. This is safe because all
@@ -794,7 +843,7 @@ export class ScopeHoistingPackager {
                   if (this.useBothScopeHoistingImprovements) {
                     if (
                       !resolved.meta.isConstantModule &&
-                      !this.wrappedAssets.has(resolved.id)
+                      !this.wrappedAssets.has(resolved)
                     ) {
                       let [depCode, depMap, depLines] =
                         this.visitAsset(resolved);
@@ -844,7 +893,6 @@ export class ScopeHoistingPackager {
                   }
 
                   if (map) {
-                    // @ts-expect-error TS2551
                     sourceMap.addSourceMap(map, lineCount);
                   }
                 }
@@ -901,7 +949,6 @@ ${code}
         if (!depCode) continue;
         code += depCode + '\n';
         if (sourceMap && map) {
-          // @ts-expect-error TS2551
           sourceMap.addSourceMap(map, lineCount);
         }
         lineCount += lines + 1;
@@ -975,7 +1022,7 @@ ${code}
           referencedBundle &&
           referencedBundle.getMainEntry() === resolved &&
           referencedBundle.type === 'js' &&
-          !this.bundleGraph.isAssetReferenced(referencedBundle, resolved)
+          !this.isAssetReferencedInBundle(referencedBundle, resolved)
         ) {
           this.addExternal(dep, replacements, referencedBundle);
           this.externalAssets.add(resolved);
@@ -1020,7 +1067,7 @@ ${code}
     // If this asset is wrapped, we need to replace the exports namespace with `module.exports`,
     // which will be provided to us by the wrapper.
     if (
-      this.wrappedAssets.has(asset.id) ||
+      this.wrappedAssets.has(asset) ||
       (this.bundle.env.outputFormat === 'commonjs' &&
         asset === this.bundle.getMainEntry())
     ) {
@@ -1147,12 +1194,9 @@ ${code}
               }
             }
 
-            // @ts-expect-error TS2322
-            renamed = this.bundleGraph.getSymbolResolution(
-              entry,
-              imported,
-              this.bundle,
-            ).symbol;
+            renamed =
+              this.bundleGraph.getSymbolResolution(entry, imported, this.bundle)
+                .symbol || undefined;
           }
         }
 
@@ -1210,7 +1254,7 @@ ${code}
     }
     return (
       (!this.bundle.hasAsset(resolved) && !this.externalAssets.has(resolved)) ||
-      (this.wrappedAssets.has(resolved.id) && resolved !== parentAsset)
+      (this.wrappedAssets.has(resolved) && resolved !== parentAsset)
     );
   }
 
@@ -1260,14 +1304,14 @@ ${code}
       (!this.bundle.hasAsset(resolvedAsset) ||
         !this.shouldSkipAsset(resolvedAsset))
     ) {
-      let hoisted = this.hoistedRequires.get(dep.id);
+      let hoisted = this.hoistedRequires.get(dep);
       if (!hoisted) {
         hoisted = new Map();
-        this.hoistedRequires.set(dep.id, hoisted);
+        this.hoistedRequires.set(dep, hoisted);
       }
 
       hoisted.set(
-        resolvedAsset.id,
+        resolvedAsset,
         `var $${publicId} = parcelRequire(${JSON.stringify(publicId)});`,
       );
     }
@@ -1309,7 +1353,7 @@ ${code}
       // Resolve to the namespace object if requested or this is a CJS default interop reqiure.
       if (
         parentAsset === resolvedAsset &&
-        this.wrappedAssets.has(resolvedAsset.id)
+        this.wrappedAssets.has(resolvedAsset)
       ) {
         // Directly use module.exports for wrapped assets importing themselves.
         return 'module.exports';
@@ -1337,7 +1381,16 @@ ${code}
         return this.getPropertyAccess(obj, exportSymbol);
       }
     } else if (!symbol) {
-      invariant(false, 'Asset was skipped or not found.');
+      let parentPath =
+        path.relative(this.options.projectRoot, parentAsset.filePath) ||
+        '<unknown>';
+      let resolvedPath =
+        path.relative(this.options.projectRoot, resolvedAsset.filePath) ||
+        '<unknown>';
+      invariant(
+        false,
+        `Asset was skipped or not found when packaging ${this.bundle.name}.\nSearching for exported symbol "${imported}" (resolved as "${exportSymbol}") in asset with id "${resolvedAsset.meta.id}" (public id: "${publicId}", path: "${resolvedPath}") from parent asset "${parentAsset.meta.id}" (path: "${parentPath}").`,
+      );
     } else {
       return replacements?.get(symbol) || symbol;
     }
@@ -1352,7 +1405,7 @@ ${code}
       return ['', 0];
     }
 
-    let hoisted = this.hoistedRequires.get(dep.id);
+    let hoisted = this.hoistedRequires.get(dep);
     let res = '';
     let lineCount = 0;
     let isWrapped = this.isWrapped(resolved, parentAsset);
@@ -1364,7 +1417,7 @@ ${code}
     if (
       isWrapped &&
       !dep.meta.shouldWrap &&
-      (!hoisted || hoisted.keys().next().value !== resolved.id) &&
+      (!hoisted || hoisted.keys().next().value !== resolved) &&
       !this.bundleGraph.isDependencySkipped(dep) &&
       !this.shouldSkipAsset(resolved)
     ) {
@@ -1406,7 +1459,7 @@ ${code}
     let prependLineCount = 0;
     let append = '';
 
-    let shouldWrap = this.wrappedAssets.has(asset.id);
+    let shouldWrap = this.wrappedAssets.has(asset);
     let usedSymbols = nullthrows(this.bundleGraph.getUsedSymbols(asset));
     let assetId = asset.meta.id;
     invariant(typeof assetId === 'string');
@@ -1617,7 +1670,10 @@ ${code}
           const meta = asset.symbols.get(exp)?.meta;
           if (
             getFeatureFlag('exportsRebindingOptimisation') &&
-            meta?.isStaticBindingSafe
+            (meta?.isStaticBindingSafe ||
+              this.manualStaticBindingExports?.some((regex) =>
+                regex.test(asset.filePath),
+              ))
           ) {
             append += `$${assetId}$exports[${JSON.stringify(
               exp,
@@ -1674,11 +1730,11 @@ ${code}
     }
 
     for (let helper of this.usedHelpers) {
-      // @ts-expect-error TS7053
-      let currentHelper = helpers[helper];
+      let currentHelper = (helpers as Record<string, any>)[helper];
       if (typeof currentHelper === 'function') {
-        // @ts-expect-error TS7053
-        currentHelper = helpers[helper](this.bundle.env);
+        currentHelper = (helpers as Record<string, any>)[helper](
+          this.bundle.env,
+        );
       }
       res += currentHelper;
       if (enableSourceMaps) {
@@ -1774,7 +1830,7 @@ ${code}
     return (
       asset.sideEffects === false &&
       nullthrows(this.bundleGraph.getUsedSymbols(asset)).size == 0 &&
-      !this.bundleGraph.isAssetReferenced(this.bundle, asset)
+      !this.isAssetReferencedInBundle(this.bundle, asset)
     );
   }
 

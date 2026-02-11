@@ -1,9 +1,9 @@
 {
   "name": "@atlaspack/eslint-config-browser",
   "private": true,
-  "version": "2.14.4",
+  "version": "2.14.6",
   "dependencies": {
-    "@atlaspack/eslint-config": "2.14.4"
+    "@atlaspack/eslint-config": "2.15.0"
   },
   "peerDependencies": {
     "@babel/core": "^7.22.11",

@@ -2,7 +2,7 @@
 name = "atlaspack_plugin_transformer_yaml"
 version = "0.1.0"
 authors = ["Monica Olejniczak <monica.j.olejniczak@gmail.com>"]
-edition = "2024"
+edition = { workspace = true }
 description = "Yaml transformer plugin for the Atlaspack Bundler"
 
 [lints]
@@ -14,7 +14,7 @@ atlaspack_core = { path = "../atlaspack_core" }
 anyhow = { workspace = true }
 async-trait = { workspace = true }
 serde_json = { workspace = true }
-serde_yml = { workspace = true }
+serde_yaml_ng = { workspace = true }
 
 [dev-dependencies]
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }

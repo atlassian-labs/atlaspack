@@ -6,12 +6,13 @@ import {
   countLines,
   normalizeSeparators,
 } from '@atlaspack/utils';
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import invariant from 'assert';
 import path from 'path';
 import fs from 'fs';
 import {replaceScriptDependencies, getSpecifier} from './utils';
+import {tracer} from '@atlaspack/logger';
 
 const PRELUDE = fs
   .readFileSync(path.join(__dirname, 'dev-prelude.js'), 'utf8')
@@ -40,9 +41,13 @@ export class DevPackager {
     contents: string;
     map: SourceMap | null | undefined;
   }> {
+    const span = tracer.enter('DevPackager.package');
+    let assetCount = 0;
+
     // Load assets
     let queue = new PromiseQueue({maxConcurrent: 32});
     this.bundle.traverseAssets((asset) => {
+      assetCount += 1;
       queue.add(async () => {
         let [code, mapBuffer] = await Promise.all([
           asset.getCode(),
@@ -61,6 +66,7 @@ export class DevPackager {
 
     let prefix = this.getPrefix();
     let lineOffset = countLines(prefix);
+
     let script:
       | {
           code: string;
@@ -121,7 +127,6 @@ export class DevPackager {
             deps[specifier] = dep.specifier;
           }
         }
-
         if (getFeatureFlag('hmrImprovements')) {
           // Add dependencies for parcelRequire calls added by runtimes
           // so that the HMR runtime can correctly traverse parents.
@@ -229,10 +234,12 @@ export class DevPackager {
         this.parcelRequireName,
       );
       if (this.bundle.env.sourceMap && entryMap) {
-        // @ts-expect-error TS2551
         map.addSourceMap(entryMap, lineOffset);
       }
     }
+
+    tracer.record(span, {assetCount: assetCount.toString()});
+    tracer.exit(span);
 
     return {
       contents,

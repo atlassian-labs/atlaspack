@@ -1,0 +1,28 @@
+[package]
+authors = ["Matt jones<mattjones701@gmail.com>"]
+name = "atlaspack_memoization_cache"
+version = "0.1.0"
+edition = { workspace = true }
+description = "Persistent cache API for Atlaspack"
+
+[dependencies]
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+bincode = "1.3"
+crossbeam = { workspace = true }
+lmdb-js-lite = { path = "../lmdb-js-lite" }
+parking_lot = { workspace = true }
+rand = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+pretty_assertions = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt"] }
+tempfile = "3.8"
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "cache_cleanup"
+harness = false

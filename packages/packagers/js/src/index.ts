@@ -1,21 +1,27 @@
-import type {Async} from '@atlaspack/types';
-import type SourceMap from '@parcel/source-map';
+import type {Async, BundleResult} from '@atlaspack/types';
+import type SourceMap from '@atlaspack/source-map';
 import {Packager} from '@atlaspack/plugin';
 import {
   replaceInlineReferences,
   replaceURLReferences,
   validateSchema,
   SchemaEntity,
+  debugTools,
 } from '@atlaspack/utils';
 import {encodeJSONKeyComponent} from '@atlaspack/diagnostic';
 import {hashString} from '@atlaspack/rust';
 import nullthrows from 'nullthrows';
 import {DevPackager} from './DevPackager';
-import {ScopeHoistingPackager} from './ScopeHoistingPackager';
+import {
+  type PackageResult as ScopeHoistingPackageResult,
+  ScopeHoistingPackager,
+} from './ScopeHoistingPackager';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 type JSPackagerConfig = {
   parcelRequireName: string;
   unstable_asyncBundleRuntime: boolean;
+  unstable_manualStaticBindingExports: string[] | null;
 };
 
 const CONFIG_SCHEMA: SchemaEntity = {
@@ -24,6 +30,12 @@ const CONFIG_SCHEMA: SchemaEntity = {
     unstable_asyncBundleRuntime: {
       type: 'boolean',
     },
+    unstable_manualStaticBindingExports: {
+      type: 'array',
+      items: {
+        type: 'string',
+      },
+    },
   },
   additionalProperties: false,
 };
@@ -31,7 +43,10 @@ const CONFIG_SCHEMA: SchemaEntity = {
 export default new Packager({
   async loadConfig({config, options}): Promise<JSPackagerConfig> {
     let packageKey = '@atlaspack/packager-js';
-    let conf = await config.getConfigFrom(options.projectRoot + '/index', [], {
+    let conf = await config.getConfigFrom<{
+      unstable_asyncBundleRuntime?: boolean;
+      unstable_manualStaticBindingExports?: string[];
+    }>(options.projectRoot + '/index', [], {
       packageKey,
     });
 
@@ -40,7 +55,7 @@ export default new Packager({
         CONFIG_SCHEMA,
         {
           data: conf?.contents,
-          source: await options.inputFS.readFile(conf.filePath, 'utf8'),
+          source: () => options.inputFS.readFileSync(conf.filePath, 'utf8'),
           filePath: conf.filePath,
           prependKey: `/${encodeJSONKeyComponent(packageKey)}`,
         },
@@ -51,7 +66,7 @@ export default new Packager({
 
     // Generate a name for the global parcelRequire function that is unique to this project.
     // This allows multiple parcel builds to coexist on the same page.
-    let packageName = await config.getConfigFrom(
+    let packageName = await config.getConfigFrom<string>(
       options.projectRoot + '/index',
       [],
       {
@@ -61,12 +76,12 @@ export default new Packager({
 
     let name = packageName?.contents ?? '';
     return {
-      // @ts-expect-error TS2345
       parcelRequireName: 'parcelRequire' + hashString(name).slice(-4),
       unstable_asyncBundleRuntime: Boolean(
-        // @ts-expect-error TS2339
         conf?.contents?.unstable_asyncBundleRuntime,
       ),
+      unstable_manualStaticBindingExports:
+        conf?.contents?.unstable_manualStaticBindingExports ?? null,
     };
   },
   async package({
@@ -81,6 +96,8 @@ export default new Packager({
     // If this is a non-module script, and there is only one asset with no dependencies,
     // then we don't need to package at all and can pass through the original code un-wrapped.
     let contents, map;
+    let scopeHoistingStats: ScopeHoistingPackageResult['scopeHoistingStats'];
+
     if (bundle.env.sourceType === 'script') {
       let entries = bundle.getEntryAssets();
       if (
@@ -93,23 +110,31 @@ export default new Packager({
     }
 
     if (contents == null) {
-      let packager = bundle.env.shouldScopeHoist
-        ? new ScopeHoistingPackager(
-            options,
-            bundleGraph,
-            bundle,
-            nullthrows(config).parcelRequireName,
-            nullthrows(config).unstable_asyncBundleRuntime,
-            logger,
-          )
-        : new DevPackager(
-            options,
-            bundleGraph,
-            bundle,
-            nullthrows(config).parcelRequireName,
-          );
+      if (bundle.env.shouldScopeHoist) {
+        let packager = new ScopeHoistingPackager(
+          options,
+          bundleGraph,
+          bundle,
+          nullthrows(config).parcelRequireName,
+          nullthrows(config).unstable_asyncBundleRuntime,
+          nullthrows(config).unstable_manualStaticBindingExports,
+          logger,
+        );
 
-      ({contents, map} = await packager.package());
+        let packageResult = await packager.package();
+        ({contents, map} = packageResult);
+        scopeHoistingStats = packageResult.scopeHoistingStats;
+      } else {
+        let packager = new DevPackager(
+          options,
+          bundleGraph,
+          bundle,
+          nullthrows(config).parcelRequireName,
+        );
+
+        let packageResult = await packager.package();
+        ({contents, map} = packageResult);
+      }
     }
 
     contents += '\n' + (await getSourceMapSuffix(getSourceMapReference, map));
@@ -126,7 +151,7 @@ export default new Packager({
       }));
     }
 
-    return replaceInlineReferences({
+    let result = await replaceInlineReferences({
       bundle,
       bundleGraph,
       contents,
@@ -137,6 +162,12 @@ export default new Packager({
       getInlineBundleContents,
       map,
     });
+
+    if (debugTools['scope-hoisting-stats']) {
+      return {...result, scopeHoistingStats};
+    }
+
+    return result;
   },
 }) as Packager<unknown, unknown>;
 

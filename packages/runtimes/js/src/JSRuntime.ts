@@ -174,6 +174,13 @@ export default new Runtime({
             )}))`,
             dependency,
             env: {sourceType: 'module'},
+            // Pre-computed symbols: exports Promise, no external dependencies (uses global)
+            symbolData: {
+              symbols: new Map([
+                ['default', {local: 'module.exports', loc: null}],
+              ]),
+              dependencies: [],
+            },
           });
         }
       } else {
@@ -197,6 +204,13 @@ export default new Runtime({
             )});`,
             dependency,
             env: {sourceType: 'module'},
+            // Pre-computed symbols: exports Promise, no external dependencies
+            symbolData: {
+              symbols: new Map([
+                ['default', {local: 'module.exports', loc: null}],
+              ]),
+              dependencies: [],
+            },
           });
           continue;
         }
@@ -230,22 +244,39 @@ export default new Runtime({
             ? 'parcelRequire'
             : '__parcel__require__';
 
-        // @ts-expect-error TS7006
-        const fallbackUrls = (cond) => {
-          return `[${[...cond.ifTrueBundles, ...cond.ifFalseBundles]
-            .map((target) => {
-              let relativePathExpr = getRelativePathExpr(
-                bundle,
-                target,
-                options,
-              );
-              return getAbsoluteUrlExpr(
-                relativePathExpr,
-                bundle,
-                config.domainSharding,
-              );
-            })
-            .join(',')}]`;
+        // We have fallback behaviour that can be used in development mode, so we need to handle both types of packagers
+        const getFallbackArgs = (cond: {
+          ifTrueBundles: NamedBundle[];
+          ifFalseBundles: NamedBundle[];
+        }) => {
+          const fallbackUrls = () => {
+            return `urls: [${[...cond.ifTrueBundles, ...cond.ifFalseBundles]
+              .map((target) => {
+                let relativePathExpr = getRelativePathExpr(
+                  bundle,
+                  target,
+                  options,
+                );
+                return getAbsoluteUrlExpr(
+                  relativePathExpr,
+                  bundle,
+                  config.domainSharding,
+                );
+              })
+              .join(',')}]`;
+          };
+
+          const fallbackBundleIds = () => {
+            return `i: [${[...cond.ifTrueBundles, ...cond.ifFalseBundles]
+              .map((target) => `"${target.publicId}"`)
+              .join(',')}]`;
+          };
+
+          return `, {l: require('./helpers/browser/sync-js-loader'), ${
+            options.mode === 'development'
+              ? fallbackUrls()
+              : fallbackBundleIds()
+          }}`;
         };
 
         const shouldUseFallback =
@@ -263,11 +294,7 @@ export default new Runtime({
         const assetCode = `module.exports = require('${loaderPath}')('${
           cond.key
         }', ${ifTrue}, ${ifFalse}${
-          shouldUseFallback
-            ? `, {loader: require('./helpers/browser/sync-js-loader'), urls: ${fallbackUrls(
-                cond,
-              )}}`
-            : ''
+          shouldUseFallback ? getFallbackArgs(cond) : ''
         })`;
 
         assets.push({
@@ -278,6 +305,32 @@ export default new Runtime({
           // (rather than the actual conditional deps)
           dependency: cond.ifFalseDependency,
           env: {sourceType: 'module'},
+          // Pre-computed symbols: conditional loader with potential sync-js-loader fallback
+          symbolData: {
+            symbols: new Map([
+              ['default', {local: 'module.exports', loc: null}],
+            ]),
+            dependencies: [
+              {
+                specifier: loaderPath,
+                symbols: new Map([
+                  ['default', {local: 'default', loc: null, isWeak: false}],
+                ]),
+                usedSymbols: new Set(['default']),
+              },
+              ...(shouldUseFallback
+                ? [
+                    {
+                      specifier: './helpers/browser/sync-js-loader',
+                      symbols: new Map([
+                        ['default', {local: 'l', loc: null, isWeak: false}],
+                      ]),
+                      usedSymbols: new Set(['default']),
+                    },
+                  ]
+                : []),
+            ],
+          },
         });
       }
     }
@@ -298,6 +351,13 @@ export default new Runtime({
           code: `module.exports = ${JSON.stringify(dependency.id)};`,
           dependency,
           env: {sourceType: 'module'},
+          // Pre-computed symbols: simple export with no dependencies
+          symbolData: {
+            symbols: new Map([
+              ['default', {local: 'module.exports', loc: null}],
+            ]),
+            dependencies: [],
+          },
         });
         continue;
       }
@@ -313,6 +373,13 @@ export default new Runtime({
           code: `module.exports = ${JSON.stringify(dependency.specifier)}`,
           dependency,
           env: {sourceType: 'module'},
+          // Pre-computed symbols: simple export with no dependencies
+          symbolData: {
+            symbols: new Map([
+              ['default', {local: 'module.exports', loc: null}],
+            ]),
+            dependencies: [],
+          },
         });
         continue;
       }
@@ -384,6 +451,19 @@ export default new Runtime({
           code: loaderCode,
           isEntry: true,
           env: {sourceType: 'module'},
+          // Pre-computed symbols: lazy bundle loader, requires specific loader helper
+          symbolData: {
+            symbols: new Map(), // No exports, just side effects
+            dependencies: [
+              {
+                specifier: loader,
+                symbols: new Map([
+                  ['default', {local: 'default', loc: null, isWeak: false}],
+                ]),
+                usedSymbols: new Set(['default']),
+              },
+            ],
+          },
         });
       }
     }
@@ -410,6 +490,19 @@ export default new Runtime({
           bundle,
           config.splitManifestThreshold,
         ),
+        // Pre-computed symbols: requires bundle-manifest helper
+        symbolData: {
+          symbols: new Map(), // No exports, just executes
+          dependencies: [
+            {
+              specifier: './helpers/bundle-manifest',
+              symbols: new Map([
+                ['register', {local: 'register', loc: null, isWeak: false}],
+              ]),
+              usedSymbols: new Set(['register']),
+            },
+          ],
+        },
       });
     }
 
@@ -736,6 +829,19 @@ function getLoaderRuntime({
       code: loaderCode,
       dependency,
       env: {sourceType: 'module'},
+      // Pre-computed symbols: ESM loader with retry, requires esm-js-loader-retry helper
+      symbolData: {
+        symbols: new Map([['default', {local: 'module.exports', loc: null}]]),
+        dependencies: [
+          {
+            specifier: './helpers/browser/esm-js-loader-retry',
+            symbols: new Map([
+              ['default', {local: 'default', loc: null, isWeak: false}],
+            ]),
+            usedSymbols: new Set(['default']),
+          },
+        ],
+      },
     };
   }
 
@@ -751,11 +857,145 @@ function getLoaderRuntime({
 
   code.push(`module.exports = ${loaderCode};`);
 
+  // Collect all potential helper dependencies used in loader runtime
+  let helperDependencies: Array<{
+    specifier: string;
+    symbols: Map<string, {local: string; loc: null; isWeak: boolean}>;
+    usedSymbols: Set<string>;
+  }> = [];
+
+  // Always potential dependencies based on the code patterns
+  if (needsEsmLoadPrelude) {
+    if (shardingConfig) {
+      helperDependencies.push({
+        specifier: './helpers/browser/esm-js-loader-shards',
+        symbols: new Map([
+          ['default', {local: 'default', loc: null, isWeak: false}],
+        ]),
+        usedSymbols: new Set(['default']),
+      });
+    } else {
+      helperDependencies.push({
+        specifier: './helpers/browser/esm-js-loader',
+        symbols: new Map([
+          ['default', {local: 'default', loc: null, isWeak: false}],
+        ]),
+        usedSymbols: new Set(['default']),
+      });
+    }
+  }
+
+  // Bundle manifest dependency if using runtime manifest
+  if (shouldUseRuntimeManifest(bundle, options)) {
+    helperDependencies.push({
+      specifier: './helpers/bundle-manifest',
+      symbols: new Map([
+        ['resolve', {local: 'resolve', loc: null, isWeak: false}],
+      ]),
+      usedSymbols: new Set(['resolve']),
+    });
+  }
+
+  // Domain sharding dependency if configured
+  if (shardingConfig) {
+    helperDependencies.push({
+      specifier: '@atlaspack/domain-sharding',
+      symbols: new Map([
+        ['shardUrl', {local: 'shardUrl', loc: null, isWeak: false}],
+      ]),
+      usedSymbols: new Set(['shardUrl']),
+    });
+  }
+
+  // Various loader dependencies based on bundle types in externalBundles
+  for (let to of externalBundles) {
+    let loader = loaders[to.type];
+    if (loader && typeof loader === 'string') {
+      helperDependencies.push({
+        specifier: loader,
+        symbols: new Map([
+          ['default', {local: 'default', loc: null, isWeak: false}],
+        ]),
+        usedSymbols: new Set(['default']),
+      });
+    }
+  }
+
+  // Import polyfill if needed
+  if (needsDynamicImportPolyfill && loaders?.IMPORT_POLYFILL) {
+    helperDependencies.push({
+      specifier: loaders.IMPORT_POLYFILL,
+      symbols: new Map([
+        ['default', {local: 'default', loc: null, isWeak: false}],
+      ]),
+      usedSymbols: new Set(['default']),
+    });
+  }
+
+  // Conditional loaders if using conditional bundling
+  if (getFeatureFlag('conditionalBundlingApi')) {
+    const loaderPath = `./helpers/conditional-loader${
+      options.mode === 'development' ? '-dev' : ''
+    }`;
+    helperDependencies.push({
+      specifier: loaderPath,
+      symbols: new Map([
+        ['default', {local: 'default', loc: null, isWeak: false}],
+      ]),
+      usedSymbols: new Set(['default']),
+    });
+
+    // Sync loader for fallback
+    if (options.mode === 'development') {
+      helperDependencies.push({
+        specifier: './helpers/browser/sync-js-loader',
+        symbols: new Map([
+          ['default', {local: 'default', loc: null, isWeak: false}],
+        ]),
+        usedSymbols: new Set(['default']),
+      });
+    }
+  }
+
+  // Preload/prefetch loaders for browser context
+  if (bundle.env.context === 'browser') {
+    helperDependencies.push({
+      specifier: BROWSER_PRELOAD_LOADER,
+      symbols: new Map([
+        ['default', {local: 'default', loc: null, isWeak: false}],
+      ]),
+      usedSymbols: new Set(['default']),
+    });
+    helperDependencies.push({
+      specifier: BROWSER_PREFETCH_LOADER,
+      symbols: new Map([
+        ['default', {local: 'default', loc: null, isWeak: false}],
+      ]),
+      usedSymbols: new Set(['default']),
+    });
+  }
+
+  // ESM loader retry if using import retry feature
+  if (needsEsmLoadPrelude && options.featureFlags.importRetry) {
+    helperDependencies.push({
+      specifier: './helpers/browser/esm-js-loader-retry',
+      symbols: new Map([
+        ['default', {local: 'default', loc: null, isWeak: false}],
+      ]),
+      usedSymbols: new Set(['default']),
+    });
+  }
+
   return {
     filePath: __filename,
     code: code.join('\n'),
     dependency,
     env: {sourceType: 'module'},
+    // Pre-computed symbols: loader runtime with comprehensive helper dependencies
+    symbolData: {
+      symbols: new Map([['default', {local: 'module.exports', loc: null}]]),
+      dependencies: helperDependencies,
+    },
   };
 }
 
@@ -891,11 +1131,89 @@ function getURLRuntime(
     )};`;
   }
 
+  // Collect dependencies based on the URL runtime code patterns
+  let urlRuntimeDependencies: Array<{
+    specifier: string;
+    symbols: Map<string, {local: string; loc: null; isWeak: boolean}>;
+    usedSymbols: Set<string>;
+  }> = [];
+
+  if (dependency.meta.webworker === true && !from.env.isLibrary) {
+    // Web worker runtime requires get-worker-url helper
+    urlRuntimeDependencies.push({
+      specifier: './helpers/get-worker-url',
+      symbols: new Map([
+        ['default', {local: 'workerURL', loc: null, isWeak: false}],
+      ]),
+      usedSymbols: new Set(['default']),
+    });
+
+    if (
+      !(
+        from.env.outputFormat === 'esmodule' &&
+        from.env.supports('import-meta-url')
+      )
+    ) {
+      // Also requires bundle-url helper in non-ESM environments
+      urlRuntimeDependencies.push({
+        specifier: './helpers/bundle-url',
+        symbols: new Map([
+          ['getBundleURL', {local: 'getBundleURL', loc: null, isWeak: false}],
+          ['getOrigin', {local: 'getOrigin', loc: null, isWeak: false}],
+        ]),
+        usedSymbols: new Set(['getBundleURL', 'getOrigin']),
+      });
+
+      // Domain sharding if configured
+      if (shardingConfig) {
+        urlRuntimeDependencies.push({
+          specifier: '@atlaspack/domain-sharding',
+          symbols: new Map([
+            ['shardUrl', {local: 'shardUrl', loc: null, isWeak: false}],
+          ]),
+          usedSymbols: new Set(['shardUrl']),
+        });
+      }
+    }
+  } else {
+    // Regular URL runtime may use bundle-url helper
+    if (
+      !(
+        from.env.outputFormat === 'esmodule' &&
+        from.env.supports('import-meta-url')
+      ) &&
+      !(from.env.outputFormat === 'commonjs')
+    ) {
+      urlRuntimeDependencies.push({
+        specifier: './helpers/bundle-url',
+        symbols: new Map([
+          ['getBundleURL', {local: 'getBundleURL', loc: null, isWeak: false}],
+        ]),
+        usedSymbols: new Set(['getBundleURL']),
+      });
+
+      if (shardingConfig) {
+        urlRuntimeDependencies.push({
+          specifier: '@atlaspack/domain-sharding',
+          symbols: new Map([
+            ['shardUrl', {local: 'shardUrl', loc: null, isWeak: false}],
+          ]),
+          usedSymbols: new Set(['shardUrl']),
+        });
+      }
+    }
+  }
+
   return {
     filePath: __filename,
     code,
     dependency,
     env: {sourceType: 'module'},
+    // Pre-computed symbols: URL runtime with helper dependencies
+    symbolData: {
+      symbols: new Map([['default', {local: 'module.exports', loc: null}]]),
+      dependencies: urlRuntimeDependencies,
+    },
   };
 }
 

@@ -2,7 +2,7 @@
 name = "atlaspack_plugin_optimizer_inline_requires"
 authors = ["Pedro Tacla Yamada <tacla.yamada@gmail.com>"]
 version = "0.1.0"
-edition = "2024"
+edition = { workspace = true }
 
 [lints]
 workspace = true
@@ -10,7 +10,6 @@ workspace = true
 [dependencies]
 swc_core = { workspace = true, features = [
     "common",
-    "common_ahash",
     "common_sourcemap",
     "ecma_ast",
     "ecma_codegen",

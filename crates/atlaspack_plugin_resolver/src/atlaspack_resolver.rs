@@ -39,6 +39,7 @@ pub struct AtlaspackResolver {
   cache: Cache,
   config: ResolverConfig,
   options: Arc<PluginOptions>,
+  extra_aliases: Option<atlaspack_resolver::AliasMap>,
 }
 
 impl Debug for AtlaspackResolver {
@@ -84,10 +85,17 @@ impl AtlaspackResolver {
       cache.scan_package_duplicates(&ctx.config.project_root)?;
     }
 
+    let extra_aliases = ctx
+      .options
+      .unstable_alias
+      .as_ref()
+      .map(atlaspack_resolver::AliasMap::from);
+
     Ok(Self {
       cache,
       config,
       options: Arc::clone(&ctx.options),
+      extra_aliases,
     })
   }
 
@@ -288,7 +296,7 @@ impl AtlaspackResolver {
       _ => {
         return Ok(Resolved {
           invalidations: Vec::new(),
-          resolution: Resolution::Resolved(self.resolve_empty(false)),
+          resolution: Resolution::Resolved(self.resolve_empty(true)),
         });
       }
     };
@@ -319,6 +327,16 @@ impl ResolverPlugin for AtlaspackResolver {
       Cow::Borrowed(&self.options.project_root),
       CacheCow::Borrowed(&self.cache),
     );
+
+    // Set unstable_alias from config
+    if let Some(ref extra_aliases) = self.extra_aliases {
+      resolver.extra_aliases = Some(extra_aliases);
+    }
+
+    resolver.dissalow_circular_package_aliases = self
+      .options
+      .feature_flags
+      .bool_enabled("disallowCircularPackageAliases");
 
     resolver.conditions.set(
       ExportsCondition::BROWSER,
@@ -454,6 +472,10 @@ impl ResolverPlugin for AtlaspackResolver {
       }),
     }
   }
+
+  fn on_new_build(&self) {
+    self.cache.clear();
+  }
 }
 
 fn should_include_node_module(include_node_modules: &IncludeNodeModules, name: &str) -> bool {
@@ -482,7 +504,7 @@ mod tests {
   use atlaspack_core::{
     config_loader::ConfigLoader,
     plugin::PluginLogger,
-    types::{Dependency, Diagnostic, ErrorKind},
+    types::{DependencyBuilder, Diagnostic, Environment, ErrorKind, Priority},
   };
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
   use pretty_assertions::assert_eq;
@@ -503,10 +525,14 @@ mod tests {
 
   fn resolve_context(specifier: &str) -> ResolveContext {
     ResolveContext {
-      dependency: Arc::new(Dependency {
-        specifier: specifier.into(),
-        ..Dependency::default()
-      }),
+      dependency: Arc::new(
+        DependencyBuilder::default()
+          .specifier(specifier.to_string())
+          .env(Arc::new(Environment::default()))
+          .specifier_type(SpecifierType::default())
+          .priority(Priority::default())
+          .build(),
+      ),
       pipeline: None,
       specifier: specifier.into(),
     }
@@ -603,11 +629,15 @@ mod tests {
     let specifier = String::from("./something.js");
 
     let ctx = ResolveContext {
-      dependency: Arc::new(Dependency {
-        resolve_from: Some(PathBuf::from("/foo/index.js")),
-        specifier: specifier.clone(),
-        ..Dependency::default()
-      }),
+      dependency: Arc::new(
+        DependencyBuilder::default()
+          .specifier(specifier.clone())
+          .env(Arc::new(Environment::default()))
+          .specifier_type(SpecifierType::default())
+          .priority(Priority::default())
+          .resolve_from(PathBuf::from("/foo/index.js"))
+          .build(),
+      ),
       pipeline: None,
       specifier,
     };

@@ -1,5 +1,159 @@
 # @atlaspack/compressor-brotli
 
+## 2.13.55
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.53
+
+## 2.13.54
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.52
+
+## 2.13.53
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.51
+
+## 2.13.52
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.50
+
+## 2.13.51
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.49
+
+## 2.13.50
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.48
+
+## 2.13.49
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.47
+
+## 2.13.48
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.46
+
+## 2.13.47
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.45
+
+## 2.13.46
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.44
+
+## 2.13.45
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.43
+
+## 2.13.44
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.42
+
+## 2.13.43
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.41
+
+## 2.13.42
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.40
+
+## 2.13.41
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.39
+
+## 2.13.40
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.38
+
+## 2.13.39
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.37
+
+## 2.13.38
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.36
+
+## 2.13.37
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.35
+
+## 2.13.36
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.34
+
+## 2.13.35
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.33
+
+## 2.13.34
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.32
+
 ## 2.13.33
 
 ### Patch Changes

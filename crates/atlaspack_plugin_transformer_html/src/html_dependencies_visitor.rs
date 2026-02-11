@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use atlaspack_core::types::Environment;
+use atlaspack_core::types::{Environment, JSONObject};
 use html5ever::{ExpandedName, LocalName};
 use markup5ever::{expanded_name, local_name, namespace_url, ns};
 use markup5ever_rcdom::{Handle, NodeData};
@@ -11,7 +11,7 @@ use markup5ever_rcdom::{Handle, NodeData};
 use atlaspack_core::{
   hash::IdentifierHasher,
   types::{
-    Asset, AssetWithDependencies, BundleBehavior, Code, Dependency, FileType, JSONObject,
+    Asset, AssetWithDependencies, BundleBehavior, Code, Dependency, DependencyBuilder, FileType,
     OutputFormat, Priority, SourceType, SpecifierType,
   },
 };
@@ -40,16 +40,15 @@ impl HtmlDependenciesVisitor {
   }
 
   fn add_url_dependency(&mut self, specifier: String) -> String {
-    let dependency = Dependency {
-      env: self.context.env.clone(),
-      priority: Priority::Lazy,
-      source_asset_id: Some(self.context.source_asset_id.clone()),
-      source_asset_type: Some(FileType::Html),
-      source_path: self.context.source_path.clone(),
-      specifier,
-      specifier_type: SpecifierType::Url,
-      ..Dependency::default()
-    };
+    let dependency = DependencyBuilder::default()
+      .env(self.context.env.clone())
+      .priority(Priority::Lazy)
+      .source_asset_id(self.context.source_asset_id.clone())
+      .source_asset_type(FileType::Html)
+      .source_path_option(self.context.source_path.clone())
+      .specifier(specifier)
+      .specifier_type(SpecifierType::Url)
+      .build();
 
     let dependency_id = dependency.id();
 
@@ -152,37 +151,39 @@ impl DomVisitor for HtmlDependenciesVisitor {
             local: &LocalName::from("data-atlaspack-isolated"),
           };
           let mut inline_bundle_behavior = None;
-          let dependency = Dependency {
-            bundle_behavior: if src_attr.is_none() && attrs.get(isolated_attr).is_some() {
-              attrs.delete(isolated_attr);
-              inline_bundle_behavior = Some(BundleBehavior::InlineIsolated);
-              Some(BundleBehavior::InlineIsolated)
-            } else if src_attr.is_none() {
-              inline_bundle_behavior = Some(BundleBehavior::Inline);
-              Some(BundleBehavior::Inline)
-            } else if source_type == SourceType::Script
-              && attrs.get(expanded_name!("", "async")).is_some()
-            {
-              Some(BundleBehavior::Isolated)
-            } else {
-              None
-            },
-            env: env.clone(),
-            is_esm: source_type == SourceType::Module,
-            priority: match src_attr {
+          let bundle_behavior = if src_attr.is_none() && attrs.get(isolated_attr).is_some() {
+            attrs.delete(isolated_attr);
+            inline_bundle_behavior = Some(BundleBehavior::InlineIsolated);
+            Some(BundleBehavior::InlineIsolated)
+          } else if src_attr.is_none() {
+            inline_bundle_behavior = Some(BundleBehavior::Inline);
+            Some(BundleBehavior::Inline)
+          } else if source_type == SourceType::Script
+            && attrs.get(expanded_name!("", "async")).is_some()
+          {
+            Some(BundleBehavior::Isolated)
+          } else {
+            None
+          };
+
+          let dependency = DependencyBuilder::default()
+            .bundle_behavior(bundle_behavior)
+            .env(env.clone())
+            .is_esm(source_type == SourceType::Module)
+            .priority(match src_attr {
               None => Priority::Sync,
               Some(_) => Priority::Parallel,
-            },
-            source_asset_id: Some(self.context.source_asset_id.clone()),
-            source_asset_type: Some(FileType::Html),
-            source_path: self.context.source_path.clone(),
-            specifier: specifier.clone(),
-            specifier_type: match src_attr {
+            })
+            .source_asset_id(self.context.source_asset_id.clone())
+            .source_asset_type(FileType::Html)
+            .source_path_option(self.context.source_path.clone())
+            .specifier(specifier.clone())
+            .specifier_type(match src_attr {
               None => SpecifierType::Esm,
               Some(_) => SpecifierType::Url,
-            },
-            ..Default::default()
-          };
+            })
+            .build();
+
           let dependency_id = dependency.id();
           self.dependencies.push(dependency);
 
@@ -214,18 +215,21 @@ impl DomVisitor for HtmlDependenciesVisitor {
               })
               .unwrap_or(FileType::Js);
 
+            let mut new_asset = Asset::new_inline(
+              Code::new(text_content(&node)),
+              env.clone(),
+              inline_asset_file_path(&self.context.source_path, &file_type),
+              file_type,
+              JSONObject::new(),
+              &self.context.project_root,
+              self.context.side_effects,
+              Some(specifier),
+              inline_bundle_behavior,
+            );
+            new_asset.css_dependency_type = Some("tag".into());
+
             self.discovered_assets.push(AssetWithDependencies {
-              asset: Asset::new_inline(
-                Code::new(text_content(&node)),
-                env.clone(),
-                inline_asset_file_path(&self.context.source_path, &file_type),
-                file_type,
-                JSONObject::from_iter([(String::from("type"), "tag".into())]),
-                &self.context.project_root,
-                self.context.side_effects,
-                Some(specifier),
-                inline_bundle_behavior,
-              ),
+              asset: new_asset,
               dependencies: Vec::new(),
             });
 
@@ -249,28 +253,33 @@ impl DomVisitor for HtmlDependenciesVisitor {
             &specifier,
           );
 
-          self.dependencies.push(Dependency {
-            env: self.context.env.clone(),
-            source_asset_id: Some(self.context.source_asset_id.clone()),
-            source_asset_type: Some(FileType::Html),
-            source_path: self.context.source_path.clone(),
-            specifier: specifier.clone(),
-            specifier_type: SpecifierType::Esm,
-            ..Dependency::default()
-          });
+          let new_dependency = DependencyBuilder::default()
+            .env(self.context.env.clone())
+            .source_asset_id(self.context.source_asset_id.clone())
+            .source_asset_type(FileType::Html)
+            .source_path_option(self.context.source_path.clone())
+            .specifier(specifier.clone())
+            .specifier_type(SpecifierType::Esm)
+            .priority(Priority::Sync)
+            .build();
+
+          self.dependencies.push(new_dependency);
+
+          let mut new_asset = Asset::new_inline(
+            Code::new(text_content(&node)),
+            self.context.env.clone(),
+            inline_asset_file_path(&self.context.source_path, &file_type),
+            file_type,
+            JSONObject::new(),
+            &self.context.project_root,
+            self.context.side_effects,
+            Some(specifier),
+            Some(BundleBehavior::Inline),
+          );
+          new_asset.css_dependency_type = Some("tag".into());
 
           self.discovered_assets.push(AssetWithDependencies {
-            asset: Asset::new_inline(
-              Code::new(text_content(&node)),
-              self.context.env.clone(),
-              inline_asset_file_path(&self.context.source_path, &file_type),
-              file_type,
-              JSONObject::from_iter([(String::from("type"), "tag".into())]),
-              &self.context.project_root,
-              self.context.side_effects,
-              Some(specifier),
-              Some(BundleBehavior::Inline),
-            ),
+            asset: new_asset,
             dependencies: Vec::new(),
           });
 

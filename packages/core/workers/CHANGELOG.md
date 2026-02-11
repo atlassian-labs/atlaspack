@@ -1,5 +1,232 @@
 # @atlaspack/workers
 
+## 2.14.53
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/logger@2.14.45
+  - @atlaspack/utils@3.3.5
+  - @atlaspack/build-cache@2.13.11
+  - @atlaspack/types-internal@2.23.1
+  - @atlaspack/profiler@2.15.14
+
+## 2.14.52
+
+### Patch Changes
+
+- Updated dependencies [[`e058f0e`](https://github.com/atlassian-labs/atlaspack/commit/e058f0e7a0423ba9373e85a7dbd5c1dd43b47916)]:
+  - @atlaspack/types-internal@2.23.0
+  - @atlaspack/logger@2.14.44
+  - @atlaspack/profiler@2.15.13
+  - @atlaspack/utils@3.3.4
+  - @atlaspack/build-cache@2.13.10
+
+## 2.14.51
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/logger@2.14.43
+  - @atlaspack/utils@3.3.3
+  - @atlaspack/profiler@2.15.12
+  - @atlaspack/types-internal@2.22.8
+
+## 2.14.50
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/logger@2.14.42
+  - @atlaspack/utils@3.3.2
+  - @atlaspack/build-cache@2.13.9
+  - @atlaspack/types-internal@2.22.7
+  - @atlaspack/profiler@2.15.11
+
+## 2.14.49
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/logger@2.14.41
+  - @atlaspack/utils@3.3.1
+  - @atlaspack/build-cache@2.13.8
+  - @atlaspack/types-internal@2.22.6
+  - @atlaspack/profiler@2.15.10
+
+## 2.14.48
+
+### Patch Changes
+
+- Updated dependencies [[`47aa84e`](https://github.com/atlassian-labs/atlaspack/commit/47aa84e44c61066072a5bf3d57678565b9d2c5a3), [`565bab3`](https://github.com/atlassian-labs/atlaspack/commit/565bab3771cc334659d873cabff4cdfac0860cc7)]:
+  - @atlaspack/utils@3.3.0
+  - @atlaspack/build-cache@2.13.7
+  - @atlaspack/profiler@2.15.9
+  - @atlaspack/logger@2.14.40
+  - @atlaspack/types-internal@2.22.5
+
+## 2.14.47
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/logger@2.14.39
+  - @atlaspack/utils@3.2.8
+  - @atlaspack/profiler@2.15.8
+  - @atlaspack/types-internal@2.22.4
+
+## 2.14.46
+
+### Patch Changes
+
+- Updated dependencies [[`02cc8b3`](https://github.com/atlassian-labs/atlaspack/commit/02cc8b32c06ca6b51806b33f6f707ca06e55e957)]:
+  - @atlaspack/types-internal@2.22.3
+  - @atlaspack/logger@2.14.38
+  - @atlaspack/utils@3.2.7
+  - @atlaspack/profiler@2.15.7
+
+## 2.14.45
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.22.2
+  - @atlaspack/utils@3.2.6
+  - @atlaspack/logger@2.14.37
+  - @atlaspack/profiler@2.15.6
+
+## 2.14.44
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/logger@2.14.36
+  - @atlaspack/utils@3.2.5
+  - @atlaspack/types-internal@2.22.1
+  - @atlaspack/profiler@2.15.5
+
+## 2.14.43
+
+### Patch Changes
+
+- Updated dependencies [[`00fa643`](https://github.com/atlassian-labs/atlaspack/commit/00fa6433202bfd3311479f6314c9ec878a789f2c)]:
+  - @atlaspack/types-internal@2.22.0
+  - @atlaspack/logger@2.14.35
+  - @atlaspack/profiler@2.15.4
+  - @atlaspack/utils@3.2.4
+
+## 2.14.42
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/logger@2.14.34
+  - @atlaspack/utils@3.2.3
+  - @atlaspack/types-internal@2.21.3
+  - @atlaspack/profiler@2.15.3
+
+## 2.14.41
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/logger@2.14.33
+  - @atlaspack/utils@3.2.2
+  - @atlaspack/types-internal@2.21.2
+  - @atlaspack/profiler@2.15.2
+
+## 2.14.40
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/logger@2.14.32
+  - @atlaspack/utils@3.2.1
+  - @atlaspack/types-internal@2.21.1
+  - @atlaspack/profiler@2.15.1
+
+## 2.14.39
+
+### Patch Changes
+
+- Updated dependencies [[`8eb84ee`](https://github.com/atlassian-labs/atlaspack/commit/8eb84ee61a42bfe87c58079b610802b07a6a13e4), [`73168c2`](https://github.com/atlassian-labs/atlaspack/commit/73168c275a5d9abff9907bcf536b340bca1ed5f0), [`617a318`](https://github.com/atlassian-labs/atlaspack/commit/617a318ddc9419b38360257353fec50b9051ee13)]:
+  - @atlaspack/types-internal@2.21.0
+  - @atlaspack/utils@3.2.0
+  - @atlaspack/profiler@2.15.0
+  - @atlaspack/logger@2.14.31
+
+## 2.14.38
+
+### Patch Changes
+
+- Updated dependencies [[`7d7a55d`](https://github.com/atlassian-labs/atlaspack/commit/7d7a55dd6395ec391a2e4c33b3dec0d1ea477d4c)]:
+  - @atlaspack/utils@3.1.2
+  - @atlaspack/types-internal@2.20.8
+  - @atlaspack/logger@2.14.30
+  - @atlaspack/profiler@2.14.35
+
+## 2.14.37
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/logger@2.14.29
+  - @atlaspack/utils@3.1.1
+  - @atlaspack/types-internal@2.20.7
+  - @atlaspack/profiler@2.14.34
+
+## 2.14.36
+
+### Patch Changes
+
+- Updated dependencies [[`5776be2`](https://github.com/atlassian-labs/atlaspack/commit/5776be21f70a3f2b9471ba33da3ba1a883f21f1a)]:
+  - @atlaspack/utils@3.1.0
+  - @atlaspack/logger@2.14.28
+  - @atlaspack/types-internal@2.20.6
+  - @atlaspack/profiler@2.14.33
+
+## 2.14.35
+
+### Patch Changes
+
+- Updated dependencies [[`c372f3f`](https://github.com/atlassian-labs/atlaspack/commit/c372f3fd6fce8200d5cf47f41bc7895c6cbb5558), [`17dfea9`](https://github.com/atlassian-labs/atlaspack/commit/17dfea9e9f3169807808520df9c09ebf70dc8b10)]:
+  - @atlaspack/types-internal@2.20.5
+  - @atlaspack/utils@3.0.3
+  - @atlaspack/logger@2.14.27
+  - @atlaspack/profiler@2.14.32
+
+## 2.14.34
+
+### Patch Changes
+
+- [#782](https://github.com/atlassian-labs/atlaspack/pull/782) [`25cbee6`](https://github.com/atlassian-labs/atlaspack/commit/25cbee625fb47ac20423fe34ff37bc818a807245) Thanks [@yamadapc](https://github.com/yamadapc)! - Initial atlaspack-inspector release
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.20.4
+  - @atlaspack/utils@3.0.2
+  - @atlaspack/logger@2.14.26
+  - @atlaspack/profiler@2.14.31
+
+## 2.14.33
+
+### Patch Changes
+
+- Updated dependencies [[`236e546`](https://github.com/atlassian-labs/atlaspack/commit/236e5465863dca6044a7191e05260a5b924c342e)]:
+  - @atlaspack/utils@3.0.1
+  - @atlaspack/types-internal@2.20.3
+  - @atlaspack/logger@2.14.25
+  - @atlaspack/profiler@2.14.30
+
+## 2.14.32
+
+### Patch Changes
+
+- Updated dependencies [[`1180103`](https://github.com/atlassian-labs/atlaspack/commit/118010351ed444f8178988afb3f77807154dd933)]:
+  - @atlaspack/utils@3.0.0
+  - @atlaspack/types-internal@2.20.2
+  - @atlaspack/logger@2.14.24
+  - @atlaspack/profiler@2.14.29
+
 ## 2.14.31
 
 ### Patch Changes

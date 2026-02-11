@@ -1,7 +1,7 @@
 [package]
 name = "atlaspack_plugin_rpc"
 version = "0.1.0"
-edition = "2024"
+edition = { workspace = true }
 description = "Atlaspack Bundler"
 
 [lints]
@@ -21,6 +21,7 @@ nodejs = [
 atlaspack_config = { path = "../atlaspack_config" }
 atlaspack_core = { path = "../atlaspack_core" }
 atlaspack_napi_helpers = { path = "../atlaspack_napi_helpers", optional = true }
+atlaspack_package_manager = { path = "../atlaspack_package_manager" }
 
 anyhow = { workspace = true }
 async-trait = { workspace = true }
@@ -28,6 +29,11 @@ mockall = { workspace = true }
 napi = { workspace = true, features = ["serde"], optional = true }
 once_cell = { workspace = true, optional = true }
 parking_lot = { workspace = true, optional = true }
+regex = { workspace = true }
 serde = { workspace = true, optional = true }
+serde_json = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }

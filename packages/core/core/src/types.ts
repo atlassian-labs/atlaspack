@@ -23,6 +23,7 @@ import type {
   HMROptions,
   DetailedReportOptions,
   Symbol,
+  SymbolData,
 } from '@atlaspack/types';
 import type {SharedReference} from '@atlaspack/workers';
 import type {FileSystem} from '@atlaspack/fs';
@@ -335,6 +336,7 @@ export type AtlaspackOptions = {
   logLevel: LogLevel;
   projectRoot: FilePath;
   shouldProfile: boolean;
+  nativeProfiler: 'instruments' | 'samply' | undefined;
   shouldTrace: boolean;
   shouldPatchConsole: boolean;
   detailedReport?: DetailedReportOptions | null | undefined;
@@ -437,6 +439,7 @@ export type AssetRequestInput = {
   isURL?: boolean;
   query?: string | null | undefined;
   isSingleChangeRebuild?: boolean;
+  symbolData?: SymbolData;
 };
 
 export type AssetRequestResult = Array<Asset>;

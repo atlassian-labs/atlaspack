@@ -1,4 +1,9 @@
-import type {Config, PluginOptions, PluginLogger} from '@atlaspack/types';
+import type {
+  Config,
+  PluginOptions,
+  PluginLogger,
+  FileSystem,
+} from '@atlaspack/types';
 import * as BabelCore from '@babel/core';
 import type {Diagnostic} from '@atlaspack/diagnostic';
 import type {BabelConfig} from './types';
@@ -287,7 +292,6 @@ const redundantPresets = new Set([
 ]);
 
 async function warnOnRedundantPlugins(
-  // @ts-expect-error TS2345
   fs: FileSystem,
   babelConfig: {
     [key: string]: any;
@@ -392,7 +396,6 @@ async function warnOnRedundantPlugins(
 }
 
 async function getCodeHighlights(
-  // @ts-expect-error TS2339
   fs: FileSystem,
   filePath: any,
   redundantPresets: Set<any | string>,

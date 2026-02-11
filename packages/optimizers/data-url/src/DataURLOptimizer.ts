@@ -1,6 +1,5 @@
 import {Optimizer} from '@atlaspack/plugin';
 import {blobToBuffer} from '@atlaspack/utils';
-// @ts-expect-error TS7016
 import mime from 'mime';
 import {isBinaryFile} from 'isbinaryfile';
 
@@ -17,6 +16,7 @@ export default new Optimizer({
 
     // Follows the data url format referenced here:
     // https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URIs
+    // @ts-expect-error TS2307
     let mimeType = mime.getType(bundle.name) ?? '';
     let encoding = hasBinaryContent ? ';base64' : '';
     let content = fixedEncodeURIComponent(

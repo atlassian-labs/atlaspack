@@ -25,6 +25,7 @@ pub struct PartialAtlaspackConfig {
   pub runtimes: Vec<PluginNode>,
   pub transformers: IndexMap<String, Vec<PluginNode>>,
   pub validators: IndexMap<String, Vec<PluginNode>>,
+  pub unstable_alias: Option<atlaspack_core::types::AliasMap>,
 }
 
 impl TryFrom<AtlaspackRcFile> for PartialAtlaspackConfig {
@@ -91,6 +92,7 @@ impl TryFrom<AtlaspackRcFile> for PartialAtlaspackConfig {
       runtimes: to_vec(file.contents.runtimes.as_ref()),
       transformers: to_pipelines(file.contents.transformers.as_ref()),
       validators: to_pipelines(file.contents.validators.as_ref()),
+      unstable_alias: file.contents.unstable_alias,
     })
   }
 }
@@ -112,21 +114,20 @@ impl PartialAtlaspackConfig {
     let mut merged_map = IndexMap::new();
     let mut used_patterns = HashSet::new();
 
-    // Add the extension options first so they have higher precedence in the output glob map
-    for (pattern, extend_pipelines) in extend_map {
-      let map_pipelines = map.get(&pattern);
-      if let Some(pipelines) = map_pipelines {
-        used_patterns.insert(pattern.clone());
-        merged_map.insert(pattern, merge(pipelines.clone(), extend_pipelines));
-      } else {
-        merged_map.insert(pattern, extend_pipelines);
-      }
+    // Add the user options first so they have higher precedence in the output glob map
+    for (pattern, map_pipelines) in map.iter() {
+      merged_map.insert(pattern.clone(), map_pipelines.clone());
+      used_patterns.insert(pattern.clone());
     }
 
-    // Add remaining pipelines
-    for (pattern, value) in map {
-      if !used_patterns.contains(&pattern) {
-        merged_map.insert(pattern, value);
+    // Add remaining extension options, merging with user options where patterns match
+    for (pattern, extend_pipelines) in extend_map {
+      if let Some(map_pipelines) = map.get(&pattern) {
+        // Pattern exists in both - merge them with user taking precedence
+        merged_map.insert(pattern, merge(map_pipelines.clone(), extend_pipelines));
+      } else {
+        // Pattern only exists in extension - add it
+        merged_map.insert(pattern, extend_pipelines);
       }
     }
 
@@ -218,6 +219,15 @@ impl PartialAtlaspackConfig {
         from_config.validators,
         extend_config.validators,
       ),
+      // We don't currently support merging unstable_aliases
+      unstable_alias: {
+        if extend_config.unstable_alias.is_some() && from_config.unstable_alias.is_some() {
+          tracing::warn!(
+            "Merging of 'unstable_alias' fields is not currently supported. Using the 'unstable_alias' from the extending configuration"
+          );
+        }
+        extend_config.unstable_alias.or(from_config.unstable_alias)
+      },
     }
   }
 }

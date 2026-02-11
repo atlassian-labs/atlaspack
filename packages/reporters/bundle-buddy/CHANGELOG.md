@@ -1,5 +1,181 @@
 # @atlaspack/reporter-bundle-buddy
 
+## 2.14.53
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.23.1
+  - @atlaspack/plugin@2.14.53
+
+## 2.14.52
+
+### Patch Changes
+
+- Updated dependencies [[`e058f0e`](https://github.com/atlassian-labs/atlaspack/commit/e058f0e7a0423ba9373e85a7dbd5c1dd43b47916)]:
+  - @atlaspack/types-internal@2.23.0
+  - @atlaspack/plugin@2.14.52
+
+## 2.14.51
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.22.8
+  - @atlaspack/plugin@2.14.51
+
+## 2.14.50
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.22.7
+  - @atlaspack/plugin@2.14.50
+
+## 2.14.49
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.22.6
+  - @atlaspack/plugin@2.14.49
+
+## 2.14.48
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.22.5
+  - @atlaspack/plugin@2.14.48
+
+## 2.14.47
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.22.4
+  - @atlaspack/plugin@2.14.47
+
+## 2.14.46
+
+### Patch Changes
+
+- Updated dependencies [[`02cc8b3`](https://github.com/atlassian-labs/atlaspack/commit/02cc8b32c06ca6b51806b33f6f707ca06e55e957)]:
+  - @atlaspack/types-internal@2.22.3
+  - @atlaspack/plugin@2.14.46
+
+## 2.14.45
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.22.2
+  - @atlaspack/plugin@2.14.45
+
+## 2.14.44
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.22.1
+  - @atlaspack/plugin@2.14.44
+
+## 2.14.43
+
+### Patch Changes
+
+- Updated dependencies [[`00fa643`](https://github.com/atlassian-labs/atlaspack/commit/00fa6433202bfd3311479f6314c9ec878a789f2c)]:
+  - @atlaspack/types-internal@2.22.0
+  - @atlaspack/plugin@2.14.43
+
+## 2.14.42
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.21.3
+  - @atlaspack/plugin@2.14.42
+
+## 2.14.41
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.21.2
+  - @atlaspack/plugin@2.14.41
+
+## 2.14.40
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.21.1
+  - @atlaspack/plugin@2.14.40
+
+## 2.14.39
+
+### Patch Changes
+
+- Updated dependencies [[`8eb84ee`](https://github.com/atlassian-labs/atlaspack/commit/8eb84ee61a42bfe87c58079b610802b07a6a13e4), [`73168c2`](https://github.com/atlassian-labs/atlaspack/commit/73168c275a5d9abff9907bcf536b340bca1ed5f0), [`617a318`](https://github.com/atlassian-labs/atlaspack/commit/617a318ddc9419b38360257353fec50b9051ee13)]:
+  - @atlaspack/types-internal@2.21.0
+  - @atlaspack/plugin@2.14.39
+
+## 2.14.38
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.20.8
+  - @atlaspack/plugin@2.14.38
+
+## 2.14.37
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.20.7
+  - @atlaspack/plugin@2.14.37
+
+## 2.14.36
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.20.6
+  - @atlaspack/plugin@2.14.36
+
+## 2.14.35
+
+### Patch Changes
+
+- Updated dependencies [[`c372f3f`](https://github.com/atlassian-labs/atlaspack/commit/c372f3fd6fce8200d5cf47f41bc7895c6cbb5558)]:
+  - @atlaspack/types-internal@2.20.5
+  - @atlaspack/plugin@2.14.35
+
+## 2.14.34
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.20.4
+  - @atlaspack/plugin@2.14.34
+
+## 2.14.33
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.20.3
+  - @atlaspack/plugin@2.14.33
+
+## 2.14.32
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.20.2
+  - @atlaspack/plugin@2.14.32
+
 ## 2.14.31
 
 ### Patch Changes

@@ -8,6 +8,7 @@ import type {
   InitialAtlaspackOptions,
   PackagedBundle,
 } from '@atlaspack/types';
+import type {FeatureFlags} from '@atlaspack/feature-flags';
 import type {FileSystem} from '@atlaspack/fs';
 import {MemoryFS, ncp as _ncp, NodeFS, OverlayFS} from '@atlaspack/fs';
 import type WorkerFarm from '@atlaspack/workers';
@@ -78,7 +79,6 @@ beforeEach(async () => {
       ) {
         await new Promise(
           (resolve: (result: Promise<undefined> | undefined) => void) =>
-            // @ts-expect-error TS2345
             setTimeout(resolve, 100),
         );
         continue;
@@ -104,6 +104,12 @@ after(async () => {
   }
 });
 
+afterEach(async () => {
+  if (isAtlaspackV3) {
+    await napiWorkerPool.clearAllWorkerState();
+  }
+});
+
 const chalk = new _chalk.Instance();
 const warning = chalk.keyword('orange');
 
@@ -123,7 +129,6 @@ type ExternalModules = {
 export function sleep(ms: number): Promise<void> {
   return new Promise(
     (resolve: (result: Promise<undefined> | undefined) => void) =>
-      // @ts-expect-error TS2345
       setTimeout(resolve, ms),
   );
 }
@@ -157,6 +162,21 @@ If you don't know how, check here: https://bit.ly/2UmWsbD
 
 export const isAtlaspackV3 = process.env.ATLASPACK_V3 === 'true';
 
+let v3FeatureFlags: Partial<FeatureFlags> | null = null;
+
+// Configure additional feature flags for V3 runs.
+// In V2 runs, this is a no-op to avoid accidentally forcing V3 behavior.
+export function setupV3Flags(flags: Partial<FeatureFlags>) {
+  if (!isAtlaspackV3) return;
+  beforeEach(() => {
+    v3FeatureFlags = flags;
+  });
+}
+
+afterEach(() => {
+  v3FeatureFlags = null;
+});
+
 // Initialize the Napi Worker Pool once and
 // reuse the same instance in all of the tests
 export let napiWorkerPool: NapiWorkerPool;
@@ -188,6 +208,7 @@ export function getParcelOptions(
       },
       featureFlags: {
         atlaspackV3: isAtlaspackV3,
+        ...(isAtlaspackV3 ? v3FeatureFlags : null),
       },
     },
     opts,
@@ -401,6 +422,7 @@ export async function runBundles(
       break;
     }
     case 'web-worker':
+    case 'tesseract':
     case 'service-worker': {
       let prepared = prepareWorkerContext(parent.filePath, globals);
       ctx = prepared.ctx;
@@ -1430,7 +1452,12 @@ export function requestRaw(
   data: string;
 }> {
   return new Promise((resolve, reject: (error?: any) => void) => {
-    client
+    const timeout = setTimeout(() => {
+      req.destroy();
+      reject(new Error(`Request timeout after 30s: ${file} on port ${port}`));
+    }, 30000);
+
+    const req = client
       .request(
         {
           hostname: 'localhost',
@@ -1444,6 +1471,7 @@ export function requestRaw(
           let data = '';
           res.on('data', (c) => (data += c));
           res.on('end', () => {
+            clearTimeout(timeout);
             if (res.statusCode !== 200) {
               return reject({res, data});
             }
@@ -1452,6 +1480,10 @@ export function requestRaw(
           });
         },
       )
+      .on('error', (err) => {
+        clearTimeout(timeout);
+        reject(err);
+      })
       .end();
   });
 }
@@ -1466,7 +1498,13 @@ export function request(
       resolve: (result: Promise<string> | string) => void,
       reject: (error?: any) => void,
     ) => {
-      client.get(
+      let req: ReturnType<typeof client.get>;
+      const timeout = setTimeout(() => {
+        req.destroy();
+        reject(new Error(`Request timeout after 30s: ${file} on port ${port}`));
+      }, 30000);
+
+      req = client.get(
         {
           hostname: 'localhost',
           port: port,
@@ -1478,6 +1516,7 @@ export function request(
           let data = '';
           res.on('data', (c) => (data += c));
           res.on('end', () => {
+            clearTimeout(timeout);
             if (res.statusCode !== 200) {
               return reject({statusCode: res.statusCode, data});
             }
@@ -1486,6 +1525,11 @@ export function request(
           });
         },
       );
+
+      req.on('error', (err) => {
+        clearTimeout(timeout);
+        reject(err);
+      });
     },
   );
 }

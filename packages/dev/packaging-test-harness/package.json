@@ -1,0 +1,36 @@
+{
+  "name": "@atlaspack/packaging-test-harness",
+  "version": "0.0.4",
+  "license": "(MIT OR Apache-2.0)",
+  "private": true,
+  "scripts": {
+    "dev:prepare": "rimraf ./lib/ && mkdir -p lib && cp ./bin/dev-bin.js ./lib/bin.js",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/atlassian-labs/atlaspack.git"
+  },
+  "bin": {
+    "packaging-test-harness": "bin/packaging-test-harness.js"
+  },
+  "main": "lib/index.js",
+  "source": "src/index.ts",
+  "dependencies": {
+    "@atlaspack/cache": "3.2.48",
+    "@atlaspack/core": "2.33.1",
+    "@atlaspack/diagnostic": "2.14.4",
+    "@atlaspack/fs": "2.15.48",
+    "@atlaspack/package-manager": "2.14.53",
+    "@atlaspack/rust": "3.22.1",
+    "commander": "^7.0.0",
+    "nullthrows": "^1.1.1",
+    "v8-compile-cache": "^2.0.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.22.11",
+    "@atlaspack/babel-register": "2.14.4",
+    "rimraf": "^5.0.5"
+  },
+  "type": "commonjs"
+}

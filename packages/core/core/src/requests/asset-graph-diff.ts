@@ -4,7 +4,7 @@ import deepClone from 'rfdc/default';
 import {diff} from 'jest-diff';
 import AssetGraph from '../AssetGraph';
 import type {AssetGraphNode} from '../types';
-import {fromProjectPathRelative, toProjectPath} from '../projectPath';
+import {toProjectPath} from '../projectPath';
 
 function filterNode(node: any) {
   let clone = deepClone(node);
@@ -71,7 +71,11 @@ function compactDeep(
   }
 }
 
-function assetGraphDiff(jsAssetGraph: AssetGraph, rustAssetGraph: AssetGraph) {
+function assetGraphDiff(
+  jsAssetGraph: AssetGraph,
+  rustAssetGraph: AssetGraph,
+  projectRoot: string,
+) {
   const getNodes = (graph: any) => {
     let nodes: Record<string, any> = {};
 
@@ -81,12 +85,12 @@ function assetGraphDiff(jsAssetGraph: AssetGraph, rustAssetGraph: AssetGraph) {
       if (!node) return;
 
       if (node.type === 'dependency') {
-        let sourcePath = node.value.sourcePath ?? toProjectPath('', 'entry');
-        nodes[
-          `dep:${fromProjectPathRelative(sourcePath)}:${node.value.specifier}`
-        ] = filterNode(node);
+        let sourcePath = node.value.sourcePath
+          ? toProjectPath(projectRoot, node.value.sourcePath)
+          : toProjectPath(projectRoot, 'entry');
+        nodes[`dep:${sourcePath}:${node.value.specifier}`] = filterNode(node);
       } else if (node.type === 'asset') {
-        nodes[`asset:${fromProjectPathRelative(node.value.filePath)}`] =
+        nodes[`asset:${toProjectPath(projectRoot, node.value.filePath)}`] =
           filterNode(node);
       }
     });

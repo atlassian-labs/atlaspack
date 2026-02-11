@@ -1,5 +1,531 @@
 # @atlaspack/core
 
+## 2.33.1
+
+### Patch Changes
+
+- Updated dependencies [[`95914a7`](https://github.com/atlassian-labs/atlaspack/commit/95914a7f33f9370cdb0c8a3fd6845c042911af59), [`883c107`](https://github.com/atlassian-labs/atlaspack/commit/883c107e60dab2f459e27342017c54e3a7db8bc5), [`1815c2c`](https://github.com/atlassian-labs/atlaspack/commit/1815c2ce48e32f4df97ccdd668fd650fc79d1051)]:
+  - @atlaspack/rust@3.22.1
+  - @atlaspack/feature-flags@2.29.1
+  - @atlaspack/cache@3.2.48
+  - @atlaspack/fs@2.15.48
+  - @atlaspack/logger@2.14.45
+  - @atlaspack/source-map@3.2.8
+  - @atlaspack/utils@3.3.5
+  - @atlaspack/build-cache@2.13.11
+  - @atlaspack/graph@3.6.15
+  - @atlaspack/package-manager@2.14.53
+  - @atlaspack/profiler@2.15.14
+  - @atlaspack/workers@2.14.53
+  - @atlaspack/plugin@2.14.53
+  - @atlaspack/types@2.15.43
+
+## 2.33.0
+
+### Minor Changes
+
+- [#993](https://github.com/atlassian-labs/atlaspack/pull/993) [`e058f0e`](https://github.com/atlassian-labs/atlaspack/commit/e058f0e7a0423ba9373e85a7dbd5c1dd43b47916) Thanks [@matt-koko](https://github.com/matt-koko)! - Add disableCache option to TransformerSetup API
+
+### Patch Changes
+
+- [#998](https://github.com/atlassian-labs/atlaspack/pull/998) [`349b19c`](https://github.com/atlassian-labs/atlaspack/commit/349b19c3aca2ccb1ffb5cdcdc74890f4b62228be) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add initial native bundler boilerplate and single file bundler
+
+- Updated dependencies [[`e058f0e`](https://github.com/atlassian-labs/atlaspack/commit/e058f0e7a0423ba9373e85a7dbd5c1dd43b47916), [`053e375`](https://github.com/atlassian-labs/atlaspack/commit/053e3754c08c5b5dc239e9f7267df289cbbf31ab), [`25c976e`](https://github.com/atlassian-labs/atlaspack/commit/25c976e01c30e536fb1027eab5b17594c604efff), [`1a86b65`](https://github.com/atlassian-labs/atlaspack/commit/1a86b657868ee881ca5acc68661cca208ac37779), [`349b19c`](https://github.com/atlassian-labs/atlaspack/commit/349b19c3aca2ccb1ffb5cdcdc74890f4b62228be), [`9959efe`](https://github.com/atlassian-labs/atlaspack/commit/9959efe30699a2de3b69275be7ecb47afe81c0b6)]:
+  - @atlaspack/rust@3.22.0
+  - @atlaspack/feature-flags@2.29.0
+  - @atlaspack/fs@2.15.47
+  - @atlaspack/graph@3.6.14
+  - @atlaspack/logger@2.14.44
+  - @atlaspack/plugin@2.14.52
+  - @atlaspack/profiler@2.15.13
+  - @atlaspack/types@2.15.42
+  - @atlaspack/utils@3.3.4
+  - @atlaspack/workers@2.14.52
+  - @atlaspack/cache@3.2.47
+  - @atlaspack/source-map@3.2.7
+  - @atlaspack/build-cache@2.13.10
+  - @atlaspack/package-manager@2.14.52
+
+## 2.32.1
+
+### Patch Changes
+
+- [#988](https://github.com/atlassian-labs/atlaspack/pull/988) [`a631dcd`](https://github.com/atlassian-labs/atlaspack/commit/a631dcd961112db072b0f8de0831efd178f355a7) Thanks [@marcins](https://github.com/marcins)! - Implement a basic package() method for the native packager
+
+- [#990](https://github.com/atlassian-labs/atlaspack/pull/990) [`5755a11`](https://github.com/atlassian-labs/atlaspack/commit/5755a114903bbf660e2ada3ae2e7ff6ceac7565b) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - changes conditional bundleGraphEdgeType value
+
+- [#987](https://github.com/atlassian-labs/atlaspack/pull/987) [`fcaf517`](https://github.com/atlassian-labs/atlaspack/commit/fcaf517010d15c9300393bcad3f9b465689d9d16) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - add get_bundle_assets
+
+- Updated dependencies [[`a631dcd`](https://github.com/atlassian-labs/atlaspack/commit/a631dcd961112db072b0f8de0831efd178f355a7), [`e9dce31`](https://github.com/atlassian-labs/atlaspack/commit/e9dce3168a8e6727a994bf2a6ac6041eb29f6027), [`59e1345`](https://github.com/atlassian-labs/atlaspack/commit/59e1345f84f43e0632d434ab42c06bf748241985), [`783118c`](https://github.com/atlassian-labs/atlaspack/commit/783118c772f45a0cf6a3b6b447fb9a0e225b25a6), [`fcaf517`](https://github.com/atlassian-labs/atlaspack/commit/fcaf517010d15c9300393bcad3f9b465689d9d16)]:
+  - @atlaspack/rust@3.21.0
+  - @atlaspack/cache@3.2.46
+  - @atlaspack/fs@2.15.46
+  - @atlaspack/logger@2.14.43
+  - @atlaspack/source-map@3.2.6
+  - @atlaspack/utils@3.3.3
+  - @atlaspack/package-manager@2.14.51
+  - @atlaspack/profiler@2.15.12
+  - @atlaspack/workers@2.14.51
+  - @atlaspack/types@2.15.41
+  - @atlaspack/graph@3.6.13
+  - @atlaspack/plugin@2.14.51
+
+## 2.32.0
+
+### Minor Changes
+
+- [#976](https://github.com/atlassian-labs/atlaspack/pull/976) [`e8ea59b`](https://github.com/atlassian-labs/atlaspack/commit/e8ea59beabb4b4fef647dc9ebea3519b6d56d7b5) Thanks [@marcins](https://github.com/marcins)! - Initial implementation of loadBundleGraph to deserialise JS -> Rust BundleGraph.
+
+- [#970](https://github.com/atlassian-labs/atlaspack/pull/970) [`8826fd0`](https://github.com/atlassian-labs/atlaspack/commit/8826fd02c29c9c67cf0c80da41f424257fbdef93) Thanks [@marcins](https://github.com/marcins)! - Add initial plumbing for native packaging to core and Atlaspack V3 code
+
+### Patch Changes
+
+- [#984](https://github.com/atlassian-labs/atlaspack/pull/984) [`dbcaabb`](https://github.com/atlassian-labs/atlaspack/commit/dbcaabbf15d4fbc8ecd9c0be58cf7b2317eebfc4) Thanks [@marcins](https://github.com/marcins)! - Serialise to JSON on the JS side before sending bundle graph nodes to Rust for performance.
+
+- Updated dependencies [[`e8ea59b`](https://github.com/atlassian-labs/atlaspack/commit/e8ea59beabb4b4fef647dc9ebea3519b6d56d7b5), [`3753cb1`](https://github.com/atlassian-labs/atlaspack/commit/3753cb1bf9155eaf3a1a8f952886864682738647), [`8826fd0`](https://github.com/atlassian-labs/atlaspack/commit/8826fd02c29c9c67cf0c80da41f424257fbdef93), [`225683f`](https://github.com/atlassian-labs/atlaspack/commit/225683f7c59355da53b7004d2b8596701ce3af41), [`43adda0`](https://github.com/atlassian-labs/atlaspack/commit/43adda06bf3b6a404b54f8ba2a3b810d92e61d75), [`dbcaabb`](https://github.com/atlassian-labs/atlaspack/commit/dbcaabbf15d4fbc8ecd9c0be58cf7b2317eebfc4)]:
+  - @atlaspack/rust@3.20.0
+  - @atlaspack/feature-flags@2.28.0
+  - @atlaspack/cache@3.2.45
+  - @atlaspack/fs@2.15.45
+  - @atlaspack/logger@2.14.42
+  - @atlaspack/source-map@3.2.5
+  - @atlaspack/utils@3.3.2
+  - @atlaspack/build-cache@2.13.9
+  - @atlaspack/graph@3.6.12
+  - @atlaspack/package-manager@2.14.50
+  - @atlaspack/profiler@2.15.11
+  - @atlaspack/workers@2.14.50
+  - @atlaspack/plugin@2.14.50
+  - @atlaspack/types@2.15.40
+
+## 2.31.3
+
+### Patch Changes
+
+- Updated dependencies [[`fc3adc0`](https://github.com/atlassian-labs/atlaspack/commit/fc3adc098f583e40d6d7687412cac6dde7cbb3f3), [`f33f9c4`](https://github.com/atlassian-labs/atlaspack/commit/f33f9c48dd24b319df352d197e4a83cbb1b053bc), [`e15fb6c`](https://github.com/atlassian-labs/atlaspack/commit/e15fb6c885c6354c6c02283de35ce18abc8c9e18), [`53da216`](https://github.com/atlassian-labs/atlaspack/commit/53da216320e19c9b71b001386eb420d05f111db8)]:
+  - @atlaspack/rust@3.19.0
+  - @atlaspack/feature-flags@2.27.7
+  - @atlaspack/cache@3.2.44
+  - @atlaspack/fs@2.15.44
+  - @atlaspack/logger@2.14.41
+  - @atlaspack/source-map@3.2.4
+  - @atlaspack/utils@3.3.1
+  - @atlaspack/build-cache@2.13.8
+  - @atlaspack/graph@3.6.11
+  - @atlaspack/package-manager@2.14.49
+  - @atlaspack/profiler@2.15.10
+  - @atlaspack/workers@2.14.49
+  - @atlaspack/plugin@2.14.49
+  - @atlaspack/types@2.15.39
+
+## 2.31.2
+
+### Patch Changes
+
+- Updated dependencies [[`47aa84e`](https://github.com/atlassian-labs/atlaspack/commit/47aa84e44c61066072a5bf3d57678565b9d2c5a3), [`564fb4f`](https://github.com/atlassian-labs/atlaspack/commit/564fb4fecc2a20bdeb951863a8fac29b618d91b7), [`9df722c`](https://github.com/atlassian-labs/atlaspack/commit/9df722c38b225054883693ba9731344f701767a7), [`c31090c`](https://github.com/atlassian-labs/atlaspack/commit/c31090c9025f35d3fa8561b42dca170853a32e6f), [`565bab3`](https://github.com/atlassian-labs/atlaspack/commit/565bab3771cc334659d873cabff4cdfac0860cc7), [`34b01ec`](https://github.com/atlassian-labs/atlaspack/commit/34b01ec03e2264bd617be000465821e1ed11eae5), [`6e5fec1`](https://github.com/atlassian-labs/atlaspack/commit/6e5fec1406c53257be7e7fbe06c028beda70fcf1), [`e4e5522`](https://github.com/atlassian-labs/atlaspack/commit/e4e55222422d8c73653d3ea09f1a0d13946345b9)]:
+  - @atlaspack/utils@3.3.0
+  - @atlaspack/rust@3.18.0
+  - @atlaspack/feature-flags@2.27.6
+  - @atlaspack/build-cache@2.13.7
+  - @atlaspack/cache@3.2.43
+  - @atlaspack/package-manager@2.14.48
+  - @atlaspack/profiler@2.15.9
+  - @atlaspack/workers@2.14.48
+  - @atlaspack/fs@2.15.43
+  - @atlaspack/logger@2.14.40
+  - @atlaspack/source-map@3.2.3
+  - @atlaspack/graph@3.6.10
+  - @atlaspack/types@2.15.38
+  - @atlaspack/plugin@2.14.48
+
+## 2.31.1
+
+### Patch Changes
+
+- [#942](https://github.com/atlassian-labs/atlaspack/pull/942) [`695339e`](https://github.com/atlassian-labs/atlaspack/commit/695339e4fd46df9590013c2ef4de74cb22225927) Thanks [@marcins](https://github.com/marcins)! - Improve error handling in Tokens transform
+
+- Updated dependencies [[`7cb8569`](https://github.com/atlassian-labs/atlaspack/commit/7cb85698143e381fcb887173b2bfd15f0aea7918), [`695339e`](https://github.com/atlassian-labs/atlaspack/commit/695339e4fd46df9590013c2ef4de74cb22225927)]:
+  - @atlaspack/rust@3.17.0
+  - @atlaspack/cache@3.2.42
+  - @atlaspack/fs@2.15.42
+  - @atlaspack/logger@2.14.39
+  - @atlaspack/source-map@3.2.2
+  - @atlaspack/utils@3.2.8
+  - @atlaspack/package-manager@2.14.47
+  - @atlaspack/profiler@2.15.8
+  - @atlaspack/workers@2.14.47
+  - @atlaspack/types@2.15.37
+  - @atlaspack/graph@3.6.9
+  - @atlaspack/plugin@2.14.47
+
+## 2.31.0
+
+### Minor Changes
+
+- [#934](https://github.com/atlassian-labs/atlaspack/pull/934) [`02cc8b3`](https://github.com/atlassian-labs/atlaspack/commit/02cc8b32c06ca6b51806b33f6f707ca06e55e957) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add experimental native persistent cache for Atlaspack V3.
+
+- [#934](https://github.com/atlassian-labs/atlaspack/pull/934) [`02cc8b3`](https://github.com/atlassian-labs/atlaspack/commit/02cc8b32c06ca6b51806b33f6f707ca06e55e957) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add new Transformer `setup` method and deprecate `loadConfig`.
+
+  Atlaspack is moving to a pure Transformer model to improve caching performance and consistency.
+  The old `loadConfig` method which ran once per Asset goes against this behaviour is now deprecated.
+  The new `setup` method runs once per Transformer instance, allowing for better caching and performance optimizations.
+
+### Patch Changes
+
+- Updated dependencies [[`515149d`](https://github.com/atlassian-labs/atlaspack/commit/515149d0a0767d844af803efdc611646780ad0fe), [`02cc8b3`](https://github.com/atlassian-labs/atlaspack/commit/02cc8b32c06ca6b51806b33f6f707ca06e55e957), [`02cc8b3`](https://github.com/atlassian-labs/atlaspack/commit/02cc8b32c06ca6b51806b33f6f707ca06e55e957)]:
+  - @atlaspack/rust@3.16.0
+  - @atlaspack/feature-flags@2.27.5
+  - @atlaspack/cache@3.2.41
+  - @atlaspack/fs@2.15.41
+  - @atlaspack/logger@2.14.38
+  - @atlaspack/source-map@3.2.1
+  - @atlaspack/utils@3.2.7
+  - @atlaspack/graph@3.6.8
+  - @atlaspack/plugin@2.14.46
+  - @atlaspack/profiler@2.15.7
+  - @atlaspack/types@2.15.36
+  - @atlaspack/workers@2.14.46
+  - @atlaspack/package-manager@2.14.46
+
+## 2.30.2
+
+### Patch Changes
+
+- Updated dependencies [[`793e78c`](https://github.com/atlassian-labs/atlaspack/commit/793e78c68eed25032e686f70cd77ea3601409b35)]:
+  - @atlaspack/feature-flags@2.27.4
+  - @atlaspack/cache@3.2.40
+  - @atlaspack/fs@2.15.40
+  - @atlaspack/graph@3.6.7
+  - @atlaspack/utils@3.2.6
+  - @atlaspack/package-manager@2.14.45
+  - @atlaspack/logger@2.14.37
+  - @atlaspack/plugin@2.14.45
+  - @atlaspack/profiler@2.15.6
+  - @atlaspack/types@2.15.35
+  - @atlaspack/workers@2.14.45
+
+## 2.30.1
+
+### Patch Changes
+
+- Updated dependencies [[`362a85d`](https://github.com/atlassian-labs/atlaspack/commit/362a85deb9722f769eeb5099bae915f8b858a126), [`c81b368`](https://github.com/atlassian-labs/atlaspack/commit/c81b368db20af701d9e019a11272b138f9cfe080)]:
+  - @atlaspack/rust@3.15.0
+  - @atlaspack/source-map@3.2.0
+  - @atlaspack/cache@3.2.39
+  - @atlaspack/fs@2.15.39
+  - @atlaspack/logger@2.14.36
+  - @atlaspack/utils@3.2.5
+  - @atlaspack/package-manager@2.14.44
+  - @atlaspack/profiler@2.15.5
+  - @atlaspack/workers@2.14.44
+  - @atlaspack/graph@3.6.6
+  - @atlaspack/plugin@2.14.44
+  - @atlaspack/types@2.15.34
+
+## 2.30.0
+
+### Minor Changes
+
+- [#925](https://github.com/atlassian-labs/atlaspack/pull/925) [`00fa643`](https://github.com/atlassian-labs/atlaspack/commit/00fa6433202bfd3311479f6314c9ec878a789f2c) Thanks [@benjervis](https://github.com/benjervis)! - Save propagating symbols for runtimes by requiring symbol and dependency data be returned at the time the assets are injected.
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/fs@2.15.38
+  - @atlaspack/graph@3.6.5
+  - @atlaspack/logger@2.14.35
+  - @atlaspack/plugin@2.14.43
+  - @atlaspack/profiler@2.15.4
+  - @atlaspack/types@2.15.33
+  - @atlaspack/utils@3.2.4
+  - @atlaspack/workers@2.14.43
+  - @atlaspack/cache@3.2.38
+  - @atlaspack/package-manager@2.14.43
+
+## 2.29.2
+
+### Patch Changes
+
+- Updated dependencies [[`787290a`](https://github.com/atlassian-labs/atlaspack/commit/787290a63b3f781e7af86097201dfdb5a36c8551), [`cbb66a5`](https://github.com/atlassian-labs/atlaspack/commit/cbb66a554f7ad679fd4dfc9e2bf2d5abb859f846), [`7815a93`](https://github.com/atlassian-labs/atlaspack/commit/7815a931b18983c3f34a39990b2f4b8b86855cc6), [`25aa273`](https://github.com/atlassian-labs/atlaspack/commit/25aa2735f4db920960de3d65d3a427775086b7d5), [`9468e16`](https://github.com/atlassian-labs/atlaspack/commit/9468e164e8ca20a5e8f552f5dc203aa3716cb154), [`e55c80c`](https://github.com/atlassian-labs/atlaspack/commit/e55c80cd0ae3cc40356fe063cb7d45fbb9095356)]:
+  - @atlaspack/rust@3.14.0
+  - @atlaspack/feature-flags@2.27.3
+  - @atlaspack/cache@3.2.37
+  - @atlaspack/fs@2.15.37
+  - @atlaspack/logger@2.14.34
+  - @atlaspack/source-map@3.1.3
+  - @atlaspack/utils@3.2.3
+  - @atlaspack/graph@3.6.4
+  - @atlaspack/package-manager@2.14.42
+  - @atlaspack/profiler@2.15.3
+  - @atlaspack/workers@2.14.42
+  - @atlaspack/plugin@2.14.42
+  - @atlaspack/types@2.15.32
+
+## 2.29.1
+
+### Patch Changes
+
+- [#911](https://github.com/atlassian-labs/atlaspack/pull/911) [`d98c992`](https://github.com/atlassian-labs/atlaspack/commit/d98c992a56121a4f9f6a011ced5e103f96fe3999) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Fix dist dir when using V3 in dev mode
+
+- Updated dependencies [[`96f1d7f`](https://github.com/atlassian-labs/atlaspack/commit/96f1d7f3efef12ce4f5966e34d00b299fcefb4dd), [`f6fc5e2`](https://github.com/atlassian-labs/atlaspack/commit/f6fc5e2acc30720f9a9676dfbc02bf780066653b), [`91738fd`](https://github.com/atlassian-labs/atlaspack/commit/91738fd77cb6b3b7acc93e799327ec283d27f7c0), [`38f3569`](https://github.com/atlassian-labs/atlaspack/commit/38f3569a7024357c43274666312bc6d024bfe5f9), [`3f6a3b8`](https://github.com/atlassian-labs/atlaspack/commit/3f6a3b8df4589fd4d65c072281c7f33bd37341d6), [`96f1d7f`](https://github.com/atlassian-labs/atlaspack/commit/96f1d7f3efef12ce4f5966e34d00b299fcefb4dd), [`d8024ce`](https://github.com/atlassian-labs/atlaspack/commit/d8024ce5c9ced1a9bc39144c979138be3a12b2fb), [`308e7ff`](https://github.com/atlassian-labs/atlaspack/commit/308e7ff979c05c1ae97fe6b08a65666b53d86cc7), [`d98c992`](https://github.com/atlassian-labs/atlaspack/commit/d98c992a56121a4f9f6a011ced5e103f96fe3999)]:
+  - @atlaspack/rust@3.13.0
+  - @atlaspack/source-map@3.1.2
+  - @atlaspack/feature-flags@2.27.2
+  - @atlaspack/cache@3.2.36
+  - @atlaspack/fs@2.15.36
+  - @atlaspack/logger@2.14.33
+  - @atlaspack/utils@3.2.2
+  - @atlaspack/graph@3.6.3
+  - @atlaspack/package-manager@2.14.41
+  - @atlaspack/profiler@2.15.2
+  - @atlaspack/workers@2.14.41
+  - @atlaspack/plugin@2.14.41
+  - @atlaspack/types@2.15.31
+
+## 2.29.0
+
+### Minor Changes
+
+- [#898](https://github.com/atlassian-labs/atlaspack/pull/898) [`a884bd2`](https://github.com/atlassian-labs/atlaspack/commit/a884bd2a6bd6f37d088fb886dd9b88e85328501b) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add `unstable_alias` feature to .parcelrc V3 builds for configuring build specific aliases
+
+### Patch Changes
+
+- [#899](https://github.com/atlassian-labs/atlaspack/pull/899) [`5710532`](https://github.com/atlassian-labs/atlaspack/commit/57105322b26ce42af2cbfcc0506cff929e50b630) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Fix v3 environment ids not being consistent with v2
+
+- [#901](https://github.com/atlassian-labs/atlaspack/pull/901) [`6fac01d`](https://github.com/atlassian-labs/atlaspack/commit/6fac01dbb1bfc5b971176c1a1c008297bf4b8f91) Thanks [@benjervis](https://github.com/benjervis)! - Makes the serialization and LMDB write steps into separate Promises, so that we can return them separately and parallelise some work.
+
+- [#905](https://github.com/atlassian-labs/atlaspack/pull/905) [`432d571`](https://github.com/atlassian-labs/atlaspack/commit/432d571ea4e9fc67be12304fcafe8c445e844174) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Decrease max V3 JS workers to 4
+
+- [#899](https://github.com/atlassian-labs/atlaspack/pull/899) [`5710532`](https://github.com/atlassian-labs/atlaspack/commit/57105322b26ce42af2cbfcc0506cff929e50b630) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add HMR and react-refresh support to v3
+
+- Updated dependencies [[`a884bd2`](https://github.com/atlassian-labs/atlaspack/commit/a884bd2a6bd6f37d088fb886dd9b88e85328501b), [`25fee72`](https://github.com/atlassian-labs/atlaspack/commit/25fee723d2228d0482ec8a8f1b8379ccd2977ce7), [`6fac01d`](https://github.com/atlassian-labs/atlaspack/commit/6fac01dbb1bfc5b971176c1a1c008297bf4b8f91), [`2f3af93`](https://github.com/atlassian-labs/atlaspack/commit/2f3af9374bcc082e6f4835f6f5a2b98e32ea45b4), [`432d571`](https://github.com/atlassian-labs/atlaspack/commit/432d571ea4e9fc67be12304fcafe8c445e844174), [`042cd95`](https://github.com/atlassian-labs/atlaspack/commit/042cd95a32ad38cd02d57aa3344c36d4e7ab8f9c), [`28f5424`](https://github.com/atlassian-labs/atlaspack/commit/28f5424f7e2080dd4fbbeb1bc5314a530197a23e), [`a884bd2`](https://github.com/atlassian-labs/atlaspack/commit/a884bd2a6bd6f37d088fb886dd9b88e85328501b), [`5710532`](https://github.com/atlassian-labs/atlaspack/commit/57105322b26ce42af2cbfcc0506cff929e50b630), [`44eb8c3`](https://github.com/atlassian-labs/atlaspack/commit/44eb8c388d3e63f1ef5d835aee7aee5d1bb0620f)]:
+  - @atlaspack/rust@3.12.0
+  - @atlaspack/feature-flags@2.27.1
+  - @atlaspack/cache@3.2.35
+  - @atlaspack/fs@2.15.35
+  - @atlaspack/logger@2.14.32
+  - @atlaspack/source-map@3.1.1
+  - @atlaspack/utils@3.2.1
+  - @atlaspack/graph@3.6.2
+  - @atlaspack/package-manager@2.14.40
+  - @atlaspack/profiler@2.15.1
+  - @atlaspack/workers@2.14.40
+  - @atlaspack/plugin@2.14.40
+  - @atlaspack/types@2.15.30
+
+## 2.28.0
+
+### Minor Changes
+
+- [#858](https://github.com/atlassian-labs/atlaspack/pull/858) [`8eb84ee`](https://github.com/atlassian-labs/atlaspack/commit/8eb84ee61a42bfe87c58079b610802b07a6a13e4) Thanks [@marcins](https://github.com/marcins)! - Introduce a new `getReferencedAssets(bundle)` method to the BundleGraph to pre-compute referenced assets, this is used by the scope hoisting packager behind a new `precomputeReferencedAssets` feature flag.
+
+- [#789](https://github.com/atlassian-labs/atlaspack/pull/789) [`73168c2`](https://github.com/atlassian-labs/atlaspack/commit/73168c275a5d9abff9907bcf536b340bca1ed5f0) Thanks [@marcins](https://github.com/marcins)! - Use an in-sourced version of @parcel/source-map, as @atlaspack/source-map
+
+- [#892](https://github.com/atlassian-labs/atlaspack/pull/892) [`617a318`](https://github.com/atlassian-labs/atlaspack/commit/617a318ddc9419b38360257353fec50b9051ee13) Thanks [@marcins](https://github.com/marcins)! - Added a new `shouldProfileNative` option that provides a way to pause and connect a native profiler to Atlaspack.
+
+### Patch Changes
+
+- [#890](https://github.com/atlassian-labs/atlaspack/pull/890) [`7dd5bd8`](https://github.com/atlassian-labs/atlaspack/commit/7dd5bd89ff60c7b324347d772729eb4c3314f01e) Thanks [@matt-koko](https://github.com/matt-koko)! - fix sideEffects not defaulting to true correctly in v3
+
+- Updated dependencies [[`7dd5bd8`](https://github.com/atlassian-labs/atlaspack/commit/7dd5bd89ff60c7b324347d772729eb4c3314f01e), [`c8a0e51`](https://github.com/atlassian-labs/atlaspack/commit/c8a0e51b1096d038a64644ad02fe68383f58682a), [`8eb84ee`](https://github.com/atlassian-labs/atlaspack/commit/8eb84ee61a42bfe87c58079b610802b07a6a13e4), [`71900f3`](https://github.com/atlassian-labs/atlaspack/commit/71900f3508d53c3882ca8ea71501ba3069687d4e), [`73168c2`](https://github.com/atlassian-labs/atlaspack/commit/73168c275a5d9abff9907bcf536b340bca1ed5f0), [`617a318`](https://github.com/atlassian-labs/atlaspack/commit/617a318ddc9419b38360257353fec50b9051ee13), [`2c4953e`](https://github.com/atlassian-labs/atlaspack/commit/2c4953e20dc1a6b012792081667aefeb9340505e), [`3fe7d4e`](https://github.com/atlassian-labs/atlaspack/commit/3fe7d4e821bee162fcbbaf9278b107a5eead944f)]:
+  - @atlaspack/rust@3.11.0
+  - @atlaspack/feature-flags@2.27.0
+  - @atlaspack/source-map@3.1.0
+  - @atlaspack/utils@3.2.0
+  - @atlaspack/profiler@2.15.0
+  - @atlaspack/cache@3.2.34
+  - @atlaspack/fs@2.15.34
+  - @atlaspack/logger@2.14.31
+  - @atlaspack/graph@3.6.1
+  - @atlaspack/plugin@2.14.39
+  - @atlaspack/types@2.15.29
+  - @atlaspack/workers@2.14.39
+  - @atlaspack/package-manager@2.14.39
+
+## 2.27.0
+
+### Minor Changes
+
+- [#869](https://github.com/atlassian-labs/atlaspack/pull/869) [`cfb4707`](https://github.com/atlassian-labs/atlaspack/commit/cfb4707087498e4fa4dcf10753fe984a248d196b) Thanks [@benjervis](https://github.com/benjervis)! - Adds a feature to the V3 devloop that will minimise the amount of work done if the change is only a content change.
+
+### Patch Changes
+
+- [#873](https://github.com/atlassian-labs/atlaspack/pull/873) [`ec3abe4`](https://github.com/atlassian-labs/atlaspack/commit/ec3abe4dffc98560a850fd2f71fb566577e6c99c) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - cleanup deduplicateReporters flag
+
+- [#870](https://github.com/atlassian-labs/atlaspack/pull/870) [`33d4c26`](https://github.com/atlassian-labs/atlaspack/commit/33d4c261ceb8d585d56b0a446ed6e28cf7f1126d) Thanks [@matt-koko](https://github.com/matt-koko)! - Support Loading TypeScript Plugin Files in v3
+
+- [#856](https://github.com/atlassian-labs/atlaspack/pull/856) [`f31b041`](https://github.com/atlassian-labs/atlaspack/commit/f31b04107e9077c9946aadb99f6f91bb69703bb7) Thanks [@matt-koko](https://github.com/matt-koko)! - Handle Directory Entry Points in v3
+
+- [#859](https://github.com/atlassian-labs/atlaspack/pull/859) [`8180981`](https://github.com/atlassian-labs/atlaspack/commit/8180981be14c00f9570adb70d3f350bd91d6ec0a) Thanks [@benjervis](https://github.com/benjervis)! - Re-use asset graphs when building in Native, if we have one left over from a previous incremental build
+
+- [#883](https://github.com/atlassian-labs/atlaspack/pull/883) [`119210b`](https://github.com/atlassian-labs/atlaspack/commit/119210b597eb993c50445df87a36b70bd49cd414) Thanks [@matt-koko](https://github.com/matt-koko)! - Fix bitflags rust/js interop
+
+- Updated dependencies [[`ec3abe4`](https://github.com/atlassian-labs/atlaspack/commit/ec3abe4dffc98560a850fd2f71fb566577e6c99c), [`c7fe3f7`](https://github.com/atlassian-labs/atlaspack/commit/c7fe3f76f247e9e20299e205e2df0a16c418eaf2), [`cfb4707`](https://github.com/atlassian-labs/atlaspack/commit/cfb4707087498e4fa4dcf10753fe984a248d196b), [`1468695`](https://github.com/atlassian-labs/atlaspack/commit/1468695fc0c9d06f060a6da9e9b0e154f11dff34), [`f31b041`](https://github.com/atlassian-labs/atlaspack/commit/f31b04107e9077c9946aadb99f6f91bb69703bb7), [`8180981`](https://github.com/atlassian-labs/atlaspack/commit/8180981be14c00f9570adb70d3f350bd91d6ec0a), [`ae77e74`](https://github.com/atlassian-labs/atlaspack/commit/ae77e7452a466b43b3fa5bed24d4ba26345ed765), [`f0a496f`](https://github.com/atlassian-labs/atlaspack/commit/f0a496f70fc8652e090cf1b3f6260e8cfbb796e2), [`7d7a55d`](https://github.com/atlassian-labs/atlaspack/commit/7d7a55dd6395ec391a2e4c33b3dec0d1ea477d4c), [`540f253`](https://github.com/atlassian-labs/atlaspack/commit/540f253dfdcd1a5caebbdc0b197319d439404aae)]:
+  - @atlaspack/feature-flags@2.26.2
+  - @atlaspack/rust@3.10.0
+  - @atlaspack/graph@3.6.0
+  - @atlaspack/utils@3.1.2
+  - @atlaspack/cache@3.2.33
+  - @atlaspack/fs@2.15.33
+  - @atlaspack/logger@2.14.30
+  - @atlaspack/package-manager@2.14.38
+  - @atlaspack/workers@2.14.38
+  - @atlaspack/plugin@2.14.38
+  - @atlaspack/profiler@2.14.35
+  - @atlaspack/types@2.15.28
+
+## 2.26.2
+
+### Patch Changes
+
+- Updated dependencies [[`339b600`](https://github.com/atlassian-labs/atlaspack/commit/339b60095d755742cea50f811d08ccc44a4ae521), [`373ee2d`](https://github.com/atlassian-labs/atlaspack/commit/373ee2d3b5cc315df1e90e647619f915892e2b87)]:
+  - @atlaspack/rust@3.9.1
+  - @atlaspack/feature-flags@2.26.1
+  - @atlaspack/cache@3.2.32
+  - @atlaspack/fs@2.15.32
+  - @atlaspack/logger@2.14.29
+  - @atlaspack/utils@3.1.1
+  - @atlaspack/graph@3.5.26
+  - @atlaspack/package-manager@2.14.37
+  - @atlaspack/workers@2.14.37
+  - @atlaspack/plugin@2.14.37
+  - @atlaspack/profiler@2.14.34
+  - @atlaspack/types@2.15.27
+
+## 2.26.1
+
+### Patch Changes
+
+- [#847](https://github.com/atlassian-labs/atlaspack/pull/847) [`9cd9521`](https://github.com/atlassian-labs/atlaspack/commit/9cd9521978f783046e2ae4ce78f2de7aeb07d073) Thanks [@marcins](https://github.com/marcins)! - Ensure feature flags are set in V3 workers
+
+- [#844](https://github.com/atlassian-labs/atlaspack/pull/844) [`d0c7bea`](https://github.com/atlassian-labs/atlaspack/commit/d0c7bea04458255b4c5d4299600e734b5f919fe1) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - deduplicate reporters from config
+
+- [#851](https://github.com/atlassian-labs/atlaspack/pull/851) [`1086c6a`](https://github.com/atlassian-labs/atlaspack/commit/1086c6a2c59271b63b3fb78e6acdb9d3a0dbf354) Thanks [@benjervis](https://github.com/benjervis)! - Remove asset groups from V3.
+
+  Asset groups were initially created to address the problem of a single asset being transformed into multiple assets (e.g. css modules).
+
+  This did the job, but means that an asset group is created for every single asset, and most groups only have a single asset inside.
+  This is a lot of unnecessary nodes, and we don't need to carry that over to the native rewrite.
+
+  This PR deletes the step that used to create them, and updates things like symbol prop to handle there potentially being no asset groups.
+
+- Updated dependencies [[`02f6aa1`](https://github.com/atlassian-labs/atlaspack/commit/02f6aa1906953fc184d2b49c905c2ef815cb878d), [`58527ee`](https://github.com/atlassian-labs/atlaspack/commit/58527eec15c1aebaaadbeb63586f3082c16beae3), [`525898e`](https://github.com/atlassian-labs/atlaspack/commit/525898e33cc229a4bc938ae853732be36d20c01a), [`cfb39a0`](https://github.com/atlassian-labs/atlaspack/commit/cfb39a0d729eb620cf2ca1611750a2bf7a080d08), [`d0c7bea`](https://github.com/atlassian-labs/atlaspack/commit/d0c7bea04458255b4c5d4299600e734b5f919fe1), [`1086c6a`](https://github.com/atlassian-labs/atlaspack/commit/1086c6a2c59271b63b3fb78e6acdb9d3a0dbf354), [`9cd9521`](https://github.com/atlassian-labs/atlaspack/commit/9cd9521978f783046e2ae4ce78f2de7aeb07d073), [`5776be2`](https://github.com/atlassian-labs/atlaspack/commit/5776be21f70a3f2b9471ba33da3ba1a883f21f1a)]:
+  - @atlaspack/rust@3.9.0
+  - @atlaspack/feature-flags@2.26.0
+  - @atlaspack/utils@3.1.0
+  - @atlaspack/cache@3.2.31
+  - @atlaspack/fs@2.15.31
+  - @atlaspack/logger@2.14.28
+  - @atlaspack/graph@3.5.25
+  - @atlaspack/package-manager@2.14.36
+  - @atlaspack/workers@2.14.36
+  - @atlaspack/plugin@2.14.36
+  - @atlaspack/profiler@2.14.33
+  - @atlaspack/types@2.15.26
+
+## 2.26.0
+
+### Minor Changes
+
+- [#827](https://github.com/atlassian-labs/atlaspack/pull/827) [`ff8ac84`](https://github.com/atlassian-labs/atlaspack/commit/ff8ac84bd0be15caa7c7af21bf5b6e47b6d36438) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Fix custom environment properties sometimes being ignored
+
+### Patch Changes
+
+- [#817](https://github.com/atlassian-labs/atlaspack/pull/817) [`3da8e69`](https://github.com/atlassian-labs/atlaspack/commit/3da8e690605472d81c531366b65fa9844f8ca337) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Fix an issue when creating the BundleGraph and some Dependency.sourceAssetId values have diverged from the actual Asset.id values.
+
+  Fix behind flag `sourceAssetIdBundleGraphFix`
+
+- [#810](https://github.com/atlassian-labs/atlaspack/pull/810) [`c372f3f`](https://github.com/atlassian-labs/atlaspack/commit/c372f3fd6fce8200d5cf47f41bc7895c6cbb5558) Thanks [@benjervis](https://github.com/benjervis)! - Add the `scope-hosting-stats` debug tool to report on the percentage of assets that were able to be scope hoisted during the build.
+
+- [#831](https://github.com/atlassian-labs/atlaspack/pull/831) [`27fd73f`](https://github.com/atlassian-labs/atlaspack/commit/27fd73fa07d358653f1be6f2d15d72dc5d8fc2fd) Thanks [@benjervis](https://github.com/benjervis)! - Update some Rust internals to use Arcs instead of passing references. This won't make any difference in the immediate term, but is required setup for the next set of changes
+
+- [#834](https://github.com/atlassian-labs/atlaspack/pull/834) [`3091fa3`](https://github.com/atlassian-labs/atlaspack/commit/3091fa36425ecffe3938e55247a035b08cda37a2) Thanks [@benjervis](https://github.com/benjervis)! - We no longer want to use `meta` fields internally in Atlaspack, so they have been removed from the Rust side of the codebase, and are mapped back to the legacy format on the JS side.
+
+- Updated dependencies [[`79a7e22`](https://github.com/atlassian-labs/atlaspack/commit/79a7e22ef119891a2f4180a9d3cc66b38dd52092), [`3da8e69`](https://github.com/atlassian-labs/atlaspack/commit/3da8e690605472d81c531366b65fa9844f8ca337), [`c372f3f`](https://github.com/atlassian-labs/atlaspack/commit/c372f3fd6fce8200d5cf47f41bc7895c6cbb5558), [`17dfea9`](https://github.com/atlassian-labs/atlaspack/commit/17dfea9e9f3169807808520df9c09ebf70dc8b10), [`f1070ec`](https://github.com/atlassian-labs/atlaspack/commit/f1070ec48e99b4ec111a03179c5ab5b74163fab1), [`27fd73f`](https://github.com/atlassian-labs/atlaspack/commit/27fd73fa07d358653f1be6f2d15d72dc5d8fc2fd), [`3091fa3`](https://github.com/atlassian-labs/atlaspack/commit/3091fa36425ecffe3938e55247a035b08cda37a2)]:
+  - @atlaspack/feature-flags@2.25.5
+  - @atlaspack/rust@3.8.3
+  - @atlaspack/utils@3.0.3
+  - @atlaspack/cache@3.2.30
+  - @atlaspack/fs@2.15.30
+  - @atlaspack/graph@3.5.24
+  - @atlaspack/package-manager@2.14.35
+  - @atlaspack/logger@2.14.27
+  - @atlaspack/plugin@2.14.35
+  - @atlaspack/profiler@2.14.32
+  - @atlaspack/types@2.15.25
+  - @atlaspack/workers@2.14.35
+
+## 2.25.1
+
+### Patch Changes
+
+- Updated dependencies [[`25cbee6`](https://github.com/atlassian-labs/atlaspack/commit/25cbee625fb47ac20423fe34ff37bc818a807245), [`662d3c6`](https://github.com/atlassian-labs/atlaspack/commit/662d3c627888b16bf27df15cfac5a9094509e93d)]:
+  - @atlaspack/workers@2.14.34
+  - @atlaspack/feature-flags@2.25.4
+  - @atlaspack/fs@2.15.29
+  - @atlaspack/package-manager@2.14.34
+  - @atlaspack/types@2.15.24
+  - @atlaspack/cache@3.2.29
+  - @atlaspack/graph@3.5.23
+  - @atlaspack/utils@3.0.2
+  - @atlaspack/logger@2.14.26
+  - @atlaspack/plugin@2.14.34
+  - @atlaspack/profiler@2.14.31
+
+## 2.25.0
+
+### Minor Changes
+
+- [#803](https://github.com/atlassian-labs/atlaspack/pull/803) [`f07351a`](https://github.com/atlassian-labs/atlaspack/commit/f07351a2398b6a8e5155a2daad77e69b7dcb2b4b) Thanks [@shanshrew](https://github.com/shanshrew)! - feat(core, transformers): add feature-flag to omit sourcesContent from memory; reduce peak memory during builds
+  - Introduce `omitSourcesContentInMemory` feature flag to stop retaining full source text in `sourcesContent` throughout transforms. Default OFF; behavior unchanged unless enabled.
+  - Guard `asset.sourceContent` initialization and `setSourceContent`/`sourcesContent` copies behind the flag.
+  - Mappings and source paths remain correct; packager still inlines or references sources per config.
+
+  Memory (three-js benchmark, V3, 1 run):
+  - Baseline OFF: later, larger compactions near end of build (e.g. `~44.2s Mark-Compact 20.4 (50.2) -> 12.5 (53.5) MB`).
+  - Flag ON: earlier compactions during transform/packaging, keeping old space ≈10–11 MB (e.g. `~17.7s Mark-Compact 11.5 (28.0) -> 9.6 (27.5) MB`).
+
+  Sourcemaps: unchanged by default; with flag ON, only the in-memory retention is removed.
+
+### Patch Changes
+
+- Updated dependencies [[`236e546`](https://github.com/atlassian-labs/atlaspack/commit/236e5465863dca6044a7191e05260a5b924c342e), [`f07351a`](https://github.com/atlassian-labs/atlaspack/commit/f07351a2398b6a8e5155a2daad77e69b7dcb2b4b)]:
+  - @atlaspack/utils@3.0.1
+  - @atlaspack/feature-flags@2.25.3
+  - @atlaspack/cache@3.2.28
+  - @atlaspack/package-manager@2.14.33
+  - @atlaspack/workers@2.14.33
+  - @atlaspack/fs@2.15.28
+  - @atlaspack/graph@3.5.22
+  - @atlaspack/types@2.15.23
+  - @atlaspack/logger@2.14.25
+  - @atlaspack/plugin@2.14.33
+  - @atlaspack/profiler@2.14.30
+
+## 2.24.2
+
+### Patch Changes
+
+- [#791](https://github.com/atlassian-labs/atlaspack/pull/791) [`10ee3fa`](https://github.com/atlassian-labs/atlaspack/commit/10ee3fa5b75a92acde8973673d9b3c5b6f3958e5) Thanks [@benjervis](https://github.com/benjervis)! - Remove emptyFileStarRexportFix and make the flagged behaviour standard.
+
+  See PR [#685][pr] for details on the change.
+
+  [pr]: https://github.com/atlassian-labs/atlaspack/pull/685
+
+- Updated dependencies [[`0207171`](https://github.com/atlassian-labs/atlaspack/commit/0207171e59e985c51e105aec2e0a99de174374bd), [`10ee3fa`](https://github.com/atlassian-labs/atlaspack/commit/10ee3fa5b75a92acde8973673d9b3c5b6f3958e5), [`bbe4e28`](https://github.com/atlassian-labs/atlaspack/commit/bbe4e28c89e5e9284bd730075d4d6f2a3cb37b21), [`1180103`](https://github.com/atlassian-labs/atlaspack/commit/118010351ed444f8178988afb3f77807154dd933), [`2bc93b1`](https://github.com/atlassian-labs/atlaspack/commit/2bc93b17cea07fd7cbb68acec84d8471345a22b4)]:
+  - @atlaspack/feature-flags@2.25.2
+  - @atlaspack/rust@3.8.2
+  - @atlaspack/utils@3.0.0
+  - @atlaspack/cache@3.2.27
+  - @atlaspack/fs@2.15.27
+  - @atlaspack/graph@3.5.21
+  - @atlaspack/logger@2.14.24
+  - @atlaspack/package-manager@2.14.32
+  - @atlaspack/workers@2.14.32
+  - @atlaspack/plugin@2.14.32
+  - @atlaspack/profiler@2.14.29
+  - @atlaspack/types@2.15.22
+
 ## 2.24.1
 
 ### Patch Changes

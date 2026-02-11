@@ -1,5 +1,23 @@
 # @atlaspack/babel-plugin-transform-contextual-imports
 
+## 2.16.2
+
+### Patch Changes
+
+- [#861](https://github.com/atlassian-labs/atlaspack/pull/861) [`ca42992`](https://github.com/atlassian-labs/atlaspack/commit/ca429925dab731600c2decd571b5245d361ca953) Thanks [@at-nathan](https://github.com/at-nathan)! - Ignore transform on type references
+
+## 2.16.1
+
+### Patch Changes
+
+- [#843](https://github.com/atlassian-labs/atlaspack/pull/843) [`f97acf2`](https://github.com/atlassian-labs/atlaspack/commit/f97acf242ed210841db3403d3a5f224f5eff5ab5) Thanks [@nickrobson](https://github.com/nickrobson)! - Transform importCond in JSX, ungate binding-based transform
+
+## 2.16.0
+
+### Minor Changes
+
+- [#795](https://github.com/atlassian-labs/atlaspack/pull/795) [`336eb1e`](https://github.com/atlassian-labs/atlaspack/commit/336eb1ef59542b7488991ff13da815f87c26645c) Thanks [@JakeLane](https://github.com/JakeLane)! - Fix binding replacement behaviour for contextual imports babel plugin
+
 ## 2.15.3
 
 ### Patch Changes

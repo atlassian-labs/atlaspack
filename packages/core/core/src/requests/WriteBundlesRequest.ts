@@ -20,13 +20,20 @@ import nullthrows from 'nullthrows';
 import {hashString} from '@atlaspack/rust';
 import {createPackageRequest} from './PackageRequest';
 import createWriteBundleRequest from './WriteBundleRequest';
+import {debugTools} from '@atlaspack/utils';
 
 type WriteBundlesRequestInput = {
   bundleGraph: BundleGraph;
   optionsRef: SharedReference;
 };
 
-export type WriteBundlesRequestResult = Map<string, PackagedBundleInfo>;
+export type WriteBundlesRequestResult = {
+  bundleInfo: Map<string, PackagedBundleInfo>;
+  scopeHoistingStats?: {
+    totalAssets: number;
+    wrappedAssets: number;
+  };
+};
 
 type RunInput<TResult> = {
   input: WriteBundlesRequestInput;
@@ -206,8 +213,30 @@ async function run({
       }),
     );
 
-    api.storeResult(res);
-    return res;
+    let result: WriteBundlesRequestResult = {bundleInfo: res};
+
+    if (debugTools['scope-hoisting-stats']) {
+      // Aggregate scope hoisting stats from all bundles
+      let aggregatedScopeHoistingStats = {
+        totalAssets: 0,
+        wrappedAssets: 0,
+      };
+
+      for (let bundle of bundles) {
+        let bundleInfo = bundleInfoMap[bundle.id];
+        if (bundleInfo?.scopeHoistingStats) {
+          aggregatedScopeHoistingStats.totalAssets +=
+            bundleInfo.scopeHoistingStats.totalAssets;
+          aggregatedScopeHoistingStats.wrappedAssets +=
+            bundleInfo.scopeHoistingStats.wrappedAssets;
+        }
+      }
+
+      result.scopeHoistingStats = aggregatedScopeHoistingStats;
+    }
+
+    api.storeResult(result);
+    return result;
   } finally {
     await dispose();
   }

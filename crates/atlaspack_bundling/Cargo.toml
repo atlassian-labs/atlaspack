@@ -1,0 +1,10 @@
+[package]
+name = "atlaspack_bundling"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = { workspace = true }
+atlaspack_core = { path = "../atlaspack_core" }
+serde_json = { workspace = true }
+petgraph = { workspace = true }

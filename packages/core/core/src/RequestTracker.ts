@@ -1943,28 +1943,21 @@ async function loadRequestGraph(
         },
       });
 
-      if (getFeatureFlag('verboseRequestInvalidationStats')) {
-        const invalidationStats = await invalidateRequestGraph(
-          requestGraph,
-          options,
-          events,
-        );
+      const invalidationStats = await invalidateRequestGraph(
+        requestGraph,
+        options,
+        events,
+      );
 
-        logger.verbose({
-          origin: '@atlaspack/core',
-          message: 'Request track loaded from cache',
-          meta: {
-            ...commonMeta,
-            trackableEvent: 'request_tracker_cache_key_hit',
-            invalidationStats,
-          },
-        });
-      } else {
-        requestGraph.invalidateUnpredictableNodes();
-        requestGraph.invalidateOnBuildNodes();
-        requestGraph.invalidateEnvNodes(options.env);
-        requestGraph.invalidateOptionNodes(options);
-      }
+      logger.verbose({
+        origin: '@atlaspack/core',
+        message: 'Request track loaded from cache',
+        meta: {
+          ...commonMeta,
+          trackableEvent: 'request_tracker_cache_key_hit',
+          invalidationStats,
+        },
+      });
 
       return requestGraph;
     } catch (e: any) {

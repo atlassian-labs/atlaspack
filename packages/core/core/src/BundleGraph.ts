@@ -22,6 +22,7 @@ import type {
   BundleNode,
   Dependency,
   DependencyNode,
+  Environment,
   InternalSourceLocation,
   Target,
   Condition,
@@ -46,6 +47,7 @@ import {ISOLATED_ENVS} from './public/Environment';
 import {fromProjectPath, fromProjectPathRelative} from './projectPath';
 import {HASH_REF_PREFIX} from './constants';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
+import logger from '@atlaspack/logger';
 import {fromEnvironmentId} from './EnvironmentManager';
 import type {EnvironmentRef} from './EnvironmentManager';
 
@@ -74,7 +76,7 @@ export const bundleGraphEdgeTypes = {
   internal_async: 5,
   // This type is used to mark an edge between a bundle and a conditional bundle.
   // This allows efficient discovery of conditional bundles in packaging
-  conditional: 5,
+  conditional: 6,
 } as const;
 
 export type BundleGraphEdgeType =
@@ -391,16 +393,27 @@ export default class BundleGraph {
                       local,
                       loc: reexportAllLoc,
                     });
+
                     if (node.value.sourceAssetId != null) {
-                      let sourceAssetId = nullthrows(
-                        assetGraphNodeIdToBundleGraphNodeId.get(
-                          assetGraph.getNodeIdByContentKey(
-                            node.value.sourceAssetId,
+                      let sourceAssetId: NodeId;
+
+                      if (getFeatureFlag('sourceAssetIdBundleGraphFix')) {
+                        [sourceAssetId] =
+                          assetGraph.getNodeIdsConnectedTo(nodeId);
+                      } else {
+                        sourceAssetId = assetGraph.getNodeIdByContentKey(
+                          node.value.sourceAssetId,
+                        );
+                      }
+
+                      let sourceAsset = nullthrows(
+                        graph.getNode(
+                          nullthrows(
+                            assetGraphNodeIdToBundleGraphNodeId.get(
+                              sourceAssetId,
+                            ),
                           ),
                         ),
-                      );
-                      let sourceAsset = nullthrows(
-                        graph.getNode(sourceAssetId),
                       );
                       invariant(sourceAsset.type === 'asset');
                       let sourceAssetSymbols = sourceAsset.value.symbols;
@@ -558,6 +571,122 @@ export default class BundleGraph {
       publicIdByAssetId: serialized.publicIdByAssetId,
       conditions: serialized.conditions,
     });
+  }
+
+  /**
+   * Serialize the bundle graph for efficient transfer to native Rust code.
+   * Returns a JSON string of nodes, an array of edges, and a map of asset IDs to public IDs.
+   */
+  serializeForNative(): {
+    nodesJson: string;
+    edges: [number, number, BundleGraphEdgeType][];
+    publicIdByAssetId: Record<string, string>;
+    environmentsJson: string;
+  } {
+    const start = performance.now();
+
+    const nodes = this._graph.nodes as BundleGraphNode[];
+    const edges: [number, number, BundleGraphEdgeType][] = [];
+
+    const edgeIterator = this._graph.getAllEdges();
+    let next = edgeIterator.next();
+    while (!next.done) {
+      const edge = next.value;
+      edges.push([edge.from, edge.to, edge.type]);
+      next = edgeIterator.next();
+    }
+
+    // Extract and deduplicate environments
+    const environmentMap = new Map<string, Environment>();
+    const extractEnvironment = (envRef: EnvironmentRef): string => {
+      const env = fromEnvironmentId(envRef);
+      const envId = env.id;
+      if (!environmentMap.has(envId)) {
+        environmentMap.set(envId, env);
+      }
+      return envId;
+    };
+
+    // Replace env objects with env IDs in nodes
+    const processedNodes = nodes.map((node) => {
+      const processedNode = {...node};
+      if (node.type === 'asset' && node.value?.env) {
+        processedNode.value = {
+          ...node.value,
+          env: extractEnvironment(node.value.env),
+        };
+      } else if (node.type === 'dependency' && node.value?.env) {
+        processedNode.value = {
+          ...node.value,
+          env: extractEnvironment(node.value.env),
+        };
+      } else if (node.type === 'bundle' && node.value?.env) {
+        processedNode.value = {
+          ...node.value,
+          env: extractEnvironment(node.value.env),
+        };
+      }
+      return processedNode;
+    });
+
+    // Optimize nodes by omitting null/undefined values to reduce JSON size
+    const optimizedNodes = processedNodes.map((node) => this._omitNulls(node));
+    const nodesJson = JSON.stringify(optimizedNodes);
+
+    // Serialize environments as array
+    const environments = Array.from(environmentMap.values());
+    const environmentsJson = JSON.stringify(environments);
+
+    // Convert Map to plain object for serialization
+    const publicIdByAssetId: Record<string, string> = {};
+    for (const [assetId, publicId] of this._publicIdByAssetId) {
+      publicIdByAssetId[assetId] = publicId;
+    }
+
+    const duration = performance.now() - start;
+    const nodesSizeMB = (nodesJson.length / (1024 * 1024)).toFixed(2);
+    const envsSizeMB = (environmentsJson.length / (1024 * 1024)).toFixed(2);
+    logger.verbose({
+      origin: '@atlaspack/core',
+      message: `serializeForNative: ${duration.toFixed(1)}ms, ${nodesSizeMB}MB nodes, ${envsSizeMB}MB envs (${environmentMap.size} unique), ${nodes.length} nodes, ${edges.length} edges`,
+    });
+
+    return {nodesJson, edges, publicIdByAssetId, environmentsJson};
+  }
+
+  /**
+   * Remove null and undefined values from an object to reduce JSON size.
+   * Preserves false, 0, empty strings, and arrays.
+   */
+  private _omitNulls(obj: unknown): unknown {
+    if (obj === null || obj === undefined) return obj;
+    if (typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) {
+      return obj.map((item) => this._omitNulls(item));
+    }
+
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+      if (value === null || value === undefined) {
+        continue;
+      }
+      if (
+        typeof value === 'object' &&
+        !Array.isArray(value) &&
+        Object.keys(value as object).length === 0
+      ) {
+        continue;
+      }
+      if (typeof value === 'object') {
+        const processed = this._omitNulls(value);
+        if (processed !== undefined) {
+          result[key] = processed;
+        }
+      } else {
+        result[key] = value;
+      }
+    }
+    return result;
   }
 
   createBundle(
@@ -1424,6 +1553,158 @@ export default class BundleGraph {
     });
   }
 
+  // New method: Fast checks only (no caching of results)
+  isAssetReferencedFastCheck(bundle: Bundle, asset: Asset): boolean | null {
+    // Fast Check #1: If asset is in multiple bundles in same target, it's referenced
+    let bundlesWithAsset = this.getBundlesWithAsset(asset).filter(
+      (b) =>
+        b.target.name === bundle.target.name &&
+        b.target.distDir === bundle.target.distDir,
+    );
+
+    if (bundlesWithAsset.length > 1) {
+      return true;
+    }
+
+    // Fast Check #2: If asset is referenced by any async/conditional dependency, it's referenced
+    let assetNodeId = nullthrows(this._graph.getNodeIdByContentKey(asset.id));
+
+    if (
+      this._graph
+        .getNodeIdsConnectedTo(assetNodeId, bundleGraphEdgeTypes.references)
+        .map((id) => this._graph.getNode(id))
+        .some(
+          (node) =>
+            node?.type === 'dependency' &&
+            (node.value.priority === Priority.lazy ||
+              node.value.priority === Priority.conditional) &&
+            node.value.specifierType !== SpecifierType.url,
+        )
+    ) {
+      return true;
+    }
+
+    // Fast checks failed - return null to indicate expensive computation needed
+    return null;
+  }
+
+  getReferencedAssets(bundle: Bundle): Set<Asset> {
+    let referencedAssets = new Set<Asset>();
+
+    // Build a map of all assets in this bundle with their dependencies
+    // This allows us to check all assets in a single traversal
+    let assetDependenciesMap = new Map<Asset, Array<Dependency>>();
+
+    this.traverseAssets(bundle, (asset) => {
+      // Always do fast checks (no caching)
+      let fastCheckResult = this.isAssetReferencedFastCheck(bundle, asset);
+
+      if (fastCheckResult === true) {
+        referencedAssets.add(asset);
+        return;
+      }
+
+      // Fast checks failed (fastCheckResult === null), need expensive computation
+      // Check if it's actually referenced via traversal
+
+      // Store dependencies for later batch checking
+      let dependencies = this._graph
+        .getNodeIdsConnectedTo(
+          nullthrows(this._graph.getNodeIdByContentKey(asset.id)),
+        )
+        .map((id) => nullthrows(this._graph.getNode(id)))
+        .filter((node) => node.type === 'dependency')
+        .map((node) => {
+          invariant(node.type === 'dependency');
+          return node.value;
+        });
+
+      if (dependencies.length > 0) {
+        assetDependenciesMap.set(asset, dependencies);
+      }
+    });
+
+    // If no assets need the expensive check, return early
+    if (assetDependenciesMap.size === 0) {
+      return referencedAssets;
+    }
+
+    // Get the assets we need to check once
+    let assetsToCheck = Array.from(assetDependenciesMap.keys());
+
+    // Helper function to check if all assets from assetDependenciesMap are in referencedAssets
+    const allAssetsReferenced = (): boolean =>
+      assetsToCheck.length <= referencedAssets.size &&
+      assetsToCheck.every((asset) => referencedAssets.has(asset));
+
+    // Do ONE traversal to check all remaining assets
+    // We can share visitedBundles across all assets because we check every asset
+    // against every visited bundle, which matches the original per-asset behavior
+    let siblingBundles = new Set(
+      this.getBundleGroupsContainingBundle(bundle).flatMap((bundleGroup) =>
+        this.getBundlesInBundleGroup(bundleGroup, {includeInline: true}),
+      ),
+    );
+
+    let visitedBundles: Set<Bundle> = new Set();
+
+    // Single traversal from all referencers
+    for (let referencer of siblingBundles) {
+      this.traverseBundles((descendant, _, actions) => {
+        if (descendant.id === bundle.id) {
+          return;
+        }
+
+        if (visitedBundles.has(descendant)) {
+          actions.skipChildren();
+          return;
+        }
+
+        visitedBundles.add(descendant);
+
+        if (
+          descendant.type !== bundle.type ||
+          fromEnvironmentId(descendant.env).context !==
+            fromEnvironmentId(bundle.env).context
+        ) {
+          // Don't skip children - they might be the right type!
+          return;
+        }
+
+        // Check ALL assets at once in this descendant bundle
+        for (let [asset, dependencies] of assetDependenciesMap) {
+          // Skip if already marked as referenced
+          if (referencedAssets.has(asset)) {
+            continue;
+          }
+
+          // Check if this descendant bundle references the asset
+          if (
+            !this.bundleHasAsset(descendant, asset) &&
+            dependencies.some((dependency) =>
+              this.bundleHasDependency(descendant, dependency),
+            )
+          ) {
+            referencedAssets.add(asset);
+          }
+        }
+
+        // If all assets from assetDependenciesMap are now marked as referenced, we can stop early
+        if (allAssetsReferenced()) {
+          actions.stop();
+          return;
+        }
+      }, referencer);
+
+      // If all assets from assetDependenciesMap are referenced, no need to check more sibling bundles
+      if (allAssetsReferenced()) {
+        break;
+      }
+    }
+
+    return referencedAssets;
+  }
+
   hasParentBundleOfType(bundle: Bundle, type: string): boolean {
     let parents = this.getParentBundles(bundle);
     return (
@@ -1539,8 +1820,36 @@ export default class BundleGraph {
   }
 
   /**
-   * TODO: Document why this works like this & why visitor order matters
-   * on these use-cases.
+   * Performs a depth-first traversal of all assets and dependencies contained
+   * within a bundle. Only visits nodes that are directly contained in the bundle
+   * (connected via a `contains` edge).
+   *
+   * Entry Asset Ordering:
+   * The traversal guarantees that entry assets are visited in the exact order they
+   * appear in `bundle.entryAssetIds`. This ordering is critical for several reasons:
+   *
+   * 1. **Code Execution Order in Packagers**: Packagers (ScopeHoistingPackager,
+   *    DevPackager) use this traversal to concatenate assets into the final bundle.
+   *    The traversal order determines the execution order of code in the output.
+   *    Entry assets must be processed in their defined order to ensure correct
+   *    initialization sequences.
+   *
+   * 2. **Runtime Injection**: Runtime assets (HMR, bundle manifests) are prepended
+   *    to `entryAssetIds` via `unshift()` in `applyRuntimes.ts`. By honoring the
+   *    array order, runtimes are guaranteed to be visited (and thus output) before
+   *    application entry points, ensuring the runtime infrastructure is available
+   *    when application code executes.
+   *
+   * 3. **Deterministic Builds**: Consistent traversal order ensures reproducible
+   *    bundle output, which is essential for caching and build verification.
+   *
+   * The sorting only applies at the first traversal level (direct children of the
+   * start node). Subsequent levels follow standard DFS order based on the graph's
+   * edge structure.
+   *
+   * @param bundle - The bundle to traverse
+   * @param visit - Visitor callback receiving asset or dependency nodes
+   * @param startAsset - Optional asset to start traversal from (defaults to bundle root)
    */
   traverseBundle<TContext>(
     bundle: Bundle,

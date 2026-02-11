@@ -17,6 +17,8 @@ import type {
   MutableBundleGraph,
   Target,
   PluginLogger,
+  BundleGraphTraversable,
+  TraversalActions,
 } from '@atlaspack/types';
 import {DefaultMap, globToRegex} from '@atlaspack/utils';
 import invariant from 'assert';
@@ -166,24 +168,44 @@ export function createIdealGraph(
   let assets: Array<Asset> = [];
   let assetToIndex = new Map<Asset, number>();
 
-  function makeManualAssetToConfigLookup() {
-    let manualAssetToConfig = new Map();
-    let constantModuleToMSB = new DefaultMap(() => []);
+  function makeManualAssetToConfigLookup(): {
+    manualAssetToConfig: Map<
+      Asset,
+      ResolvedBundlerConfig['manualSharedBundles'][number]
+    >;
+    constantModuleToMSB: DefaultMap<
+      Asset,
+      Array<ResolvedBundlerConfig['manualSharedBundles'][number]>
+    >;
+  } {
+    let manualAssetToConfig = new Map<
+      Asset,
+      ResolvedBundlerConfig['manualSharedBundles'][number]
+    >();
+    let constantModuleToMSB = new DefaultMap<
+      Asset,
+      Array<ResolvedBundlerConfig['manualSharedBundles'][number]>
+    >(() => []);
 
     if (config.manualSharedBundles.length === 0) {
       return {manualAssetToConfig, constantModuleToMSB};
     }
 
-    let parentsToConfig = new DefaultMap(() => []);
+    let parentsToConfig = new DefaultMap<
+      string,
+      Array<ResolvedBundlerConfig['manualSharedBundles'][number]>
+    >(() => []);
 
     for (let c of config.manualSharedBundles) {
       if (c.root != null) {
-        // @ts-expect-error TS2345
         parentsToConfig.get(path.join(config.projectRoot, c.root)).push(c);
       }
     }
-    let numParentsToFind = parentsToConfig.size;
-    let configToParentAsset = new Map();
+    let numParentsToFind: number = parentsToConfig.size;
+    let configToParentAsset = new Map<
+      ResolvedBundlerConfig['manualSharedBundles'][number],
+      Asset
+    >();
 
     assetGraph.traverse((node, _, actions) => {
       if (node.type === 'asset' && parentsToConfig.has(node.value.filePath)) {
@@ -210,8 +232,10 @@ export function createIdealGraph(
         continue;
       }
 
-      let parentAsset = configToParentAsset.get(c);
-      let assetRegexes = c.assets.map((glob) => globToRegex(glob));
+      let parentAsset: Asset | undefined = configToParentAsset.get(c);
+      let assetRegexes: Array<RegExp> = c.assets.map((glob) =>
+        globToRegex(glob),
+      );
 
       assetGraph.traverse((node, _, actions) => {
         if (
@@ -226,7 +250,6 @@ export function createIdealGraph(
           // We track all matching MSB's for constant modules as they are never duplicated
           // and need to be assigned to all matching bundles
           if (node.value.meta.isConstantModule === true) {
-            // @ts-expect-error TS2345
             constantModuleToMSB.get(node.value).push(c);
           }
 
@@ -264,7 +287,7 @@ export function createIdealGraph(
   > = new DefaultMap(() => []);
 
   let mergeSourceBundleLookup = new Map<string, NodeId>();
-  let mergeSourceBundleAssets = new Set(
+  let mergeSourceBundleAssets: Set<string> = new Set(
     config.sharedBundleMerge?.flatMap(
       (c) =>
         c.sourceBundles?.map((assetMatch: string) =>
@@ -281,8 +304,8 @@ export function createIdealGraph(
   assetGraph.traverse(
     {
       enter(
-        node: // @ts-expect-error TS2304
-        | BundleGraphTraversable
+        node:
+          | BundleGraphTraversable
           | {
               readonly type: 'dependency';
               value: Dependency;
@@ -298,7 +321,6 @@ export function createIdealGraph(
               readonly type: 'dependency';
               value: Dependency;
             },
-        // @ts-expect-error TS2304
         actions: TraversalActions,
       ) {
         if (node.type === 'asset') {
@@ -336,12 +358,16 @@ export function createIdealGraph(
           }
 
           for (let childAsset of assets) {
-            let bundleId = bundles.get(childAsset.id);
-            let bundle;
+            let bundleId: number | undefined | null = bundles.get(
+              childAsset.id,
+            );
+            let bundle: Bundle | 'root' | undefined;
 
             // MSB Step 1: Match glob on filepath and type for any asset
-            let manualSharedBundleKey;
-            let manualSharedObject = manualAssetToConfig.get(childAsset);
+            let manualSharedBundleKey: string | undefined;
+            let manualSharedObject:
+              | ResolvedBundlerConfig['manualSharedBundles'][number]
+              | undefined = manualAssetToConfig.get(childAsset);
 
             if (manualSharedObject) {
               // MSB Step 2: Generate a key for which to look up this manual bundle with
@@ -431,8 +457,9 @@ export function createIdealGraph(
                     type: 'bundle',
                   },
                 ),
-                // @ts-expect-error TS7053
-                dependencyPriorityEdges[dependency.priority],
+                dependencyPriorityEdges[
+                  dependency.priority as keyof typeof dependencyPriorityEdges
+                ],
               );
 
               if (
@@ -501,9 +528,10 @@ export function createIdealGraph(
                 });
                 bundleId = bundleGraph.addNode(bundle);
               } else {
-                bundle = bundleGraph.getNode(bundleId);
-                invariant(bundle != null && bundle !== 'root');
+                let bundleNode = bundleGraph.getNode(bundleId);
+                invariant(bundleNode != null && bundleNode !== 'root');
 
+                bundle = bundleNode;
                 if (
                   // If this dependency requests isolated, but the bundle is not,
                   // make the bundle isolated for all uses.
@@ -545,7 +573,6 @@ export function createIdealGraph(
 
               assetReference.get(childAsset).push([dependency, bundle]);
             } else {
-              // @ts-expect-error TS2322
               bundleId = null;
             }
             if (manualSharedObject && bundleId != null) {
@@ -553,7 +580,6 @@ export function createIdealGraph(
               // add the asset if it doesn't already have it and set key
 
               invariant(
-                // @ts-expect-error TS2367
                 bundle !== 'root' && bundle != null && bundleId != null,
               );
 
@@ -580,8 +606,7 @@ export function createIdealGraph(
         }
         return node;
       },
-      // @ts-expect-error TS2322
-      exit(node: BundleGraphTraversable) {
+      exit(node: BundleGraphTraversable): undefined {
         if (stack[stack.length - 1]?.[0] === node.value) {
           stack.pop();
         }
@@ -645,7 +670,7 @@ export function createIdealGraph(
   // order the bundles are loaded.
   let ancestorAssets: Array<null | BitSet> = [];
 
-  let inlineConstantDeps = new DefaultMap(() => new Set());
+  let inlineConstantDeps = new DefaultMap<Asset, Set<Asset>>(() => new Set());
 
   for (let [bundleRootId, assetId] of bundleRootGraph.nodes.entries()) {
     let reachable = new BitSet(assets.length);
@@ -876,11 +901,8 @@ export function createIdealGraph(
 
   function assignInlineConstants(parentAsset: Asset, bundle: Bundle) {
     for (let inlineConstant of inlineConstantDeps.get(parentAsset)) {
-      // @ts-expect-error TS2345
       if (!bundle.assets.has(inlineConstant)) {
-        // @ts-expect-error TS2345
         bundle.assets.add(inlineConstant);
-        // @ts-expect-error TS18046
         bundle.size += inlineConstant.stats.size;
       }
     }
@@ -893,8 +915,10 @@ export function createIdealGraph(
   let reachableNonEntries = new BitSet(assets.length);
   let reachableIntersection = new BitSet(assets.length);
   for (let i = 0; i < assets.length; i++) {
-    let asset = assets[i];
-    let manualSharedObject = manualAssetToConfig.get(asset);
+    let asset: Asset = assets[i];
+    let manualSharedObject:
+      | ResolvedBundlerConfig['manualSharedBundles'][number]
+      | undefined = manualAssetToConfig.get(asset);
 
     if (bundleRoots.has(asset) && inlineConstantDeps.get(asset).size > 0) {
       let entryBundleId = nullthrows(bundleRoots.get(asset))[0];
@@ -938,9 +962,10 @@ export function createIdealGraph(
 
     // If we encounter a "manual" asset, draw an edge from reachable to its MSB
     if (manualSharedObject && !reachable.empty()) {
-      let bundle;
-      let bundleId;
-      let manualSharedBundleKey = manualSharedObject.name + ',' + asset.type;
+      let bundle: Bundle | undefined;
+      let bundleId: NodeId | undefined;
+      let manualSharedBundleKey: string =
+        manualSharedObject.name + ',' + asset.type;
       let sourceBundles: Array<NodeId> = [];
       reachable.forEach((id) => {
         sourceBundles.push(nullthrows(bundleRoots.get(assets[id]))[0]);
@@ -965,11 +990,13 @@ export function createIdealGraph(
         manualSharedMap.set(manualSharedBundleKey, bundleId);
       } else {
         bundleId = nullthrows(manualSharedMap.get(manualSharedBundleKey));
-        bundle = nullthrows(bundleGraph.getNode(bundleId));
+        let bundleNode = nullthrows(bundleGraph.getNode(bundleId));
         invariant(
-          bundle != null && bundle !== 'root',
+          bundleNode != null && bundleNode !== 'root',
           'We tried to use the root incorrectly',
         );
+
+        bundle = bundleNode;
 
         if (!bundle.assets.has(asset)) {
           bundle.assets.add(asset);
@@ -1066,12 +1093,13 @@ export function createIdealGraph(
       config.disableSharedBundles === false &&
       reachableArray.length > config.minBundles
     ) {
-      let sourceBundles = reachableArray.map(
+      let sourceBundles: Array<NodeId> = reachableArray.map(
         (a) => nullthrows(bundleRoots.get(a))[0],
       );
-      let key = reachableArray.map((a) => a.id).join(',') + '.' + asset.type;
-      let bundleId = bundles.get(key);
-      let bundle;
+      let key: string =
+        reachableArray.map((a) => a.id).join(',') + '.' + asset.type;
+      let bundleId: NodeId | undefined = bundles.get(key);
+      let bundle: Bundle | undefined;
       if (bundleId == null) {
         let firstSourceBundle = nullthrows(
           bundleGraph.getNode(sourceBundles[0]),
@@ -1102,8 +1130,9 @@ export function createIdealGraph(
         bundleId = bundleGraph.addNode(bundle);
         bundles.set(key, bundleId);
       } else {
-        bundle = nullthrows(bundleGraph.getNode(bundleId));
-        invariant(bundle !== 'root');
+        let bundleNode = nullthrows(bundleGraph.getNode(bundleId));
+        invariant(bundleNode !== 'root');
+        bundle = bundleNode;
       }
       bundle.assets.add(asset);
       bundle.size += asset.stats.size;
@@ -1134,26 +1163,30 @@ export function createIdealGraph(
   let modifiedSourceBundles = new Set<Bundle>();
 
   // Step split manual shared bundles for those that have the "split" property set
-  let remainderMap = new DefaultMap(() => []);
+  let remainderMap = new DefaultMap<number, Array<Asset>>(() => []);
   for (let id of manualSharedMap.values()) {
     let manualBundle = bundleGraph.getNode(id);
     invariant(manualBundle !== 'root' && manualBundle != null);
 
     if (manualBundle.sourceBundles.size > 0) {
-      let firstSourceBundle = nullthrows(
+      let firstSourceBundleNode: Bundle | 'root' = nullthrows(
         bundleGraph.getNode([...manualBundle.sourceBundles][0]),
       );
-      invariant(firstSourceBundle !== 'root');
-      let firstAsset = [...manualBundle.assets][0];
-      let manualSharedObject = manualAssetToConfig.get(firstAsset);
+      invariant(firstSourceBundleNode !== 'root');
+      let firstSourceBundle = firstSourceBundleNode;
+
+      let firstAsset: Asset = [...manualBundle.assets][0];
+      let manualSharedObject:
+        | ResolvedBundlerConfig['manualSharedBundles'][number]
+        | undefined = manualAssetToConfig.get(firstAsset);
       invariant(manualSharedObject != null);
-      let modNum = manualAssetToConfig.get(firstAsset)?.split;
+      let modNum: number | undefined =
+        manualAssetToConfig.get(firstAsset)?.split;
       if (modNum != null) {
         for (let a of [...manualBundle.assets]) {
           let numRep = getBigIntFromContentKey(a.id);
           let r = Number(numRep % BigInt(modNum));
 
-          // @ts-expect-error TS2345
           remainderMap.get(r).push(a);
         }
 
@@ -1176,10 +1209,8 @@ export function createIdealGraph(
           }
           for (let sp of remainderMap.get(i)) {
             bundle.assets.add(sp);
-            // @ts-expect-error TS2339
             bundle.size += sp.stats.size;
             manualBundle.assets.delete(sp);
-            // @ts-expect-error TS2339
             manualBundle.size -= sp.stats.size;
           }
         }
@@ -1192,7 +1223,6 @@ export function createIdealGraph(
   // match multiple MSB's
   for (let [asset, msbs] of constantModuleToMSB.entries()) {
     for (let manualSharedObject of msbs) {
-      // @ts-expect-error TS2339
       let bundleId = manualSharedMap.get(manualSharedObject.name + ',js');
       if (bundleId == null) continue;
       let bundle = nullthrows(bundleGraph.getNode(bundleId));
@@ -1201,11 +1231,8 @@ export function createIdealGraph(
         'We tried to use the root incorrectly',
       );
 
-      // @ts-expect-error TS2345
       if (!bundle.assets.has(asset)) {
-        // @ts-expect-error TS2345
         bundle.assets.add(asset);
-        // @ts-expect-error TS18046
         bundle.size += asset.stats.size;
       }
     }
@@ -1364,9 +1391,8 @@ export function createIdealGraph(
           numBundlesContributingToPRL > config.maxParallelRequests
         ) {
           let bundleTuple = sharedBundlesInGroup.pop();
-          // @ts-expect-error TS18048
+          if (!bundleTuple) break;
           let bundleToRemove = bundleTuple.bundle;
-          // @ts-expect-error TS18048
           let bundleIdToRemove = bundleTuple.id;
           //TODO add integration test where bundles in bunlde group > max parallel request limit & only remove a couple shared bundles
           // but total # bundles still exceeds limit due to non shared bundles
@@ -1377,15 +1403,27 @@ export function createIdealGraph(
           );
 
           for (let sourceBundleId of sourceBundles) {
-            let sourceBundle = nullthrows(bundleGraph.getNode(sourceBundleId));
+            let sourceBundle = nullthrows(
+              bundleGraph.getNode(sourceBundleId),
+              'Source bundle not found when removing shared bundle due to hitting max parallel requests limit',
+            );
             invariant(sourceBundle !== 'root');
             modifiedSourceBundles.add(sourceBundle);
             bundleToRemove.sourceBundles.delete(sourceBundleId);
             for (let asset of bundleToRemove.assets) {
-              addAssetToBundleRoot(
-                asset,
-                nullthrows(sourceBundle.mainEntryAsset),
-              );
+              if (sourceBundle.manualSharedBundle != null) {
+                sourceBundle.assets.add(asset);
+                sourceBundle.size += asset.stats.size;
+                assignInlineConstants(asset, sourceBundle);
+              } else {
+                addAssetToBundleRoot(
+                  asset,
+                  nullthrows(
+                    sourceBundle.mainEntryAsset,
+                    'Source bundle has no mainEntryAsset when removing shared bundle due to hitting max parallel requests limit',
+                  ),
+                );
+              }
             }
             //This case is specific to reused bundles, which can have shared bundles attached to it
             for (let childId of bundleGraph.getNodeIdsConnectedFrom(
@@ -1443,11 +1481,10 @@ export function createIdealGraph(
 
       let newAssetReference = assetReference
         .get(asset)
-        .map(([dep, bundle]: [any, any]) =>
+        .map(([dep, bundle]): [Dependency, Bundle] =>
           bundle === bundleToRemove ? [dep, bundleToKeep] : [dep, bundle],
         );
 
-      // @ts-expect-error TS2345
       assetReference.set(asset, newAssetReference);
     }
 

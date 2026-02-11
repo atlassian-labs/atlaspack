@@ -5,7 +5,7 @@ use html5ever::namespace_url;
 use markup5ever::{QualName, expanded_name, local_name, ns};
 use markup5ever_rcdom::{Handle, Node, NodeData};
 
-use atlaspack_core::types::{Asset, Dependency, FileType, Priority, SpecifierType};
+use atlaspack_core::types::{Asset, DependencyBuilder, FileType, Priority, SpecifierType};
 
 use crate::{
   attrs::Attrs,
@@ -38,18 +38,17 @@ impl DomVisitor for HMRVisitor {
           let mut attrs = vec![];
           {
             let mut attrs = Attrs::new(&mut attrs);
-            let dependency = Dependency {
-              env: self.context.env.clone(),
-              priority: Priority::Parallel,
-              specifier: "".to_owned(),
-              specifier_type: SpecifierType::Url,
-              source_asset_id: Some(self.context.source_asset_id.clone()),
-              source_asset_type: Some(FileType::Html),
-              source_path: self.context.source_path.clone(),
-              ..Default::default()
-            };
+            let dependency = DependencyBuilder::default()
+              .env(self.context.env.clone())
+              .priority(Priority::Parallel)
+              .specifier("".to_owned())
+              .specifier_type(SpecifierType::Url)
+              .source_asset_id(self.context.source_asset_id.clone())
+              .source_asset_type(FileType::Html)
+              .source_path_option(self.context.source_path.clone())
+              .build();
 
-            let src = dependency.id();
+            let src = dependency.id;
 
             self.hmr_asset = Some(Asset {
               file_type: FileType::Js,
