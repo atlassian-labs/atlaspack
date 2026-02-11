@@ -270,7 +270,7 @@ export default new Transformer<Config>({
 
     assert(result?.ast, 'Babel transform returned no AST');
 
-    const {code: generatedCode, rawMappings} = generate(result.ast.program, {
+    let {code: generatedCode, rawMappings} = generate(result.ast.program, {
       sourceFileName,
       sourceMaps: !!asset.env.sourceMap,
       comments: true,
@@ -284,6 +284,64 @@ export default new Transformer<Config>({
       }>;
     };
 
+    // The Compiled Babel plugin inserts new AST nodes (CSS constants, runtime
+    // imports, etc.) that receive a fallback `loc` pointing to the insertion
+    // site (typically the end of the last import line). This produces many
+    // rawMappings from distinct generated lines all pointing to the same
+    // original position, which is incorrect. We detect and strip these
+    // "fallback position" mappings so the generated code is left unmapped
+    // rather than incorrectly mapped.
+    if (rawMappings && rawMappings.length > 0) {
+      // Count how many distinct generated lines map to each original position.
+      const positionToGenLines = new Map<string, Set<number>>();
+      for (const m of rawMappings) {
+        const key = `${m.original.line}:${m.original.column}`;
+        if (!positionToGenLines.has(key)) {
+          positionToGenLines.set(key, new Set());
+        }
+        positionToGenLines.get(key)!.add(m.generated.line);
+      }
+
+      // A "fallback position" is one where 5+ distinct generated lines all
+      // map to the exact same original position AND each of those lines has
+      // NO other mappings to different original lines. This distinguishes
+      // generated-code fallbacks (many separate statements with same loc)
+      // from legitimate transforms (one expression spanning many lines).
+      const genLineToOrigLines = new Map<number, Set<number>>();
+      for (const m of rawMappings) {
+        if (!genLineToOrigLines.has(m.generated.line)) {
+          genLineToOrigLines.set(m.generated.line, new Set());
+        }
+        genLineToOrigLines.get(m.generated.line)!.add(m.original.line);
+      }
+
+      const fallbackPositions = new Set<string>();
+      for (const [key, genLines] of positionToGenLines) {
+        if (genLines.size >= 5) {
+          // Check if these generated lines ONLY map to this position's line
+          const origLine = parseInt(key.split(':')[0]);
+          let allExclusive = true;
+          for (const gl of genLines) {
+            const origLinesForGen = genLineToOrigLines.get(gl);
+            if (origLinesForGen && origLinesForGen.size > 1) {
+              allExclusive = false;
+              break;
+            }
+          }
+          if (allExclusive) {
+            fallbackPositions.add(key);
+          }
+        }
+      }
+
+      if (fallbackPositions.size > 0) {
+        rawMappings = rawMappings.filter(
+          (m) =>
+            !fallbackPositions.has(`${m.original.line}:${m.original.column}`),
+        );
+      }
+    }
+
     asset.setCode(generatedCode);
 
     const map = new SourceMap(config.projectRoot);
@@ -292,15 +350,13 @@ export default new Transformer<Config>({
     }
 
     if (originalSourceMap) {
-      // The babel AST already contains the correct mappings, but not the source contents.
-      // We need to copy over the source contents from the original map.
-      const sourcesContent = originalSourceMap.getSourcesContentMap();
-      for (const filePath in sourcesContent) {
-        const content = sourcesContent[filePath];
-        if (content != null) {
-          map.setSourceContent(filePath, content);
-        }
-      }
+      // Compose the new mappings (generated → intermediate) with the previous map
+      // (intermediate → original) so the final map traces back to the original source.
+      map.extends(originalSourceMap);
+    }
+
+    if (asset.env.sourceMap) {
+      asset.setMap(map);
     }
 
     return [asset];

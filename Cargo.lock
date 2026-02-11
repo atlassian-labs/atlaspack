@@ -698,6 +698,7 @@ version = "0.1.0"
 dependencies = [
  "atlaspack_swc_runner",
  "pretty_assertions",
+ "serde_json",
  "swc_core",
 ]
 

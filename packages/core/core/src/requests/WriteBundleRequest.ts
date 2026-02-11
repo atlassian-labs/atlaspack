@@ -250,7 +250,7 @@ async function run({input, options, api}) {
   return res;
 }
 
-function applyReplacementsToSourceMap(
+export function applyReplacementsToSourceMap(
   sourceMap: SourceMap,
   replacements: HashRefReplacement[],
 ): void {
@@ -258,27 +258,18 @@ function applyReplacementsToSourceMap(
   const sorted = [...replacements].sort(
     (a, b) => a.line - b.line || a.column - b.column,
   );
-  const runningDeltaByLine = new Map<number, number>();
   for (const r of sorted) {
-    const runningDelta = runningDeltaByLine.get(r.line) ?? 0;
-    let adjustedColumn = r.column - runningDelta;
     const delta = r.newLength - r.originalLength;
     if (delta !== 0) {
-      // Source map is in pre-replacement (original) coordinates. Only shift mappings
-      // that start at or after the end of the placeholder, not inside it.
-      const columnAfterPlaceholder = adjustedColumn + r.originalLength;
-      const offsetStartColumn = Math.max(
-        0,
-        delta < 0
-          ? Math.max(columnAfterPlaceholder, -delta)
-          : columnAfterPlaceholder,
-      );
+      // r.column is in post-replacement coordinates (matching the already-shifted
+      // source map state after previous offsetColumns calls). The end of the
+      // placeholder in these coordinates is simply r.column + r.originalLength.
+      const offsetStartColumn = r.column + r.originalLength;
       const line1Based = r.line + 1;
       if (line1Based >= 1 && offsetStartColumn + delta >= 0) {
         sourceMap.offsetColumns(line1Based, offsetStartColumn, delta);
       }
     }
-    runningDeltaByLine.set(r.line, runningDelta + delta);
   }
 }
 
@@ -445,6 +436,9 @@ function replaceStream(
             .subarray(matchI, matchI + HASH_REF_PREFIX_LEN + HASH_REF_HASH_LEN)
             .toString();
           let replacement = Buffer.from(hashRefToNameHash.get(match) ?? match);
+          // Copy pre-match content FIRST so position calculation includes it
+          replaced.set(str.subarray(lastMatchI, matchI), replacedLength);
+          replacedLength += matchI - lastMatchI;
           if (replacements) {
             const pos = advanceLineColumn(
               outputLine,
@@ -458,8 +452,6 @@ function replaceStream(
               newLength: replacement.byteLength,
             });
           }
-          replaced.set(str.subarray(lastMatchI, matchI), replacedLength);
-          replacedLength += matchI - lastMatchI;
           replaced.set(replacement, replacedLength);
           replacedLength += replacement.byteLength;
           lastMatchI = matchI + HASH_REF_PREFIX_LEN + HASH_REF_HASH_LEN;
