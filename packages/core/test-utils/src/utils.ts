@@ -73,10 +73,13 @@ beforeEach(async () => {
   outputFS = new MemoryFS(workerFarm);
   overlayFS = new OverlayFS(outputFS, inputFS);
 
+  let cacheCreated = false;
   for (let i = 0; i < 5; i++) {
     try {
       cacheDir = tempy.directory();
       cache = new LMDBLiteCache(cacheDir);
+      cacheCreated = true;
+      break;
     } catch (err: any) {
       if (
         err.message.includes('temporarily unavailable') ||
@@ -90,6 +93,12 @@ beforeEach(async () => {
       }
       throw err;
     }
+  }
+  if (!cacheCreated) {
+    throw new Error(
+      'Failed to create LMDBLiteCache after 5 retries. ' +
+        'This may indicate file descriptor exhaustion.',
+    );
   }
   cache.ensure();
 });
