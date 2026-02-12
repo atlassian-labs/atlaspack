@@ -171,7 +171,7 @@ impl IdealGraphBuilder {
     self.compute_availability(&mut ideal)?;
 
     // Phase 10: internalize async bundles whose root is already available from all parents.
-    self.internalize_async_bundles(asset_graph, &mut ideal)?;
+    self.internalize_async_bundles(asset_graph, &reachability, &mut ideal)?;
 
     // Always attach debug info. Decision payloads are compact and avoid String cloning.
     ideal.debug = Some(super::types::IdealGraphDebug {
@@ -1429,11 +1429,65 @@ impl IdealGraphBuilder {
   fn internalize_async_bundles(
     &mut self,
     asset_graph: &AssetGraph,
+    reachability: &HashMap<AssetKey, HashSet<AssetKey>>,
     ideal: &mut IdealGraph,
   ) -> anyhow::Result<()> {
+    // Build reverse lookup: target asset id -> deps (priority, source asset id) that point to it.
+    // This avoids repeated full scans of `asset_graph.get_dependencies()`.
+    let mut deps_targeting: HashMap<String, Vec<(Priority, Option<String>)>> = HashMap::new();
+    for dep in asset_graph.get_dependencies() {
+      if dep.is_entry {
+        continue;
+      }
+      let Some(dep_node_id) = asset_graph.get_node_id_by_content_key(&dep.id) else {
+        continue;
+      };
+      for neighbor in asset_graph.get_outgoing_neighbors(dep_node_id) {
+        if let Some(asset) = asset_graph.get_asset(&neighbor) {
+          deps_targeting
+            .entry(asset.id.clone())
+            .or_default()
+            .push((dep.priority, dep.source_asset_id.clone()));
+        }
+      }
+    }
+
+    // Precompute bundle parent adjacency for fast ancestor walking (child -> parents).
+    let mut bundle_parents: HashMap<IdealBundleId, Vec<IdealBundleId>> = HashMap::new();
+    for (from, to, _ty) in &ideal.bundle_edges {
+      bundle_parents
+        .entry(to.clone())
+        .or_default()
+        .push(from.clone());
+    }
+
+    // Precompute reverse adjacency for sync edges in the *asset graph*:
+    // target asset key -> source asset keys that sync-import it.
+    let mut sync_incoming: Vec<Vec<AssetKey>> = vec![Vec::new(); self.assets.len()];
+    for (target_id, deps) in &deps_targeting {
+      let Some(target_key) = self.assets.key_for(target_id) else {
+        continue;
+      };
+      let incoming = &mut sync_incoming[target_key.0 as usize];
+      for (p, source_asset_id) in deps {
+        if *p != Priority::Sync {
+          continue;
+        }
+        let Some(source_asset_id) = source_asset_id else {
+          continue;
+        };
+        let Some(source_key) = self.assets.key_for(source_asset_id) else {
+          continue;
+        };
+        incoming.push(source_key);
+      }
+    }
+
+    // Cache: async root asset key -> bitset of asset keys that can sync-reach it in the asset graph.
+    let mut reverse_sync_cache: HashMap<AssetKey, FixedBitSet> = HashMap::new();
+
     // Collect async bundle roots: non-entry bundle boundaries that became
     // boundaries due to a lazy/async dependency (not just type change).
-    // We check the asset graph's incoming dependencies directly.
     let async_roots: Vec<AssetKey> = self
       .bundle_boundaries
       .iter()
@@ -1443,24 +1497,9 @@ impl IdealGraphBuilder {
           return false;
         }
         let asset_id = self.assets.id_for(*k);
-        // Check if any dependency targeting this asset is lazy (async).
-        asset_graph.get_dependencies().any(|dep| {
-          dep.priority == Priority::Lazy
-            && asset_graph
-              .get_node_id_by_content_key(&dep.id)
-              .map(|dep_node| {
-                asset_graph
-                  .get_outgoing_neighbors(dep_node)
-                  .iter()
-                  .any(|n| {
-                    asset_graph
-                      .get_asset(n)
-                      .map(|a| a.id == asset_id)
-                      .unwrap_or(false)
-                  })
-              })
-              .unwrap_or(false)
-        })
+        deps_targeting
+          .get(asset_id)
+          .is_some_and(|deps| deps.iter().any(|(p, _)| *p == Priority::Lazy))
       })
       .collect();
 
@@ -1486,28 +1525,16 @@ impl IdealGraphBuilder {
       // We can't rely solely on `ideal.bundle_edges` here because bundle edges are computed
       // before Phase 7 asset placement, and therefore may miss edges that originate from
       // non-root assets (e.g. an entry bundle asset that lazy-imports another bundle root).
-      let mut parent_bundle_ids: Vec<IdealBundleId> = Vec::new();
-      for dep in asset_graph.get_dependencies() {
-        if dep.is_entry {
-          continue;
-        }
-        let Some(dep_node_id) = asset_graph.get_node_id_by_content_key(&dep.id) else {
-          continue;
-        };
-        // Is this dependency targeting the current async root?
-        let targets_root = asset_graph
-          .get_outgoing_neighbors(dep_node_id)
-          .iter()
-          .any(|n| asset_graph.get_asset(n).is_some_and(|a| a.id == root_id));
-        if !targets_root {
-          continue;
-        }
-        if let Some(from_asset_id) = &dep.source_asset_id
-          && let Some(from_bundle) = ideal.asset_to_bundle.get(from_asset_id)
-        {
-          parent_bundle_ids.push(from_bundle.clone());
-        }
-      }
+      let mut parent_bundle_ids: Vec<IdealBundleId> = deps_targeting
+        .get(&root_id)
+        .into_iter()
+        .flatten()
+        .filter_map(|(_p, source_asset_id)| {
+          source_asset_id
+            .as_ref()
+            .and_then(|sid| ideal.asset_to_bundle.get(sid).cloned())
+        })
+        .collect();
       parent_bundle_ids.sort();
       parent_bundle_ids.dedup();
 
@@ -1535,7 +1562,16 @@ impl IdealGraphBuilder {
           // available when each parent loads. Importantly, this availability can come from
           // an *ancestor* bundle of the parent (e.g. the entry bundle), not necessarily from
           // the parent bundle itself.
-          self.is_asset_available_from_bundle_or_ancestors(asset_graph, ideal, parent_id, &root_id)
+          self.is_asset_available_from_bundle_or_ancestors(
+            reachability,
+            ideal,
+            &bundle_parents,
+            &sync_incoming,
+            &mut reverse_sync_cache,
+            parent_id,
+            root_key,
+            &root_id,
+          )
         } else {
           true
         };
@@ -1594,15 +1630,47 @@ impl IdealGraphBuilder {
 
   /// Check if `from_id` can sync-reach `to_id` in the asset graph.
   /// Unlike the sync graph, this traversal crosses bundle boundaries.
+  #[allow(clippy::too_many_arguments)]
   fn is_asset_available_from_bundle_or_ancestors(
     &self,
-    asset_graph: &AssetGraph,
+    reachability: &HashMap<AssetKey, HashSet<AssetKey>>,
     ideal: &IdealGraph,
+    bundle_parents: &HashMap<IdealBundleId, Vec<IdealBundleId>>,
+    sync_incoming: &[Vec<AssetKey>],
+    reverse_sync_cache: &mut HashMap<AssetKey, FixedBitSet>,
     from_bundle_id: &IdealBundleId,
+    asset_key: AssetKey,
     asset_id: &str,
   ) -> bool {
     let mut stack: Vec<IdealBundleId> = vec![from_bundle_id.clone()];
     let mut visited: HashSet<IdealBundleId> = HashSet::new();
+
+    // Primary fast path: reachability contains (asset -> roots that can sync-reach it in sync graph).
+    // If the async root asset is sync-reachable from a given bundle's root asset, treat it as
+    // available.
+    let reaching_roots = reachability.get(&asset_key);
+
+    // Secondary fast path: sync reachability that originates from non-root assets.
+    // We compute all asset keys that can sync-reach `asset_key` once per async root
+    // (reverse traversal over sync edges in the asset graph).
+    let reverse_sync_reachers = reverse_sync_cache.entry(asset_key).or_insert_with(|| {
+      let mut visited = FixedBitSet::with_capacity(self.assets.len());
+      let mut stack: Vec<AssetKey> = vec![asset_key];
+
+      while let Some(current) = stack.pop() {
+        let idx = current.0 as usize;
+        if visited.contains(idx) {
+          continue;
+        }
+        visited.insert(idx);
+
+        for &p in &sync_incoming[idx] {
+          stack.push(p);
+        }
+      }
+
+      visited
+    });
 
     while let Some(id) = stack.pop() {
       if !visited.insert(id.clone()) {
@@ -1615,70 +1683,32 @@ impl IdealGraphBuilder {
         return true;
       }
 
-      // Also treat sync reachability in the asset graph from any asset already in this bundle
-      // as availability.
-      //
-      // This is important when the sync reachability path originates from a non-root asset in the
-      // parent bundle (e.g. a module that both sync-imports and lazy-imports the same target).
-      if let Some(bundle) = ideal.bundles.get(&id) {
-        for from_asset_id in &bundle.assets {
-          if self.is_sync_reachable_in_asset_graph(asset_graph, from_asset_id, asset_id) {
-            return true;
-          }
-        }
-      } else if self.is_sync_reachable_in_asset_graph(asset_graph, &id.0, asset_id) {
-        // Fallback for unexpected missing bundle state.
+      // Check sync-reachability from this bundle's root asset using Phase 5 reachability.
+      if let Some(reaching_roots) = reaching_roots
+        && let Some(from_root_key) = self.assets.key_for(&id.0)
+        && reaching_roots.contains(&from_root_key)
+      {
+        return true;
+      }
+
+      // Check sync-reachability from any asset in this bundle.
+      if let Some(bundle) = ideal.bundles.get(&id)
+        && bundle.assets.iter().any(|from_id| {
+          self
+            .assets
+            .key_for(from_id)
+            .is_some_and(|k| reverse_sync_reachers.contains(k.0 as usize))
+        })
+      {
         return true;
       }
 
       // Walk to ancestor bundles (those that have edges to `id`).
-      for (from, to, _ty) in &ideal.bundle_edges {
-        if *to == id {
-          stack.push(from.clone());
-        }
+      if let Some(parents) = bundle_parents.get(&id) {
+        stack.extend(parents.iter().cloned());
       }
     }
 
-    false
-  }
-
-  fn is_sync_reachable_in_asset_graph(
-    &self,
-    asset_graph: &AssetGraph,
-    from_id: &str,
-    to_id: &str,
-  ) -> bool {
-    let Some(from_node) = asset_graph.get_node_id_by_content_key(from_id).copied() else {
-      return false;
-    };
-
-    let mut visited: HashSet<NodeId> = HashSet::new();
-    let mut stack = vec![from_node];
-
-    while let Some(node) = stack.pop() {
-      if !visited.insert(node) {
-        continue;
-      }
-
-      // Traverse asset -> dep -> asset edges, only through sync deps.
-      for dep_node in asset_graph.get_outgoing_neighbors(&node) {
-        let Some(dep) = asset_graph.get_dependency(&dep_node) else {
-          continue;
-        };
-        if dep.priority != Priority::Sync {
-          continue;
-        }
-        for target_node in asset_graph.get_outgoing_neighbors(&dep_node) {
-          let Some(target) = asset_graph.get_asset(&target_node) else {
-            continue;
-          };
-          if target.id == to_id {
-            return true;
-          }
-          stack.push(target_node);
-        }
-      }
-    }
     false
   }
 
