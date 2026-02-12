@@ -1,6 +1,10 @@
 use std::collections::{HashMap, HashSet};
 
-use atlaspack_core::types::{MaybeBundleBehavior, Priority};
+use atlaspack_core::{
+  asset_graph::AssetGraph,
+  types::{MaybeBundleBehavior, Priority},
+};
+use fixedbitset::FixedBitSet;
 
 /// Configuration knobs for the ideal graph build/analysis.
 ///
@@ -22,6 +26,64 @@ pub struct IdealGraphBuildStats {
 /// This is intended to be cheap to copy/hash and suitable for indexing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct AssetKey(pub u32);
+
+/// Bi-directional mapping between the asset graph's string ids and compact [`AssetKey`] values.
+///
+/// This is the primary boundary where we still pay for String allocation/cloning.
+#[derive(Debug, Default, Clone)]
+pub struct AssetInterner {
+  by_id: HashMap<String, AssetKey>,
+  ids: Vec<String>,
+}
+
+impl AssetInterner {
+  pub fn from_asset_graph(asset_graph: &AssetGraph) -> Self {
+    let mut ids: Vec<String> = asset_graph.get_assets().map(|a| a.id.clone()).collect();
+    ids.sort();
+    ids.dedup();
+
+    let mut by_id = HashMap::with_capacity(ids.len());
+    for (i, id) in ids.iter().enumerate() {
+      let key = AssetKey(u32::try_from(i).expect("too many assets to key"));
+      by_id.insert(id.clone(), key);
+    }
+
+    Self { by_id, ids }
+  }
+
+  pub fn key_for(&self, asset_id: &str) -> Option<AssetKey> {
+    self.by_id.get(asset_id).copied()
+  }
+
+  pub fn id_for(&self, key: AssetKey) -> &str {
+    &self.ids[key.0 as usize]
+  }
+
+  pub fn len(&self) -> usize {
+    self.ids.len()
+  }
+
+  pub fn ids(&self) -> &[String] {
+    &self.ids
+  }
+
+  pub fn ids_cloned(&self) -> Vec<String> {
+    self.ids.clone()
+  }
+
+  pub fn is_empty(&self) -> bool {
+    self.ids.is_empty()
+  }
+
+  /// Allocate a new synthetic asset key for an id that doesn't exist in the asset graph
+  /// (e.g. shared bundle root pseudo-assets).
+  pub fn insert_synthetic(&mut self, asset_id: String) -> AssetKey {
+    let next = AssetKey(u32::try_from(self.ids.len()).expect("too many assets to key"));
+    self.by_id.insert(asset_id.clone(), next);
+    self.ids.push(asset_id);
+    next
+  }
+}
 
 /// Typed decision event.
 ///
@@ -163,7 +225,9 @@ pub struct IdealBundle {
   pub root_asset_id: Option<String>,
 
   /// Assets assigned to this bundle (no duplication in the ideal phase).
-  pub assets: HashSet<String>,
+  ///
+  /// Indexed by `AssetKey.0 as usize`.
+  pub assets: FixedBitSet,
 
   /// Output bundle type (roughly corresponds to asset file type).
   pub bundle_type: atlaspack_core::types::FileType,
@@ -174,19 +238,19 @@ pub struct IdealBundle {
   /// Assets known to be available when this bundle loads.
   ///
   /// In the doc, this is computed using the *intersection* rule across parent paths.
-  pub ancestor_assets: HashSet<String>,
+  ///
+  /// Indexed by `AssetKey.0 as usize`.
+  pub ancestor_assets: FixedBitSet,
 }
 
 impl IdealBundle {
   /// Convenience: assets available at runtime when this bundle loads.
   ///
   /// In the doc this can include additional sets (e.g. bundle-group/parallel bundles).
-  pub fn all_assets_available_from_here(&self) -> HashSet<String> {
-    self
-      .ancestor_assets
-      .union(&self.assets)
-      .cloned()
-      .collect::<HashSet<_>>()
+  pub fn all_assets_available_from_here(&self) -> FixedBitSet {
+    let mut result = self.ancestor_assets.clone();
+    result.union_with(&self.assets);
+    result
   }
 }
 
@@ -202,13 +266,27 @@ pub struct IdealGraph {
   pub bundle_edges: Vec<(IdealBundleId, IdealBundleId, IdealEdgeType)>,
 
   /// Asset -> Bundle mapping.
-  pub asset_to_bundle: HashMap<String, IdealBundleId>,
+  pub asset_to_bundle: HashMap<AssetKey, IdealBundleId>,
+
+  /// Mapping between `AssetKey` and the original asset id string.
+  pub assets: AssetInterner,
 
   /// Optional debug information captured during the build.
   pub debug: Option<IdealGraphDebug>,
 }
 
 impl IdealGraph {
+  /// Test helper: check whether a bundle contains an asset by its string id.
+  pub fn bundle_has_asset(&self, bundle_id: &IdealBundleId, asset_id: &str) -> bool {
+    let Some(bundle) = self.bundles.get(bundle_id) else {
+      return false;
+    };
+    let Some(key) = self.assets.key_for(asset_id) else {
+      return false;
+    };
+    bundle.assets.contains(key.0 as usize)
+  }
+
   pub fn create_bundle(&mut self, bundle: IdealBundle) -> anyhow::Result<()> {
     anyhow::ensure!(
       !self.bundles.contains_key(&bundle.id),
@@ -243,9 +321,10 @@ impl IdealGraph {
   /// and remove its assets from `asset_to_bundle`.
   pub fn remove_bundle(&mut self, bundle_id: &IdealBundleId) {
     if let Some(bundle) = self.bundles.remove(bundle_id) {
-      for asset_id in &bundle.assets {
-        if self.asset_to_bundle.get(asset_id) == Some(bundle_id) {
-          self.asset_to_bundle.remove(asset_id);
+      for asset_idx in bundle.assets.ones() {
+        let key = AssetKey(asset_idx as u32);
+        if self.asset_to_bundle.get(&key) == Some(bundle_id) {
+          self.asset_to_bundle.remove(&key);
         }
       }
     }
@@ -282,15 +361,15 @@ impl IdealGraph {
 
   pub fn move_asset_to_bundle(
     &mut self,
-    asset_id: &str,
+    asset: AssetKey,
     to: &IdealBundleId,
   ) -> anyhow::Result<Option<IdealBundleId>> {
-    let prev = self.asset_to_bundle.get(asset_id).cloned();
+    let prev = self.asset_to_bundle.get(&asset).cloned();
 
     if let Some(prev_bundle) = &prev
       && let Some(b) = self.bundles.get_mut(prev_bundle)
     {
-      b.assets.remove(asset_id);
+      b.assets.set(asset.0 as usize, false);
     }
 
     let to_bundle = self
@@ -298,10 +377,8 @@ impl IdealGraph {
       .get_mut(to)
       .ok_or_else(|| anyhow::anyhow!("missing bundle: {}", to.0))?;
 
-    to_bundle.assets.insert(asset_id.to_string());
-    self
-      .asset_to_bundle
-      .insert(asset_id.to_string(), to.clone());
+    to_bundle.assets.insert(asset.0 as usize);
+    self.asset_to_bundle.insert(asset, to.clone());
 
     Ok(prev)
   }
