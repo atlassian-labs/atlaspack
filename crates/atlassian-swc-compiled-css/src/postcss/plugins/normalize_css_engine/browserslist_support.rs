@@ -66,36 +66,17 @@ pub(crate) fn feature_supported_for_config(
   config_path: Option<&Path>,
   env: Option<&str>,
 ) -> (bool, Vec<String>) {
-  let trace = std::env::var("COMPILED_CSS_TRACE").is_ok();
   let browserslist = cached_browserslist_entries(config_path, env);
-
-  if trace {
-    eprintln!(
-      "[browserslist] feature_supported_for_config path={:?} env={:?} had_error={} entry_count={}",
-      config_path,
-      env,
-      browserslist.had_error,
-      browserslist.entries.len()
-    );
-  }
 
   if browserslist.had_error {
     // Match caniuse-api: if browserslist resolution fails, treat as unsupported.
-    if trace {
-      eprintln!("[browserslist] returning initial_support=false (had_error)");
-    }
     return (false, vec!["<browserslist-error>".to_string()]);
   }
 
   let caniuse_feature = match feature_name.feature(&EmbeddedCanIUseDatabase) {
     Some(feature) => feature,
     // If the dataset is missing, do not block builds.
-    None => {
-      if trace {
-        eprintln!("[browserslist] caniuse feature missing, returning initial_support=false");
-      }
-      return (false, vec!["<caniuse-feature-missing>".to_string()]);
-    }
+    None => return (false, vec!["<caniuse-feature-missing>".to_string()]),
   };
 
   let mut seen: Vec<String> = Vec::new();
@@ -103,9 +84,6 @@ pub(crate) fn feature_supported_for_config(
   let mut unsupported: Vec<String> = Vec::new();
 
   if browserslist.entries.is_empty() {
-    if trace {
-      eprintln!("[browserslist] no resolved browsers, returning initial_support=false");
-    }
     return (false, vec![]);
   }
 
@@ -128,29 +106,6 @@ pub(crate) fn feature_supported_for_config(
     }
   }
 
-  if trace {
-    eprintln!(
-      "[browserslist] css-initial-value all_supported={} unsupported_count={}",
-      all_supported,
-      unsupported.len()
-    );
-    if !unsupported.is_empty() {
-      eprintln!(
-        "[browserslist] unsupported browsers (first 20): {:?}",
-        &unsupported[..unsupported.len().min(20)]
-      );
-    }
-    if seen.len() <= 30 {
-      eprintln!("[browserslist] resolved browsers: {:?}", seen);
-    } else {
-      eprintln!(
-        "[browserslist] resolved browsers (first 15): {:?} ... (total {})",
-        &seen[..15],
-        seen.len()
-      );
-    }
-  }
-
   (all_supported, seen)
 }
 
@@ -166,38 +121,19 @@ fn load_browserslist_entries(
   config_path: Option<&Path>,
   env: Option<&str>,
 ) -> BrowserslistCacheEntry {
-  let trace = std::env::var("COMPILED_CSS_TRACE").is_ok();
   let mut opts = Opts::default();
   opts.path = config_path.map(|path: &Path| path.to_string_lossy().into_owned());
   opts.env = env.map(String::from);
 
   let result = match execute(&opts) {
-    Ok(entries) => {
-      if trace {
-        eprintln!(
-          "[browserslist] load_browserslist_entries path={:?} env={:?} ok count={}",
-          config_path,
-          env,
-          entries.len()
-        );
-      }
-      BrowserslistCacheEntry {
-        entries,
-        had_error: false,
-      }
-    }
-    Err(e) => {
-      if trace {
-        eprintln!(
-          "[browserslist] load_browserslist_entries path={:?} env={:?} error={:?}",
-          config_path, env, e
-        );
-      }
-      BrowserslistCacheEntry {
-        entries: Vec::new(),
-        had_error: true,
-      }
-    }
+    Ok(entries) => BrowserslistCacheEntry {
+      entries,
+      had_error: false,
+    },
+    Err(_) => BrowserslistCacheEntry {
+      entries: Vec::new(),
+      had_error: true,
+    },
   };
   result
 }

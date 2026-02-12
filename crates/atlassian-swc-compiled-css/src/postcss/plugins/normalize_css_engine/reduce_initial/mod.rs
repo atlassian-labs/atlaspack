@@ -422,12 +422,6 @@ pub fn transform_value_for_hash(prop: &str, value: &str, initial_support: bool) 
   if initial_support {
     if let Some(&ti) = TO_INITIAL.get(prop_l.as_str()) {
       if value_l == ti || (ti == "transparent" && is_transparent_like(&value_l)) {
-        if std::env::var("COMPILED_CSS_TRACE").is_ok() {
-          eprintln!(
-            "[reduce_initial] transform_value_for_hash prop={:?} value={:?} -> initial (TO_INITIAL match)",
-            prop, value
-          );
-        }
         return "initial".to_string();
       }
     }

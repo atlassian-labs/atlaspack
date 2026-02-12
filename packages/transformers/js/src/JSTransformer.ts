@@ -384,10 +384,6 @@ export async function loadCompiledCssInJsConfig(
     },
   );
 
-  // Allow disabling extract via environment variable for testing
-  const extractDisabled =
-    process.env.ATLASPACK_COMPILED_EXTRACT_DISABLED === 'true';
-
   const resolvedBrowserslistEnv =
     conf?.contents.browserslistEnv ??
     process.env.BROWSERSLIST_ENV ??
@@ -400,10 +396,7 @@ export async function loadCompiledCssInJsConfig(
       ...DEFAULT_IMPORT_SOURCES,
       ...(conf?.contents.importSources ?? []),
     ],
-    extract:
-      conf?.contents.extract &&
-      options.mode !== 'development' &&
-      !extractDisabled,
+    extract: conf?.contents.extract && options.mode !== 'development',
     // Use explicit env or process env (BROWSERSLIST_ENV/NODE_ENV). Default to "production"
     // to match browserslist/caniuse defaults and the legacy Babel plugin behavior.
     browserslistEnv: resolvedBrowserslistEnv,

@@ -1648,12 +1648,6 @@ fn atomicify_rules_plugin(
   } else {
     super::plugins::normalize_css_engine::colormin::add_plugin_defaults()
   };
-  if std::env::var("COMPILED_CSS_TRACE").is_ok() {
-    eprintln!(
-      "[postcss] initial_support={} (browserslist_config_path={:?} env={:?})",
-      initial_support, options.browserslist_config_path, options.browserslist_env
-    );
-  }
 
   #[derive(Clone)]
   struct Ctx<'a> {
