@@ -38,17 +38,27 @@ jobs:
   #             octokit: github
   #           });
 
-  # Build and store native packages (Linux)
-  build_native_linux:
-    name: 🐥 Build Linux AMD64
-    runs-on: ubuntu-22.04
+  # Build and store native packages
+  build_native:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: 🐥 Build Linux AMD64
+            os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - name: 🍎 Build MacOS ARM64
+            os: macos-15
+            target: aarch64-apple-darwin
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust
         uses: ./.github/actions/rust-toolchain
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: 'x86_64-unknown-linux-gnu'
+          shared-key: '${{ matrix.target }}'
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.9
@@ -57,11 +67,12 @@ jobs:
         run: ${SCCACHE_PATH} --show-stats
       - uses: ./.github/actions/setup-node
       - name: Free up space
+        if: runner.os == 'Linux'
         run: |
           sudo rm -rf /usr/local/lib/android || true
           sudo apt-get remove -y '^dotnet-.*' '^llvm-.*' 'php.*'
       - env:
-          RUSTUP_TARGET: x86_64-unknown-linux-gnu
+          RUSTUP_TARGET: ${{ matrix.target }}
           CARGO_PROFILE: release
           SCCACHE_GHA_ENABLED: 'true'
           RUSTC_WRAPPER: 'sccache'
@@ -70,39 +81,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: packages-x86_64-unknown-linux-gnu
-          path: packages/**/*
-          retention-days: 1
-
-  # Build and store native packages (macOS)
-  build_native_macos:
-    name: 🍎 Build MacOS ARM64
-    runs-on: macos-15
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust
-        uses: ./.github/actions/rust-toolchain
-      - uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: 'aarch64-apple-darwin'
-          save-if: ${{ github.ref == 'refs/heads/main' }}
-      - name: Run sccache-cache
-        uses: mozilla-actions/sccache-action@v0.0.9
-      - name: Run sccache stat for check
-        shell: bash
-        run: ${SCCACHE_PATH} --show-stats
-      - uses: ./.github/actions/setup-node
-      - env:
-          RUSTUP_TARGET: aarch64-apple-darwin
-          CARGO_PROFILE: release
-          SCCACHE_GHA_ENABLED: 'true'
-          RUSTC_WRAPPER: 'sccache'
-        run: yarn build-native
-      - run: yarn build:ci
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: packages-aarch64-apple-darwin
+          name: packages-${{ matrix.target }}
           path: packages/**/*
           retention-days: 1
 
@@ -198,7 +177,7 @@ jobs:
   integration_tests_linux:
     name: Integration tests (ubuntu-22.04, Node 24, Slice ${{ matrix.slice_num }}/${{ matrix.slice_total }})
     needs:
-      - build_native_linux
+      - build_native
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -247,7 +226,7 @@ jobs:
   integration_tests_macos:
     name: Integration tests (macos-15, Node 24, Slice ${{ matrix.slice_num }}/${{ matrix.slice_total }})
     needs:
-      - build_native_macos
+      - build_native
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -294,7 +273,7 @@ jobs:
   integration_tests_v3_linux:
     name: Integration tests (v3 ubuntu-22.04, Node 24, Slice ${{ matrix.slice_num }}/${{ matrix.slice_total }})
     needs:
-      - build_native_linux
+      - build_native
     timeout-minutes: 25
     strategy:
       # These tend to be quite flakey, so one failed instance shouldn't stop
@@ -381,7 +360,7 @@ jobs:
   integration_tests_v3_macos:
     name: Integration tests (v3 macos-15, Node 24, Slice ${{ matrix.slice_num }}/${{ matrix.slice_total }})
     needs:
-      - build_native_macos
+      - build_native
     timeout-minutes: 25
     strategy:
       fail-fast: false
