@@ -54,10 +54,10 @@ use atlaspack_core::{
 };
 use petgraph::{
   Direction,
-  algo::{dominators, kosaraju_scc},
+  algo::kosaraju_scc,
   graph::NodeIndex,
   stable_graph::StableDiGraph,
-  visit::{EdgeRef, IntoEdgeReferences},
+  visit::{EdgeRef, IntoEdgeReferences, NodeIndexable},
 };
 use tracing::{debug, instrument};
 
@@ -83,8 +83,6 @@ pub struct IdealGraphBuilder {
   sync_graph: StableDiGraph<SyncNode, ()>,
   virtual_root: Option<NodeIndex>,
   asset_to_sync_node: HashMap<super::types::AssetKey, NodeIndex>,
-
-  dominators: Option<dominators::Dominators<NodeIndex>>,
 
   // Entry roots.
   entry_roots: HashSet<super::types::AssetKey>,
@@ -148,28 +146,25 @@ impl IdealGraphBuilder {
     // Phase 1: identify bundle boundaries.
     self.identify_bundle_boundaries(asset_graph)?;
 
-    // Phase 2: build sync-only graph used for dominators.
+    // Phase 2: build sync-only graph.
     self.build_sync_graph(asset_graph, &entry_assets)?;
 
-    // Phase 3: compute dominators.
-    self.compute_dominators()?;
-
-    // Phase 4: create bundle root shells (no non-root asset placement yet).
+    // Phase 3: create bundle root shells (no non-root asset placement yet).
     let mut ideal = self.create_bundle_roots(asset_graph, &entry_assets)?;
 
-    // Phase 5: bundle dependency graph (edge types).
+    // Phase 4: bundle dependency graph (edge types).
     self.build_bundle_edges(asset_graph, &mut ideal)?;
 
-    // Phase 6: derive reachability from dominator tree + sync graph.
-    let reachability = self.compute_reachability_from_dominators()?;
+    // Phase 5: derive reachability via topological bitset propagation.
+    let reachability = self.compute_reachability_topological()?;
 
-    // Phase 7: place single-root assets into their dominating bundle.
+    // Phase 6: place single-root assets into their dominating bundle.
     self.place_single_root_assets(&reachability, &mut ideal)?;
 
-    // Phase 8a: availability propagation (now includes placed single-root assets).
+    // Phase 7: availability propagation (now includes placed single-root assets).
     self.compute_availability(&mut ideal)?;
 
-    // Phase 8b: extract shared bundles for multi-root assets.
+    // Phase 8: extract shared bundles for multi-root assets.
     self.create_shared_bundles(&reachability, &mut ideal)?;
 
     // Phase 9: availability propagation again after shared bundle insertion.
@@ -402,22 +397,7 @@ impl IdealGraphBuilder {
   }
 
   // ----------------------------
-  // Phase 3: Dominators
-  // ----------------------------
-
-  #[instrument(level = "debug", skip_all)]
-  fn compute_dominators(&mut self) -> anyhow::Result<()> {
-    let root = self
-      .virtual_root
-      .context("sync graph virtual root not initialized")?;
-
-    self.dominators = Some(dominators::simple_fast(&self.sync_graph, root));
-    debug!("ideal graph: computed dominators");
-    Ok(())
-  }
-
-  // ----------------------------
-  // Phase 4: Placement
+  // Phase 3: Placement
   // ----------------------------
 
   /// Phase 4: Create bundle root shells only.
@@ -917,144 +897,184 @@ impl IdealGraphBuilder {
   }
 
   // ----------------------------
-  // Phase 7: Dominator-based reachability
+  // Phase 6: Reachability
   // ----------------------------
 
-  /// Derive reachability from the dominator tree structure.
-  ///
-  /// For each non-root asset:
-  /// - Walk up the dominator tree. If we hit a bundle root before reaching virtual_root,
-  ///   that asset is dominated by (and reachable from) exactly that one root.
-  /// - If idom chain reaches virtual_root, the asset is reachable from multiple roots.
-  ///   We find those roots via a reverse walk on the sync graph.
+  /// Derive reachability by propagating bundle-root bitsets through the sync graph in
+  /// topological order.
   ///
   /// Returns a map of asset -> set of bundle roots that can reach it.
+  ///
+  /// If the sync graph is cyclic, this will return an error and the caller may fall back to
+  /// another reachability strategy.
   #[instrument(level = "debug", skip_all)]
-  fn compute_reachability_from_dominators(
-    &mut self,
+  fn compute_reachability_topological(
+    &self,
   ) -> anyhow::Result<HashMap<AssetKey, HashSet<AssetKey>>> {
-    let doms = self
-      .dominators
-      .as_ref()
-      .context("dominators not computed")?;
-
     let virtual_root = self
       .virtual_root
       .context("sync graph virtual root not initialized")?;
 
-    // Build dominator tree child lists for efficient subtree traversal.
-    // parent_node -> [child_nodes]
-    let mut dom_children: HashMap<NodeIndex, Vec<NodeIndex>> = HashMap::new();
-    for (&asset_key, &node_idx) in &self.asset_to_sync_node {
-      // Skip bundle roots -- they are placed in Phase 4 already.
-      if self.bundle_roots.contains(&asset_key) {
-        continue;
-      }
-      if let Some(idom) = doms.immediate_dominator(node_idx) {
-        dom_children.entry(idom).or_default().push(node_idx);
-      }
+    // Deterministic root ordering.
+    let mut roots: Vec<AssetKey> = self.bundle_roots.iter().copied().collect();
+    roots.sort();
+
+    let num_roots = roots.len();
+    if num_roots == 0 {
+      return Ok(HashMap::new());
     }
 
-    // For each bundle root, collect the assets in its dominator subtree.
-    // These are assets dominated by that root and reachable only from it.
-    let mut asset_roots: HashMap<AssetKey, HashSet<AssetKey>> = HashMap::new();
+    // StableGraph indices are not dense; use `node_bound` and index via `NodeIndex::index()`.
+    let bound = self.sync_graph.node_bound();
+    let mut reach_bits: Vec<FixedBitSet> = vec![FixedBitSet::with_capacity(num_roots); bound];
 
-    let roots: Vec<AssetKey> = self.bundle_roots.iter().copied().collect();
-    for root_key in &roots {
-      let Some(&root_idx) = self.asset_to_sync_node.get(root_key) else {
+    // Seed root bits.
+    for (i, root_key) in roots.iter().copied().enumerate() {
+      let Some(&root_idx) = self.asset_to_sync_node.get(&root_key) else {
         continue;
       };
-
-      // DFS through dominator subtree of this root.
-      let mut stack = vec![root_idx];
-      while let Some(node) = stack.pop() {
-        if let Some(children) = dom_children.get(&node) {
-          for &child in children {
-            if let Some(SyncNode::Asset(child_key)) = self.sync_graph.node_weight(child).copied() {
-              asset_roots.entry(child_key).or_default().insert(*root_key);
-            }
-            stack.push(child);
-          }
-        }
-      }
+      reach_bits[root_idx.index()].insert(i);
     }
 
-    for &root_key in &roots {
-      self.decision(
-        "reachability",
-        super::types::DecisionKind::ReachabilityComputed {
-          bundle_root: root_key,
-          reachable_assets_len: asset_roots
-            .values()
-            .filter(|r| r.contains(&root_key))
-            .count(),
-        },
-      );
-    }
-
-    // For assets whose idom is virtual_root (multi-root), the dominator subtree
-    // traversal above won't find them under any single root. Their idom children
-    // sit directly under virtual_root. We need to find which roots can reach them
-    // via a reverse walk on the sync graph.
-    if let Some(vr_children) = dom_children.get(&virtual_root) {
-      // Collect all multi-root assets: virtual_root's subtree in the dominator tree.
-      let mut multi_root_assets: Vec<AssetKey> = Vec::new();
-      let mut stack: Vec<NodeIndex> = vr_children.clone();
-      while let Some(node) = stack.pop() {
-        if let Some(SyncNode::Asset(key)) = self.sync_graph.node_weight(node).copied()
-          && !self.bundle_roots.contains(&key)
-        {
-          multi_root_assets.push(key);
-        }
-        if let Some(children) = dom_children.get(&node) {
-          stack.extend(children);
-        }
-      }
-
-      // For each multi-root asset, reverse-walk the sync graph to find which bundle
-      // roots can reach it.
-      for asset_key in multi_root_assets {
-        let Some(&asset_idx) = self.asset_to_sync_node.get(&asset_key) else {
+    if let Ok(order) = petgraph::algo::toposort(&self.sync_graph, None) {
+      // ----------------------------
+      // Fast path: DAG topo propagation
+      // ----------------------------
+      for node in order {
+        if node == virtual_root {
           continue;
-        };
-
-        let mut reaching_roots: HashSet<AssetKey> = HashSet::new();
-        let mut visited: HashSet<NodeIndex> = HashSet::new();
-        let mut rev_stack: Vec<NodeIndex> = vec![asset_idx];
-
-        while let Some(n) = rev_stack.pop() {
-          if !visited.insert(n) {
-            continue;
-          }
-          if let Some(SyncNode::Asset(k)) = self.sync_graph.node_weight(n).copied()
-            && self.bundle_roots.contains(&k)
-          {
-            reaching_roots.insert(k);
-            continue; // Don't walk past bundle roots.
-          }
-          // Walk predecessors (incoming edges in sync graph).
-          for pred in self.sync_graph.neighbors_directed(n, Direction::Incoming) {
-            // Skip virtual root.
-            if pred == virtual_root {
-              continue;
-            }
-            rev_stack.push(pred);
-          }
         }
 
-        asset_roots.insert(asset_key, reaching_roots);
+        let bits = reach_bits[node.index()].clone();
+        if bits.is_empty() {
+          continue;
+        }
+
+        for succ in self
+          .sync_graph
+          .neighbors_directed(node, Direction::Outgoing)
+        {
+          reach_bits[succ.index()].union_with(&bits);
+        }
       }
+    } else {
+      // ----------------------------
+      // Cycle-handling path: SCC condensation
+      // ----------------------------
+      debug!("ideal graph: sync graph has cycles; computing reachability via SCC condensation");
+
+      let sccs: Vec<Vec<NodeIndex>> = kosaraju_scc(&self.sync_graph);
+
+      let mut scc_of: HashMap<NodeIndex, usize> = HashMap::new();
+      for (i, scc) in sccs.iter().enumerate() {
+        for &n in scc {
+          scc_of.insert(n, i);
+        }
+      }
+
+      // Build SCC DAG.
+      let mut scc_graph: StableDiGraph<usize, ()> = StableDiGraph::new();
+      let scc_nodes: Vec<NodeIndex> = (0..sccs.len()).map(|i| scc_graph.add_node(i)).collect();
+
+      for e in self.sync_graph.edge_references() {
+        let a = e.source();
+        let b = e.target();
+        let sa = scc_of[&a];
+        let sb = scc_of[&b];
+        if sa != sb {
+          scc_graph.add_edge(scc_nodes[sa], scc_nodes[sb], ());
+        }
+      }
+
+      let scc_order = petgraph::algo::toposort(&scc_graph, None).map_err(|cycle| {
+        anyhow::anyhow!(
+          "SCC condensation graph unexpectedly cyclic (cycle at {:?})",
+          cycle.node_id()
+        )
+      })?;
+
+      // Aggregate initial bits per SCC (union of member seeds).
+      let mut scc_bits: Vec<FixedBitSet> = vec![FixedBitSet::with_capacity(num_roots); sccs.len()];
+      for (scc_idx, nodes) in sccs.iter().enumerate() {
+        let mut agg = FixedBitSet::with_capacity(num_roots);
+        for &n in nodes {
+          agg.union_with(&reach_bits[n.index()]);
+        }
+        scc_bits[scc_idx] = agg;
+      }
+
+      // Propagate across SCC DAG.
+      for scc_node in scc_order {
+        let scc_idx = *scc_graph
+          .node_weight(scc_node)
+          .context("SCC node missing")?;
+
+        let bits = scc_bits[scc_idx].clone();
+        if bits.is_empty() {
+          continue;
+        }
+
+        for succ in scc_graph.neighbors_directed(scc_node, Direction::Outgoing) {
+          let succ_idx = *scc_graph
+            .node_weight(succ)
+            .context("SCC successor missing")?;
+          scc_bits[succ_idx].union_with(&bits);
+        }
+      }
+
+      // Assign SCC bits back to nodes.
+      for (scc_idx, nodes) in sccs.iter().enumerate() {
+        for &n in nodes {
+          reach_bits[n.index()] = scc_bits[scc_idx].clone();
+        }
+      }
+    }
+
+    // Convert to AssetKey -> HashSet<AssetKey>.
+    let mut asset_roots: HashMap<AssetKey, HashSet<AssetKey>> = HashMap::new();
+
+    for (&asset_key, &idx) in &self.asset_to_sync_node {
+      if idx == virtual_root {
+        continue;
+      }
+
+      let bs = &reach_bits[idx.index()];
+      if bs.is_empty() {
+        continue;
+      }
+
+      let mut reaching: HashSet<AssetKey> = HashSet::new();
+      for bit in bs.ones() {
+        if let Some(root) = roots.get(bit).copied() {
+          reaching.insert(root);
+        }
+      }
+
+      if reaching.is_empty() {
+        continue;
+      }
+
+      // Skip bundle roots unless they are reachable from other bundle roots.
+      if self.bundle_roots.contains(&asset_key)
+        && reaching.len() == 1
+        && reaching.contains(&asset_key)
+      {
+        continue;
+      }
+
+      asset_roots.insert(asset_key, reaching);
     }
 
     debug!(
       assets_with_reachability = asset_roots.len(),
-      "ideal graph: computed dominator-based reachability"
+      "ideal graph: computed topo-based reachability"
     );
+
     Ok(asset_roots)
   }
 
   // ----------------------------
-  // Phase 7: Single-root asset placement
+  // Phase 6: Single-root asset placement
   // ----------------------------
 
   /// Place assets that are reachable from exactly one bundle root into that root's bundle.

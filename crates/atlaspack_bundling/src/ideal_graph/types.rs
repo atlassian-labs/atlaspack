@@ -68,11 +68,7 @@ pub enum DecisionKind {
     ancestor_assets_len: usize,
   },
 
-  // Phase 7+ (shared bundles)
-  ReachabilityComputed {
-    bundle_root: AssetKey,
-    reachable_assets_len: usize,
-  },
+  // Phase 8+ (shared bundles)
   SharedBundleCreated {
     shared_bundle_root: AssetKey,
     source_bundle_roots: Vec<AssetKey>,
