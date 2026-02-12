@@ -1130,9 +1130,13 @@ impl IdealGraphBuilder {
           .insert(asset_id_str.clone(), bundle_id);
       }
 
-      // If placed in entry-like bundles and no splittable roots remain (or multiple
-      // that need shared extraction), defer to Phase 8.
-      if !reaching_entry_like.is_empty() && splittable_roots.len() != 1 {
+      // If this asset is reachable from an entry root, do not place it into splittable
+      // (async) roots as well. Entry bundles are ancestors of async bundles, so the asset
+      // will be available via ancestor_assets (Phase 8a).
+      if reaching_entry_like
+        .iter()
+        .any(|r| self.entry_roots.contains(r))
+      {
         continue;
       }
 
@@ -1488,9 +1492,11 @@ impl IdealGraphBuilder {
         let in_ancestors = parent_bundle.ancestor_assets.contains(&root_id);
 
         let reachable_from_parent = if !in_bundle && !in_ancestors {
-          // Check if the parent bundle root can sync-reach this async root
-          // via the asset graph (the sync graph excludes boundary edges).
-          self.is_sync_reachable_in_asset_graph(asset_graph, &parent_id.0, &root_id)
+          // The JS algorithm considers an async bundle redundant if the async root is already
+          // available when each parent loads. Importantly, this availability can come from
+          // an *ancestor* bundle of the parent (e.g. the entry bundle), not necessarily from
+          // the parent bundle itself.
+          self.is_asset_available_from_bundle_or_ancestors(asset_graph, ideal, parent_id, &root_id)
         } else {
           true
         };
@@ -1557,6 +1563,43 @@ impl IdealGraphBuilder {
 
   /// Check if `from_id` can sync-reach `to_id` in the asset graph.
   /// Unlike the sync graph, this traversal crosses bundle boundaries.
+  fn is_asset_available_from_bundle_or_ancestors(
+    &self,
+    asset_graph: &AssetGraph,
+    ideal: &IdealGraph,
+    from_bundle_id: &IdealBundleId,
+    asset_id: &str,
+  ) -> bool {
+    let mut stack: Vec<IdealBundleId> = vec![from_bundle_id.clone()];
+    let mut visited: HashSet<IdealBundleId> = HashSet::new();
+
+    while let Some(id) = stack.pop() {
+      if !visited.insert(id.clone()) {
+        continue;
+      }
+
+      if let Some(bundle) = ideal.bundles.get(&id)
+        && (bundle.assets.contains(asset_id) || bundle.ancestor_assets.contains(asset_id))
+      {
+        return true;
+      }
+
+      // Also treat sync reachability in the asset graph from this bundle's root as availability.
+      if self.is_sync_reachable_in_asset_graph(asset_graph, &id.0, asset_id) {
+        return true;
+      }
+
+      // Walk to ancestor bundles (those that have edges to `id`).
+      for (from, to, _ty) in &ideal.bundle_edges {
+        if *to == id {
+          stack.push(from.clone());
+        }
+      }
+    }
+
+    false
+  }
+
   fn is_sync_reachable_in_asset_graph(
     &self,
     asset_graph: &AssetGraph,
