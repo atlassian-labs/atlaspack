@@ -67,7 +67,7 @@ jobs:
         run: ${SCCACHE_PATH} --show-stats
       - uses: ./.github/actions/setup-node
       - name: Free up space
-        if: runner.os == 'Linux'
+        if: ${{ runner.os == 'Linux' }}
         run: |
           sudo rm -rf /usr/local/lib/android || true
           sudo apt-get remove -y '^dotnet-.*' '^llvm-.*' 'php.*'
