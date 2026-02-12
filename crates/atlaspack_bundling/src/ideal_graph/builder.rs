@@ -37,7 +37,18 @@ impl AssetKeyInterner {
 
   /// Convert a FixedBitSet back to a HashSet<String>.
   fn strings_from_bitset(&self, bs: &FixedBitSet) -> HashSet<String> {
-    bs.ones().map(|i| self.ids[i].clone()).collect()
+    if bs.is_empty() {
+      return HashSet::new();
+    }
+
+    // Reserving avoids repeated rehashing when availability sets are large.
+    // `count_ones(..)` is a word-level popcount (faster than iterating all ones twice).
+    let count = bs.count_ones(..);
+    let mut out: HashSet<String> = HashSet::with_capacity(count);
+    for i in bs.ones() {
+      out.insert(self.ids[i].clone());
+    }
+    out
   }
 }
 
@@ -588,7 +599,75 @@ impl IdealGraphBuilder {
   /// for a bitset representation once the algorithm is stable.
   #[instrument(level = "debug", skip_all)]
   fn compute_availability(&mut self, ideal: &mut IdealGraph) -> anyhow::Result<()> {
-    // Build a petgraph representation for traversal.
+    // Default: root bundles start with empty availability.
+    for bundle in ideal.bundles.values_mut() {
+      bundle.ancestor_assets.clear();
+    }
+
+    // ----------------------------
+    // Fast path: DAG topo propagation (custom Kahn topo sort)
+    // ----------------------------
+    //
+    // Building a full petgraph and running toposort is expensive at large bundle counts,
+    // especially when the number of edges is small. We compute topo order directly from
+    // `ideal.bundle_edges` and only fall back to SCC condensation when a cycle is detected.
+    {
+      let bundle_ids: Vec<IdealBundleId> = ideal.bundles.keys().cloned().collect();
+      let mut indegree: HashMap<IdealBundleId, usize> = HashMap::new();
+      for id in &bundle_ids {
+        indegree.insert(id.clone(), 0);
+      }
+
+      let mut outgoing: HashMap<IdealBundleId, Vec<(IdealBundleId, IdealEdgeType)>> =
+        HashMap::new();
+      for (from, to, ty) in &ideal.bundle_edges {
+        outgoing
+          .entry(from.clone())
+          .or_default()
+          .push((to.clone(), *ty));
+        if let Some(d) = indegree.get_mut(to) {
+          *d += 1;
+        }
+      }
+
+      // Deterministic ordering: collect all zero-indegree nodes and sort by id.
+      let mut ready: Vec<IdealBundleId> = indegree
+        .iter()
+        .filter_map(|(id, d)| if *d == 0 { Some(id.clone()) } else { None })
+        .collect();
+      ready.sort_by(|a, b| a.0.cmp(&b.0));
+
+      let mut order: Vec<IdealBundleId> = Vec::with_capacity(indegree.len());
+      while let Some(n) = ready.pop() {
+        if let Some(children) = outgoing.get(&n) {
+          for (to, _) in children {
+            let d = indegree
+              .get_mut(to)
+              .expect("bundle missing from indegree map");
+            *d -= 1;
+            if *d == 0 {
+              ready.push(to.clone());
+            }
+          }
+          // Maintain deterministic ordering for newly-ready nodes.
+          ready.sort_by(|a, b| b.0.cmp(&a.0));
+        }
+        order.push(n);
+      }
+
+      if order.len() == indegree.len() {
+        self.compute_availability_dag_fast(ideal, &outgoing, &order)?;
+        debug!(
+          bundles = ideal.bundles.len(),
+          "ideal graph: computed availability (dag)"
+        );
+        return Ok(());
+      }
+    }
+
+    // ----------------------------
+    // Cycle-handling path: SCC condensation (petgraph)
+    // ----------------------------
     let mut g: StableDiGraph<IdealBundleId, IdealEdgeType> = StableDiGraph::new();
     let mut idx_by_bundle: HashMap<IdealBundleId, NodeIndex> = HashMap::new();
 
@@ -606,26 +685,6 @@ impl IdealGraphBuilder {
       g.add_edge(from_idx, to_idx, ty);
     }
 
-    // Default: root bundles start with empty availability.
-    for bundle in ideal.bundles.values_mut() {
-      bundle.ancestor_assets.clear();
-    }
-
-    // ----------------------------
-    // Fast path: DAG topo propagation
-    // ----------------------------
-    if let Ok(order) = petgraph::algo::toposort(&g, None) {
-      self.compute_availability_dag(&g, ideal, order)?;
-      debug!(
-        bundles = ideal.bundles.len(),
-        "ideal graph: computed availability (dag)"
-      );
-      return Ok(());
-    }
-
-    // ----------------------------
-    // Cycle-handling path: SCC condensation
-    // ----------------------------
     debug!("ideal graph: bundle graph has cycles; computing availability via SCC condensation");
     self.compute_availability_scc(&g, ideal)?;
     debug!(
@@ -653,6 +712,126 @@ impl IdealGraphBuilder {
     bs
   }
 
+  fn compute_availability_dag_fast(
+    &mut self,
+    ideal: &mut IdealGraph,
+    outgoing: &HashMap<IdealBundleId, Vec<(IdealBundleId, IdealEdgeType)>>,
+    order: &[IdealBundleId],
+  ) -> anyhow::Result<()> {
+    let capacity = self.assets.len();
+
+    // Computed ancestor-availability per bundle as a FixedBitSet.
+    let mut availability: HashMap<IdealBundleId, FixedBitSet> = HashMap::new();
+
+    // Bundle assets as bitsets, computed eagerly.
+    let mut bundle_assets_bs: HashMap<IdealBundleId, FixedBitSet> = HashMap::new();
+    for (id, bundle) in &ideal.bundles {
+      let mut bs = FixedBitSet::with_capacity(capacity);
+      for asset_id in &bundle.assets {
+        if let Some(key) = self.assets.key_for(asset_id) {
+          bs.insert(key.0 as usize);
+        }
+      }
+      bundle_assets_bs.insert(id.clone(), bs);
+    }
+
+    for parent_id in order {
+      let parent_is_isolated = ideal
+        .bundles
+        .get(parent_id)
+        .map(|b| {
+          b.behavior == Some(BundleBehavior::Isolated)
+            || b.behavior == Some(BundleBehavior::InlineIsolated)
+        })
+        .unwrap_or(false);
+
+      let parent_ancestor_bs = availability.get(parent_id);
+
+      // What this parent makes available to its children.
+      let mut parent_available = bundle_assets_bs
+        .get(parent_id)
+        .cloned()
+        .unwrap_or_else(|| FixedBitSet::with_capacity(capacity));
+      if !parent_is_isolated && let Some(bs) = parent_ancestor_bs {
+        parent_available.union_with(bs);
+      }
+
+      // Collect children and sort deterministically for parallel ordering.
+      let mut children: Vec<(IdealBundleId, IdealEdgeType)> =
+        outgoing.get(parent_id).cloned().unwrap_or_default();
+      children.sort_by(|(a, _), (b, _)| a.0.cmp(&b.0));
+
+      let mut parallel_availability = FixedBitSet::with_capacity(capacity);
+
+      for (child_id, edge_type) in children {
+        let child_is_isolated = ideal
+          .bundles
+          .get(&child_id)
+          .map(|b| {
+            b.behavior == Some(BundleBehavior::Isolated)
+              || b.behavior == Some(BundleBehavior::InlineIsolated)
+          })
+          .unwrap_or(false);
+
+        if child_is_isolated {
+          availability.insert(child_id, FixedBitSet::with_capacity(capacity));
+          continue;
+        }
+
+        let current_available = if edge_type == IdealEdgeType::Parallel {
+          let mut combined = parent_available.clone();
+          combined.union_with(&parallel_availability);
+          combined
+        } else {
+          parent_available.clone()
+        };
+
+        availability
+          .entry(child_id.clone())
+          .and_modify(|prev| prev.intersect_with(&current_available))
+          .or_insert(current_available);
+
+        if edge_type == IdealEdgeType::Parallel {
+          let child_assets = bundle_assets_bs
+            .get(&child_id)
+            .cloned()
+            .unwrap_or_else(|| FixedBitSet::with_capacity(capacity));
+          parallel_availability.union_with(&child_assets);
+        }
+      }
+    }
+
+    // Final pass: assign `ancestor_assets` once per bundle.
+    for bundle_id in order {
+      let bundle = ideal.bundles.get_mut(bundle_id).context("bundle missing")?;
+
+      if bundle.behavior == Some(BundleBehavior::Isolated)
+        || bundle.behavior == Some(BundleBehavior::InlineIsolated)
+      {
+        bundle.ancestor_assets = HashSet::new();
+      } else {
+        bundle.ancestor_assets = availability
+          .get(bundle_id)
+          .map(|bs| self.assets.strings_from_bitset(bs))
+          .unwrap_or_default();
+      }
+
+      self.decision(
+        "availability",
+        super::types::DecisionKind::AvailabilityComputed {
+          bundle_root: self
+            .assets
+            .key_for(&bundle_id.0)
+            .context("bundle root not interned")?,
+          ancestor_assets_len: bundle.ancestor_assets.len(),
+        },
+      );
+    }
+
+    Ok(())
+  }
+
+  #[allow(dead_code)]
   fn compute_availability_dag(
     &mut self,
     g: &StableDiGraph<IdealBundleId, IdealEdgeType>,
@@ -661,11 +840,36 @@ impl IdealGraphBuilder {
   ) -> anyhow::Result<()> {
     let capacity = self.assets.len();
 
+    // Bundle assets as bitsets, computed lazily.
+    // Most bundles in large graphs have no edges; eagerly converting every bundle's
+    // `HashSet<String>` to a bitset is very expensive.
+    let mut bundle_assets_bs: HashMap<IdealBundleId, FixedBitSet> = HashMap::new();
+    let mut get_bundle_assets_bs = |bundle_id: &IdealBundleId| -> FixedBitSet {
+      if let Some(bs) = bundle_assets_bs.get(bundle_id) {
+        return bs.clone();
+      }
+
+      let mut bs = FixedBitSet::with_capacity(capacity);
+      if let Some(bundle) = ideal.bundles.get(bundle_id) {
+        for asset_id in &bundle.assets {
+          if let Some(key) = self.assets.key_for(asset_id) {
+            bs.insert(key.0 as usize);
+          }
+        }
+      }
+
+      bundle_assets_bs.insert(bundle_id.clone(), bs.clone());
+      bs
+    };
+
     // Computed ancestor-availability per node as a FixedBitSet.
     //
-    // IMPORTANT: We must assign a bundle's `ancestor_assets` before using it as a parent,
-    // otherwise transitive availability (e.g. entry -> a -> c) is lost.
-    let mut node_availability: HashMap<NodeIndex, FixedBitSet> = HashMap::new();
+    // IMPORTANT: We cannot eagerly assign `ancestor_assets` (HashSet<String>) during
+    // propagation, because converting FixedBitSet -> strings for every node scans bits.
+    // Instead, we propagate bitsets, then assign `ancestor_assets` once at the end.
+    //
+    // Use a `Vec<Option<FixedBitSet>>` indexed by `NodeIndex::index()` to avoid hashing.
+    let mut node_availability: Vec<Option<FixedBitSet>> = vec![None; g.node_bound()];
 
     for parent_node in &order {
       let parent_id = g
@@ -673,45 +877,23 @@ impl IdealGraphBuilder {
         .cloned()
         .context("parent node missing")?;
 
-      let parent_availability_bs = node_availability
-        .get(parent_node)
-        .cloned()
-        .unwrap_or_else(|| FixedBitSet::with_capacity(capacity));
+      let parent_ancestor_bs = node_availability[parent_node.index()].as_ref();
 
-      // Assign availability to the parent bundle now (topo-order DP).
-      {
-        let availability_strings = self.assets.strings_from_bitset(&parent_availability_bs);
-        let parent_bundle = ideal
-          .bundles
-          .get_mut(&parent_id)
-          .context("bundle missing")?;
-
-        if parent_bundle.behavior == Some(BundleBehavior::Isolated)
-          || parent_bundle.behavior == Some(BundleBehavior::InlineIsolated)
-        {
-          parent_bundle.ancestor_assets = HashSet::new();
-        } else {
-          parent_bundle.ancestor_assets = availability_strings;
-        }
-
-        self.decision(
-          "availability",
-          super::types::DecisionKind::AvailabilityComputed {
-            bundle_root: self
-              .assets
-              .key_for(&parent_id.0)
-              .context("bundle root not interned")?,
-            ancestor_assets_len: parent_bundle.ancestor_assets.len(),
-          },
-        );
-      }
-
-      // What this parent makes available to its children (parent assets + its ancestor assets).
-      let parent_available = ideal
+      let parent_is_isolated = ideal
         .bundles
         .get(&parent_id)
-        .map(|b| self.bundle_available_bitset(b))
-        .unwrap_or_else(|| FixedBitSet::with_capacity(capacity));
+        .map(|b| {
+          b.behavior == Some(BundleBehavior::Isolated)
+            || b.behavior == Some(BundleBehavior::InlineIsolated)
+        })
+        .unwrap_or(false);
+
+      // What this parent makes available to its children.
+      // For isolated bundles, do not propagate ancestor availability.
+      let mut parent_available = get_bundle_assets_bs(&parent_id);
+      if !parent_is_isolated && let Some(parent_ancestor_bs) = parent_ancestor_bs {
+        parent_available.union_with(parent_ancestor_bs);
+      }
 
       // Collect children grouped by edge type, maintaining stable order.
       let mut children: Vec<(NodeIndex, IdealEdgeType)> = Vec::new();
@@ -750,7 +932,7 @@ impl IdealGraphBuilder {
           .unwrap_or(false);
 
         if child_is_isolated {
-          node_availability.insert(child_node, FixedBitSet::with_capacity(capacity));
+          node_availability[child_node.index()] = Some(FixedBitSet::with_capacity(capacity));
           continue;
         }
 
@@ -764,22 +946,57 @@ impl IdealGraphBuilder {
         };
 
         // Intersect with any previously computed availability (from other parents).
-        node_availability
-          .entry(child_node)
-          .and_modify(|prev| prev.intersect_with(&current_available))
-          .or_insert(current_available);
-
-        // If this child is parallel, add its assets to parallel availability.
-        if edge_type == IdealEdgeType::Parallel
-          && let Some(child_bundle) = ideal.bundles.get(&child_id)
-        {
-          for id in &child_bundle.assets {
-            if let Some(key) = self.assets.key_for(id) {
-              parallel_availability.insert(key.0 as usize);
-            }
+        match &mut node_availability[child_node.index()] {
+          Some(prev) => {
+            prev.intersect_with(&current_available);
+          }
+          None => {
+            node_availability[child_node.index()] = Some(current_available);
           }
         }
+
+        // If this child is parallel, add its assets to parallel availability.
+        if edge_type == IdealEdgeType::Parallel {
+          let child_assets = get_bundle_assets_bs(&child_id);
+          parallel_availability.union_with(&child_assets);
+        }
       }
+    }
+
+    // Final pass: assign `ancestor_assets` once per bundle.
+    for node in &order {
+      let bundle_id = g
+        .node_weight(*node)
+        .cloned()
+        .context("bundle node missing")?;
+
+      let ancestor_bs = node_availability[node.index()].as_ref();
+
+      let bundle = ideal
+        .bundles
+        .get_mut(&bundle_id)
+        .context("bundle missing")?;
+
+      if bundle.behavior == Some(BundleBehavior::Isolated)
+        || bundle.behavior == Some(BundleBehavior::InlineIsolated)
+      {
+        bundle.ancestor_assets = HashSet::new();
+      } else {
+        bundle.ancestor_assets = ancestor_bs
+          .map(|bs| self.assets.strings_from_bitset(bs))
+          .unwrap_or_default();
+      }
+
+      self.decision(
+        "availability",
+        super::types::DecisionKind::AvailabilityComputed {
+          bundle_root: self
+            .assets
+            .key_for(&bundle_id.0)
+            .context("bundle root not interned")?,
+          ancestor_assets_len: bundle.ancestor_assets.len(),
+        },
+      );
     }
 
     Ok(())
@@ -1217,21 +1434,84 @@ impl IdealGraphBuilder {
   ) -> anyhow::Result<()> {
     let mut eligible_roots_by_asset: HashMap<AssetKey, Vec<AssetKey>> = HashMap::new();
 
+    // Precompute bundle-edge lookups to avoid O(n^2) scans of `ideal.bundle_edges`.
+    //
+    // Map: from_bundle -> {to_bundle}
+    let mut edge_targets: HashMap<IdealBundleId, HashSet<IdealBundleId>> = HashMap::new();
+
+    // For parallel sibling checks.
+    // Map: parent_bundle -> {parallel_child_bundle}
+    let mut parallel_children: HashMap<IdealBundleId, HashSet<IdealBundleId>> = HashMap::new();
+    // Map: parallel_child_bundle -> [parent_bundle]
+    let mut parallel_parents_by_child: HashMap<IdealBundleId, Vec<IdealBundleId>> = HashMap::new();
+
+    for (from, to, ty) in &ideal.bundle_edges {
+      edge_targets
+        .entry(from.clone())
+        .or_default()
+        .insert(to.clone());
+
+      if *ty == IdealEdgeType::Parallel {
+        parallel_children
+          .entry(from.clone())
+          .or_default()
+          .insert(to.clone());
+        parallel_parents_by_child
+          .entry(to.clone())
+          .or_default()
+          .push(from.clone());
+      }
+    }
+
     for (&asset, roots) in reachability {
       if self.bundle_roots.contains(&asset) {
         continue;
       }
 
+      // If this asset is reachable from any entry root, Phase 7 already duplicated it into
+      // the entry bundle(s) and intentionally avoided placing it into splittable roots.
+      // In that case, no shared bundle extraction is needed.
+      if roots.iter().any(|r| self.entry_roots.contains(r)) {
+        continue;
+      }
+
       // Only process multi-root assets (those skipped in Phase 7).
-      let splittable_roots: Vec<AssetKey> = roots
+      // Avoid allocating a Vec unless the asset is truly multi-root.
+      let mut first: Option<AssetKey> = None;
+      let mut second: Option<AssetKey> = None;
+      let mut extra: Vec<AssetKey> = Vec::new();
+
+      for &r in roots {
+        if self.entry_like_roots.contains(&r) {
+          continue;
+        }
+
+        match (first, second) {
+          (None, _) => first = Some(r),
+          (Some(_), None) => second = Some(r),
+          (Some(_), Some(_)) => extra.push(r),
+        }
+      }
+
+      let (Some(first), Some(second)) = (first, second) else {
+        continue; // Not multi-root.
+      };
+
+      let mut splittable_roots: Vec<AssetKey> = Vec::with_capacity(2 + extra.len());
+      splittable_roots.push(first);
+      splittable_roots.push(second);
+      splittable_roots.extend(extra);
+
+      // Deterministic ordering is relied upon by the parallel sibling availability rule.
+      splittable_roots.sort();
+      splittable_roots.dedup();
+
+      // Precompute bundle ids for roots once per asset to avoid repeated String allocations.
+      let splittable_root_ids: Vec<(AssetKey, IdealBundleId)> = splittable_roots
         .iter()
         .copied()
-        .filter(|r| !self.entry_like_roots.contains(r))
+        .map(|root| (root, IdealBundleId(self.assets.id_for(root).to_string())))
         .collect();
-
-      if splittable_roots.len() <= 1 {
-        continue; // Already placed in Phase 7.
-      }
 
       let asset_id = self.assets.id_for(asset);
 
@@ -1241,10 +1521,8 @@ impl IdealGraphBuilder {
       // 2. Another root in the reachable set is an ancestor of R (the asset will
       //    be placed in that ancestor's bundle, making it available via bundle reuse).
       let mut eligible: Vec<AssetKey> = Vec::new();
-      for &root in &splittable_roots {
-        let root_id = self.assets.id_for(root);
-        let bundle_id = IdealBundleId(root_id.to_string());
-        let Some(bundle) = ideal.bundles.get(&bundle_id) else {
+      for (root, bundle_id) in &splittable_root_ids {
+        let Some(bundle) = ideal.bundles.get(bundle_id) else {
           continue;
         };
 
@@ -1257,17 +1535,17 @@ impl IdealGraphBuilder {
         // If there's a bundle edge path from this root to another reachable root
         // that dominates the asset, the asset will be in that other root's bundle.
         // This root can load it via the edge rather than needing a shared bundle.
-        let available_via_reuse = splittable_roots.iter().any(|&other_root| {
-          if other_root == root {
-            return false;
-          }
-          let other_bundle_id = IdealBundleId(self.assets.id_for(other_root).to_string());
-          // Check if there's any bundle edge from this root to the other root.
-          ideal
-            .bundle_edges
+        let available_via_reuse =
+          splittable_root_ids
             .iter()
-            .any(|(from, to, _)| *from == bundle_id && *to == other_bundle_id)
-        });
+            .any(|(other_root, other_bundle_id)| {
+              if other_root == root {
+                return false;
+              }
+              edge_targets
+                .get(bundle_id)
+                .is_some_and(|targets| targets.contains(other_bundle_id))
+            });
 
         if available_via_reuse {
           continue;
@@ -1277,27 +1555,33 @@ impl IdealGraphBuilder {
         // If this root has a parallel sibling that also reaches the asset and
         // comes before it in deterministic ordering, the asset will be placed
         // in the earlier sibling's bundle and available via parallel loading.
-        let available_via_parallel = splittable_roots.iter().any(|&other_root| {
-          if other_root >= root {
-            // Only earlier siblings (deterministic order) provide availability.
-            return false;
-          }
-          let other_bundle_id = IdealBundleId(self.assets.id_for(other_root).to_string());
-          // Check if both roots share a common parent via parallel edges.
-          ideal.bundle_edges.iter().any(|(parent, to, ty)| {
-            *to == other_bundle_id
-              && *ty == IdealEdgeType::Parallel
-              && ideal.bundle_edges.iter().any(|(p2, t2, ty2)| {
-                p2 == parent && *t2 == bundle_id && *ty2 == IdealEdgeType::Parallel
-              })
-          })
-        });
+        let available_via_parallel =
+          splittable_root_ids
+            .iter()
+            .any(|(other_root, other_bundle_id)| {
+              if *other_root >= *root {
+                // Only earlier siblings (deterministic order) provide availability.
+                return false;
+              }
+
+              // If both roots are parallel children of the same parent, then the earlier one
+              // provides availability.
+              parallel_parents_by_child
+                .get(other_bundle_id)
+                .into_iter()
+                .flatten()
+                .any(|parent| {
+                  parallel_children
+                    .get(parent)
+                    .is_some_and(|children| children.contains(bundle_id))
+                })
+            });
 
         if available_via_parallel {
           continue;
         }
 
-        eligible.push(root);
+        eligible.push(*root);
       }
 
       if eligible.len() > 1 {
