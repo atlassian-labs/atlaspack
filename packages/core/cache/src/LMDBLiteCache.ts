@@ -85,7 +85,7 @@ export function open(
       asyncWrites: true,
       mapSize:
         process.env.ATLASPACK_BUILD_ENV === 'test'
-          ? 1024 * 1024 * 1024
+          ? 128 * 1024 * 1024
           : 1024 * 1024 * 1024 * 15,
     }),
   );

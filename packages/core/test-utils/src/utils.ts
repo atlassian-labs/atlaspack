@@ -74,20 +74,27 @@ beforeEach(async () => {
   overlayFS = new OverlayFS(outputFS, inputFS);
 
   let cacheCreated = false;
-  for (let i = 0; i < 5; i++) {
+  const maxRetries = 10;
+  let lastError: Error | null = null;
+  for (let i = 0; i < maxRetries; i++) {
     try {
       cacheDir = tempy.directory();
       cache = new LMDBLiteCache(cacheDir);
       cacheCreated = true;
       break;
     } catch (err: any) {
+      lastError = err;
       if (
         err.message.includes('temporarily unavailable') ||
-        err.message.includes('close it to be able to open it again')
+        err.message.includes('close it to be able to open it again') ||
+        err.message.includes('Cannot allocate memory') ||
+        err.message.includes('mmap')
       ) {
+        // Exponential backoff: 100ms, 200ms, 400ms, 800ms, ...
+        const delay = Math.min(100 * Math.pow(2, i), 5000);
         await new Promise(
           (resolve: (result: Promise<undefined> | undefined) => void) =>
-            setTimeout(resolve, 100),
+            setTimeout(resolve, delay),
         );
         continue;
       }
@@ -96,8 +103,9 @@ beforeEach(async () => {
   }
   if (!cacheCreated) {
     throw new Error(
-      'Failed to create LMDBLiteCache after 5 retries. ' +
-        'This may indicate file descriptor exhaustion.',
+      `Failed to create LMDBLiteCache after ${maxRetries} retries. ` +
+        'This may indicate file descriptor or memory exhaustion. ' +
+        `Last error: ${lastError?.message ?? 'unknown'}`,
     );
   }
   cache.ensure();
