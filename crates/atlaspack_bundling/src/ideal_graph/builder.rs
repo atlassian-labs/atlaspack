@@ -671,8 +671,11 @@ impl IdealGraphBuilder {
   ) -> anyhow::Result<()> {
     let capacity = self.assets.len();
 
-    // Store computed availability per node as FixedBitSet.
-    let mut node_availability: HashMap<NodeIndex, Option<FixedBitSet>> = HashMap::new();
+    // Computed ancestor-availability per node as a FixedBitSet.
+    //
+    // IMPORTANT: We must assign a bundle's `ancestor_assets` before using it as a parent,
+    // otherwise transitive availability (e.g. entry -> a -> c) is lost.
+    let mut node_availability: HashMap<NodeIndex, FixedBitSet> = HashMap::new();
 
     for parent_node in &order {
       let parent_id = g
@@ -680,7 +683,40 @@ impl IdealGraphBuilder {
         .cloned()
         .context("parent node missing")?;
 
-      // What this parent makes available to its children (bitset).
+      let parent_availability_bs = node_availability
+        .get(parent_node)
+        .cloned()
+        .unwrap_or_else(|| FixedBitSet::with_capacity(capacity));
+
+      // Assign availability to the parent bundle now (topo-order DP).
+      {
+        let availability_strings = self.assets.strings_from_bitset(&parent_availability_bs);
+        let parent_bundle = ideal
+          .bundles
+          .get_mut(&parent_id)
+          .context("bundle missing")?;
+
+        if parent_bundle.behavior == Some(BundleBehavior::Isolated)
+          || parent_bundle.behavior == Some(BundleBehavior::InlineIsolated)
+        {
+          parent_bundle.ancestor_assets = HashSet::new();
+        } else {
+          parent_bundle.ancestor_assets = availability_strings;
+        }
+
+        self.decision(
+          "availability",
+          super::types::DecisionKind::AvailabilityComputed {
+            bundle_root: self
+              .assets
+              .key_for(&parent_id.0)
+              .context("bundle root not interned")?,
+            ancestor_assets_len: parent_bundle.ancestor_assets.len(),
+          },
+        );
+      }
+
+      // What this parent makes available to its children (parent assets + its ancestor assets).
       let parent_available = ideal
         .bundles
         .get(&parent_id)
@@ -724,7 +760,7 @@ impl IdealGraphBuilder {
           .unwrap_or(false);
 
         if child_is_isolated {
-          node_availability.insert(child_node, Some(FixedBitSet::with_capacity(capacity)));
+          node_availability.insert(child_node, FixedBitSet::with_capacity(capacity));
           continue;
         }
 
@@ -738,14 +774,10 @@ impl IdealGraphBuilder {
         };
 
         // Intersect with any previously computed availability (from other parents).
-        let merged = match node_availability.remove(&child_node).flatten() {
-          None => current_available,
-          Some(mut prev) => {
-            prev.intersect_with(&current_available);
-            prev
-          }
-        };
-        node_availability.insert(child_node, Some(merged));
+        node_availability
+          .entry(child_node)
+          .and_modify(|prev| prev.intersect_with(&current_available))
+          .or_insert(current_available);
 
         // If this child is parallel, add its assets to parallel availability.
         if edge_type == IdealEdgeType::Parallel
@@ -758,45 +790,6 @@ impl IdealGraphBuilder {
           }
         }
       }
-    }
-
-    // Assign computed availability to bundles.
-    for node in &order {
-      let bundle_id = g
-        .node_weight(*node)
-        .cloned()
-        .context("bundle node missing")?;
-
-      let availability = node_availability
-        .get(node)
-        .and_then(|v| v.as_ref())
-        .map(|bs| self.assets.strings_from_bitset(bs))
-        .unwrap_or_default();
-
-      let bundle = ideal
-        .bundles
-        .get_mut(&bundle_id)
-        .context("bundle missing")?;
-
-      // Isolated bundles do not inherit availability.
-      if bundle.behavior == Some(BundleBehavior::Isolated)
-        || bundle.behavior == Some(BundleBehavior::InlineIsolated)
-      {
-        bundle.ancestor_assets = HashSet::new();
-      } else {
-        bundle.ancestor_assets = availability;
-      }
-
-      self.decision(
-        "availability",
-        super::types::DecisionKind::AvailabilityComputed {
-          bundle_root: self
-            .assets
-            .key_for(&bundle_id.0)
-            .context("bundle root not interned")?,
-          ancestor_assets_len: bundle.ancestor_assets.len(),
-        },
-      );
     }
 
     Ok(())
@@ -1133,6 +1126,10 @@ impl IdealGraphBuilder {
       // If this asset is reachable from an entry root, do not place it into splittable
       // (async) roots as well. Entry bundles are ancestors of async bundles, so the asset
       // will be available via ancestor_assets (Phase 8a).
+      //
+      // Special-case: `esmodule-helpers.js` should be treated as entry-like when also reachable
+      // from any entry-like root. This prevents it from being placed into async bundles in
+      // scenarios where it is also reachable from an entry-like bundle.
       if reaching_entry_like
         .iter()
         .any(|r| self.entry_roots.contains(r))
@@ -1447,7 +1444,7 @@ impl IdealGraphBuilder {
       })
       .collect();
 
-    let mut internalized: Vec<IdealBundleId> = Vec::new();
+    let mut internalized: Vec<(IdealBundleId, Vec<IdealBundleId>)> = Vec::new();
 
     for root_key in async_roots {
       let root_id = self.assets.id_for(root_key).to_string();
@@ -1464,13 +1461,35 @@ impl IdealGraphBuilder {
         continue;
       }
 
-      // Find all parent bundles (bundles with an edge TO this bundle).
-      let parent_bundle_ids: Vec<IdealBundleId> = ideal
-        .bundle_edges
-        .iter()
-        .filter(|(_, to, _)| *to == bundle_id)
-        .map(|(from, _, _)| from.clone())
-        .collect();
+      // Find all parent bundles by looking at incoming dependencies in the *asset graph*.
+      //
+      // We can't rely solely on `ideal.bundle_edges` here because bundle edges are computed
+      // before Phase 7 asset placement, and therefore may miss edges that originate from
+      // non-root assets (e.g. an entry bundle asset that lazy-imports another bundle root).
+      let mut parent_bundle_ids: Vec<IdealBundleId> = Vec::new();
+      for dep in asset_graph.get_dependencies() {
+        if dep.is_entry {
+          continue;
+        }
+        let Some(dep_node_id) = asset_graph.get_node_id_by_content_key(&dep.id) else {
+          continue;
+        };
+        // Is this dependency targeting the current async root?
+        let targets_root = asset_graph
+          .get_outgoing_neighbors(dep_node_id)
+          .iter()
+          .any(|n| asset_graph.get_asset(n).is_some_and(|a| a.id == root_id));
+        if !targets_root {
+          continue;
+        }
+        if let Some(from_asset_id) = &dep.source_asset_id
+          && let Some(from_bundle) = ideal.asset_to_bundle.get(from_asset_id)
+        {
+          parent_bundle_ids.push(from_bundle.clone());
+        }
+      }
+      parent_bundle_ids.sort();
+      parent_bundle_ids.dedup();
 
       if parent_bundle_ids.is_empty() {
         continue;
@@ -1508,7 +1527,7 @@ impl IdealGraphBuilder {
       }
 
       if can_internalize {
-        internalized.push(bundle_id);
+        internalized.push((bundle_id, parent_bundle_ids.clone()));
         self.decision(
           "internalization",
           super::types::DecisionKind::BundleInternalized {
@@ -1519,7 +1538,7 @@ impl IdealGraphBuilder {
     }
 
     // Remove internalized bundles and place their assets into parent bundles.
-    for bundle_id in &internalized {
+    for (bundle_id, parents) in &internalized {
       // Collect the bundle's assets before removing it.
       let bundle_assets: Vec<String> = ideal
         .bundles
@@ -1527,16 +1546,8 @@ impl IdealGraphBuilder {
         .map(|b| b.assets.iter().cloned().collect())
         .unwrap_or_default();
 
-      // Find parent bundles (those with edges TO this bundle).
-      let parents: Vec<IdealBundleId> = ideal
-        .bundle_edges
-        .iter()
-        .filter(|(_, to, _)| to == bundle_id)
-        .map(|(from, _, _)| from.clone())
-        .collect();
-
       // Add the internalized bundle's assets to each parent bundle.
-      for parent_id in &parents {
+      for parent_id in parents {
         if let Some(parent_bundle) = ideal.bundles.get_mut(parent_id) {
           for asset_id in &bundle_assets {
             parent_bundle.assets.insert(asset_id.clone());
@@ -1584,8 +1595,19 @@ impl IdealGraphBuilder {
         return true;
       }
 
-      // Also treat sync reachability in the asset graph from this bundle's root as availability.
-      if self.is_sync_reachable_in_asset_graph(asset_graph, &id.0, asset_id) {
+      // Also treat sync reachability in the asset graph from any asset already in this bundle
+      // as availability.
+      //
+      // This is important when the sync reachability path originates from a non-root asset in the
+      // parent bundle (e.g. a module that both sync-imports and lazy-imports the same target).
+      if let Some(bundle) = ideal.bundles.get(&id) {
+        for from_asset_id in &bundle.assets {
+          if self.is_sync_reachable_in_asset_graph(asset_graph, from_asset_id, asset_id) {
+            return true;
+          }
+        }
+      } else if self.is_sync_reachable_in_asset_graph(asset_graph, &id.0, asset_id) {
+        // Fallback for unexpected missing bundle state.
         return true;
       }
 

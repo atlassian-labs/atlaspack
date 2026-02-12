@@ -200,9 +200,17 @@ impl Bundler for IdealGraphBundler {
 
         // Find the dependency that leads to this bundle root.
         // We look for dependencies targeting this asset from the asset graph.
+        //
+        // IMPORTANT: only non-sync dependencies should connect to the async bundle group.
+        // Sync deps to an async-root bundle should be represented via bundle-to-bundle
+        // `References` edges, not via dependency -> bundle_group edges.
         let mut found_dep = false;
         for dep in asset_graph.get_dependencies() {
           if dep.is_entry {
+            continue;
+          }
+
+          if dep.priority == atlaspack_core::types::Priority::Sync {
             continue;
           }
           let Some(dep_node_id) = asset_graph.get_node_id_by_content_key(&dep.id) else {
@@ -249,6 +257,10 @@ impl Bundler for IdealGraphBundler {
             // Add References edge from dep to asset for non-entry bundles too.
             for dep in asset_graph.get_dependencies() {
               if dep.is_entry {
+                continue;
+              }
+
+              if dep.priority == atlaspack_core::types::Priority::Sync {
                 continue;
               }
               let Some(dep_node_id) = asset_graph.get_node_id_by_content_key(&dep.id) else {
@@ -398,12 +410,34 @@ impl Bundler for IdealGraphBundler {
           continue;
         };
 
-        let native_edge_type = match edge_type {
-          types::IdealEdgeType::Sync => NativeBundleGraphEdgeType::References,
-          types::IdealEdgeType::Lazy
-          | types::IdealEdgeType::Parallel
-          | types::IdealEdgeType::Conditional => NativeBundleGraphEdgeType::Bundle,
-        };
+        if *edge_type == types::IdealEdgeType::Sync {
+          // Sync edge to an existing async bundle root.
+          //
+          // We must NOT add the target bundle into the source bundle group. Doing so makes the
+          // runtime think the source bundle group contains multiple bundles that may need to be
+          // loaded together, which injects loader runtimes (e.g. bundle-url.js) into the source.
+          //
+          // The target bundle already belongs to its own async bundle group and will be loaded by
+          // whoever triggers that async boundary.
+          if let Some(&to_bundle_node_id) = materialized_bundle_nodes.get(&to_id.0)
+            && seen.insert((
+              from_bundle_node_id,
+              to_bundle_node_id,
+              NativeBundleGraphEdgeType::References,
+            ))
+          {
+            bundle_graph.add_edge(
+              &from_bundle_node_id,
+              &to_bundle_node_id,
+              NativeBundleGraphEdgeType::References,
+            );
+          }
+
+          continue;
+        }
+
+        // Non-sync edges: connect to the child's bundle group (if it exists).
+        let native_edge_type = NativeBundleGraphEdgeType::Bundle;
 
         if seen.insert((from_bundle_node_id, to_bg_node_id, native_edge_type)) {
           bundle_graph.add_edge(&from_bundle_node_id, &to_bg_node_id, native_edge_type);
@@ -515,10 +549,17 @@ impl Bundler for IdealGraphBundler {
           }
         }
       } else {
-        // Non-entry bundles (async, shared): use the ideal graph's asset set directly.
-        // This respects zero-duplication placement - assets available from ancestors
-        // won't be duplicated into child bundles.
+        // Non-entry bundles (async, shared): use the ideal graph's asset set directly,
+        // but do not duplicate assets that are already available from ancestor bundles.
+        //
+        // `IdealBundle.assets` may still include assets that also appear in ancestor bundles
+        // (e.g. due to conservative placement). `ancestor_assets` is the canonical source of
+        // availability, so we skip any assets that are already available.
         for asset_id in &ideal_bundle.assets {
+          if ideal_bundle.ancestor_assets.contains(asset_id) {
+            continue;
+          }
+
           if let Some(&asset_node_id) = bundle_graph.get_node_id_by_content_key(asset_id) {
             bundle_graph.add_edge(
               &bundle_node_id,
@@ -563,7 +604,7 @@ fn materialize_ideal_bundle(
   ideal_bundle_id: &types::IdealBundleId,
   ideal_bundle: &types::IdealBundle,
   target: &atlaspack_core::types::Target,
-  entry_dep: &atlaspack_core::types::Dependency,
+  _entry_dep: &atlaspack_core::types::Dependency,
   materialized: &mut std::collections::HashMap<String, usize>,
 ) -> anyhow::Result<usize> {
   use atlaspack_core::hash::hash_string;
@@ -592,11 +633,15 @@ fn materialize_ideal_bundle(
     env: (*target.env).clone(),
     entry_asset_ids: entry_asset_id.clone().into_iter().collect(),
     main_entry_id: entry_asset_id,
-    // Shared bundles don't need stable names - they're loaded as siblings.
+    // Use the ideal-graph decision for stable naming.
+    //
+    // IMPORTANT: We must not default to the entry dependency's `needs_stable_name` for non-entry
+    // bundles, otherwise every async bundle becomes "entry-like" and ends up with entry runtimes
+    // (bundle-url, bundle-manifest, etc) and can violate bundle-group naming invariants.
     needs_stable_name: Some(if is_shared_bundle {
       false
     } else {
-      entry_dep.needs_stable_name
+      ideal_bundle.needs_stable_name
     }),
     bundle_behavior: ideal_bundle.behavior,
     is_splittable: Some(false),
@@ -977,6 +1022,12 @@ mod tests {
   struct EdgeSpec<'a> {
     from: &'a str,
     to: &'a str,
+    /// Dependency specifier (used to generate a stable dependency id).
+    ///
+    /// This is separate from `to` because a single source asset can legitimately have
+    /// multiple dependencies that resolve to the same target asset (e.g. `import('./b')`
+    /// and `import bSync from './b'`). In real graphs these have distinct dependency ids.
+    specifier: Option<&'a str>,
     priority: atlaspack_core::types::Priority,
     bundle_behavior: Option<atlaspack_core::types::BundleBehavior>,
   }
@@ -986,9 +1037,15 @@ mod tests {
       Self {
         from,
         to,
+        specifier: None,
         priority,
         bundle_behavior: None,
       }
+    }
+
+    fn specifier(mut self, specifier: &'a str) -> Self {
+      self.specifier = Some(specifier);
+      self
     }
 
     fn isolated(mut self) -> Self {
@@ -1084,7 +1141,7 @@ mod tests {
     for edge in edges {
       let mut dep_builder = atlaspack_core::types::DependencyBuilder::default();
       dep_builder = dep_builder
-        .specifier(edge.to.to_string())
+        .specifier(edge.specifier.unwrap_or(edge.to).to_string())
         .specifier_type(atlaspack_core::types::SpecifierType::Esm)
         .env(Arc::new(Environment::default()))
         .priority(edge.priority)
@@ -1302,6 +1359,8 @@ mod tests {
 
   #[test]
   fn materialization_skips_bundle_edge_for_sync_dep_to_existing_async_bundle_group() {
+    // This also asserts we do not connect the sync dependency node to the async bundle group.
+
     use atlaspack_core::bundle_graph::NativeBundleGraph;
     use atlaspack_core::types::Priority;
 
@@ -1328,7 +1387,7 @@ mod tests {
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
     bundler.bundle(&asset_graph, &mut bundle_graph).unwrap();
 
-    // Find the bundle nodes for entry and a, plus the bundle group node for c.
+    // Find the bundle nodes for entry, a, and c, plus the bundle group node for c.
     let bundles = bundle_graph.get_bundles();
 
     let entry_bundle_id = bundles
@@ -1349,6 +1408,16 @@ mod tests {
       .clone();
     let a_bundle_node = *bundle_graph
       .get_node_id_by_content_key(&a_bundle_id)
+      .unwrap();
+
+    let c_bundle_id = bundles
+      .iter()
+      .find(|b| b.main_entry_id.as_deref() == Some(c))
+      .unwrap()
+      .id
+      .clone();
+    let c_bundle_node = *bundle_graph
+      .get_node_id_by_content_key(&c_bundle_id)
       .unwrap();
 
     let c_bg_node = bundle_graph
@@ -1384,14 +1453,162 @@ mod tests {
       edges
     );
 
-    // But it should create a References edge (sibling/reference relationship).
+    // And it must not connect the dependency node to the async bundle group.
+    let a_sync_dep_id = asset_graph
+      .get_dependencies()
+      .find(|dep| {
+        if dep.is_entry {
+          return false;
+        }
+        if dep.priority != Priority::Sync {
+          return false;
+        }
+        if dep.source_asset_id.as_deref() != Some(a) {
+          return false;
+        }
+
+        asset_graph
+          .get_node_id_by_content_key(&dep.id)
+          .map(|dep_node| {
+            asset_graph
+              .get_outgoing_neighbors(dep_node)
+              .iter()
+              .any(|n| asset_graph.get_asset(n).is_some_and(|asset| asset.id == c))
+          })
+          .unwrap_or(false)
+      })
+      .map(|dep| dep.id.clone())
+      .expect("expected a sync dependency a -> c");
+
+    let a_sync_dep_node = *bundle_graph
+      .get_node_id_by_content_key(&a_sync_dep_id)
+      .expect("expected sync dependency node in bundle graph");
+
+    assert!(
+      !edges.contains(&(a_sync_dep_node, c_bg_node, NativeBundleGraphEdgeType::Null)),
+      "did not expect Null edge from sync dependency -> c bundle group; got edges: {:?}",
+      edges
+    );
+
+    // But it should create a References edge (bundle-to-bundle relationship).
     assert!(
       edges.contains(&(
         a_bundle_node,
-        c_bg_node,
+        c_bundle_node,
         NativeBundleGraphEdgeType::References
       )),
-      "expected References edge from a bundle -> c bundle group; got edges: {:?}",
+      "expected References edge from a bundle -> c bundle; got edges: {:?}",
+      edges
+    );
+  }
+
+  #[test]
+  fn materialization_does_not_add_sync_referenced_async_bundle_as_sibling_in_source_group() {
+    use atlaspack_core::bundle_graph::NativeBundleGraph;
+    use atlaspack_core::types::Priority;
+
+    // Use hex-like ids so NativeBundleGraph public id generation won't panic.
+    let entry = "0123456789abcdef.js";
+    let a = "1111111111111111.js";
+    let b = "3333333333333333.js";
+    let c = "2222222222222222.js";
+
+    // entry -> lazy a, lazy b, lazy c
+    // a -> sync c, b -> sync c
+    let asset_graph = fixture_graph(
+      &[entry],
+      &[
+        EdgeSpec::new(entry, a, Priority::Lazy),
+        EdgeSpec::new(entry, b, Priority::Lazy),
+        EdgeSpec::new(entry, c, Priority::Lazy),
+        EdgeSpec::new(a, c, Priority::Sync),
+        EdgeSpec::new(b, c, Priority::Sync),
+      ],
+    );
+
+    let mut bundle_graph = NativeBundleGraph::from_asset_graph(&asset_graph);
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    bundler.bundle(&asset_graph, &mut bundle_graph).unwrap();
+
+    let bundles = bundle_graph.get_bundles();
+
+    let a_bundle_id = bundles
+      .iter()
+      .find(|bundle| bundle.main_entry_id.as_deref() == Some(a))
+      .unwrap()
+      .id
+      .clone();
+    let a_bundle_node = *bundle_graph
+      .get_node_id_by_content_key(&a_bundle_id)
+      .unwrap();
+
+    let b_bundle_id = bundles
+      .iter()
+      .find(|bundle| bundle.main_entry_id.as_deref() == Some(b))
+      .unwrap()
+      .id
+      .clone();
+    let b_bundle_node = *bundle_graph
+      .get_node_id_by_content_key(&b_bundle_id)
+      .unwrap();
+
+    let c_bundle_id = bundles
+      .iter()
+      .find(|bundle| bundle.main_entry_id.as_deref() == Some(c))
+      .unwrap()
+      .id
+      .clone();
+    let c_bundle_node = *bundle_graph
+      .get_node_id_by_content_key(&c_bundle_id)
+      .unwrap();
+
+    let a_bg_node = bundle_graph
+      .nodes()
+      .enumerate()
+      .find_map(|(id, n)| match n {
+        atlaspack_core::bundle_graph::native_bundle_graph::NativeBundleGraphNode::BundleGroup {
+          entry_asset_id,
+          ..
+        } if entry_asset_id == a => Some(id),
+        _ => None,
+      })
+      .expect("expected a bundle group for async root a");
+
+    let b_bg_node = bundle_graph
+      .nodes()
+      .enumerate()
+      .find_map(|(id, n)| match n {
+        atlaspack_core::bundle_graph::native_bundle_graph::NativeBundleGraphNode::BundleGroup {
+          entry_asset_id,
+          ..
+        } if entry_asset_id == b => Some(id),
+        _ => None,
+      })
+      .expect("expected a bundle group for async root b");
+
+    let edges = edge_triples(&bundle_graph);
+
+    // a bundle group should contain only a bundle.
+    assert!(
+      edges.contains(&(a_bg_node, a_bundle_node, NativeBundleGraphEdgeType::Bundle)),
+      "expected Bundle edge from a bundle group -> a bundle; got edges: {:?}",
+      edges
+    );
+    assert!(
+      !edges.contains(&(a_bg_node, c_bundle_node, NativeBundleGraphEdgeType::Bundle)),
+      "did not expect c bundle to be sibling in a bundle group; got edges: {:?}",
+      edges
+    );
+
+    // b bundle group should contain only b bundle.
+    assert!(
+      edges.contains(&(b_bg_node, b_bundle_node, NativeBundleGraphEdgeType::Bundle)),
+      "expected Bundle edge from b bundle group -> b bundle; got edges: {:?}",
+      edges
+    );
+    assert!(
+      !edges.contains(&(b_bg_node, c_bundle_node, NativeBundleGraphEdgeType::Bundle)),
+      "did not expect c bundle to be sibling in b bundle group; got edges: {:?}",
       edges
     );
   }
@@ -1684,6 +1901,62 @@ mod tests {
   }
 
   #[test]
+  fn internalize_async_bundle_when_root_is_sync_reachable_through_parent_bundle() {
+    // Mirrors integration fixture:
+    // entry -> sync a
+    // a -> lazy b
+    // a -> sync b
+    //
+    // b.js is a bundle boundary (lazy), but also sync-imported by a which is in the entry.
+    // Since b.js is sync-reachable from the entry, the async bundle for b.js should be
+    // internalized and b.js should end up in the entry bundle.
+    let asset_graph = fixture_graph(
+      &["entry.js"],
+      &[
+        EdgeSpec::new("entry.js", "a.js", Priority::Sync),
+        EdgeSpec::new("a.js", "b.js", Priority::Lazy).specifier("b.js?lazy"),
+        EdgeSpec::new("a.js", "b.js", Priority::Sync).specifier("b.js?sync"),
+      ],
+    );
+
+    // Sanity: verify there is at least one sync dep edge a.js -> b.js.
+    let a_node = *asset_graph
+      .get_node_id_by_content_key("a.js")
+      .expect("missing a.js node");
+    let mut found_sync_b = false;
+    for dep_node in asset_graph.get_outgoing_neighbors(&a_node) {
+      let Some(dep) = asset_graph.get_dependency(&dep_node) else {
+        continue;
+      };
+      if dep.priority != Priority::Sync {
+        continue;
+      }
+      for target in asset_graph.get_outgoing_neighbors(&dep_node) {
+        let Some(asset) = asset_graph.get_asset(&target) else {
+          continue;
+        };
+        if asset.id == "b.js" {
+          found_sync_b = true;
+          break;
+        }
+      }
+    }
+    assert!(
+      found_sync_b,
+      "expected sync dep a.js -> b.js in fixture graph"
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js", "a.js", "b.js"],
+      },
+    });
+  }
+
+  #[test]
   fn do_not_internalize_when_root_not_available_from_all_parents() {
     // entry -> lazy a, lazy b
     // a -> sync c
@@ -1788,6 +2061,53 @@ mod tests {
         "b.js" sync "c.js",
       },
     });
+  }
+
+  #[test]
+  fn reuse_async_bundle_esmodule_helpers_not_in_async_bundle() {
+    // index.js -> lazy a.js, lazy b.js, lazy c.js
+    // a.js -> sync c.js
+    // b.js -> sync c.js
+    // All four files -> sync helpers.js (simulating esmodule-helpers)
+    let asset_graph = fixture_graph(
+      &["index.js"],
+      &[
+        EdgeSpec::new("index.js", "a.js", Priority::Lazy),
+        EdgeSpec::new("index.js", "b.js", Priority::Lazy),
+        EdgeSpec::new("index.js", "c.js", Priority::Lazy),
+        EdgeSpec::new("a.js", "c.js", Priority::Sync),
+        EdgeSpec::new("b.js", "c.js", Priority::Sync),
+        // All ESM files import helpers
+        EdgeSpec::new("index.js", "helpers.js", Priority::Sync),
+        EdgeSpec::new("a.js", "helpers.js", Priority::Sync),
+        EdgeSpec::new("b.js", "helpers.js", Priority::Sync),
+        EdgeSpec::new("c.js", "helpers.js", Priority::Sync),
+      ],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    // helpers.js should only be in the entry bundle, NOT in c.js bundle
+    let c_bundle = g
+      .bundles
+      .get(&types::IdealBundleId("c.js".to_string()))
+      .expect("c.js bundle should exist");
+    assert!(
+      !c_bundle.assets.contains("helpers.js"),
+      "helpers.js should NOT be in c.js bundle. c.js bundle assets: {:?}",
+      c_bundle.assets
+    );
+
+    // helpers.js SHOULD be in the entry bundle
+    let entry_bundle = g
+      .bundles
+      .get(&types::IdealBundleId("index.js".to_string()))
+      .expect("entry bundle should exist");
+    assert!(
+      entry_bundle.assets.contains("helpers.js"),
+      "helpers.js should be in entry bundle. Entry bundle assets: {:?}",
+      entry_bundle.assets
+    );
   }
 
   #[test]
