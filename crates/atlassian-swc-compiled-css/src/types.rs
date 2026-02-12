@@ -156,6 +156,9 @@ pub struct PluginOptions {
   pub class_hash_prefix: Option<String>,
   pub flatten_multiple_selectors: Option<bool>,
   pub extract: Option<bool>,
+  /// Browserslist environment (e.g. "development" or "production") for config with
+  /// "browserslist": { "development": [...], "production": [...] }.
+  pub browserslist_env: Option<String>,
 }
 
 impl Default for PluginOptions {
@@ -179,6 +182,7 @@ impl Default for PluginOptions {
       class_hash_prefix: None,
       flatten_multiple_selectors: None,
       extract: None,
+      browserslist_env: None,
     }
   }
 }
@@ -204,6 +208,7 @@ impl From<&crate::config::CompiledCssInJsConfig> for PluginOptions {
       class_hash_prefix: config.class_hash_prefix.clone(),
       flatten_multiple_selectors: config.flatten_multiple_selectors,
       extract: config.extract,
+      browserslist_env: config.browserslist_env.clone(),
     }
   }
 }

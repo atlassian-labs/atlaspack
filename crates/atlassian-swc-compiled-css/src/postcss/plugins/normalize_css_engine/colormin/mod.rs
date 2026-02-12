@@ -1,10 +1,13 @@
 use crate::postcss::value_parser as vp;
+use caniuse_serde::FeatureName;
 use once_cell::sync::Lazy;
 use postcss as pc;
 use regex::Regex;
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
+use super::browserslist_support::{cached_browserslist_entries, feature_supported_for_config};
 static COLOR_FUNCTION_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(?i)(rgb|hsl)a?$").unwrap());
 static SKIP_PROPERTY_REGEX: Lazy<Regex> = Lazy::new(|| {
   Regex::new(r"(?i)^(composes|font|src$|filter|-webkit-tap-highlight-color)").unwrap()
@@ -410,9 +413,8 @@ fn hex_string_from_rgba(r: u8, g: u8, b: u8, alpha: f32) -> String {
   if alpha >= 1.0 {
     format!("#{:02x}{:02x}{:02x}", r, g, b)
   } else if alpha <= 0.0 {
-    // represent as 4-digit short when possible (#0000), else 8-digit
-    let base = to_hex_rgba(r, g, b, 0);
-    short_hex_candidate(&base, 0.0).unwrap_or(base)
+    // Use 8-digit form (#00000000) to match Babel/postcss-colormin output.
+    to_hex_rgba(r, g, b, 0)
   } else {
     // fractional alpha; produce 8-digit but short_hex_candidate will reject (None), so fallback to 8-digit
     let a = (alpha * 255.0).round().clamp(0.0, 255.0) as u8;
@@ -452,6 +454,9 @@ fn rgba_to_hsl(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
 
 fn minify_color(input: &str, options: &ColorminOptions) -> String {
   let trimmed = input.trim();
+  if !options.alpha_hex && trimmed.eq_ignore_ascii_case("transparent") {
+    return "transparent".to_string();
+  }
 
   // Workaround for csscolorparser incorrectly parsing 3/4/6/8 digit hex without # as hex
   if matches!(trimmed.len(), 3 | 4 | 6 | 8)
@@ -483,7 +488,7 @@ fn minify_color(input: &str, options: &ColorminOptions) -> String {
 
     let mut candidates: Vec<String> = Vec::new();
 
-    // hex first when allowed; prefer shortest (#rgb over #rrggbb) for opaque
+    // hex first when allowed; prefer shortest (#rgb/#rgba over longer forms)
     if a >= 1.0 || options.alpha_hex {
       let base = if a >= 1.0 {
         format!("#{:02x}{:02x}{:02x}", r, g, b)
@@ -495,12 +500,11 @@ fn minify_color(input: &str, options: &ColorminOptions) -> String {
         // Shorten opaque hex to 3-digit when possible
         let short = short_hex_literal(&base);
         candidates.push(short);
+      } else if let Some(short) = short_hex_candidate(&base, alpha) {
+        candidates.push(short);
+        candidates.push(base);
       } else {
-        if let Some(short) = short_hex_candidate(&base, alpha) {
-          candidates.push(short);
-        } else {
-          candidates.push(base);
-        }
+        candidates.push(base);
       }
     }
 
@@ -636,18 +640,42 @@ pub(crate) fn transform_value(value: &str, options: &ColorminOptions) -> String 
   vp::stringify(&parsed.nodes)
 }
 
-fn resolve_browsers() -> Vec<String> {
-  Vec::new()
+fn resolve_browsers(config_path: Option<&Path>, env: Option<&str>) -> Vec<String> {
+  let entries = cached_browserslist_entries(config_path, env);
+  if entries.had_error {
+    return Vec::new();
+  }
+  entries
+    .entries
+    .iter()
+    .map(|entry| {
+      format!(
+        "{} {}",
+        entry.name().to_ascii_lowercase(),
+        entry.version().to_ascii_lowercase()
+      )
+    })
+    .collect()
 }
 
-pub fn plugin() -> pc::BuiltPlugin {
-  // browserslist resolution (used only for transparent bug). If unavailable, default modern.
-  let browsers: Vec<String> = resolve_browsers();
+pub(crate) fn resolve_colormin_options(
+  config_path: Option<&Path>,
+  env: Option<&str>,
+) -> (ColorminOptions, Vec<String>) {
+  let browsers = resolve_browsers(config_path, env);
   let has_ie8_9 = browsers.iter().any(|b| b == "ie 8" || b == "ie 9");
   let mut options = add_plugin_defaults();
+  options.alpha_hex =
+    feature_supported_for_config(FeatureName::from("css-rrggbbaa"), config_path, env).0;
   if has_ie8_9 {
     options.transparent = false;
   }
+  (options, browsers)
+}
+
+pub fn plugin(config_path: Option<PathBuf>, env: Option<String>) -> pc::BuiltPlugin {
+  // browserslist resolution (used for transparent bug + alphaHex support).
+  let (options, browsers) = resolve_colormin_options(config_path.as_deref(), env.as_deref());
 
   let cache = std::sync::Mutex::new(HashMap::<String, String>::new());
   pc::plugin("postcss-colormin")
@@ -714,4 +742,28 @@ pub fn plugin() -> pc::BuiltPlugin {
       Ok(())
     })
     .build()
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use pretty_assertions::assert_eq;
+  use std::fs;
+
+  #[test]
+  fn resolve_colormin_options_allows_alpha_hex_for_supported_browsers() {
+    let tmp = tempfile::tempdir().expect("tmpdir");
+    fs::write(tmp.path().join(".browserslistrc"), "Chrome 80\n")
+      .expect("browserslist config write");
+    let (options, _browsers) = resolve_colormin_options(Some(tmp.path()), Some("development"));
+    assert_eq!(options.alpha_hex, true);
+  }
+
+  #[test]
+  fn resolve_colormin_options_disables_alpha_hex_for_unsupported_browsers() {
+    let tmp = tempfile::tempdir().expect("tmpdir");
+    fs::write(tmp.path().join(".browserslistrc"), "IE 11\n").expect("browserslist config write");
+    let (options, _browsers) = resolve_colormin_options(Some(tmp.path()), Some("development"));
+    assert_eq!(options.alpha_hex, false);
+  }
 }

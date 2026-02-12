@@ -382,9 +382,13 @@ fn build_processor(options: &TransformCssOptions, collector: &AtomicCollector) -
     plugins.push(nce::ordered_values::plugin());
     plugins.push(nce::reduce_initial::plugin(
       options.browserslist_config_path.clone(),
+      options.browserslist_env.clone(),
     ));
     plugins.push(nce::convert_values::plugin());
-    plugins.push(nce::colormin::plugin());
+    plugins.push(nce::colormin::plugin(
+      options.browserslist_config_path.clone(),
+      options.browserslist_env.clone(),
+    ));
     plugins.push(nce::normalize_url::plugin());
     plugins.push(nce::normalize_unicode::plugin());
     plugins.push(nce::normalize_string::plugin());
@@ -1516,6 +1520,7 @@ fn normalize_value_for_hash(
   value: &str,
   initial_support: bool,
   optimize_css: bool,
+  colormin_options: super::plugins::normalize_css_engine::colormin::ColorminOptions,
 ) -> String {
   if !optimize_css {
     return value.to_string();
@@ -1538,9 +1543,8 @@ fn normalize_value_for_hash(
   let mut normalized = if should_skip_colormin(prop) {
     trimmed.to_string()
   } else {
-    let colormin_opts = super::plugins::normalize_css_engine::colormin::add_plugin_defaults();
     let after_colormin =
-      super::plugins::normalize_css_engine::colormin::transform_value(trimmed, &colormin_opts);
+      super::plugins::normalize_css_engine::colormin::transform_value(trimmed, &colormin_options);
     if after_colormin.len() < trimmed.len() {
       after_colormin
     } else {
@@ -1628,12 +1632,28 @@ fn atomicify_rules_plugin(
   use crate::utils_hash::hash;
   use postcss::list::comma;
 
-  // Compute initial_support once based on browserslist config
-  // This determines whether we convert values like `currentColor` to `initial`
+  // Compute initial_support once based on browserslist config.
+  // This determines whether we convert values like `content-box` to `initial`.
   let optimize_css = options.optimize_css.unwrap_or(true);
   let initial_support = super::plugins::normalize_css_engine::reduce_initial::is_initial_supported(
     options.browserslist_config_path.as_deref(),
+    options.browserslist_env.as_deref(),
   );
+  let colormin_options = if optimize_css {
+    super::plugins::normalize_css_engine::colormin::resolve_colormin_options(
+      options.browserslist_config_path.as_deref(),
+      options.browserslist_env.as_deref(),
+    )
+    .0
+  } else {
+    super::plugins::normalize_css_engine::colormin::add_plugin_defaults()
+  };
+  if std::env::var("COMPILED_CSS_TRACE").is_ok() {
+    eprintln!(
+      "[postcss] initial_support={} (browserslist_config_path={:?} env={:?})",
+      initial_support, options.browserslist_config_path, options.browserslist_env
+    );
+  }
 
   #[derive(Clone)]
   struct Ctx<'a> {
@@ -1794,7 +1814,13 @@ fn atomicify_rules_plugin(
   }
 
   #[allow(dead_code)]
-  fn process_rule(rule: &PcRule, ctx: &mut Ctx, initial_support: bool, optimize_css: bool) {
+  fn process_rule(
+    rule: &PcRule,
+    ctx: &mut Ctx,
+    initial_support: bool,
+    optimize_css: bool,
+    colormin_options: super::plugins::normalize_css_engine::colormin::ColorminOptions,
+  ) {
     if std::env::var("COMPILED_CSS_TRACE").is_ok() {
       eprintln!(
         "[engine.process_rule] selectors={:?} rule.selector()='{}'",
@@ -1825,13 +1851,23 @@ fn atomicify_rules_plugin(
         let has_important = decl.important();
         // COMPAT: Hash seed uses the value AFTER reduce-initial and colormin transformations
         // but BEFORE whitespace normalization, matching Babel's plugin order.
-        let mut hash_seed =
-          normalize_value_for_hash(&prop, &orig_value, initial_support, optimize_css);
+        let mut hash_seed = normalize_value_for_hash(
+          &prop,
+          &orig_value,
+          initial_support,
+          optimize_css,
+          colormin_options,
+        );
         if has_important {
           hash_seed.push_str("true");
         }
-        let mut value_full =
-          normalize_value_for_hash(&prop, &orig_value, initial_support, optimize_css);
+        let mut value_full = normalize_value_for_hash(
+          &prop,
+          &orig_value,
+          initial_support,
+          optimize_css,
+          colormin_options,
+        );
         if has_important {
           value_full.push_str("!important");
         }
@@ -1911,7 +1947,13 @@ fn atomicify_rules_plugin(
         let sels = combine_selectors(&ctx.selectors, &nested.selector());
         let mut next = ctx.clone();
         next.selectors = sels;
-        process_rule(&nested, &mut next, initial_support, optimize_css);
+        process_rule(
+          &nested,
+          &mut next,
+          initial_support,
+          optimize_css,
+          colormin_options,
+        );
       }
     }
   }
@@ -1974,14 +2016,24 @@ fn atomicify_rules_plugin(
         let has_important = decl.important();
         // COMPAT: Hash seed uses the value AFTER reduce-initial and colormin transformations
         // but BEFORE whitespace normalization, matching Babel's plugin order.
-        let mut hash_seed =
-          normalize_value_for_hash(&prop, &raw_value, initial_support, optimize_css);
+        let mut hash_seed = normalize_value_for_hash(
+          &prop,
+          &raw_value,
+          initial_support,
+          optimize_css,
+          colormin_options,
+        );
         if has_important {
           hash_seed.push_str("true");
         }
         // For CSS output, apply full normalization (including whitespace)
-        let mut normalized_value =
-          normalize_value_for_hash(&prop, &raw_value, initial_support, optimize_css);
+        let mut normalized_value = normalize_value_for_hash(
+          &prop,
+          &raw_value,
+          initial_support,
+          optimize_css,
+          colormin_options,
+        );
         normalized_value = minify_value_whitespace(&normalized_value);
         let autoprefixer_ref = autoprefixer.as_ref().map(|arc| arc.as_ref());
 
@@ -2159,14 +2211,24 @@ fn atomicify_rules_plugin(
             let has_important = decl.important();
             // COMPAT: Hash seed uses the value AFTER reduce-initial and colormin transformations
             // but BEFORE whitespace normalization, matching Babel's plugin order.
-            let mut hash_seed =
-              normalize_value_for_hash(&prop, &raw_value, initial_support, optimize_css);
+            let mut hash_seed = normalize_value_for_hash(
+              &prop,
+              &raw_value,
+              initial_support,
+              optimize_css,
+              colormin_options,
+            );
             if has_important {
               hash_seed.push_str("true");
             }
             // For CSS output, apply full normalization (including whitespace)
-            let mut value_full =
-              normalize_value_for_hash(&prop, &raw_value, initial_support, optimize_css);
+            let mut value_full = normalize_value_for_hash(
+              &prop,
+              &raw_value,
+              initial_support,
+              optimize_css,
+              colormin_options,
+            );
             value_full = minify_value_whitespace(&value_full);
 
             let normalized_list: Vec<String> =
@@ -2249,14 +2311,24 @@ fn atomicify_rules_plugin(
                 let has_important = nested_decl.important();
                 // COMPAT: Hash seed uses the value AFTER reduce-initial and colormin transformations
                 // but BEFORE whitespace normalization, matching Babel's plugin order.
-                let mut hash_seed =
-                  normalize_value_for_hash(&prop, &raw_value, initial_support, optimize_css);
+                let mut hash_seed = normalize_value_for_hash(
+                  &prop,
+                  &raw_value,
+                  initial_support,
+                  optimize_css,
+                  colormin_options,
+                );
                 if has_important {
                   hash_seed.push_str("true");
                 }
                 // For CSS output, apply full normalization (including whitespace)
-                let mut normalized_value =
-                  normalize_value_for_hash(&prop, &raw_value, initial_support, optimize_css);
+                let mut normalized_value = normalize_value_for_hash(
+                  &prop,
+                  &raw_value,
+                  initial_support,
+                  optimize_css,
+                  colormin_options,
+                );
                 normalized_value = minify_value_whitespace(&normalized_value);
 
                 for norm in &normalized_list {
@@ -3190,6 +3262,7 @@ mod tests {
     let mut options = TransformCssOptions::default();
     options.optimize_css = Some(true);
     options.browserslist_config_path = Some(tmp.path().to_path_buf());
+    options.browserslist_env = Some("production".to_string());
     let result = transform_css(css, options).expect("transform should succeed");
 
     assert_eq!(result.class_names.len(), 1);
@@ -3202,10 +3275,12 @@ mod tests {
     assert!(result.sheets[0].contains("text-decoration-color:initial"));
 
     // Clean up cache
-    browserslist_cache()
-      .lock()
-      .unwrap()
-      .remove(&tmp.path().to_path_buf());
+    browserslist_cache().lock().unwrap().remove(
+      &crate::postcss::plugins::normalize_css_engine::browserslist_support::BrowserslistCacheKey {
+        path: tmp.path().to_path_buf(),
+        env: Some("production".to_string()),
+      },
+    );
   }
 
   /// Regression test: background: transparent should expand to background-color:initial
@@ -3224,16 +3299,50 @@ mod tests {
     let mut options = TransformCssOptions::default();
     options.optimize_css = Some(true);
     options.browserslist_config_path = Some(tmp.path().to_path_buf());
+    options.browserslist_env = Some("production".to_string());
     let result = transform_css(css, options).expect("transform should succeed");
 
     assert_eq!(result.class_names.len(), 1);
     assert_eq!(result.class_names[0], "_bfhk18uv");
     assert!(result.sheets[0].contains("background-color:initial"));
 
-    browserslist_cache()
-      .lock()
-      .unwrap()
-      .remove(&tmp.path().to_path_buf());
+    browserslist_cache().lock().unwrap().remove(
+      &crate::postcss::plugins::normalize_css_engine::browserslist_support::BrowserslistCacheKey {
+        path: tmp.path().to_path_buf(),
+        env: Some("production".to_string()),
+      },
+    );
+  }
+
+  /// Reduce-initial should respect the selected browserslist environment.
+  #[test]
+  fn reduce_initial_respects_development_env() {
+    use crate::postcss::plugins::normalize_css_engine::browserslist_support::browserslist_cache;
+    use std::fs;
+
+    let tmp = tempfile::tempdir().expect("tmpdir");
+    fs::write(tmp.path().join(".browserslistrc"), "Chrome >= 80\n")
+      .expect("browserslist config write");
+    browserslist_cache().lock().unwrap().clear();
+
+    let css = "& { box-sizing: content-box; text-decoration-color: currentColor; }";
+    let mut options = TransformCssOptions::default();
+    options.optimize_css = Some(true);
+    options.browserslist_config_path = Some(tmp.path().to_path_buf());
+    options.browserslist_env = Some("development".to_string());
+    let sheets = collect_sheets(&[css], options);
+    let expected = [
+      "._vchh18uv{box-sizing:initial}",
+      "._4bfu18uv{text-decoration-color:initial}",
+    ];
+    assert_contains_sheets(&sheets, &expected);
+
+    browserslist_cache().lock().unwrap().remove(
+      &crate::postcss::plugins::normalize_css_engine::browserslist_support::BrowserslistCacheKey {
+        path: tmp.path().to_path_buf(),
+        env: Some("development".to_string()),
+      },
+    );
   }
 
   /// Regression test: nested selectors starting with a combinator should not
@@ -3346,8 +3455,8 @@ mod tests {
     options.optimize_css = Some(true);
     let sheets = collect_sheets(&css_inputs, options);
     let expected = [
-      "div._11kj1w7a:hover{background-color:var(--ds-background-neutral-subtle,#0000)}",
-      "div._1et61w7a:active{background-color:var(--ds-background-neutral-subtle,#0000)}",
+      "div._11kj1w7a:hover{background-color:var(--ds-background-neutral-subtle,transparent)}",
+      "div._1et61w7a:active{background-color:var(--ds-background-neutral-subtle,transparent)}",
       "div._1v6jjjyb:active{color:var(--ds-text-subtle,#42526e)}",
       "div._jl2n73ad:hover{cursor:default}",
     ];
@@ -3364,8 +3473,8 @@ mod tests {
     options.optimize_css = Some(true);
     let sheets = collect_sheets(&css_inputs, options);
     let expected = [
-      "div._11kj1w7a:hover{background-color:var(--ds-background-neutral-subtle,#0000)}",
-      "div._1et61w7a:active{background-color:var(--ds-background-neutral-subtle,#0000)}",
+      "div._11kj1w7a:hover{background-color:var(--ds-background-neutral-subtle,transparent)}",
+      "div._1et61w7a:active{background-color:var(--ds-background-neutral-subtle,transparent)}",
       "div._1v6j10s3:active{color:var(--ds-text,#42526e)}",
       "div._jl2n73ad:hover{cursor:default}",
     ];

@@ -404,12 +404,12 @@ fn is_transparent_like(value: &str) -> bool {
   false
 }
 
-fn initial_support(config_path: Option<PathBuf>) -> (bool, Vec<String>) {
-  feature_supported_for_config_path(config_path, FeatureName::from("css-initial-value"))
+fn initial_support(config_path: Option<PathBuf>, env: Option<&str>) -> (bool, Vec<String>) {
+  feature_supported_for_config_path(config_path, FeatureName::from("css-initial-value"), env)
 }
 
-pub fn is_initial_supported(config_path: Option<&Path>) -> bool {
-  feature_supported_for_config(FeatureName::from("css-initial-value"), config_path).0
+pub fn is_initial_supported(config_path: Option<&Path>, env: Option<&str>) -> bool {
+  feature_supported_for_config(FeatureName::from("css-initial-value"), config_path, env).0
 }
 
 pub fn transform_value_for_hash(prop: &str, value: &str, initial_support: bool) -> String {
@@ -422,6 +422,12 @@ pub fn transform_value_for_hash(prop: &str, value: &str, initial_support: bool) 
   if initial_support {
     if let Some(&ti) = TO_INITIAL.get(prop_l.as_str()) {
       if value_l == ti || (ti == "transparent" && is_transparent_like(&value_l)) {
+        if std::env::var("COMPILED_CSS_TRACE").is_ok() {
+          eprintln!(
+            "[reduce_initial] transform_value_for_hash prop={:?} value={:?} -> initial (TO_INITIAL match)",
+            prop, value
+          );
+        }
         return "initial".to_string();
       }
     }
@@ -436,9 +442,37 @@ pub fn transform_value_for_hash(prop: &str, value: &str, initial_support: bool) 
   value.to_string()
 }
 
-pub fn plugin(config_path: Option<PathBuf>) -> pc::BuiltPlugin {
-  // Align with Babel/cssnano: enable `initial` only when the resolved browsers support it.
-  let (initial_support, _browsers) = initial_support(config_path);
+#[cfg(test)]
+#[test]
+fn transform_value_for_hash_respects_initial_support() {
+  // When initial_support is false (e.g. older browsers), keep explicit values for hash consistency with Babel.
+  assert_eq!(
+    transform_value_for_hash("box-sizing", "content-box", false),
+    "content-box"
+  );
+  assert_eq!(
+    transform_value_for_hash("text-decoration-color", "currentColor", false),
+    "currentColor"
+  );
+  // When initial_support is true, reduce to initial to match Babel/cssnano.
+  assert_eq!(
+    transform_value_for_hash("box-sizing", "content-box", true),
+    "initial"
+  );
+  assert_eq!(
+    transform_value_for_hash("text-decoration-color", "currentColor", true),
+    "initial"
+  );
+  // Expand initial to longhand when not supported (FROM_INITIAL).
+  assert_eq!(
+    transform_value_for_hash("position", "initial", false),
+    "static"
+  );
+}
+
+pub fn plugin(config_path: Option<PathBuf>, env: Option<String>) -> pc::BuiltPlugin {
+  // Align with Babel/cssnano: reduce when browserslist supports it.
+  let (initial_support, _browsers) = initial_support(config_path, env.as_deref());
 
   pc::plugin("postcss-reduce-initial")
     .once_exit(move |css, _| {
@@ -487,6 +521,7 @@ pub fn plugin(config_path: Option<PathBuf>) -> pc::BuiltPlugin {
 
 #[cfg(test)]
 mod tests {
+  use super::super::browserslist_support::BrowserslistCacheKey;
   use super::*;
   use pretty_assertions::assert_eq;
   use std::fs;
@@ -499,7 +534,10 @@ mod tests {
 
     browserslist_cache().lock().unwrap().clear();
 
-    let plugin = plugin(Some(tmp.path().to_path_buf()));
+    let plugin = plugin(
+      Some(tmp.path().to_path_buf()),
+      Some("production".to_string()),
+    );
     let processor = pc::postcss_with_plugins(vec![plugin]);
     let mut result = processor
       .process("a{background-color:transparent}")
@@ -516,7 +554,10 @@ mod tests {
     browserslist_cache()
       .lock()
       .unwrap()
-      .remove(&tmp.path().to_path_buf());
+      .remove(&BrowserslistCacheKey {
+        path: tmp.path().to_path_buf(),
+        env: Some("production".to_string()),
+      });
   }
 
   #[test]
@@ -527,7 +568,10 @@ mod tests {
 
     browserslist_cache().lock().unwrap().clear();
 
-    let plugin = plugin(Some(tmp.path().to_path_buf()));
+    let plugin = plugin(
+      Some(tmp.path().to_path_buf()),
+      Some("production".to_string()),
+    );
     let processor = pc::postcss_with_plugins(vec![plugin]);
     let mut result = processor
       .process("a{background-color:lch(0% 0 0 / 0)}")
@@ -543,6 +587,9 @@ mod tests {
     browserslist_cache()
       .lock()
       .unwrap()
-      .remove(&tmp.path().to_path_buf());
+      .remove(&BrowserslistCacheKey {
+        path: tmp.path().to_path_buf(),
+        env: Some("production".to_string()),
+      });
   }
 }

@@ -31,6 +31,8 @@ pub struct TransformCssOptions {
   pub flatten_multiple_selectors: Option<bool>,
   pub declaration_placeholder: Option<String>,
   pub browserslist_config_path: Option<PathBuf>,
+  /// Browserslist environment (e.g. "development" or "production") for package.json "browserslist".
+  pub browserslist_env: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

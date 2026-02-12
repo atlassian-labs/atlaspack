@@ -60,6 +60,8 @@ pub struct CompiledCssInJsConfigPlugin {
   pub unsafe_report_safe_assets_for_migration: Option<bool>,
   pub unsafe_use_safe_assets: Option<bool>,
   pub unsafe_skip_pattern: Option<String>,
+  /// Browserslist environment (e.g. "development" or "production") for package.json "browserslist".
+  pub browserslist_env: Option<String>,
 }
 
 #[napi(object)]
@@ -70,6 +72,9 @@ pub struct CompiledCssInJsPluginInput {
   pub is_source: bool,
   pub source_maps: bool,
   pub config: CompiledCssInJsConfigPlugin,
+  /// Browserslist environment (e.g. "development" or "production") so resolution
+  /// uses the same key as Babel (confluence/package.json "browserslist"."development"|"production").
+  pub browserslist_env: Option<String>,
 }
 
 #[napi(object)]
@@ -259,6 +264,12 @@ fn process_compiled_css_in_js(
       unsafe_report_safe_assets_for_migration: input.config.unsafe_report_safe_assets_for_migration,
       unsafe_use_safe_assets: input.config.unsafe_use_safe_assets,
       unsafe_skip_pattern: input.config.unsafe_skip_pattern.clone(),
+      // Prefer config.browserslist_env (set from options.mode in loadCompiledCssInJsConfig); fall back to top-level input for backwards compatibility.
+      browserslist_env: input
+        .config
+        .browserslist_env
+        .clone()
+        .or_else(|| input.browserslist_env.clone()),
     },
   );
 
@@ -547,6 +558,7 @@ fn config_to_plugin_options(
     class_hash_prefix: config.class_hash_prefix.clone(),
     flatten_multiple_selectors: Some(config.flatten_multiple_selectors),
     extract: Some(config.extract),
+    browserslist_env: config.browserslist_env.clone(),
   }
 }
 
@@ -562,6 +574,7 @@ mod tests {
       project_root: "/project".to_string(),
       is_source: false,
       source_maps,
+      browserslist_env: None,
       config: CompiledCssInJsConfigPlugin {
         config_path: None,
         unsafe_report_safe_assets_for_migration: None,

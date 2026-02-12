@@ -112,6 +112,13 @@ pub struct CompiledCssInJsConfig {
   /// Defaults to `None`.
   ///
   pub unsafe_skip_pattern: Option<String>,
+  ///
+  /// Browserslist environment (e.g. "development" or "production") for package.json "browserslist".
+  /// Used so CSS normalization uses the same env as Babel.
+  ///
+  /// Defaults to `None`.
+  ///
+  pub browserslist_env: Option<String>,
 }
 
 /// Full configuration for CompiledCssInJs transform.
@@ -228,6 +235,10 @@ pub struct CompiledCssInJsTransformConfig {
   /// Defaults to `None`.
   ///
   pub unsafe_skip_pattern: Option<String>,
+  ///
+  /// Browserslist environment (e.g. "development" or "production") for package.json "browserslist".
+  ///
+  pub browserslist_env: Option<String>,
 }
 
 impl Default for CompiledCssInJsTransformConfig {
@@ -251,6 +262,7 @@ impl Default for CompiledCssInJsTransformConfig {
       unsafe_report_safe_assets_for_migration: false,
       unsafe_use_safe_assets: false,
       unsafe_skip_pattern: None,
+      browserslist_env: None,
     }
   }
 }
@@ -287,6 +299,7 @@ impl From<CompiledCssInJsConfig> for CompiledCssInJsTransformConfig {
         .unsafe_use_safe_assets
         .unwrap_or(defaults.unsafe_use_safe_assets),
       unsafe_skip_pattern: partial.unsafe_skip_pattern.or(defaults.unsafe_skip_pattern),
+      browserslist_env: partial.browserslist_env.or(defaults.browserslist_env),
     }
   }
 }

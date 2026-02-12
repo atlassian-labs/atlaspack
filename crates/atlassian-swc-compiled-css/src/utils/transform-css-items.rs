@@ -1,5 +1,6 @@
 use std::cell::Cell;
 use std::collections::{BTreeMap, HashMap};
+use std::path::PathBuf;
 
 fn first_property_from_sheet(sheet: &str) -> Option<String> {
   if let Some(open) = sheet.find('{') {
@@ -182,7 +183,11 @@ pub(crate) fn create_transform_css_options(
   options.sort_shorthand = None;
   options.class_hash_prefix = state.opts.class_hash_prefix.clone();
   options.flatten_multiple_selectors = state.opts.flatten_multiple_selectors;
-  options.browserslist_config_path = Some(state.root.clone());
+  // Match cssnano/postcss plugins: browserslist resolves relative to the plugin package
+  // directory (path=__dirname), not the project root. Use this crate root to mirror
+  // Babel output for reduce-initial/colormin and hashing.
+  options.browserslist_config_path = Some(PathBuf::from(env!("CARGO_MANIFEST_DIR")));
+  options.browserslist_env = state.opts.browserslist_env.clone();
 
   let compression_map = state.opts.class_name_compression_map.clone();
   if let Some(map) = &compression_map {
@@ -660,8 +665,10 @@ pub fn apply_selectors(item: &mut CssItem, selectors: &[String]) {
 #[cfg(test)]
 mod tests {
   use std::cell::RefCell;
+  use std::path::PathBuf;
   use std::rc::Rc;
 
+  use pretty_assertions::assert_eq;
   use swc_core::atoms::Atom;
   use swc_core::common::sync::Lrc;
   use swc_core::common::{DUMMY_SP, SourceMap, SyntaxContext};
@@ -689,6 +696,16 @@ mod tests {
       value: Atom::from(value),
       raw: None,
     }))
+  }
+
+  #[test]
+  fn uses_crate_root_for_browserslist_config_path() {
+    let meta = create_metadata();
+    let (options, _compression) = create_transform_css_options(&meta);
+    assert_eq!(
+      options.browserslist_config_path,
+      Some(PathBuf::from(env!("CARGO_MANIFEST_DIR")))
+    );
   }
 
   #[test]

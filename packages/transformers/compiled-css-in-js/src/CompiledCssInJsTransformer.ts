@@ -15,6 +15,9 @@ import ThrowableDiagnostic, {
 import {remapSourceLocation} from '@atlaspack/utils';
 
 import {loadCompiledCssInJsConfig} from '@atlaspack/transformer-js';
+import * as fs from 'fs';
+
+const EMIT_SWC_OUTPUT = process.env.ATLASPACK_EMIT_SWC_OUTPUT === 'true';
 
 export default new Transformer({
   // eslint-disable-next-line require-await
@@ -215,6 +218,23 @@ export default new Transformer({
 
     if (result.bailOut) {
       // Bail out if the transform failed
+      return [asset];
+    }
+
+    // Emit transformed code to sibling file for testing/comparison
+    // When EMIT_SWC_OUTPUT is true, we emit the file but don't modify the asset,
+    // allowing the Babel transformer (@compiled/parcel-transformer) to run on the
+    // original code in the same build pass
+    if (EMIT_SWC_OUTPUT) {
+      const swcOutputPath = asset.filePath + '.swc.js';
+      try {
+        fs.writeFileSync(swcOutputPath, result.code, 'utf8');
+      } catch (e) {
+        logger.warn({
+          message: `Failed to write SWC output to ${swcOutputPath}: ${e}`,
+        });
+      }
+      // Return original asset unchanged so Babel transformer can also process it
       return [asset];
     }
 
