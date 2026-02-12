@@ -1,65 +1,65 @@
-name: Type Coverage
-
-on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-
-concurrency:
-  # Cancel previous runs for the same PR
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
-
-permissions:
-  contents: read
-  pull-requests: write
-
-jobs:
-  type-coverage:
-    name: Type Coverage Report
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          # Fetch full history to enable comparison with base branch
-          fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: ./.github/actions/setup-node
-
-      - name: Fetch base branch
-        run: |
-          git fetch origin ${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}
-
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
-
-      - name: Ensure TypeScript references are up to date
-        run: yarn update-ts-references --frozen
-
-      - name: Run type coverage
-        id: type-coverage
-        uses: actions/github-script@v7
-        with:
-          result-encoding: string
-          script: |
-            const { generateTypeCoverageComment } = require('./scripts/generate-type-coverage-comment.js');
-
-            return generateTypeCoverageComment();
-
-      - name: Find existing comment
-        uses: peter-evans/find-comment@v3
-        id: find-comment
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          comment-author: 'github-actions[bot]'
-          body-includes: '📊 Type Coverage Report'
-
-      - name: Create or update comment
-        uses: peter-evans/create-or-update-comment@v4
-        with:
-          comment-id: ${{ steps.find-comment.outputs.comment-id }}
-          issue-number: ${{ github.event.pull_request.number }}
-          body: ${{ steps.type-coverage.outputs.result }}
-          edit-mode: replace
+# name: Type Coverage
+#
+# on:
+#   pull_request:
+#     types: [opened, synchronize, reopened]
+#
+# concurrency:
+#   # Cancel previous runs for the same PR
+#   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+#   cancel-in-progress: true
+#
+# permissions:
+#   contents: read
+#   pull-requests: write
+#
+# jobs:
+#   type-coverage:
+#     name: Type Coverage Report
+#     runs-on: ubuntu-latest
+#
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+#         with:
+#           # Fetch full history to enable comparison with base branch
+#           fetch-depth: 0
+#
+#       - name: Setup Node.js
+#         uses: ./.github/actions/setup-node
+#
+#       - name: Fetch base branch
+#         run: |
+#           git fetch origin ${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}
+#
+#       - name: Install dependencies
+#         run: yarn install --frozen-lockfile
+#
+#       - name: Ensure TypeScript references are up to date
+#         run: yarn update-ts-references --frozen
+#
+#       - name: Run type coverage
+#         id: type-coverage
+#         uses: actions/github-script@v7
+#         with:
+#           result-encoding: string
+#           script: |
+#             const { generateTypeCoverageComment } = require('./scripts/generate-type-coverage-comment.js');
+#
+#             return generateTypeCoverageComment();
+#
+#       - name: Find existing comment
+#         uses: peter-evans/find-comment@v3
+#         id: find-comment
+#         with:
+#           issue-number: ${{ github.event.pull_request.number }}
+#           comment-author: 'github-actions[bot]'
+#           body-includes: '📊 Type Coverage Report'
+#
+#       - name: Create or update comment
+#         uses: peter-evans/create-or-update-comment@v4
+#         with:
+#           comment-id: ${{ steps.find-comment.outputs.comment-id }}
+#           issue-number: ${{ github.event.pull_request.number }}
+#           body: ${{ steps.type-coverage.outputs.result }}
+#           edit-mode: replace

@@ -211,6 +211,8 @@ export class Lmdb {
   commitWriteTransaction(): Promise<void>;
   /** Compact the database to the target path */
   compact(targetPath: string): void;
+  /** Explicitly close the database handle, releasing the mmap and writer thread. */
+  close(): void;
   constructor(options: LMDBOptions);
   get(key: string): Promise<Buffer | null | undefined>;
   hasSync(key: string): boolean;
@@ -226,6 +228,8 @@ export class Lmdb {
   startWriteTransaction(): Promise<void>;
   commitWriteTransaction(): Promise<void>;
   compact(targetPath: string): void;
+  /** Explicitly close the database handle, releasing the mmap and writer thread. */
+  close(): void;
 }
 export class Hash {
   constructor();

@@ -90,4 +90,10 @@ impl LMDB {
   pub fn compact(&self, target_path: String) -> napi::Result<()> {
     self.inner.compact(target_path)
   }
+
+  /// Explicitly close the database handle, releasing the mmap and writer thread.
+  #[napi]
+  pub fn close(&mut self) -> napi::Result<()> {
+    self.inner.close()
+  }
 }

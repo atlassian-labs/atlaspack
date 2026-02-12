@@ -68,6 +68,10 @@ export class LmdbWrapper {
   compact(targetPath: string) {
     this.lmdb.compact(targetPath);
   }
+
+  close() {
+    this.lmdb.close();
+  }
 }
 
 export function open(
@@ -290,6 +294,18 @@ export class LMDBLiteCache implements Cache {
       })
       .join('/');
     return path.join(this.cacheFilesDirectory, cleanKey);
+  }
+
+  /**
+   * Explicitly close the underlying LMDB database handle, releasing the mmap
+   * region and writer thread. This should be called when the cache is no longer
+   * needed (e.g. in test teardown) to avoid accumulating memory-mapped regions
+   * that cause paging pressure.
+   *
+   * After calling dispose(), this cache instance must not be used.
+   */
+  dispose(): void {
+    this.store.close();
   }
 
   async clear(): Promise<void> {

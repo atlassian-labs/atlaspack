@@ -65,13 +65,21 @@ before(() => {
 });
 
 beforeEach(async () => {
+  // Dispose the previous cache to release its LMDB mmap region immediately,
+  // rather than waiting for GC. This prevents accumulation of 1 GB mmap
+  // regions across hundreds of tests, which causes severe paging in CI.
+  cache.dispose();
+
   outputFS = new MemoryFS(workerFarm);
   overlayFS = new OverlayFS(outputFS, inputFS);
 
+  let cacheCreated = false;
   for (let i = 0; i < 5; i++) {
     try {
       cacheDir = tempy.directory();
       cache = new LMDBLiteCache(cacheDir);
+      cacheCreated = true;
+      break;
     } catch (err: any) {
       if (
         err.message.includes('temporarily unavailable') ||
@@ -86,6 +94,12 @@ beforeEach(async () => {
       throw err;
     }
   }
+  if (!cacheCreated) {
+    throw new Error(
+      'Failed to create LMDBLiteCache after 5 retries. ' +
+        'This may indicate file descriptor exhaustion.',
+    );
+  }
   cache.ensure();
 });
 
@@ -97,6 +111,7 @@ export async function ncp(source: FilePath, destination: FilePath) {
 }
 
 after(async () => {
+  cache.dispose();
   // Spin down the worker farm to stop it from preventing the main process from exiting
   await workerFarm.end();
   if (isAtlaspackV3) {

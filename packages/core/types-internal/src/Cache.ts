@@ -26,4 +26,9 @@ export interface Cache {
    * of the changes that may have been written to the cache in other threads.
    */
   refresh(): void;
+  /**
+   * Explicitly release underlying resources (e.g. LMDB mmap regions).
+   * Optional; implementations that hold no native resources may omit this.
+   */
+  dispose?(): void;
 }

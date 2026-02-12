@@ -71,7 +71,10 @@ pub fn atlaspack_napi_create(
   };
 
   // Get access to LMDB reference
-  let db_handle = lmdb.get_database().clone();
+  let db_handle = lmdb
+    .get_database()
+    .ok_or_else(|| napi::Error::from_reason("LMDB database has been closed"))?
+    .clone();
   atlaspack_napi_run_db_health_check(&db_handle)?;
 
   // Get Atlaspack Options

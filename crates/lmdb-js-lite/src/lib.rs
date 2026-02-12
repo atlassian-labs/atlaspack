@@ -167,7 +167,7 @@ pub fn get_database(options: LMDBOptions) -> anyhow::Result<Arc<DatabaseHandle>>
 
 #[napi]
 pub struct LMDBJsLite {
-  inner: Arc<DatabaseHandle>,
+  inner: Option<Arc<DatabaseHandle>>,
   read_transaction: Option<heed::RoTxn<'static>>,
 }
 
@@ -177,14 +177,25 @@ impl LMDBJsLite {
   pub fn new(options: LMDBOptions) -> napi::Result<Self> {
     let database = get_database(options).map_err(napi_error)?;
     Ok(Self {
-      inner: database,
+      inner: Some(database),
       read_transaction: None,
     })
   }
 
+  /// Explicitly close the database handle, releasing the mmap and writer thread.
+  ///
+  /// After calling close, all subsequent operations on this instance will return errors.
+  /// This is useful in tests to avoid accumulating LMDB mmap regions that cause memory pressure.
+  #[napi]
+  pub fn close(&mut self) -> napi::Result<()> {
+    self.read_transaction.take();
+    self.inner.take();
+    Ok(())
+  }
+
   #[napi(ts_return_type = "Promise<Buffer | null | undefined>")]
   pub fn get(&self, env: Env, key: String) -> napi::Result<napi::JsObject> {
-    let database_handle = &self.inner;
+    let database_handle = self.handle()?;
     let (deferred, promise) = env.create_deferred()?;
 
     database_handle
@@ -203,7 +214,7 @@ impl LMDBJsLite {
 
   #[napi(ts_return_type = "boolean")]
   pub fn has_sync(&self, key: String) -> napi::Result<bool> {
-    let database_handle = &self.inner;
+    let database_handle = self.handle()?;
     let database = &database_handle.database;
     let txn = self.read_txn()?;
 
@@ -212,7 +223,7 @@ impl LMDBJsLite {
 
   #[napi]
   pub fn keys_sync(&self, skip: i32, limit: i32) -> napi::Result<Vec<String>> {
-    let database_handle = &self.inner;
+    let database_handle = self.handle()?;
     let database = &database_handle.database;
     let txn = self.read_txn()?;
 
@@ -223,7 +234,7 @@ impl LMDBJsLite {
 
   #[napi(ts_return_type = "Buffer | null")]
   pub fn get_sync(&self, env: Env, key: String) -> napi::Result<JsUnknown> {
-    let database_handle = &self.inner;
+    let database_handle = self.handle()?;
     let database = &database_handle.database;
 
     let txn = self.read_txn()?;
@@ -247,7 +258,7 @@ impl LMDBJsLite {
 
   #[napi]
   pub fn get_many_sync(&self, keys: Vec<String>) -> napi::Result<Vec<Option<Buffer>>> {
-    let database_handle = &self.inner;
+    let database_handle = self.handle()?;
     let database = &database_handle.database;
 
     let mut results = vec![];
@@ -268,7 +279,7 @@ impl LMDBJsLite {
 
   #[napi(ts_return_type = "Promise<void>")]
   pub fn put_many(&self, env: Env, entries: Vec<Entry>) -> napi::Result<napi::JsObject> {
-    let database_handle = &self.inner;
+    let database_handle = self.handle()?;
     let (deferred, promise) = env.create_deferred()?;
 
     let message = DatabaseWriterMessage::PutMany {
@@ -293,7 +304,7 @@ impl LMDBJsLite {
 
   #[napi(ts_return_type = "Promise<void>")]
   pub fn put(&self, env: Env, key: String, data: Buffer) -> napi::Result<napi::JsObject> {
-    let database_handle = &self.inner;
+    let database_handle = self.handle()?;
     // This costs us 70% over the round-trip time after arg. conversion
     let (deferred, promise) = env.create_deferred()?;
 
@@ -315,7 +326,7 @@ impl LMDBJsLite {
 
   #[napi]
   pub fn put_no_confirm(&self, key: String, data: Buffer) -> napi::Result<()> {
-    let database_handle = &self.inner;
+    let database_handle = self.handle()?;
 
     let message = DatabaseWriterMessage::Put {
       key,
@@ -332,7 +343,7 @@ impl LMDBJsLite {
 
   #[napi(ts_return_type = "Promise<void>")]
   pub fn delete(&self, env: Env, key: String) -> napi::Result<napi::JsObject> {
-    let database_handle = &self.inner;
+    let database_handle = self.handle()?;
     let (deferred, promise) = env.create_deferred()?;
 
     let message = DatabaseWriterMessage::Delete {
@@ -355,7 +366,7 @@ impl LMDBJsLite {
     if self.read_transaction.is_some() {
       return Ok(());
     }
-    let database_handle = &self.inner;
+    let database_handle = self.handle()?;
     let txn = database_handle
       .database
       .static_read_txn()
@@ -376,7 +387,7 @@ impl LMDBJsLite {
 
   #[napi(ts_return_type = "Promise<void>")]
   pub fn start_write_transaction(&self, env: Env) -> napi::Result<napi::JsObject> {
-    let database_handle = &self.inner;
+    let database_handle = self.handle()?;
     let (deferred, promise) = env.create_deferred()?;
 
     let message = DatabaseWriterMessage::StartTransaction {
@@ -396,7 +407,7 @@ impl LMDBJsLite {
 
   #[napi(ts_return_type = "Promise<void>")]
   pub fn commit_write_transaction(&self, env: Env) -> napi::Result<napi::JsObject> {
-    let database_handle = &self.inner;
+    let database_handle = self.handle()?;
     let (deferred, promise) = env.create_deferred()?;
 
     let message = DatabaseWriterMessage::CommitTransaction {
@@ -413,7 +424,7 @@ impl LMDBJsLite {
   /// Compact the database to the target path
   #[napi]
   pub fn compact(&self, target_path: String) -> napi::Result<()> {
-    let database_handle = &self.inner;
+    let database_handle = self.handle()?;
     database_handle
       .database()
       .compact(Path::new(&target_path))
@@ -425,19 +436,26 @@ impl LMDBJsLite {
     Ok(())
   }
 
-  pub fn get_database(&self) -> &Arc<DatabaseHandle> {
-    &self.inner
+  pub fn get_database(&self) -> Option<&Arc<DatabaseHandle>> {
+    self.inner.as_ref()
   }
 }
 
 impl LMDBJsLite {
+  fn handle(&self) -> napi::Result<&Arc<DatabaseHandle>> {
+    self
+      .inner
+      .as_ref()
+      .ok_or_else(|| napi::Error::from_reason("[napi] LMDB database has been closed"))
+  }
+
   /// On the main thread, we either start a new read transaction on each read, or use the currently
   /// active read transaction.
   fn read_txn<'a, 'b>(&'b self) -> napi::Result<writer::Transaction<'a, 'b>> {
     if let Some(txn) = &self.read_transaction {
       Ok(writer::Transaction::Borrowed(txn))
     } else {
-      let database = &self.inner;
+      let database = self.handle()?;
       Ok(writer::Transaction::Owned(
         database.database.read_txn().map_err(napi_error)?,
       ))
