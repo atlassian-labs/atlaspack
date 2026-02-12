@@ -18,7 +18,7 @@ import {Asset} from '@atlaspack/types';
 const CONFIG = Symbol.for('parcel-plugin-config');
 let packageManager = new NodePackageManager(inputFS, '/');
 
-describe.v2('incremental bundling', function () {
+describe('incremental bundling', function () {
   let defaultBundlerSpy, customBundlerSpy;
   let assertChangedAssets = (actual: number, expected: number) => {
     assert.equal(
@@ -101,7 +101,8 @@ console.log('adding a new console');`,
         }
       });
 
-      it('disable by setting option to false', async () => {
+      // Note - marked as v2 because it currently fails on v3
+      it.v2('disable by setting option to false', async () => {
         let subscription;
         let fixture = path.join(__dirname, '/integration/incremental-bundling');
         try {
@@ -665,7 +666,8 @@ console.log('index.js');`,
   });
 
   describe('other changes that would for a re-bundle', () => {
-    it('changing the bundler in parcel configs', async () => {
+    // Note - marked as v2 because it currently fails on v3
+    it.v2('changing the bundler in parcel configs', async () => {
       let subscription;
       let fixture = path.join(__dirname, '/integration/incremental-bundling');
       try {
@@ -712,7 +714,8 @@ console.log('index.js');`,
       }
     });
 
-    it('changing bundler options', async () => {
+    // Note - marked as v2 because it currently fails on v3
+    it.v2('changing bundler options', async () => {
       let subscription;
       try {
         await fsFixture(overlayFS, __dirname)`
@@ -766,7 +769,8 @@ console.log('index.js');`,
     });
   });
 
-  it('changing the namer', async () => {
+  // Note - marked as v2 because it currently fails on v3
+  it.v2('changing the namer', async () => {
     let subscription;
     let fixture = path.join(__dirname, '/integration/incremental-bundling');
     try {
@@ -810,7 +814,8 @@ console.log('index.js');`,
     }
   });
 
-  it('changing the runtimes', async () => {
+  // Note - marked as v2 because it currently fails on v3
+  it.v2('changing the runtimes', async () => {
     let subscription;
     let fixture = path.join(__dirname, '/integration/incremental-bundling');
     try {
@@ -852,7 +857,8 @@ console.log('index.js');`,
     }
   });
 
-  it('changing target options', async () => {
+  // Note - marked as v2 because it currently fails on v3
+  it.v2('changing target options', async () => {
     let subscription;
     let fixture = path.join(__dirname, '/integration/incremental-bundling');
     try {
@@ -900,7 +906,8 @@ console.log('index.js');`,
     }
   });
 
-  it('adding a new the entry', async () => {
+  // Note - marked as v2 because it currently fails on v3
+  it.v2('adding a new the entry', async () => {
     let subscription;
     let fixture = path.join(__dirname, '/integration/incremental-bundling');
     try {

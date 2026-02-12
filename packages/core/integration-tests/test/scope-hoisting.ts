@@ -3204,6 +3204,64 @@ import {OverlayFS} from '@atlaspack/fs';
         });
       });
 
+      describe.v3(
+        'recovery after symbol propagation error (graph corruption)',
+        () => {
+          it('should recover after a symbol propagation error without graph corruption', async function () {
+            let testDir = path.join(
+              __dirname,
+              '/integration/scope-hoisting/es6/update-used-symbols-remove-export',
+            );
+
+            let b = bundler(path.join(testDir, 'a.js'), {
+              inputFS: overlayFS,
+              outputFS: overlayFS,
+            });
+
+            await overlayFS.mkdirp(testDir);
+            // Step 1: b.js exports foo -- build succeeds
+            await overlayFS.copyFile(
+              path.join(testDir, 'b.1.js'),
+              path.join(testDir, 'b.js'),
+            );
+
+            let subscription = await b.watch();
+
+            try {
+              let bundleEvent = await getNextBuild(b);
+              assert.strictEqual(bundleEvent.type, 'buildSuccess');
+              if (!bundleEvent.bundleGraph) return assert.fail();
+              let output = await run(bundleEvent.bundleGraph);
+              assert.deepEqual(output, 123);
+
+              // Step 2: b.js removes foo export -- build fails (symbol propagation error)
+              await overlayFS.copyFile(
+                path.join(testDir, 'b.2.js'),
+                path.join(testDir, 'b.js'),
+              );
+              bundleEvent = await getNextBuild(b);
+              assert.strictEqual(bundleEvent.type, 'buildFailure');
+
+              // Step 3: restore b.js -- build should succeed without graph corruption.
+              // If the shared mutable state bug is present, the prevAssetGraph's
+              // _contentKeyToNodeId Map may have been corrupted by the failed build,
+              // causing "Graph already has content key" on this rebuild.
+              await overlayFS.copyFile(
+                path.join(testDir, 'b.1.js'),
+                path.join(testDir, 'b.js'),
+              );
+              bundleEvent = await getNextBuild(b);
+              assert.strictEqual(bundleEvent.type, 'buildSuccess');
+              if (!bundleEvent.bundleGraph) return assert.fail();
+              output = await run(bundleEvent.bundleGraph);
+              assert.deepEqual(output, 123);
+            } finally {
+              await subscription.unsubscribe();
+            }
+          });
+        },
+      );
+
       it('removes functions that increment variables in object properties', async function () {
         let b = await bundle(
           path.join(
