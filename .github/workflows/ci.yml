@@ -191,14 +191,14 @@ jobs:
     name: Integration tests (${{ matrix.os }}, Node ${{ matrix.node }}, Slice ${{ matrix.slice_num }}/${{ matrix.slice_total }})
     needs:
       - build_native
-    timeout-minutes: 20
+    timeout-minutes: 45
     strategy:
       # These tend to be quite flakey, so one failed instance shouldn't stop
       # others from potentially succeeding
       fail-fast: false
       matrix:
-        slice_num: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
-        slice_total: [16]
+        slice_num: [1, 2, 3, 4]
+        slice_total: [4]
         os: [ubuntu-22.04, macos-15]
         node: [24]
     runs-on: ${{ matrix.os }}
@@ -251,7 +251,11 @@ jobs:
     name: Integration tests (v3 ${{ matrix.os }}, Node ${{ matrix.node }}, Slice ${{ matrix.slice_num }}/${{ matrix.slice_total }})
     needs:
       - build_native
+<<<<<<< HEAD
     timeout-minutes: 20
+=======
+    timeout-minutes: 25
+>>>>>>> 1a1cf786c (jb; decrease test slices, increase timeout for non-v3 tests)
     strategy:
       # These tend to be quite flakey, so one failed instance shouldn't stop
       # others from potentially succeeding
@@ -259,8 +263,25 @@ jobs:
       matrix:
         slice_num: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
         slice_total: [16]
-        os: [ubuntu-22.04, macos-15]
+        os: [ubuntu-22.04]
         node: [24]
+        include:
+          - os: macos-15
+            node: 24
+            slice_num: 1
+            slice_total: 4
+          - os: macos-15
+            node: 24
+            slice_num: 2
+            slice_total: 4
+          - os: macos-15
+            node: 24
+            slice_num: 3
+            slice_total: 4
+          - os: macos-15
+            node: 24
+            slice_num: 4
+            slice_total: 4
     runs-on: ${{ matrix.os }}
     steps:
       - name: Collect Workflow Telemetry
