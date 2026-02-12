@@ -489,11 +489,14 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "atlaspack_core",
+ "criterion",
  "fixedbitset",
  "petgraph",
  "pretty_assertions",
+ "rand 0.8.5",
  "serde_json",
  "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

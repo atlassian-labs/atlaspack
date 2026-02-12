@@ -13,3 +13,10 @@ tracing = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = { workspace = true }
+criterion = { version = "0.5", features = ["html_reports"] }
+rand = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[[bench]]
+name = "bundling_benchmark"
+harness = false
