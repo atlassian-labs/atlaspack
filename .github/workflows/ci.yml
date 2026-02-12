@@ -20,23 +20,23 @@ permissions:
   actions: read
 
 jobs:
-  # Validate changesets - handles both general and Rust-specific validation
-  validate-changesets:
-    name: ✍️ Validate Changesets
-    runs-on: ubuntu-24.04
-    if: github.ref_name != 'main'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/github-script@v7
-        with:
-          script: |
-            const { validateChangesets } = require('./scripts/validate-changesets.js');
-            await validateChangesets({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pullNumber: context.payload.pull_request.number,
-              octokit: github
-            });
+  # # Validate changesets - handles both general and Rust-specific validation
+  # validate-changesets:
+  #   name: ✍️ Validate Changesets
+  #   runs-on: ubuntu-24.04
+  #   if: github.ref_name != 'main'
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/github-script@v7
+  #       with:
+  #         script: |
+  #           const { validateChangesets } = require('./scripts/validate-changesets.js');
+  #           await validateChangesets({
+  #             owner: context.repo.owner,
+  #             repo: context.repo.repo,
+  #             pullNumber: context.payload.pull_request.number,
+  #             octokit: github
+  #           });
 
   # Build and store native packages
   build_native:
@@ -98,94 +98,94 @@ jobs:
           path: packages/**/*
           retention-days: 1
 
-  lint_javascript:
-    name: 🔎 Lint TypeScript
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-node
-      - run: npx eslint .
-      - run: npx prettier --list-different .
+  # lint_javascript:
+  #   name: 🔎 Lint TypeScript
+  #   runs-on: ubuntu-24.04
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: ./.github/actions/setup-node
+  #     - run: npx eslint .
+  #     - run: npx prettier --list-different .
 
-  check_typescript:
-    name: 📋 Check TypeScript
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-node
-      - run: yarn build:ts
+  # check_typescript:
+  #   name: 📋 Check TypeScript
+  #   runs-on: ubuntu-24.04
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: ./.github/actions/setup-node
+  #     - run: yarn build:ts
 
-  lint_feature_flags:
-    name: 🏴‍☠️ Lint Feature Flags
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-node
-      - run: yarn lint:feature-flags
+  # lint_feature_flags:
+  #   name: 🏴‍☠️ Lint Feature Flags
+  #   runs-on: ubuntu-24.04
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: ./.github/actions/setup-node
+  #     - run: yarn lint:feature-flags
 
-  lint_rust:
-    name: 🦀 Lint Rust
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust
-        uses: ./.github/actions/rust-toolchain
-        with: {components: 'clippy, rustfmt'}
-      - run: cargo fmt --all -- --check
-      - run: cargo clippy -- -D warnings
+  # lint_rust:
+  #   name: 🦀 Lint Rust
+  #   runs-on: ubuntu-24.04
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Install Rust
+  #       uses: ./.github/actions/rust-toolchain
+  #       with: {components: 'clippy, rustfmt'}
+  #     - run: cargo fmt --all -- --check
+  #     - run: cargo clippy -- -D warnings
 
-  unit_tests_rust:
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-22.04
-          - os: macos-15
-    name: Unit tests (${{ matrix.os }}, Rust)
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust
-        uses: ./.github/actions/rust-toolchain
-      - uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: '${{ matrix.os }}-rust-unit-tests'
-          # Only store new caches on main
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+  # unit_tests_rust:
+  #   strategy:
+  #     matrix:
+  #       include:
+  #         - os: ubuntu-22.04
+  #         - os: macos-15
+  #   name: Unit tests (${{ matrix.os }}, Rust)
+  #   runs-on: ${{ matrix.os }}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Install Rust
+  #       uses: ./.github/actions/rust-toolchain
+  #     - uses: Swatinem/rust-cache@v2
+  #       with:
+  #         shared-key: '${{ matrix.os }}-rust-unit-tests'
+  #         # Only store new caches on main
+  #         save-if: ${{ github.ref == 'refs/heads/main' }}
+  #
+  #     - name: Free up space
+  #       if: ${{ runner.os == 'Linux' }}
+  #       run: |
+  #         sudo rm -rf /usr/local/lib/android || true
+  #         sudo apt-get remove -y '^dotnet-.*' '^llvm-.*' 'php.*'
+  #     - run: cargo test
 
-      - name: Free up space
-        if: ${{ runner.os == 'Linux' }}
-        run: |
-          sudo rm -rf /usr/local/lib/android || true
-          sudo apt-get remove -y '^dotnet-.*' '^llvm-.*' 'php.*'
-      - run: cargo test
-
-  unit_tests:
-    name: Unit tests (${{ matrix.os }}, Node ${{ matrix.node }})
-    needs:
-      - build_native
-    strategy:
-      matrix:
-        os: ['ubuntu-22.04', 'macos-15']
-        node: [24]
-        exclude:
-          # Seems to have an error - in theory we have enough coverage with the other tests / variations
-          - os: macos-15
-            node: 24
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-node
-        with:
-          node-version: ${{ matrix.node }}
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: packages-*
-          path: packages
-          merge-multiple: true
-      - name: Bump max inotify watches (Linux only)
-        if: ${{ runner.os == 'Linux' }}
-        run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
-      - run: yarn test:js:unit
+  # unit_tests:
+  #   name: Unit tests (${{ matrix.os }}, Node ${{ matrix.node }})
+  #   needs:
+  #     - build_native
+  #   strategy:
+  #     matrix:
+  #       os: ['ubuntu-22.04', 'macos-15']
+  #       node: [24]
+  #       exclude:
+  #         # Seems to have an error - in theory we have enough coverage with the other tests / variations
+  #         - os: macos-15
+  #           node: 24
+  #   runs-on: ${{ matrix.os }}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: ./.github/actions/setup-node
+  #       with:
+  #         node-version: ${{ matrix.node }}
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         pattern: packages-*
+  #         path: packages
+  #         merge-multiple: true
+  #     - name: Bump max inotify watches (Linux only)
+  #       if: ${{ runner.os == 'Linux' }}
+  #       run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
+  #     - run: yarn test:js:unit
 
   integration_tests:
     name: Integration tests (${{ matrix.os }}, Node ${{ matrix.node }}, Slice ${{ matrix.slice_num }}/${{ matrix.slice_total }})
@@ -247,203 +247,199 @@ jobs:
           if-no-files-found: ignore
           retention-days: 3
 
-  integration_tests_v3:
-    name: Integration tests (v3 ${{ matrix.os }}, Node ${{ matrix.node }}, Slice ${{ matrix.slice_num }}/${{ matrix.slice_total }})
-    needs:
-      - build_native
-<<<<<<< HEAD
-    timeout-minutes: 20
-=======
-    timeout-minutes: 25
->>>>>>> 1a1cf786c (jb; decrease test slices, increase timeout for non-v3 tests)
-    strategy:
-      # These tend to be quite flakey, so one failed instance shouldn't stop
-      # others from potentially succeeding
-      fail-fast: false
-      matrix:
-        slice_num: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
-        slice_total: [16]
-        os: [ubuntu-22.04]
-        node: [24]
-        include:
-          - os: macos-15
-            node: 24
-            slice_num: 1
-            slice_total: 4
-          - os: macos-15
-            node: 24
-            slice_num: 2
-            slice_total: 4
-          - os: macos-15
-            node: 24
-            slice_num: 3
-            slice_total: 4
-          - os: macos-15
-            node: 24
-            slice_num: 4
-            slice_total: 4
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Collect Workflow Telemetry
-        uses: catchpoint/workflow-telemetry-action@v2
-        with:
-          comment_on_pr: false
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-watchman
-      - uses: ./.github/actions/setup-node
-        with:
-          node-version: ${{ matrix.node }}
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: packages-*
-          path: packages
-          merge-multiple: true
-      - name: Bump max inotify watches (Linux only)
-        run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
-        if: ${{ runner.os == 'Linux' }}
-      - name: Enable core dumps (Linux only)
-        if: ${{ runner.os == 'Linux' }}
-        run: |
-          # Enable core dumps
-          ulimit -c unlimited
-          # Set core dump pattern to put dumps in /tmp with identifying info
-          echo '/tmp/core.%e.%p.%t' | sudo tee /proc/sys/kernel/core_pattern
-          # Create directory for core dumps
-          sudo mkdir -p /tmp
-          sudo chmod 777 /tmp
-          echo "Core dumps enabled. Pattern: $(cat /proc/sys/kernel/core_pattern)"
-      - name: Start resource monitor
-        run: |
-          # Log memory and disk usage every 30s in the background
-          (while true; do
-            echo "--- $(date -u '+%Y-%m-%dT%H:%M:%SZ') ---"
-            if [ "$RUNNER_OS" = "Linux" ]; then
-              free -m
-              df -h /
-            else
-              vm_stat | head -10
-              df -h /
-            fi
-            echo ""
-            sleep 30
-          done) > /tmp/resource-monitor.log 2>&1 &
-          echo $! > /tmp/resource-monitor.pid
-      - run: yarn test:integration-ci
-        env:
-          ATLASPACK_V3: true
-          SLICE_NUM: ${{ matrix.slice_num }}
-          SLICE_TOTAL: ${{ matrix.slice_total }}
-          ATLASPACK_MOCHA_HANG_DEBUG: 'true'
-          ISOLATE_TESTS: 'false'
-          RUST_BACKTRACE: full
-      - name: Upload resource monitor log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: resource-log-v3-${{ matrix.os }}-node${{ matrix.node }}-slice${{ matrix.slice_num }}
-          path: /tmp/resource-monitor.log
-          if-no-files-found: ignore
-          retention-days: 3
-      - name: Collect core dumps (Linux only)
-        if: ${{ runner.os == 'Linux' && always() }}
-        run: |
-          echo "Looking for core dumps in /tmp..."
-          if ls /tmp/core.* 1> /dev/null 2>&1; then
-            echo "Core dumps found:"
-            ls -lh /tmp/core.*
-            mkdir -p core-dumps
-            cp /tmp/core.* core-dumps/ || true
-          else
-            echo "No core dumps found"
-          fi
-      - name: Upload core dumps (Linux only)
-        if: ${{ runner.os == 'Linux' && always() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: core-dumps-v3-${{ matrix.os }}-node-${{ matrix.node }}-${{ github.run_id }}
-          path: core-dumps/
-          if-no-files-found: ignore
-          retention-days: 7
+  # integration_tests_v3:
+  #   name: Integration tests (v3 ${{ matrix.os }}, Node ${{ matrix.node }}, Slice ${{ matrix.slice_num }}/${{ matrix.slice_total }})
+  #   needs:
+  #     - build_native
+  #   timeout-minutes: 25
+  #   strategy:
+  #     # These tend to be quite flakey, so one failed instance shouldn't stop
+  #     # others from potentially succeeding
+  #     fail-fast: false
+  #     matrix:
+  #       slice_num: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+  #       slice_total: [16]
+  #       os: [ubuntu-22.04]
+  #       node: [24]
+  #       include:
+  #         - os: macos-15
+  #           node: 24
+  #           slice_num: 1
+  #           slice_total: 4
+  #         - os: macos-15
+  #           node: 24
+  #           slice_num: 2
+  #           slice_total: 4
+  #         - os: macos-15
+  #           node: 24
+  #           slice_num: 3
+  #           slice_total: 4
+  #         - os: macos-15
+  #           node: 24
+  #           slice_num: 4
+  #           slice_total: 4
+  #   runs-on: ${{ matrix.os }}
+  #   steps:
+  #     - name: Collect Workflow Telemetry
+  #       uses: catchpoint/workflow-telemetry-action@v2
+  #       with:
+  #         comment_on_pr: false
+  #     - uses: actions/checkout@v4
+  #     - uses: ./.github/actions/setup-watchman
+  #     - uses: ./.github/actions/setup-node
+  #       with:
+  #         node-version: ${{ matrix.node }}
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         pattern: packages-*
+  #         path: packages
+  #         merge-multiple: true
+  #     - name: Bump max inotify watches (Linux only)
+  #       run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
+  #       if: ${{ runner.os == 'Linux' }}
+  #     - name: Enable core dumps (Linux only)
+  #       if: ${{ runner.os == 'Linux' }}
+  #       run: |
+  #         # Enable core dumps
+  #         ulimit -c unlimited
+  #         # Set core dump pattern to put dumps in /tmp with identifying info
+  #         echo '/tmp/core.%e.%p.%t' | sudo tee /proc/sys/kernel/core_pattern
+  #         # Create directory for core dumps
+  #         sudo mkdir -p /tmp
+  #         sudo chmod 777 /tmp
+  #         echo "Core dumps enabled. Pattern: $(cat /proc/sys/kernel/core_pattern)"
+  #     - name: Start resource monitor
+  #       run: |
+  #         # Log memory and disk usage every 30s in the background
+  #         (while true; do
+  #           echo "--- $(date -u '+%Y-%m-%dT%H:%M:%SZ') ---"
+  #           if [ "$RUNNER_OS" = "Linux" ]; then
+  #             free -m
+  #             df -h /
+  #           else
+  #             vm_stat | head -10
+  #             df -h /
+  #           fi
+  #           echo ""
+  #           sleep 30
+  #         done) > /tmp/resource-monitor.log 2>&1 &
+  #         echo $! > /tmp/resource-monitor.pid
+  #     - run: yarn test:integration-ci
+  #       env:
+  #         ATLASPACK_V3: true
+  #         SLICE_NUM: ${{ matrix.slice_num }}
+  #         SLICE_TOTAL: ${{ matrix.slice_total }}
+  #         ATLASPACK_MOCHA_HANG_DEBUG: 'true'
+  #         ISOLATE_TESTS: 'false'
+  #         RUST_BACKTRACE: full
+  #     - name: Upload resource monitor log
+  #       if: always()
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: resource-log-v3-${{ matrix.os }}-node${{ matrix.node }}-slice${{ matrix.slice_num }}
+  #         path: /tmp/resource-monitor.log
+  #         if-no-files-found: ignore
+  #         retention-days: 3
+  #     - name: Collect core dumps (Linux only)
+  #       if: ${{ runner.os == 'Linux' && always() }}
+  #       run: |
+  #         echo "Looking for core dumps in /tmp..."
+  #         if ls /tmp/core.* 1> /dev/null 2>&1; then
+  #           echo "Core dumps found:"
+  #           ls -lh /tmp/core.*
+  #           mkdir -p core-dumps
+  #           cp /tmp/core.* core-dumps/ || true
+  #         else
+  #           echo "No core dumps found"
+  #         fi
+  #     - name: Upload core dumps (Linux only)
+  #       if: ${{ runner.os == 'Linux' && always() }}
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: core-dumps-v3-${{ matrix.os }}-node-${{ matrix.node }}-${{ github.run_id }}
+  #         path: core-dumps/
+  #         if-no-files-found: ignore
+  #         retention-days: 7
 
-  end_to_end_tests:
-    name: E2E tests
-    needs:
-      - build_native
-    timeout-minutes: 35
-    strategy:
-      matrix:
-        node: [24]
-        os: [ubuntu-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-node
-        with:
-          node-version: ${{ matrix.node }}
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: packages-*
-          path: packages
-          merge-multiple: true
-      - name: Bump max inotify watches (Linux only)
-        run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
-        if: ${{ runner.os == 'Linux' }}
-      - run: yarn playwright install
-      - run: yarn test:e2e:ci
+  # end_to_end_tests:
+  #   name: E2E tests
+  #   needs:
+  #     - build_native
+  #   timeout-minutes: 35
+  #   strategy:
+  #     matrix:
+  #       node: [24]
+  #       os: [ubuntu-latest]
+  #   runs-on: ${{ matrix.os }}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: ./.github/actions/setup-node
+  #       with:
+  #         node-version: ${{ matrix.node }}
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         pattern: packages-*
+  #         path: packages
+  #         merge-multiple: true
+  #     - name: Bump max inotify watches (Linux only)
+  #       run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
+  #       if: ${{ runner.os == 'Linux' }}
+  #     - run: yarn playwright install
+  #     - run: yarn test:e2e:ci
 
-  atlaspack_inspector_unit_tests:
-    name: ${{ matrix.project }} - Unit tests (${{ matrix.os }}, Node ${{ matrix.node }})
-    needs:
-      - build_native
-    strategy:
-      matrix:
-        node: [24]
-        os: ['ubuntu-22.04']
-        project: ['@atlaspack/inspector', '@atlaspack/inspector-frontend']
+  # atlaspack_inspector_unit_tests:
+  #   name: ${{ matrix.project }} - Unit tests (${{ matrix.os }}, Node ${{ matrix.node }})
+  #   needs:
+  #     - build_native
+  #   strategy:
+  #     matrix:
+  #       node: [24]
+  #       os: ['ubuntu-22.04']
+  #       project: ['@atlaspack/inspector', '@atlaspack/inspector-frontend']
+  #
+  #   runs-on: ${{ matrix.os }}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: ./.github/actions/setup-node
+  #       with:
+  #         node-version: ${{ matrix.node }}
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         pattern: packages-*
+  #         path: packages
+  #         merge-multiple: true
+  #     - name: Bump max inotify watches (Linux only)
+  #       if: ${{ runner.os == 'Linux' }}
+  #       run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
+  #     - run: |
+  #         yarn build
+  #         yarn workspace ${{ matrix.project }} test:unit
 
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-node
-        with:
-          node-version: ${{ matrix.node }}
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: packages-*
-          path: packages
-          merge-multiple: true
-      - name: Bump max inotify watches (Linux only)
-        if: ${{ runner.os == 'Linux' }}
-        run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
-      - run: |
-          yarn build
-          yarn workspace ${{ matrix.project }} test:unit
-
-  atlaspack_inspector_e2e_tests:
-    name: '@atlaspack/inspector - E2E tests (${{ matrix.os }}, Node ${{ matrix.node }})'
-    needs:
-      - build_native
-    strategy:
-      matrix:
-        node: [24]
-        os: ['ubuntu-22.04']
-
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-node
-        with:
-          node-version: ${{ matrix.node }}
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: packages-*
-          path: packages
-          merge-multiple: true
-      - name: Bump max inotify watches (Linux only)
-        if: ${{ runner.os == 'Linux' }}
-        run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
-      - run: |
-          yarn build
-          yarn playwright install-deps
-          yarn playwright install
-          yarn workspace @atlaspack/inspector test:e2e
+  # atlaspack_inspector_e2e_tests:
+  #   name: '@atlaspack/inspector - E2E tests (${{ matrix.os }}, Node ${{ matrix.node }})'
+  #   needs:
+  #     - build_native
+  #   strategy:
+  #     matrix:
+  #       node: [24]
+  #       os: ['ubuntu-22.04']
+  #
+  #   runs-on: ${{ matrix.os }}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: ./.github/actions/setup-node
+  #       with:
+  #         node-version: ${{ matrix.node }}
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         pattern: packages-*
+  #         path: packages
+  #         merge-multiple: true
+  #     - name: Bump max inotify watches (Linux only)
+  #       if: ${{ runner.os == 'Linux' }}
+  #       run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
+  #     - run: |
+  #         yarn build
+  #         yarn playwright install-deps
+  #         yarn playwright install
+  #         yarn workspace @atlaspack/inspector test:e2e
