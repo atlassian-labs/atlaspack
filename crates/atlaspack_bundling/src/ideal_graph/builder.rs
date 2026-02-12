@@ -420,11 +420,41 @@ impl IdealGraphBuilder {
 
     let mut ideal = IdealGraph::default();
 
-    for root_key in self.bundle_roots.clone() {
+    // Hot-path lookups.
+    let asset_by_id: HashMap<&str, &atlaspack_core::types::Asset> = asset_graph
+      .get_assets()
+      .map(|a| (a.id.as_str(), a))
+      .collect();
+
+    // Precompute: which assets are targeted by at least one dependency with `needs_stable_name`.
+    // This avoids scanning all dependencies for every bundle root.
+    let mut assets_needing_stable_name: HashSet<String> = HashSet::new();
+    for dep in asset_graph.get_dependencies() {
+      if dep.is_entry || !dep.needs_stable_name {
+        continue;
+      }
+
+      let Some(dep_node) = asset_graph.get_node_id_by_content_key(&dep.id) else {
+        continue;
+      };
+
+      for neighbor in asset_graph.get_outgoing_neighbors(dep_node) {
+        if let Some(asset) = asset_graph.get_asset(&neighbor) {
+          assets_needing_stable_name.insert(asset.id.clone());
+        }
+      }
+    }
+
+    // Avoid cloning the whole set into the loop body while still allowing mutation of
+    // `entry_like_roots`.
+    let roots: Vec<AssetKey> = self.bundle_roots.iter().copied().collect();
+
+    for root_key in roots {
       let root_asset_id = self.assets.id_for(root_key).to_string();
 
-      let asset = self
-        .find_asset_by_id(asset_graph, &root_asset_id)
+      let asset = asset_by_id
+        .get(root_asset_id.as_str())
+        .copied()
         .context("bundle root asset missing from graph")?;
 
       // Determine if this root should be treated like an entry (assets duplicated into it).
@@ -432,27 +462,7 @@ impl IdealGraphBuilder {
       let is_isolated = asset.bundle_behavior == Some(BundleBehavior::Isolated)
         || asset.bundle_behavior == Some(BundleBehavior::InlineIsolated);
 
-      // Look up the dependency that targets this asset to check needs_stable_name.
-      let dep_needs_stable_name = asset_graph
-        .get_dependencies()
-        .filter(|dep| !dep.is_entry)
-        .any(|dep| {
-          dep.needs_stable_name
-            && asset_graph
-              .get_node_id_by_content_key(&dep.id)
-              .map(|dep_node| {
-                asset_graph
-                  .get_outgoing_neighbors(dep_node)
-                  .iter()
-                  .any(|n| {
-                    asset_graph
-                      .get_asset(n)
-                      .map(|a| a.id == root_asset_id)
-                      .unwrap_or(false)
-                  })
-              })
-              .unwrap_or(false)
-        });
+      let dep_needs_stable_name = assets_needing_stable_name.contains(&root_asset_id);
 
       let needs_stable_name = is_entry || dep_needs_stable_name;
 
@@ -1718,13 +1728,5 @@ impl IdealGraphBuilder {
       .get_assets()
       .filter_map(|a| asset_graph.get_node_id_by_content_key(&a.id).copied())
       .collect()
-  }
-
-  fn find_asset_by_id<'a>(
-    &self,
-    asset_graph: &'a AssetGraph,
-    asset_id: &str,
-  ) -> Option<&'a atlaspack_core::types::Asset> {
-    asset_graph.get_assets().find(|a| a.id == asset_id)
   }
 }
