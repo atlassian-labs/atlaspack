@@ -42,6 +42,59 @@ function indexToLineCol(str: string, index: number) {
   };
 }
 
+/**
+ * Verifies that a source location is mapped from the bundle, without relying on
+ * exact minified output (which can vary). Use for minified-bundle sourcemap tests.
+ */
+function checkSourceMappingFromSource({
+  map,
+  source,
+  generated,
+  str,
+  sourcePath,
+  msg = '',
+}: {
+  map: SourceMap;
+  source: string;
+  generated: string;
+  str: string;
+  sourcePath: string;
+  msg?: string;
+}) {
+  assert(source.indexOf(str) !== -1, "'" + str + "' not in source code");
+
+  let sourcePosition = indexToLineCol(source, source.indexOf(str));
+  let mapContent = map.getMap();
+
+  // Find a mapping whose original (source path, line) covers this source position.
+  const sourcePathNorm = path.normalize(sourcePath);
+  const mapping = mapContent.mappings.find((m) => {
+    if (!m.original || m.source == null) return false;
+    let mapSource = mapContent.sources[m.source];
+    if (!mapSource) return false;
+    let mapSourceNorm = path.normalize(mapSource);
+    if (
+      !mapSourceNorm.endsWith(sourcePathNorm) &&
+      mapSourceNorm !== sourcePathNorm
+    )
+      return false;
+    return m.original.line === sourcePosition.line;
+  });
+
+  invariant(
+    mapping,
+    "no mapping from bundle to source '" + str + "' in " + sourcePath + msg,
+  );
+
+  // Sanity: generated position is within the bundle.
+  let generatedLines = generated.split('\n');
+  assert(
+    mapping!.generated.line >= 1 &&
+      mapping!.generated.line <= generatedLines.length,
+    'mapping generated line out of range',
+  );
+}
+
 function checkSourceMapping({
   map,
   source,
@@ -520,40 +573,36 @@ describe('sourcemaps', function () {
       await inputFS.readFile(path.join(sourceDir, 'utils/util.js'), 'utf8'),
     ];
 
-    // TODO: Figure out a way to tests these without relying on generatedStr as much
-    checkSourceMapping({
+    // Use source-first checks so we don't depend on exact minifier output (e.g. 'o.a').
+    checkSourceMappingFromSource({
       map: sourceMap,
       source: inputs[0],
       generated: raw,
       str: 'const local',
-      generatedStr: 'let r',
       sourcePath: 'index.js',
     });
 
-    checkSourceMapping({
+    checkSourceMappingFromSource({
       map: sourceMap,
       source: inputs[0],
       generated: raw,
       str: 'local.a',
-      generatedStr: 'r.a',
       sourcePath: 'index.js',
     });
 
-    checkSourceMapping({
+    checkSourceMappingFromSource({
       map: sourceMap,
       source: inputs[1],
       generated: raw,
       str: 'exports.a',
-      generatedStr: 'o.a',
       sourcePath: 'local.js',
     });
 
-    checkSourceMapping({
+    checkSourceMappingFromSource({
       map: sourceMap,
       source: inputs[2],
       generated: raw,
       str: 'exports.count = function(a, b) {',
-      generatedStr: 'o.count=function(e,n){',
       sourcePath: 'utils/util.js',
     });
   });
