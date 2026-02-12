@@ -290,119 +290,145 @@ jobs:
           if-no-files-found: ignore
           retention-days: 3
 
-  # integration_tests_v3:
-  #   name: Integration tests (v3 ${{ matrix.os }}, Node ${{ matrix.node }}, Slice ${{ matrix.slice_num }}/${{ matrix.slice_total }})
-  #   needs:
-  #     - build_native
-  #   timeout-minutes: 25
-  #   strategy:
-  #     # These tend to be quite flakey, so one failed instance shouldn't stop
-  #     # others from potentially succeeding
-  #     fail-fast: false
-  #     matrix:
-  #       slice_num: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
-  #       slice_total: [16]
-  #       os: [ubuntu-22.04]
-  #       node: [24]
-  #       include:
-  #         - os: macos-15
-  #           node: 24
-  #           slice_num: 1
-  #           slice_total: 4
-  #         - os: macos-15
-  #           node: 24
-  #           slice_num: 2
-  #           slice_total: 4
-  #         - os: macos-15
-  #           node: 24
-  #           slice_num: 3
-  #           slice_total: 4
-  #         - os: macos-15
-  #           node: 24
-  #           slice_num: 4
-  #           slice_total: 4
-  #   runs-on: ${{ matrix.os }}
-  #   steps:
-  #     - name: Collect Workflow Telemetry
-  #       uses: catchpoint/workflow-telemetry-action@v2
-  #       with:
-  #         comment_on_pr: false
-  #     - uses: actions/checkout@v4
-  #     - uses: ./.github/actions/setup-watchman
-  #     - uses: ./.github/actions/setup-node
-  #       with:
-  #         node-version: ${{ matrix.node }}
-  #     - uses: actions/download-artifact@v4
-  #       with:
-  #         pattern: packages-*
-  #         path: packages
-  #         merge-multiple: true
-  #     - name: Bump max inotify watches (Linux only)
-  #       run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
-  #       if: ${{ runner.os == 'Linux' }}
-  #     - name: Enable core dumps (Linux only)
-  #       if: ${{ runner.os == 'Linux' }}
-  #       run: |
-  #         # Enable core dumps
-  #         ulimit -c unlimited
-  #         # Set core dump pattern to put dumps in /tmp with identifying info
-  #         echo '/tmp/core.%e.%p.%t' | sudo tee /proc/sys/kernel/core_pattern
-  #         # Create directory for core dumps
-  #         sudo mkdir -p /tmp
-  #         sudo chmod 777 /tmp
-  #         echo "Core dumps enabled. Pattern: $(cat /proc/sys/kernel/core_pattern)"
-  #     - name: Start resource monitor
-  #       run: |
-  #         # Log memory and disk usage every 30s in the background
-  #         (while true; do
-  #           echo "--- $(date -u '+%Y-%m-%dT%H:%M:%SZ') ---"
-  #           if [ "$RUNNER_OS" = "Linux" ]; then
-  #             free -m
-  #             df -h /
-  #           else
-  #             vm_stat | head -10
-  #             df -h /
-  #           fi
-  #           echo ""
-  #           sleep 30
-  #         done) > /tmp/resource-monitor.log 2>&1 &
-  #         echo $! > /tmp/resource-monitor.pid
-  #     - run: yarn test:integration-ci
-  #       env:
-  #         ATLASPACK_V3: true
-  #         SLICE_NUM: ${{ matrix.slice_num }}
-  #         SLICE_TOTAL: ${{ matrix.slice_total }}
-  #         ATLASPACK_MOCHA_HANG_DEBUG: 'true'
-  #         ISOLATE_TESTS: 'false'
-  #         RUST_BACKTRACE: full
-  #     - name: Upload resource monitor log
-  #       if: always()
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: resource-log-v3-${{ matrix.os }}-node${{ matrix.node }}-slice${{ matrix.slice_num }}
-  #         path: /tmp/resource-monitor.log
-  #         if-no-files-found: ignore
-  #         retention-days: 3
-  #     - name: Collect core dumps (Linux only)
-  #       if: ${{ runner.os == 'Linux' && always() }}
-  #       run: |
-  #         echo "Looking for core dumps in /tmp..."
-  #         if ls /tmp/core.* 1> /dev/null 2>&1; then
-  #           echo "Core dumps found:"
-  #           ls -lh /tmp/core.*
-  #           mkdir -p core-dumps
-  #           cp /tmp/core.* core-dumps/ || true
-  #         else
-  #           echo "No core dumps found"
-  #         fi
-  #     - name: Upload core dumps (Linux only)
-  #       if: ${{ runner.os == 'Linux' && always() }}
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: core-dumps-v3-${{ matrix.os }}-node-${{ matrix.node }}-${{ github.run_id }}
-  #         path: core-dumps/
-  #         if-no-files-found: ignore
-  #         retention-days: 7
+  integration_tests_v3_linux:
+    name: Integration tests (v3 ubuntu-22.04, Node 24, Slice ${{ matrix.slice_num }}/${{ matrix.slice_total }})
+    needs:
+      - build_native_linux
+    timeout-minutes: 25
+    strategy:
+      # These tend to be quite flakey, so one failed instance shouldn't stop
+      # others from potentially succeeding
+      fail-fast: false
+      matrix:
+        slice_num: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+        slice_total: [16]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Collect Workflow Telemetry
+        uses: catchpoint/workflow-telemetry-action@v2
+        with:
+          comment_on_pr: false
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-watchman
+      - uses: ./.github/actions/setup-node
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v4
+        with:
+          name: packages-x86_64-unknown-linux-gnu
+          path: packages
+      - name: Bump max inotify watches
+        run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
+      - name: Enable core dumps
+        run: |
+          # Enable core dumps
+          ulimit -c unlimited
+          # Set core dump pattern to put dumps in /tmp with identifying info
+          echo '/tmp/core.%e.%p.%t' | sudo tee /proc/sys/kernel/core_pattern
+          # Create directory for core dumps
+          sudo mkdir -p /tmp
+          sudo chmod 777 /tmp
+          echo "Core dumps enabled. Pattern: $(cat /proc/sys/kernel/core_pattern)"
+      - name: Start resource monitor
+        run: |
+          # Log memory and disk usage every 30s in the background
+          (while true; do
+            echo "--- $(date -u '+%Y-%m-%dT%H:%M:%SZ') ---"
+            free -m
+            df -h /
+            echo ""
+            sleep 30
+          done) > /tmp/resource-monitor.log 2>&1 &
+          echo $! > /tmp/resource-monitor.pid
+      - run: yarn test:integration-ci
+        env:
+          ATLASPACK_V3: true
+          SLICE_NUM: ${{ matrix.slice_num }}
+          SLICE_TOTAL: ${{ matrix.slice_total }}
+          ATLASPACK_MOCHA_HANG_DEBUG: 'true'
+          ISOLATE_TESTS: 'false'
+          RUST_BACKTRACE: full
+      - name: Upload resource monitor log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resource-log-v3-ubuntu-22.04-node24-slice${{ matrix.slice_num }}
+          path: /tmp/resource-monitor.log
+          if-no-files-found: ignore
+          retention-days: 3
+      - name: Collect core dumps
+        if: always()
+        run: |
+          echo "Looking for core dumps in /tmp..."
+          if ls /tmp/core.* 1> /dev/null 2>&1; then
+            echo "Core dumps found:"
+            ls -lh /tmp/core.*
+            mkdir -p core-dumps
+            cp /tmp/core.* core-dumps/ || true
+          else
+            echo "No core dumps found"
+          fi
+      - name: Upload core dumps
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-dumps-v3-ubuntu-22.04-node-24-${{ github.run_id }}
+          path: core-dumps/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  integration_tests_v3_macos:
+    name: Integration tests (v3 macos-15, Node 24, Slice ${{ matrix.slice_num }}/${{ matrix.slice_total }})
+    needs:
+      - build_native_macos
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        slice_num: [1, 2, 3, 4]
+        slice_total: [4]
+    runs-on: macos-15
+    steps:
+      - name: Collect Workflow Telemetry
+        uses: catchpoint/workflow-telemetry-action@v2
+        with:
+          comment_on_pr: false
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-watchman
+      - uses: ./.github/actions/setup-node
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v4
+        with:
+          name: packages-aarch64-apple-darwin
+          path: packages
+      - name: Start resource monitor
+        run: |
+          # Log memory and disk usage every 30s in the background
+          (while true; do
+            echo "--- $(date -u '+%Y-%m-%dT%H:%M:%SZ') ---"
+            vm_stat | head -10
+            df -h /
+            echo ""
+            sleep 30
+          done) > /tmp/resource-monitor.log 2>&1 &
+          echo $! > /tmp/resource-monitor.pid
+      - run: yarn test:integration-ci
+        env:
+          ATLASPACK_V3: true
+          SLICE_NUM: ${{ matrix.slice_num }}
+          SLICE_TOTAL: ${{ matrix.slice_total }}
+          ATLASPACK_MOCHA_HANG_DEBUG: 'true'
+          ISOLATE_TESTS: 'false'
+          RUST_BACKTRACE: full
+      - name: Upload resource monitor log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resource-log-v3-macos-15-node24-slice${{ matrix.slice_num }}
+          path: /tmp/resource-monitor.log
+          if-no-files-found: ignore
+          retention-days: 3
 
   # end_to_end_tests:
   #   name: E2E tests
