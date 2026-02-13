@@ -27,6 +27,7 @@ use crate::request_tracker::{DynCacheHandler, RequestNode, RequestTracker};
 use crate::requests::{
   AssetGraphRequest, BundleGraphRequest, BundleGraphRequestOutput, RequestResult,
 };
+use atlaspack_core::debug_tools::DebugTools;
 pub struct AtlaspackInitOptions {
   pub db: Arc<DatabaseHandle>,
   pub fs: Option<FileSystemRef>,
@@ -50,6 +51,7 @@ pub struct Atlaspack {
   /// bundle graph implementation. Starts empty and is populated via `load_bundle_graph`.
   /// Uses non-async RwLock so the packager (and any Rayon threads) can take a read lock when needed.
   pub bundle_graph: Arc<parking_lot::RwLock<BundleGraphFromJs>>,
+  pub debug_tools: DebugTools,
 }
 
 impl Atlaspack {
@@ -165,6 +167,8 @@ impl Atlaspack {
       ))),
     );
 
+    let debug_tools = DebugTools::from_env();
+
     Ok(Self {
       db,
       fs,
@@ -177,6 +181,7 @@ impl Atlaspack {
       plugins,
       request_tracker: Arc::new(RwLock::new(request_tracker)),
       bundle_graph: Arc::new(parking_lot::RwLock::new(BundleGraphFromJs::default())),
+      debug_tools,
     })
   }
 }
@@ -288,7 +293,12 @@ impl Atlaspack {
   pub fn package(&self, bundle_id: String) -> anyhow::Result<PackageResult> {
     // This possibly could be persistent between pacakges? But right now with SSR builds only we're talking about a few packages at most
     // so we can worry about that refactor later.
-    let packager = JsPackager::new(Arc::clone(&self.db), Arc::clone(&self.bundle_graph));
+    let packager = JsPackager::new(
+      Arc::clone(&self.db),
+      Arc::clone(&self.bundle_graph),
+      self.project_root.clone(),
+      self.debug_tools.clone(),
+    );
     packager.package(&bundle_id)
   }
 

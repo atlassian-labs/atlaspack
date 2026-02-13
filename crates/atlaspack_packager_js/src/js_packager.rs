@@ -1,32 +1,36 @@
-use std::{
-  collections::HashMap,
-  sync::{Arc, LazyLock},
-};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use atlaspack_core::{
   bundle_graph::bundle_graph::BundleGraph,
+  debug_tools::DebugTools,
   hash::{hash_bytes, hash_string},
-  types::{Asset, Bundle},
+  types::{Asset, Bundle, OutputFormat},
   version::atlaspack_rust_version,
 };
 use lmdb_js_lite::DatabaseHandle;
 use parking_lot::RwLock;
 use rayon::prelude::*;
-use regex::Regex;
-
-/// Regex to match require("...") or require('...')
-static REQUIRE_CALL_REGEX: LazyLock<Regex> =
-  LazyLock::new(|| Regex::new(r#"require\(["']([^"']+)["']\)"#).unwrap());
 
 use atlaspack_core::package_result::{BundleInfo, CacheKeyMap, PackageResult};
 
 use super::JsPackager;
+use super::process_asset::rewrite_asset_code;
 
 type PackagedAsset<'a> = (&'a Asset, String);
 
 impl<B: BundleGraph + Send + Sync> JsPackager<B> {
-  pub fn new(db: Arc<DatabaseHandle>, bundle_graph: Arc<RwLock<B>>) -> Self {
-    Self { db, bundle_graph }
+  pub fn new(
+    db: Arc<DatabaseHandle>,
+    bundle_graph: Arc<RwLock<B>>,
+    project_root: PathBuf,
+    debug_tools: DebugTools,
+  ) -> Self {
+    Self {
+      db,
+      bundle_graph,
+      project_root,
+      debug_tools,
+    }
   }
 
   pub fn package(&self, bundle_id: &str) -> anyhow::Result<PackageResult> {
@@ -110,31 +114,11 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
   fn process_asset(&self, bundle: &Bundle, asset: &Asset, code: String) -> anyhow::Result<String> {
     // Get dependency map for this asset
     let deps = self.get_asset_dependency_map(bundle, asset)?;
-    let code = self.replace_require_calls(code, &deps);
+    let code = rewrite_asset_code(code, &deps)?;
 
-    if bundle.entry_asset_ids.contains(&asset.id) {
-      Ok(code)
-    } else {
-      self.wrap_asset(bundle, asset, code)
-    }
-  }
-
-  // NOTE THIS IS A TEMPORARY HACK IMPL - just to validate the end-to-end packaging.
-  // While it produces a (sort of) working bundle, it's not actually how we want to approach this
-  fn replace_require_calls(&self, code: String, deps: &HashMap<String, Option<String>>) -> String {
-    REQUIRE_CALL_REGEX
-      .replace_all(&code, |caps: &regex::Captures| {
-        let specifier = &caps[1];
-
-        match deps.get(specifier) {
-          Some(Some(public_id)) => {
-            format!(r#"require("{}")"#, public_id)
-          }
-          Some(None) => caps[0].to_string(),
-          None => caps[0].to_string(),
-        }
-      })
-      .to_string()
+    // All assets are wrapped, including entry assets. Entry assets will be explicitly
+    // required at the bottom of the bundle to ensure they execute in order.
+    self.wrap_asset(bundle, asset, code)
   }
 
   fn get_asset_dependency_map(
@@ -182,9 +166,33 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       .expect("Asset not found in bundle graph")
       .to_string();
 
+    // Only add comments if debug flag is enabled
+    let comment = if self.debug_tools.asset_file_names_in_output {
+      // Get relative file path from project root if possible
+      let file_path_comment = if asset.file_path.is_absolute() {
+        // For absolute paths, try to strip the project root
+        asset
+          .file_path
+          .strip_prefix(&self.project_root)
+          .ok()
+          .and_then(|p| p.to_str())
+          .map(|p| format!(": {}", p))
+          .unwrap_or_default()
+      } else {
+        // For relative paths, use them as-is
+        asset
+          .file_path
+          .to_str()
+          .map(|p| format!(": {}", p))
+          .unwrap_or_default()
+      };
+      &format!("\n// {public_id}{file_path_comment}\n")
+    } else {
+      ""
+    };
+
     Ok(format!(
-      "define('{}', function (require,module,exports) {{ {code} }});",
-      public_id
+      "{comment}define('{public_id}', function (require,module,exports) {{ {code} }});"
     ))
   }
 
@@ -221,6 +229,20 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       .collect::<Vec<_>>()
       .join("\n");
 
+    // Build explicit require() calls for entry assets to execute them in order
+    let bundle_graph = self.bundle_graph.read();
+    let entry_requires = bundle
+      .entry_asset_ids
+      .iter()
+      .map(|asset_id| {
+        let public_id = bundle_graph
+          .get_public_asset_id(asset_id)
+          .expect("Entry asset not found in bundle graph");
+        format!("require('{}');", public_id)
+      })
+      .collect::<Vec<_>>()
+      .join("\n");
+
     // For now we just always use the dev prelude
     let prelude_string = include_str!("../prelude/lib/prelude.dev.js");
 
@@ -253,14 +275,44 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       prelude_hash = &prelude_hash
     );
 
-    // We wrap the whole bundle in an IIFE as well to isolate the top level variables
-    "(function() {\n".to_string() + &prelude_loader + &asset_contents + "\n})();\n"
+    // Bundle structure depends on output format:
+    //
+    // CommonJS (e.g., SSR bundles):
+    //   - All assets (including entries) are wrapped in define() calls
+    //   - Main entry asset is explicitly required and its exports assigned to module.exports
+    //   - No IIFE wrapper - the bundle is directly executable by Node.js
+    //   - This allows the SSR bundle to export functions that can be imported by other modules
+    //
+    // Other formats (Global, ESModule):
+    //   - All assets (including entries) are wrapped in define() calls
+    //   - Entry assets are explicitly executed via require() calls
+    //   - Entire bundle is wrapped in IIFE to isolate variables and avoid global pollution
+    let is_commonjs = bundle.env.output_format == OutputFormat::CommonJS;
+
+    if is_commonjs {
+      let main_entry_require = if let Some(main_entry_id) = bundle.entry_asset_ids.first() {
+        let public_id = bundle_graph
+          .get_public_asset_id(main_entry_id)
+          .expect("Main entry asset not found in bundle graph");
+        format!("module.exports = require('{}');", public_id)
+      } else {
+        String::new()
+      };
+
+      prelude_loader + &asset_contents + "\n" + &main_entry_require + "\n"
+    } else {
+      "(function() {\n".to_string()
+        + &prelude_loader
+        + &asset_contents
+        + "\n"
+        + &entry_requires
+        + "\n})();\n"
+    }
   }
 }
 
 #[cfg(test)]
 mod tests {
-  use super::*;
   use atlaspack_core::types::{Asset, Bundle, Environment, FileType};
   use std::path::PathBuf;
   use std::sync::Arc;
@@ -297,57 +349,6 @@ mod tests {
       public_id: None,
       target: Default::default(),
     }
-  }
-
-  /// Test that the regex correctly matches require calls and replaces them
-  #[test]
-  fn test_replace_require_calls_regex_matching() {
-    let code = r#"
-      const foo = require("./foo");
-      const bar = require('./bar');
-      const baz = require("deeply/nested/module");
-    "#
-    .to_string();
-
-    let mut deps = HashMap::new();
-    deps.insert("./foo".to_string(), Some("pub_foo".to_string()));
-    deps.insert("./bar".to_string(), Some("pub_bar".to_string()));
-    deps.insert(
-      "deeply/nested/module".to_string(),
-      Some("pub_nested".to_string()),
-    );
-
-    // Test the regex by extracting the logic
-    let result = REQUIRE_CALL_REGEX.replace_all(&code, |caps: &regex::Captures| {
-      let specifier = &caps[1];
-      match deps.get(specifier) {
-        Some(Some(public_id)) => format!(r#"require("{}")"#, public_id),
-        _ => caps[0].to_string(),
-      }
-    });
-
-    assert!(result.contains(r#"require("pub_foo")"#));
-    assert!(result.contains(r#"require("pub_bar")"#));
-    assert!(result.contains(r#"require("pub_nested")"#));
-  }
-
-  #[test]
-  fn test_replace_require_calls_preserves_skipped_deps() {
-    let code = r#"const foo = require("./foo"); const bar = require("./bar");"#.to_string();
-    let mut deps = HashMap::new();
-    deps.insert("./foo".to_string(), Some("pub_foo".to_string()));
-    deps.insert("./bar".to_string(), None); // Skipped
-
-    let result = REQUIRE_CALL_REGEX.replace_all(&code, |caps: &regex::Captures| {
-      let specifier = &caps[1];
-      match deps.get(specifier) {
-        Some(Some(public_id)) => format!(r#"require("{}")"#, public_id),
-        _ => caps[0].to_string(),
-      }
-    });
-
-    assert!(result.contains(r#"require("pub_foo")"#));
-    assert!(result.contains(r#"require("./bar")"#)); // Unchanged
   }
 
   #[test]
@@ -423,15 +424,16 @@ mod tests {
     let public_id = "pub123";
     let code = "module.exports = 42;";
 
-    let expected = format!(
-      "define('{}', function (require,module,exports) {{ {} }});",
-      public_id, code
+    let expected_pattern = format!(
+      "\n// {}\ndefine('{}', function (require,module,exports) {{ {} }});",
+      public_id, public_id, code
     );
 
     // Verify the format
-    assert!(expected.starts_with("define('pub123',"));
-    assert!(expected.contains("function (require,module,exports)"));
-    assert!(expected.contains("module.exports = 42;"));
-    assert!(expected.ends_with("});"));
+    assert!(expected_pattern.contains(&format!("// {}", public_id)));
+    assert!(expected_pattern.contains("define('pub123',"));
+    assert!(expected_pattern.contains("function (require,module,exports)"));
+    assert!(expected_pattern.contains("module.exports = 42;"));
+    assert!(expected_pattern.ends_with("});"));
   }
 }
