@@ -17,7 +17,7 @@
     "react-dom": "^17.0.2"
   },
   "devDependencies": {
-    "@atlaspack/cli": "2.15.13"
+    "@atlaspack/cli": "2.15.14"
   },
   "targets": {
     "ssr": {
