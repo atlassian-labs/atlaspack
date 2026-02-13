@@ -14,6 +14,7 @@ pub struct DebugTools {
   pub simple_cli_reporter: bool,
   pub bundle_stats: bool,
   pub scope_hoisting_stats: bool,
+  pub debug_prelude: bool,
 }
 
 impl DebugTools {
@@ -36,10 +37,11 @@ impl DebugTools {
           "simple-cli-reporter" => tools.simple_cli_reporter = true,
           "bundle-stats" => tools.bundle_stats = true,
           "scope-hoisting-stats" => tools.scope_hoisting_stats = true,
+          "debug-prelude" => tools.debug_prelude = true,
           "" => continue,
           _ => {
             eprintln!(
-              "Warning: Unknown debug tool option: '{}'. Valid options are: asset-file-names-in-output, simple-cli-reporter, bundle-stats, scope-hoisting-stats, all",
+              "Warning: Unknown debug tool option: '{}'. Valid options are: asset-file-names-in-output, simple-cli-reporter, bundle-stats, scope-hoisting-stats, debug-prelude, all",
               tool
             );
           }

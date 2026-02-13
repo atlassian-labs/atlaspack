@@ -8,42 +8,23 @@ use oxc_codegen::Codegen;
 use oxc_parser::Parser;
 use oxc_span::{SPAN, SourceType};
 
-/// Optional features that can be enabled during asset code processing.
-#[derive(Default)]
-pub struct ProcessFeatures {
-  /// Collect export names from `<ident>.export(exports, "<name>", ...)` calls.
-  /// Only needed for entry assets to generate lazy CommonJS exports.
-  pub extract_export_names: bool,
-}
-
-/// Result of processing asset code.
-pub struct ProcessResult {
-  /// The rewritten code.
-  pub code: String,
-  /// Export names found (only populated when `extract_export_names` feature is enabled).
-  pub export_names: Vec<String>,
-}
-
-/// Rewrites asset code by replacing require() calls with resolved public IDs and
-/// optionally collecting additional information based on enabled features.
+/// Rewrites asset code by replacing require() calls with resolved public IDs.
 ///
 /// This function:
 /// 1. Parses the JavaScript code to an AST
-/// 2. Traverses the AST in a single pass, applying all enabled transformations/extractions
+/// 2. Traverses the AST, replacing require() specifiers with resolved public IDs
 /// 3. Generates JavaScript code back from the modified AST
 ///
 /// # Arguments
 /// * `code` - The JavaScript code to transform
 /// * `deps` - Map of specifiers to their resolved public IDs (None means skipped dependency)
-/// * `features` - Optional features to enable during processing
 ///
 /// # Returns
-/// A `ProcessResult` containing the transformed code and any extracted data
+/// The transformed code as a String
 pub fn rewrite_asset_code(
   code: String,
   deps: &HashMap<String, Option<String>>,
-  features: &ProcessFeatures,
-) -> anyhow::Result<ProcessResult> {
+) -> anyhow::Result<String> {
   let allocator = Allocator::default();
   let source_type = SourceType::default().with_module(true);
 
@@ -61,41 +42,25 @@ pub fn rewrite_asset_code(
 
   // Apply the visitor in a single pass
   let ast_builder = AstBuilder::new(&allocator);
-  let mut visitor = AssetCodeVisitor::new(&ast_builder, deps, features);
+  let mut visitor = AssetCodeVisitor::new(&ast_builder, deps);
   visitor.visit_program(&mut program);
 
   // Generate code back from the AST
   let codegen = Codegen::new();
   let generated = codegen.build(&program);
 
-  Ok(ProcessResult {
-    code: generated.code,
-    export_names: visitor.export_names,
-  })
+  Ok(generated.code)
 }
 
-/// Visitor that processes asset code in a single AST pass:
-/// - Replaces require() call specifiers with resolved public IDs
-/// - Optionally collects export names from `<ident>.export(exports, "<name>", ...)` calls
+/// Visitor that replaces require() call specifiers with resolved public IDs
 struct AssetCodeVisitor<'a, 'alloc> {
   ast: &'a AstBuilder<'alloc>,
   deps: &'a HashMap<String, Option<String>>,
-  extract_export_names: bool,
-  export_names: Vec<String>,
 }
 
 impl<'a, 'alloc> AssetCodeVisitor<'a, 'alloc> {
-  fn new(
-    ast: &'a AstBuilder<'alloc>,
-    deps: &'a HashMap<String, Option<String>>,
-    features: &ProcessFeatures,
-  ) -> Self {
-    Self {
-      ast,
-      deps,
-      extract_export_names: features.extract_export_names,
-      export_names: Vec::new(),
-    }
+  fn new(ast: &'a AstBuilder<'alloc>, deps: &'a HashMap<String, Option<String>>) -> Self {
+    Self { ast, deps }
   }
 }
 
@@ -120,18 +85,6 @@ impl<'a: 'alloc, 'alloc> VisitMut<'alloc> for AssetCodeVisitor<'a, 'alloc> {
 
     // Check if this is a call expression
     if let Expression::CallExpression(call_expr) = expr {
-      // Collect export names: <ident>.export(exports, "<name>", ...)
-      if self.extract_export_names
-        && let Expression::StaticMemberExpression(member) = &call_expr.callee
-        && member.property.name == "export"
-        && call_expr.arguments.len() >= 2
-        && let Argument::Identifier(first_arg) = &call_expr.arguments[0]
-        && first_arg.name == "exports"
-        && let Argument::StringLiteral(name_lit) = &call_expr.arguments[1]
-      {
-        self.export_names.push(name_lit.value.as_str().to_string());
-      }
-
       // Replace require() calls with resolved public IDs
       if let Expression::Identifier(ident) = &call_expr.callee
         && ident.name == "require"
@@ -165,24 +118,9 @@ impl<'a: 'alloc, 'alloc> VisitMut<'alloc> for AssetCodeVisitor<'a, 'alloc> {
 mod tests {
   use super::*;
 
-  /// Helper: run rewrite_asset_code with default features (no export extraction)
+  /// Helper: run rewrite_asset_code
   fn rewrite(code: &str, deps: &HashMap<String, Option<String>>) -> String {
-    rewrite_asset_code(code.to_string(), deps, &ProcessFeatures::default())
-      .unwrap()
-      .code
-  }
-
-  /// Helper: extract export names from code (enables the extract_export_names feature)
-  fn extract_exports(code: &str) -> Vec<String> {
-    rewrite_asset_code(
-      code.to_string(),
-      &HashMap::new(),
-      &ProcessFeatures {
-        extract_export_names: true,
-      },
-    )
-    .unwrap()
-    .export_names
+    rewrite_asset_code(code.to_string(), deps).unwrap()
   }
 
   #[test]
@@ -485,105 +423,5 @@ mod tests {
     // module.bundle.root should be replaced with require
     assert!(result.contains("require(id)"));
     assert!(!result.contains("module.bundle.root"));
-  }
-
-  // --- extract_export_names feature tests ---
-
-  #[test]
-  fn test_extract_export_names_from_code() {
-    let code = r#"
-      var parcelHelpers = require("gpsXI");
-      parcelHelpers.defineInteropFlag(exports);
-      parcelHelpers.export(exports, "init", () => init);
-      parcelHelpers.export(exports, "stream", () => stream);
-      var _index = require("6osex");
-      async function init() { return (0, _index.init)(); }
-      async function stream({ request, response }) { return (0, _index.streamPrematchedRoute)({ request, response }); }
-    "#;
-
-    let names = extract_exports(code);
-    assert_eq!(names, vec!["init".to_string(), "stream".to_string()]);
-  }
-
-  #[test]
-  fn test_extract_export_names_single_quotes() {
-    let code = r#"
-      parcelHelpers.export(exports, 'default', () => MyComponent);
-      parcelHelpers.export(exports, 'helper', () => helperFn);
-    "#;
-
-    let names = extract_exports(code);
-    assert_eq!(names, vec!["default".to_string(), "helper".to_string()]);
-  }
-
-  #[test]
-  fn test_extract_export_names_empty_code() {
-    let names = extract_exports("var x = 42;");
-    assert!(names.is_empty());
-  }
-
-  #[test]
-  fn test_extract_export_names_not_on_exports_identifier() {
-    // Should NOT match when the first argument is not the `exports` identifier
-    let names = extract_exports(r#"parcelHelpers.export(someOtherObj, "foo", () => foo);"#);
-    assert!(names.is_empty());
-  }
-
-  #[test]
-  fn test_extract_export_names_ignores_non_export_member() {
-    // Should NOT match defineInteropFlag or exportAll
-    let code = r#"
-      parcelHelpers.defineInteropFlag(exports);
-      parcelHelpers.exportAll(_dep, exports);
-    "#;
-
-    let names = extract_exports(code);
-    assert!(names.is_empty());
-  }
-
-  #[test]
-  fn test_extract_export_names_combined_with_require_rewrite() {
-    // Both features work together in a single pass
-    let code = r#"
-      var parcelHelpers = require("helpers");
-      parcelHelpers.export(exports, "init", () => init);
-      var _dep = require("./dep");
-    "#;
-
-    let mut deps = HashMap::new();
-    deps.insert("helpers".to_string(), Some("h1".to_string()));
-    deps.insert("./dep".to_string(), Some("d1".to_string()));
-
-    let result = rewrite_asset_code(
-      code.to_string(),
-      &deps,
-      &ProcessFeatures {
-        extract_export_names: true,
-      },
-    )
-    .unwrap();
-
-    // Require rewriting works
-    assert!(result.code.contains(r#"require("h1")"#));
-    assert!(result.code.contains(r#"require("d1")"#));
-
-    // Export name extraction works
-    assert_eq!(result.export_names, vec!["init".to_string()]);
-  }
-
-  #[test]
-  fn test_export_names_not_collected_when_feature_disabled() {
-    let code = r#"
-      parcelHelpers.export(exports, "init", () => init);
-    "#;
-
-    let result = rewrite_asset_code(
-      code.to_string(),
-      &HashMap::new(),
-      &ProcessFeatures::default(), // extract_export_names = false
-    )
-    .unwrap();
-
-    assert!(result.export_names.is_empty());
   }
 }
