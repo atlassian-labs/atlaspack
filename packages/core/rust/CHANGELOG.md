@@ -1,5 +1,11 @@
 # @atlaspack/rust
 
+## 3.22.2
+
+### Patch Changes
+
+- [#1006](https://github.com/atlassian-labs/atlaspack/pull/1006) [`ca78e1d`](https://github.com/atlassian-labs/atlaspack/commit/ca78e1d2007bfecd267b283d66a73f3695da4234) Thanks [@marcins](https://github.com/marcins)! - Switch to AST (OXC) based asset packaging in native packager
+
 ## 3.22.1
 
 ### Patch Changes

@@ -1,5 +1,17 @@
 # @atlaspack/cache
 
+## 3.2.49
+
+### Patch Changes
+
+- [#1017](https://github.com/atlassian-labs/atlaspack/pull/1017) [`3ad8e88`](https://github.com/atlassian-labs/atlaspack/commit/3ad8e880c4c2b9126cbfb6963a3862a75306a26f) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - reduce test lmdbcache mapsize and remove unused setup-cache
+
+- Updated dependencies [[`ca78e1d`](https://github.com/atlassian-labs/atlaspack/commit/ca78e1d2007bfecd267b283d66a73f3695da4234)]:
+  - @atlaspack/rust@3.22.2
+  - @atlaspack/fs@2.15.49
+  - @atlaspack/logger@2.14.46
+  - @atlaspack/utils@3.3.6
+
 ## 3.2.48
 
 ### Patch Changes

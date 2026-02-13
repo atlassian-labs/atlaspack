@@ -1,5 +1,16 @@
 # @atlaspack/packaging-test-harness
 
+## 0.0.5
+
+### Patch Changes
+
+- Updated dependencies [[`ca78e1d`](https://github.com/atlassian-labs/atlaspack/commit/ca78e1d2007bfecd267b283d66a73f3695da4234), [`3ad8e88`](https://github.com/atlassian-labs/atlaspack/commit/3ad8e880c4c2b9126cbfb6963a3862a75306a26f)]:
+  - @atlaspack/rust@3.22.2
+  - @atlaspack/cache@3.2.49
+  - @atlaspack/core@2.33.2
+  - @atlaspack/fs@2.15.49
+  - @atlaspack/package-manager@2.14.54
+
 ## 0.0.4
 
 ### Patch Changes
