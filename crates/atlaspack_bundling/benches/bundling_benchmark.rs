@@ -31,6 +31,8 @@ struct GraphConfig {
   lazy_ratio: f64,
   /// Fraction of assets that should be CSS (0.0 - 1.0).
   css_ratio: f64,
+  /// Fraction of non-entry assets that should be routes/lazy roots (0.0 - 1.0).
+  route_ratio: f64,
   seed: u64,
 }
 
@@ -123,8 +125,10 @@ fn generate_asset_graph(cfg: GraphConfig) -> AssetGraph {
 
   // Allocate assets across: routes, components, utilities.
   // Keep utilities relatively small but heavily shared.
-  let mut num_routes = ((remaining_assets as f64) * 0.15).round() as usize;
-  let mut num_components = ((remaining_assets as f64) * 0.70).round() as usize;
+  let mut num_routes = ((remaining_assets as f64) * cfg.route_ratio).round() as usize;
+  // Components take the bulk of remaining assets after routes.
+  let component_ratio = 1.0 - cfg.route_ratio - 0.15; // 15% reserved for utilities
+  let mut num_components = ((remaining_assets as f64) * component_ratio).round() as usize;
   let mut num_utils = remaining_assets.saturating_sub(num_routes + num_components);
 
   // Ensure minimums for structure.
@@ -470,7 +474,7 @@ fn apply_group_tuning(
     }
     "xlarge" => {
       group.sample_size(10);
-      group.measurement_time(Duration::from_secs(30));
+      group.measurement_time(Duration::from_secs(15));
     }
     _ => {}
   }
@@ -480,13 +484,13 @@ fn benchmark_ideal_graph(c: &mut Criterion) {
   let mut group = c.benchmark_group("ideal_graph");
 
   let configs = [
-    ("small", 2, 100, 700),
-    ("medium", 5, 1_000, 7_000),
-    ("large", 10, 10_000, 70_000),
-    ("xlarge", 20, 120_000, 900_000),
+    ("small", 2, 100, 700, 0.05),
+    ("medium", 5, 1_000, 7_000, 0.05),
+    ("large", 10, 10_000, 70_000, 0.05),
+    ("xlarge", 20, 120_000, 900_000, 0.05),
   ];
 
-  for (name, entries, assets, deps) in configs {
+  for (name, entries, assets, deps, route_ratio) in configs {
     apply_group_tuning(&mut group, name);
 
     let graph = generate_asset_graph(GraphConfig {
@@ -495,6 +499,7 @@ fn benchmark_ideal_graph(c: &mut Criterion) {
       num_deps: deps,
       lazy_ratio: 0.15,
       css_ratio: 0.10,
+      route_ratio,
       seed: 42,
     });
 
@@ -515,13 +520,13 @@ fn benchmark_full_bundle(c: &mut Criterion) {
   let mut group = c.benchmark_group("full_bundle");
 
   let configs = [
-    ("small", 2, 100, 700),
-    ("medium", 5, 1_000, 7_000),
-    ("large", 10, 10_000, 70_000),
-    ("xlarge", 20, 120_000, 900_000),
+    ("small", 2, 100, 700, 0.05),
+    ("medium", 5, 1_000, 7_000, 0.05),
+    ("large", 10, 10_000, 70_000, 0.05),
+    ("xlarge", 20, 120_000, 900_000, 0.05),
   ];
 
-  for (name, entries, assets, deps) in configs {
+  for (name, entries, assets, deps, route_ratio) in configs {
     apply_group_tuning(&mut group, name);
 
     let graph = generate_asset_graph(GraphConfig {
@@ -530,6 +535,7 @@ fn benchmark_full_bundle(c: &mut Criterion) {
       num_deps: deps,
       lazy_ratio: 0.15,
       css_ratio: 0.10,
+      route_ratio,
       seed: 42,
     });
 
