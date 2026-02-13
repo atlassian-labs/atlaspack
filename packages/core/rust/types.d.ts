@@ -235,7 +235,10 @@ export class Hash {
 }
 export class AtlaspackTracer {
   constructor();
-  enter(label: string): SpanId;
+  enter(
+    label: string,
+    level?: 'error' | 'warn' | 'info' | 'debug' | 'trace' | null,
+  ): SpanId;
   exit(id: SpanId): void;
   record(id: SpanId, data?: any | undefined | null): void;
 }
