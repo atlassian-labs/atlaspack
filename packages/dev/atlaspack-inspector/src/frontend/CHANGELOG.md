@@ -1,5 +1,14 @@
 # @atlaspack/inspector-frontend
 
+## 0.1.21
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/core@2.33.2
+  - @atlaspack/cli@2.15.15
+  - @atlaspack/graph@3.6.16
+
 ## 0.1.20
 
 ### Patch Changes

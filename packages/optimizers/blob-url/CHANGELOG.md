@@ -1,5 +1,13 @@
 # @atlaspack/optimizer-blob-url
 
+## 2.14.54
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.3.6
+  - @atlaspack/plugin@2.14.54
+
 ## 2.14.53
 
 ### Patch Changes
