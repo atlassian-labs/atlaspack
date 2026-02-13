@@ -686,9 +686,9 @@ dependencies = [
  "oxc_span",
  "oxc_syntax",
  "parking_lot",
+ "pathdiff",
  "pretty_assertions",
  "rayon",
- "regex",
  "tracing",
 ]
 

@@ -1,6 +1,6 @@
 import { defineConfig, type RolldownOptions } from 'rolldown';
 
-export function preludeConfig(mode: 'dev' | 'prod'): RolldownOptions {
+export function preludeConfig(mode: 'debug' | 'dev' | 'prod'): RolldownOptions {
   return {
     input: 'src/prelude.ts',
     platform: 'neutral',
@@ -20,6 +20,7 @@ export function preludeConfig(mode: 'dev' | 'prod'): RolldownOptions {
 }
 
 export default defineConfig([
+  preludeConfig('debug'),
   preludeConfig('dev'),
   preludeConfig('prod'),
 ]);
