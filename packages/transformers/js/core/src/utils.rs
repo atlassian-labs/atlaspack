@@ -3,7 +3,6 @@ use std::cmp::Ordering;
 use atlassian_swc_compiled_css::TransformError;
 use serde::Deserialize;
 use serde::Serialize;
-use swc_core::common::BytePos;
 use swc_core::common::DUMMY_SP;
 use swc_core::common::Mark;
 use swc_core::common::SourceMap;
@@ -62,17 +61,17 @@ pub fn match_member_expr(expr: &ast::MemberExpr, idents: Vec<&str>, unresolved_m
   false
 }
 
-/// Span for synthesized code when no attribution is available. Codegen emits a
-/// dedicated source map entry (instead of reusing the next node's), avoiding
-/// the DUMMY_SP bug (GH swc-project/swc#6767).
-const SYNTHESIZED_SP: Span = Span {
-  lo: BytePos::SYNTHESIZED,
-  hi: BytePos::SYNTHESIZED,
-};
-
 /// When attribution_span is Some(s), the created CallExpr (and thus the emitted
-/// source mapping) uses s. When None, uses SYNTHESIZED_SP so synthetic code
-/// gets its own mapping instead of reusing the next node's (GH swc-project/swc#6767).
+/// source mapping) uses s. When None, uses DUMMY_SP so the mapping is skipped
+/// by SWC's codegen (avoiding "Source out of range" errors when a file contains
+/// only synthesized code and no real source is registered).
+///
+/// Note: SYNTHESIZED_SP (BytePos::SYNTHESIZED / u32::MAX) was previously tried
+/// here to avoid the DUMMY_SP bug (GH swc-project/swc#6767) where codegen
+/// reuses the next node's mapping. However, SYNTHESIZED emits a mapping that
+/// references src_id which defaults to 0 even when no source file has been
+/// registered, causing "Source out of range" for files that consist entirely of
+/// synthesized code (e.g. type-only re-export files after stripping).
 pub fn create_require(
   specifier: swc_core::ecma::atoms::Atom,
   unresolved_mark: Mark,
@@ -82,7 +81,7 @@ pub fn create_require(
   if normalized_specifier.starts_with("node:") {
     normalized_specifier = normalized_specifier.replace("node:", "").into();
   }
-  let span = attribution_span.unwrap_or(SYNTHESIZED_SP);
+  let span = attribution_span.unwrap_or(DUMMY_SP);
 
   ast::CallExpr {
     callee: ast::Callee::Expr(Box::new(ast::Expr::Ident(ast::Ident::new(
@@ -236,8 +235,8 @@ pub fn match_import_cond(node: &ast::Expr, ignore_mark: Mark) -> Option<(Atom, A
 }
 
 /// When attribution_span is Some(s), the created VarDecl uses s so the emitted
-/// source mapping points to that location instead of reusing the next node's
-/// (SWC GH#6767).
+/// source mapping points to that location instead of reusing the next node's.
+/// When None, uses DUMMY_SP (see create_require for rationale).
 // `name` must not be an existing binding.
 pub fn create_global_decl_stmt(
   name: swc_core::ecma::atoms::Atom,
@@ -248,7 +247,7 @@ pub fn create_global_decl_stmt(
   // The correct value would actually be `DUMMY_SP.apply_mark(Mark::fresh(Mark::root()))`.
   // But this saves us from running the resolver again in some cases.
   let ctxt = SyntaxContext::empty().apply_mark(global_mark);
-  let span = attribution_span.unwrap_or(SYNTHESIZED_SP);
+  let span = attribution_span.unwrap_or(DUMMY_SP);
 
   (
     ast::Stmt::Decl(ast::Decl::Var(Box::new(ast::VarDecl {
