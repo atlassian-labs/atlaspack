@@ -19,9 +19,9 @@ oxc_parser = { workspace = true }
 oxc_span = { workspace = true }
 oxc_syntax = { workspace = true }
 parking_lot = { workspace = true }
+pathdiff = { workspace = true }
 pretty_assertions = { workspace = true }
 rayon = { workspace = true }
-regex = { workspace = true }
 tracing = { workspace = true }
 
 [build-dependencies]

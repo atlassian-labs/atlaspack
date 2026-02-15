@@ -9,6 +9,7 @@ use atlaspack_core::{
 };
 use lmdb_js_lite::DatabaseHandle;
 use parking_lot::RwLock;
+use pathdiff::diff_paths;
 use rayon::prelude::*;
 
 use atlaspack_core::package_result::{BundleInfo, CacheKeyMap, PackageResult};
@@ -168,27 +169,22 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
 
     // Only add comments if debug flag is enabled
     let comment = if self.debug_tools.asset_file_names_in_output {
-      // Get relative file path from project root if possible
-      let file_path_comment = if asset.file_path.is_absolute() {
-        // For absolute paths, try to strip the project root
-        asset
-          .file_path
-          .strip_prefix(&self.project_root)
-          .ok()
-          .and_then(|p| p.to_str())
-          .map(|p| format!(": {}", p))
-          .unwrap_or_default()
+      // Show file path for real files (e.g. node_modules inside or outside project root).
+      // Skip path for virtual/generated assets.
+      let file_path_comment = if asset.is_virtual {
+        String::new()
       } else {
-        // For relative paths, use them as-is
-        asset
-          .file_path
+        // Relative to project root (use .. when outside, e.g. node_modules above project).
+        let display_path = diff_paths(&asset.file_path, &self.project_root)
+          .unwrap_or_else(|| asset.file_path.clone());
+        display_path
           .to_str()
           .map(|p| format!(": {}", p))
           .unwrap_or_default()
       };
-      &format!("\n// {public_id}{file_path_comment}\n")
+      format!("\n// {public_id}{file_path_comment}\n")
     } else {
-      ""
+      String::new()
     };
 
     Ok(format!(
@@ -244,7 +240,10 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       .join("\n");
 
     // For now we just always use the dev prelude
-    let prelude_string = include_str!("../prelude/lib/prelude.dev.js");
+    let prelude_string = match self.debug_tools.debug_prelude {
+      true => include_str!("../prelude/lib/prelude.debug.js"),
+      false => include_str!("../prelude/lib/prelude.dev.js"),
+    };
 
     // For SSR bundles we don't have the concern of disambiguating preludes from different builds
     // I'm not sure if we need this functionality at all for our use case, but let's leave it in for now.
@@ -359,7 +358,7 @@ mod tests {
     let asset2 = create_test_asset("aaa", "/a.js");
     let asset3 = create_test_asset("mmm", "/m.js");
 
-    let contents = vec![
+    let contents: Vec<(&Asset, String)> = vec![
       (&asset1, "// asset zzz".to_string()),
       (&asset2, "// asset aaa".to_string()),
       (&asset3, "// asset mmm".to_string()),
@@ -389,7 +388,7 @@ mod tests {
     let entry2 = create_test_asset("entry2", "/entry2.js");
     let non_entry = create_test_asset("zzz", "/zzz.js");
 
-    let contents = vec![
+    let contents: Vec<(&Asset, String)> = vec![
       (&entry1, "// entry 1".to_string()),
       (&non_entry, "// non entry".to_string()),
       (&entry2, "// entry 2".to_string()),
