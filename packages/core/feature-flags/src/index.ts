@@ -110,16 +110,6 @@ export const DEFAULT_FEATURE_FLAGS = {
    */
   inlineBundlesSourceMapFixes: false,
 
-  /**
-   * When enabled, tracks HASH_REF replacements during bundle write and adjusts
-   * the source map column offsets so mappings remain correct after placeholder
-   * replacement. Disabled to minimise cost when not needed.
-   *
-   * @since 2025-02-10
-   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
-   */
-  fixSourceMapHashRefs: false,
-
   /** Enable patch project paths. This will patch the project paths to be relative to the project root.
    * This feature is experimental and should not be used in production. It will used to test downloadble cache artefacts.
    *
@@ -407,6 +397,16 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2026-01-27
    */
   nativeBundling: false,
+
+  /**
+   * When enabled, tracks HASH_REF replacements during bundle write and adjusts
+   * the source map column offsets so mappings remain correct after placeholder
+   * replacement.
+   *
+   * @since 2025-02-10
+   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
+   */
+  fixSourceMapHashRefs: process.env.ATLASPACK_BUILD_ENV === 'test',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;

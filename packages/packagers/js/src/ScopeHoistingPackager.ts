@@ -713,8 +713,6 @@ export class ScopeHoistingPackager {
         ? new SourceMap(this.options.projectRoot, map)
         : null;
 
-    // #endregion
-
     // If this asset is skipped, just add dependencies and not the asset's content.
     if (this.shouldSkipAsset(asset)) {
       let depCode = '';

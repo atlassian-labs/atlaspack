@@ -50,7 +50,7 @@ impl VisitMut for IdentifierReplacementVisitor {
     // Propagate the original identifier's span to wrapper nodes so source maps
     // correctly attribute the replacement to the original identifier's location.
     // Without this, the quote! macro creates nodes with DUMMY_SP, causing
-    // fragmented forward mappings (source -> bundle) in source map visualizers.
+    // fragmented forward mappings (source -> bundle) in source maps.
     match n {
       Expr::Paren(paren) => {
         paren.span = original_span;
