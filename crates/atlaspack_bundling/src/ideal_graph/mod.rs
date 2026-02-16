@@ -2264,4 +2264,86 @@ mod tests {
       },
     });
   }
+
+  #[test]
+  fn availability_includes_sync_reachable_assets_from_parallel_siblings() {
+    // entry -> lazy page
+    // page -> parallel sidebar
+    // page -> sync shared_lib
+    // sidebar -> sync shared_lib
+    //
+    // Without sync-reachable availability: shared_lib is reachable from both
+    // page and sidebar, which would create a shared bundle.
+    //
+    // With proper availability: sidebar is loaded in parallel with page.
+    // page already contains shared_lib (sync-reachable), so sidebar's
+    // availability includes shared_lib via its parallel sibling (page).
+    // Therefore shared_lib should NOT be in a shared bundle - it should
+    // be placed directly in page's bundle, and sidebar should know it's available.
+    let asset_graph = fixture_graph(
+      &["entry.js"],
+      &[
+        EdgeSpec::new("entry.js", "page.js", Priority::Lazy),
+        EdgeSpec::new("page.js", "sidebar.js", Priority::Parallel),
+        EdgeSpec::new("page.js", "shared_lib.js", Priority::Sync),
+        EdgeSpec::new("sidebar.js", "shared_lib.js", Priority::Sync),
+      ],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    // shared_lib.js should be in page.js's bundle (sync-reachable from page).
+    // sidebar.js should know shared_lib is available via parallel loading.
+    // NO shared bundle should be created for shared_lib.
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js"],
+        "page.js" => ["page.js", "shared_lib.js"],
+        "sidebar.js" => ["sidebar.js"],
+      },
+      edges: {
+        "entry.js" lazy "page.js",
+        "page.js" parallel "sidebar.js",
+      },
+    });
+  }
+
+  #[test]
+  fn availability_includes_sync_reachable_assets_from_ancestor_bundles() {
+    // entry -> lazy page
+    // page -> lazy dialog
+    // page -> sync util
+    // dialog -> sync util
+    //
+    // util.js is sync-reachable from page.js (placed in page's bundle).
+    // dialog.js is lazy-loaded from page.js, so page's bundle is an ancestor.
+    // Therefore util.js should be available to dialog via ancestor_assets.
+    // NO shared bundle should be created.
+    let asset_graph = fixture_graph(
+      &["entry.js"],
+      &[
+        EdgeSpec::new("entry.js", "page.js", Priority::Lazy),
+        EdgeSpec::new("page.js", "dialog.js", Priority::Lazy),
+        EdgeSpec::new("page.js", "util.js", Priority::Sync),
+        EdgeSpec::new("dialog.js", "util.js", Priority::Sync),
+      ],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    // util.js placed in page.js bundle. dialog knows it's available from ancestor.
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js"],
+        "page.js" => ["page.js", "util.js"],
+        "dialog.js" => ["dialog.js"],
+      },
+      edges: {
+        "entry.js" lazy "page.js",
+        "page.js" lazy "dialog.js",
+      },
+    });
+  }
 }
