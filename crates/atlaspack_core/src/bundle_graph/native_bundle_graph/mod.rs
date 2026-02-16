@@ -118,8 +118,8 @@ impl NativeBundleGraph {
     }
 
     // Copy edges as Null edges
+    let nodes = asset_graph.graph.node_weights().collect::<Vec<_>>();
     for edge in asset_graph.graph.edge_references() {
-      let nodes = asset_graph.graph.node_weights().collect::<Vec<_>>();
       let from_id = *nodes[edge.source().index()];
       let to_id = *nodes[edge.target().index()];
 

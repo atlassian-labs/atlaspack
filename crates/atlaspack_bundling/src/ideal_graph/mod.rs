@@ -64,6 +64,40 @@ impl Bundler for IdealGraphBundler {
       .get_node_id_by_content_key("@@root")
       .context("missing @@root node in NativeBundleGraph")?;
 
+    use std::collections::HashMap;
+
+    // Build an index of non-sync dependencies by their resolved target asset id.
+    //
+    // Several places below need to find “incoming deps targeting this asset”.
+    // Scanning all dependencies for each bundle is O(N*M) and can be billions of iterations.
+    let mut non_sync_deps_by_target_asset_id: HashMap<
+      String,
+      Vec<&atlaspack_core::types::Dependency>,
+    > = HashMap::new();
+
+    for dep in asset_graph.get_dependencies() {
+      if dep.is_entry {
+        continue;
+      }
+
+      if dep.priority == atlaspack_core::types::Priority::Sync {
+        continue;
+      }
+
+      let Some(dep_node_id) = asset_graph.get_node_id_by_content_key(&dep.id) else {
+        continue;
+      };
+
+      for neighbor in asset_graph.get_outgoing_neighbors(dep_node_id) {
+        if let Some(target_asset) = asset_graph.get_asset(&neighbor) {
+          non_sync_deps_by_target_asset_id
+            .entry(target_asset.id.clone())
+            .or_default()
+            .push(dep);
+        }
+      }
+    }
+
     // Collect entry dependencies and their target assets.
     let entries: Vec<(atlaspack_core::types::Dependency, String)> = asset_graph
       .get_dependencies()
@@ -83,7 +117,6 @@ impl Bundler for IdealGraphBundler {
 
     // Create bundle groups and bundles for each entry, then wire up the ideal graph bundles.
     use atlaspack_core::types::Target;
-    use std::collections::HashMap;
 
     // Track which ideal bundles have been materialized into the NativeBundleGraph.
     let mut materialized_bundle_nodes: HashMap<types::IdealBundleId, usize> = HashMap::new();
@@ -195,7 +228,7 @@ impl Bundler for IdealGraphBundler {
       //
       // Sync type-change bundles are siblings in their parent's bundle group.
       if let Some(root_asset_id) = &ideal_bundle.root_asset_id
-        && is_async_boundary_root(asset_graph, root_asset_id)
+        && is_async_boundary_root(root_asset_id, &non_sync_deps_by_target_asset_id)
       {
         let bundle_group_id = format!("bundle_group:{}{}", default_target.name, root_asset_id);
         let bundle_group_node_id = bundle_graph.add_bundle_group(
@@ -211,22 +244,9 @@ impl Bundler for IdealGraphBundler {
         // Sync deps to an async-root bundle should be represented via bundle-to-bundle
         // `References` edges, not via dependency -> bundle_group edges.
         let mut found_dep = false;
-        for dep in asset_graph.get_dependencies() {
-          if dep.is_entry {
-            continue;
-          }
-
-          if dep.priority == atlaspack_core::types::Priority::Sync {
-            continue;
-          }
-          let Some(dep_node_id) = asset_graph.get_node_id_by_content_key(&dep.id) else {
-            continue;
-          };
-          for neighbor in asset_graph.get_outgoing_neighbors(dep_node_id) {
-            if let Some(target_asset) = asset_graph.get_asset(&neighbor)
-              && target_asset.id == *root_asset_id
-              && let Some(&dep_bg_node_id) = bundle_graph.get_node_id_by_content_key(&dep.id)
-            {
+        if let Some(deps) = non_sync_deps_by_target_asset_id.get(root_asset_id) {
+          for dep in deps {
+            if let Some(&dep_bg_node_id) = bundle_graph.get_node_id_by_content_key(&dep.id) {
               bundle_graph.add_edge(
                 &dep_bg_node_id,
                 &bundle_group_node_id,
@@ -261,22 +281,9 @@ impl Bundler for IdealGraphBundler {
           );
           if found_dep {
             // Add References edge from dep to asset for non-entry bundles too.
-            for dep in asset_graph.get_dependencies() {
-              if dep.is_entry {
-                continue;
-              }
-
-              if dep.priority == atlaspack_core::types::Priority::Sync {
-                continue;
-              }
-              let Some(dep_node_id) = asset_graph.get_node_id_by_content_key(&dep.id) else {
-                continue;
-              };
-              for neighbor in asset_graph.get_outgoing_neighbors(dep_node_id) {
-                if let Some(target_asset) = asset_graph.get_asset(&neighbor)
-                  && target_asset.id == *root_asset_id
-                  && let Some(&dep_bg_node_id) = bundle_graph.get_node_id_by_content_key(&dep.id)
-                {
+            if let Some(deps) = non_sync_deps_by_target_asset_id.get(root_asset_id) {
+              for dep in deps {
+                if let Some(&dep_bg_node_id) = bundle_graph.get_node_id_by_content_key(&dep.id) {
                   bundle_graph.add_edge(
                     &dep_bg_node_id,
                     &root_asset_node_id,
@@ -670,34 +677,20 @@ fn materialize_ideal_bundle(
   Ok(node_id)
 }
 
-fn is_async_boundary_root(asset_graph: &AssetGraph, root_asset_id: &str) -> bool {
+fn is_async_boundary_root(
+  root_asset_id: &str,
+  non_sync_deps_by_target_asset_id: &std::collections::HashMap<
+    String,
+    Vec<&atlaspack_core::types::Dependency>,
+  >,
+) -> bool {
   // A bundle root gets a bundle group iff at least one incoming dependency boundary is non-sync.
   //
   // This distinguishes async boundaries (Lazy/Parallel/Conditional) from sync type-change
   // boundaries (e.g. JS -> CSS), which must not get their own bundle group.
-  asset_graph.get_dependencies().any(|dep| {
-    if dep.is_entry {
-      return false;
-    }
-
-    if dep.priority == atlaspack_core::types::Priority::Sync {
-      return false;
-    }
-
-    asset_graph
-      .get_node_id_by_content_key(&dep.id)
-      .map(|dep_node| {
-        asset_graph
-          .get_outgoing_neighbors(dep_node)
-          .iter()
-          .any(|n| {
-            asset_graph
-              .get_asset(n)
-              .is_some_and(|a| a.id == root_asset_id)
-          })
-      })
-      .unwrap_or(false)
-  })
+  non_sync_deps_by_target_asset_id
+    .get(root_asset_id)
+    .is_some_and(|deps| !deps.is_empty())
 }
 
 #[cfg(test)]
