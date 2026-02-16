@@ -209,10 +209,23 @@ pub enum IdealEdgeType {
 
 /// Stable bundle identifier used within the ideal graph.
 ///
-/// For now this is just the root asset id (string). We keep it wrapped so we can
-/// change representation later.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct IdealBundleId(pub String);
+/// This is the compact numeric key backing the bundle id string.
+///
+/// - For named bundles, this is the root asset's [`AssetKey`].
+/// - For synthetic bundles (e.g. `@@shared:...`), this is the synthetic key allocated via
+///   [`AssetInterner::insert_synthetic`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct IdealBundleId(pub u32);
+
+impl IdealBundleId {
+  pub fn from_asset_key(k: AssetKey) -> Self {
+    Self(k.0)
+  }
+
+  pub fn as_asset_key(self) -> AssetKey {
+    AssetKey(self.0)
+  }
+}
 
 /// A bundle in the ideal graph (zero duplication placement).
 ///
@@ -298,17 +311,17 @@ impl IdealGraph {
       "bundle already exists: {}",
       bundle.id.0
     );
-    self.bundles.insert(bundle.id.clone(), bundle);
+    self.bundles.insert(bundle.id, bundle);
     Ok(())
   }
 
   pub fn ensure_bundle(&mut self, bundle: IdealBundle) {
-    self.bundles.entry(bundle.id.clone()).or_insert(bundle);
+    self.bundles.entry(bundle.id).or_insert(bundle);
   }
 
   pub fn add_bundle_edge(&mut self, from: IdealBundleId, to: IdealBundleId, ty: IdealEdgeType) {
     // Dedup to keep later phases simpler.
-    if !self.bundle_edge_set.insert((from.clone(), to.clone(), ty)) {
+    if !self.bundle_edge_set.insert((from, to, ty)) {
       return;
     }
 
@@ -324,7 +337,7 @@ impl IdealGraph {
       IdealEdgeType::Lazy,
       IdealEdgeType::Conditional,
     ] {
-      self.bundle_edge_set.remove(&(from.clone(), to.clone(), ty));
+      self.bundle_edge_set.remove(&(*from, *to, ty));
     }
 
     self.bundle_edges.retain(|(a, b, _)| a != from || b != to);
@@ -363,14 +376,12 @@ impl IdealGraph {
     for (from, to, ty) in self.bundle_edges.iter_mut() {
       if targets.contains(to) {
         // Keep set consistent while mutating the ordered vec.
-        self
-          .bundle_edge_set
-          .remove(&(from.clone(), to.clone(), *ty));
+        self.bundle_edge_set.remove(&(*from, *to, *ty));
 
-        rewritten.push((from.clone(), to.clone(), *ty));
-        *to = new_to.clone();
+        rewritten.push((*from, *to, *ty));
+        *to = *new_to;
 
-        self.bundle_edge_set.insert((from.clone(), to.clone(), *ty));
+        self.bundle_edge_set.insert((*from, *to, *ty));
       }
     }
 
@@ -378,7 +389,7 @@ impl IdealGraph {
     self.bundle_edge_set.clear();
     self
       .bundle_edges
-      .retain(|(a, b, t)| self.bundle_edge_set.insert((a.clone(), b.clone(), *t)));
+      .retain(|(a, b, t)| self.bundle_edge_set.insert((*a, *b, *t)));
 
     rewritten
   }
@@ -388,10 +399,10 @@ impl IdealGraph {
     asset: AssetKey,
     to: &IdealBundleId,
   ) -> anyhow::Result<Option<IdealBundleId>> {
-    let prev = self.asset_to_bundle.get(&asset).cloned();
+    let prev = self.asset_to_bundle.get(&asset).copied();
 
-    if let Some(prev_bundle) = &prev
-      && let Some(b) = self.bundles.get_mut(prev_bundle)
+    if let Some(prev_bundle) = prev
+      && let Some(b) = self.bundles.get_mut(&prev_bundle)
     {
       b.assets.set(asset.0 as usize, false);
     }
@@ -402,7 +413,7 @@ impl IdealGraph {
       .ok_or_else(|| anyhow::anyhow!("missing bundle: {}", to.0))?;
 
     to_bundle.assets.insert(asset.0 as usize);
-    self.asset_to_bundle.insert(asset, to.clone());
+    self.asset_to_bundle.insert(asset, *to);
 
     Ok(prev)
   }

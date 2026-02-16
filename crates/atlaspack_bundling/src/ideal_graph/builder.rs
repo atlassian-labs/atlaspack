@@ -145,7 +145,7 @@ impl IdealGraphBuilder {
     // Always attach debug info. Decision payloads are compact and avoid String cloning.
     ideal.debug = Some(super::types::IdealGraphDebug {
       decisions: std::mem::take(&mut self.decisions),
-      asset_ids: self.assets.ids_cloned(),
+      asset_ids: ideal.assets.ids_cloned(),
     });
 
     Ok((ideal, stats))
@@ -446,12 +446,12 @@ impl IdealGraphBuilder {
         self.entry_like_roots.insert(root_key);
       }
 
-      let bundle_id = IdealBundleId(root_asset_id.clone());
+      let bundle_id = IdealBundleId::from_asset_key(root_key);
 
       ideal.bundles.insert(
-        bundle_id.clone(),
+        bundle_id,
         IdealBundle {
-          id: bundle_id.clone(),
+          id: bundle_id,
           root_asset_id: Some(root_asset_id.clone()),
           assets: {
             let mut bs = FixedBitSet::with_capacity(self.assets.len());
@@ -465,7 +465,7 @@ impl IdealGraphBuilder {
         },
       );
 
-      ideal.asset_to_bundle.insert(root_key, bundle_id.clone());
+      ideal.asset_to_bundle.insert(root_key, bundle_id);
 
       self.decision(
         "placement",
@@ -504,7 +504,7 @@ impl IdealGraphBuilder {
         continue;
       };
 
-      let Some(from_bundle) = ideal.asset_to_bundle.get(&from_key).cloned() else {
+      let Some(from_bundle) = ideal.asset_to_bundle.get(&from_key).copied() else {
         continue;
       };
 
@@ -534,12 +534,12 @@ impl IdealGraphBuilder {
             continue;
           }
 
-          let to_bundle = IdealBundleId(target_asset.id.clone());
+          let to_bundle = IdealBundleId::from_asset_key(target_key);
           if from_bundle == to_bundle {
             continue;
           }
 
-          ideal.add_bundle_edge(from_bundle.clone(), to_bundle, edge_type);
+          ideal.add_bundle_edge(from_bundle, to_bundle, edge_type);
         }
       }
     }
@@ -584,16 +584,13 @@ impl IdealGraphBuilder {
       let bundle_ids: Vec<IdealBundleId> = ideal.bundles.keys().cloned().collect();
       let mut indegree: HashMap<IdealBundleId, usize> = HashMap::new();
       for id in &bundle_ids {
-        indegree.insert(id.clone(), 0);
+        indegree.insert(*id, 0);
       }
 
       let mut outgoing: HashMap<IdealBundleId, Vec<(IdealBundleId, IdealEdgeType)>> =
         HashMap::new();
       for (from, to, ty) in &ideal.bundle_edges {
-        outgoing
-          .entry(from.clone())
-          .or_default()
-          .push((to.clone(), *ty));
+        outgoing.entry(*from).or_default().push((*to, *ty));
         if let Some(d) = indegree.get_mut(to) {
           *d += 1;
         }
@@ -602,7 +599,7 @@ impl IdealGraphBuilder {
       // Deterministic ordering: collect all zero-indegree nodes and sort by id.
       let mut ready: Vec<IdealBundleId> = indegree
         .iter()
-        .filter_map(|(id, d)| if *d == 0 { Some(id.clone()) } else { None })
+        .filter_map(|(id, d)| if *d == 0 { Some(*id) } else { None })
         .collect();
       ready.sort_by(|a, b| a.0.cmp(&b.0));
 
@@ -615,7 +612,7 @@ impl IdealGraphBuilder {
               .expect("bundle missing from indegree map");
             *d -= 1;
             if *d == 0 {
-              ready.push(to.clone());
+              ready.push(*to);
             }
           }
           // Maintain deterministic ordering for newly-ready nodes.
@@ -641,7 +638,7 @@ impl IdealGraphBuilder {
     let mut idx_by_bundle: HashMap<IdealBundleId, NodeIndex> = HashMap::new();
 
     for bundle_id in ideal.bundles.keys() {
-      idx_by_bundle.insert(bundle_id.clone(), g.add_node(bundle_id.clone()));
+      idx_by_bundle.insert(*bundle_id, g.add_node(*bundle_id));
     }
 
     for (from, to, ty) in ideal.bundle_edges.iter().cloned() {
@@ -683,7 +680,7 @@ impl IdealGraphBuilder {
     // Bundle assets as bitsets.
     let mut bundle_assets_bs: HashMap<IdealBundleId, FixedBitSet> = HashMap::new();
     for (id, bundle) in &ideal.bundles {
-      bundle_assets_bs.insert(id.clone(), bundle.assets.clone());
+      bundle_assets_bs.insert(*id, bundle.assets.clone());
     }
 
     for parent_id in order {
@@ -738,7 +735,7 @@ impl IdealGraphBuilder {
         };
 
         availability
-          .entry(child_id.clone())
+          .entry(child_id)
           .and_modify(|prev| prev.intersect_with(&current_available))
           .or_insert(current_available);
 
@@ -767,10 +764,7 @@ impl IdealGraphBuilder {
       self.decision(
         "availability",
         super::types::DecisionKind::AvailabilityComputed {
-          bundle_root: self
-            .assets
-            .key_for(&bundle_id.0)
-            .context("bundle root not interned")?,
+          bundle_root: bundle_id.as_asset_key(),
           ancestor_assets_len: bundle.ancestor_assets.count_ones(..),
         },
       );
@@ -801,7 +795,7 @@ impl IdealGraphBuilder {
         .map(|b| b.assets.clone())
         .unwrap_or_else(|| FixedBitSet::with_capacity(capacity));
 
-      bundle_assets_bs.insert(bundle_id.clone(), bs.clone());
+      bundle_assets_bs.insert(*bundle_id, bs.clone());
       bs
     };
 
@@ -849,8 +843,14 @@ impl IdealGraphBuilder {
 
       // Sort children deterministically for parallel ordering.
       children.sort_by(|(a, _), (b, _)| {
-        let a_id = g.node_weight(*a).map(|id| id.0.as_str()).unwrap_or("");
-        let b_id = g.node_weight(*b).map(|id| id.0.as_str()).unwrap_or("");
+        let a_id = g
+          .node_weight(*a)
+          .map(|id| self.assets.id_for(id.as_asset_key()))
+          .unwrap_or("");
+        let b_id = g
+          .node_weight(*b)
+          .map(|id| self.assets.id_for(id.as_asset_key()))
+          .unwrap_or("");
         a_id.cmp(b_id)
       });
 
@@ -930,10 +930,7 @@ impl IdealGraphBuilder {
       self.decision(
         "availability",
         super::types::DecisionKind::AvailabilityComputed {
-          bundle_root: self
-            .assets
-            .key_for(&bundle_id.0)
-            .context("bundle root not interned")?,
+          bundle_root: bundle_id.as_asset_key(),
           ancestor_assets_len: bundle.ancestor_assets.count_ones(..),
         },
       );
@@ -1034,10 +1031,7 @@ impl IdealGraphBuilder {
         self.decision(
           "availability",
           super::types::DecisionKind::AvailabilityComputed {
-            bundle_root: self
-              .assets
-              .key_for(&bundle_id.0)
-              .context("bundle root not interned")?,
+            bundle_root: bundle_id.as_asset_key(),
             ancestor_assets_len: bundle.ancestor_assets.count_ones(..),
           },
         );
@@ -1267,7 +1261,7 @@ impl IdealGraphBuilder {
       .bundle_roots
       .iter()
       .chain(self.entry_like_roots.iter())
-      .map(|&key| (key, IdealBundleId(self.assets.id_for(key).to_string())))
+      .map(|&key| (key, IdealBundleId::from_asset_key(key)))
       .collect();
 
     let sync_nodes: Vec<(AssetKey, NodeIndex)> = self
@@ -1325,7 +1319,7 @@ impl IdealGraphBuilder {
       // Track canonical bundle assignment (smallest entry-like for determinism).
       if !reaching_entry_like.is_empty() {
         let canonical = reaching_entry_like.iter().copied().min().unwrap();
-        let bundle_id = root_bundle_ids[&canonical].clone();
+        let bundle_id = root_bundle_ids[&canonical];
         ideal.asset_to_bundle.insert(asset_key, bundle_id);
       }
 
@@ -1355,7 +1349,7 @@ impl IdealGraphBuilder {
           .get_mut(bundle_id)
           .context("bundle missing for single-root placement")?;
         bundle.assets.insert(asset_key.0 as usize);
-        ideal.asset_to_bundle.insert(asset_key, bundle_id.clone());
+        ideal.asset_to_bundle.insert(asset_key, *bundle_id);
 
         self.decision(
           "placement",
@@ -1398,7 +1392,7 @@ impl IdealGraphBuilder {
       .bundle_roots
       .iter()
       .chain(self.entry_like_roots.iter())
-      .map(|&key| (key, IdealBundleId(self.assets.id_for(key).to_string())))
+      .map(|&key| (key, IdealBundleId::from_asset_key(key)))
       .collect();
 
     let mut eligible_roots_by_asset: HashMap<AssetKey, Vec<AssetKey>> = HashMap::new();
@@ -1415,20 +1409,14 @@ impl IdealGraphBuilder {
     let mut parallel_parents_by_child: HashMap<IdealBundleId, Vec<IdealBundleId>> = HashMap::new();
 
     for (from, to, ty) in &ideal.bundle_edges {
-      edge_targets
-        .entry(from.clone())
-        .or_default()
-        .insert(to.clone());
+      edge_targets.entry(*from).or_default().insert(*to);
 
       if *ty == IdealEdgeType::Parallel {
-        parallel_children
-          .entry(from.clone())
-          .or_default()
-          .insert(to.clone());
+        parallel_children.entry(*from).or_default().insert(*to);
         parallel_parents_by_child
-          .entry(to.clone())
+          .entry(*to)
           .or_default()
-          .push(from.clone());
+          .push(*from);
       }
     }
 
@@ -1579,7 +1567,7 @@ impl IdealGraphBuilder {
           .get_mut(bundle_id)
           .context("bundle missing for single-eligible placement")?;
         bundle.assets.insert(asset_key.0 as usize);
-        ideal.asset_to_bundle.insert(asset_key, bundle_id.clone());
+        ideal.asset_to_bundle.insert(asset_key, *bundle_id);
         self.decision(
           "placement",
           super::types::DecisionKind::AssetAssignedToBundle {
@@ -1621,9 +1609,9 @@ impl IdealGraphBuilder {
           .join(",")
       );
 
-      let shared_key = self.assets.insert_synthetic(shared_name.clone());
+      let shared_key = ideal.assets.insert_synthetic(shared_name);
 
-      let shared_bundle_id = super::types::IdealBundleId(shared_name.clone());
+      let shared_bundle_id = IdealBundleId::from_asset_key(shared_key);
 
       // Derive bundle type from the first asset in the group.
       let bundle_type = assets
@@ -1632,7 +1620,7 @@ impl IdealGraphBuilder {
         .unwrap_or(atlaspack_core::types::FileType::Js);
 
       ideal.create_bundle(super::types::IdealBundle {
-        id: shared_bundle_id.clone(),
+        id: shared_bundle_id,
         root_asset_id: None,
         assets: FixedBitSet::with_capacity(self.assets.len()),
         bundle_type,
@@ -1656,9 +1644,7 @@ impl IdealGraphBuilder {
           .get_mut(&shared_bundle_id)
           .context("shared bundle missing")?;
         bundle.assets.insert(asset.0 as usize);
-        ideal
-          .asset_to_bundle
-          .insert(asset, shared_bundle_id.clone());
+        ideal.asset_to_bundle.insert(asset, shared_bundle_id);
 
         if let Some(&from_root) = roots.first() {
           self.decision(
@@ -1674,8 +1660,8 @@ impl IdealGraphBuilder {
 
       // Sync edges from each source root to the shared bundle.
       for root in roots {
-        let from_id = root_bundle_ids[&root].clone();
-        ideal.add_bundle_edge(from_id, shared_bundle_id.clone(), IdealEdgeType::Sync);
+        let from_id = root_bundle_ids[&root];
+        ideal.add_bundle_edge(from_id, shared_bundle_id, IdealEdgeType::Sync);
       }
     }
 
@@ -1727,10 +1713,7 @@ impl IdealGraphBuilder {
     // Precompute bundle parent adjacency for fast ancestor walking (child -> parents).
     let mut bundle_parents: HashMap<IdealBundleId, Vec<IdealBundleId>> = HashMap::new();
     for (from, to, _ty) in &ideal.bundle_edges {
-      bundle_parents
-        .entry(to.clone())
-        .or_default()
-        .push(from.clone());
+      bundle_parents.entry(*to).or_default().push(*from);
     }
 
     // Precompute reverse adjacency for sync edges in the *asset graph*:
@@ -1851,8 +1834,8 @@ impl IdealGraphBuilder {
     let mut internalized: Vec<(IdealBundleId, Vec<IdealBundleId>)> = Vec::new();
 
     for &root_key in &async_roots {
-      let root_id = self.assets.id_for(root_key).to_string();
-      let bundle_id = IdealBundleId(root_id.clone());
+      let root_id = self.assets.id_for(root_key);
+      let bundle_id = IdealBundleId::from_asset_key(root_key);
 
       let Some(bundle) = ideal.bundles.get(&bundle_id) else {
         continue;
@@ -1871,7 +1854,7 @@ impl IdealGraphBuilder {
       // before Phase 7 asset placement, and therefore may miss edges that originate from
       // non-root assets (e.g. an entry bundle asset that lazy-imports another bundle root).
       let mut parent_bundle_ids: Vec<IdealBundleId> = deps_targeting
-        .get(&root_id)
+        .get(root_id)
         .into_iter()
         .flatten()
         .filter_map(|(_p, source_asset_id)| {
@@ -1879,7 +1862,7 @@ impl IdealGraphBuilder {
             self
               .assets
               .key_for(sid)
-              .and_then(|k| ideal.asset_to_bundle.get(&k).cloned())
+              .and_then(|k| ideal.asset_to_bundle.get(&k).copied())
           })
         })
         .collect();
@@ -1988,7 +1971,7 @@ impl IdealGraphBuilder {
     from_bundle_id: &IdealBundleId,
     asset_key: AssetKey,
   ) -> bool {
-    let mut stack: Vec<IdealBundleId> = vec![from_bundle_id.clone()];
+    let mut stack: Vec<IdealBundleId> = vec![*from_bundle_id];
     let mut visited: HashSet<IdealBundleId> = HashSet::new();
 
     // Primary fast path: check reachability from this bundle's root asset using Phase 5 reachability.
@@ -1998,7 +1981,7 @@ impl IdealGraphBuilder {
     let asset_sync_node_idx = self.asset_to_sync_node.get(&asset_key).copied();
 
     while let Some(id) = stack.pop() {
-      if !visited.insert(id.clone()) {
+      if !visited.insert(id) {
         continue;
       }
 
@@ -2010,12 +1993,13 @@ impl IdealGraphBuilder {
       }
 
       // Check sync-reachability from this bundle's root asset using Phase 5 reachability.
-      if let Some(asset_sync_node_idx) = asset_sync_node_idx
-        && let Some(from_root_key) = self.assets.key_for(&id.0)
-        && let Some(&root_bit) = reachability.root_to_bit.get(&from_root_key)
-        && reachability.reach_bits[asset_sync_node_idx.index()].contains(root_bit)
-      {
-        return true;
+      if let Some(asset_sync_node_idx) = asset_sync_node_idx {
+        let from_root_key = id.as_asset_key();
+        if let Some(&root_bit) = reachability.root_to_bit.get(&from_root_key)
+          && reachability.reach_bits[asset_sync_node_idx.index()].contains(root_bit)
+        {
+          return true;
+        }
       }
 
       // Check sync-reachability from any asset in this bundle.
