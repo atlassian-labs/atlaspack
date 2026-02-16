@@ -43,6 +43,7 @@ import {
   nameBundle,
   loadPluginConfigWithDevDeps,
   runDevDepRequest as runDevDepRequestShared,
+  dumpBundleGraphSnapshot,
 } from './BundleGraphRequestUtils';
 import createAssetGraphRequestJS from './AssetGraphRequest';
 import {createAssetGraphRequestRust} from './AssetGraphRequestRust';
@@ -407,6 +408,8 @@ class BundlerRunner {
         });
 
         measurement && measurement.end();
+
+        dumpBundleGraphSnapshot(internalBundleGraph, 'js');
 
         if (this.pluginOptions.mode === 'production') {
           let optimizeMeasurement;

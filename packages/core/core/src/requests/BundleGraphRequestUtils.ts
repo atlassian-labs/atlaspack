@@ -17,11 +17,13 @@ import type {
 } from '../types';
 
 import assert from 'assert';
+import fs from 'fs';
 import nullthrows from 'nullthrows';
+import path from 'path';
 import {PluginLogger} from '@atlaspack/logger';
 import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
 import {unique, setSymmetricDifference} from '@atlaspack/utils';
-import InternalBundleGraph from '../BundleGraph';
+import InternalBundleGraph, {bundleGraphEdgeTypes} from '../BundleGraph';
 import BundleGraph from '../public/BundleGraph';
 import {Bundle, NamedBundle} from '../public/Bundle';
 import PluginOptions from '../public/PluginOptions';
@@ -64,6 +66,160 @@ export function validateBundles(bundleGraph: InternalBundleGraph): void {
         ),
       ].join(),
   );
+}
+
+/**
+ * Dump a canonical JSON snapshot of the bundle graph for parity comparison.
+ * Gated by ATLASPACK_DUMP_BUNDLE_GRAPH environment variable which specifies the output directory.
+ * The snapshot captures bundle identity, type, contained assets, and bundle group structure
+ * in a deterministic, sorted format suitable for diffing.
+ */
+export function dumpBundleGraphSnapshot(
+  bundleGraph: InternalBundleGraph,
+  variant: 'js' | 'rust',
+): void {
+  let outDir = process.env.ATLASPACK_DUMP_BUNDLE_GRAPH;
+  if (!outDir) return;
+
+  let filename =
+    variant === 'js' ? 'bundle-graph-js.json' : 'bundle-graph-rust.json';
+  let outPath = path.join(outDir, filename);
+
+  fs.mkdirSync(outDir, {recursive: true});
+
+  let bundles = bundleGraph.getBundles();
+  let bundlesSnapshot = bundles
+    .map((bundle) => {
+      let bundleNodeId = bundleGraph._graph.getNodeIdByContentKey(bundle.id);
+      let containedAssetNodeIds = bundleGraph._graph.getNodeIdsConnectedFrom(
+        bundleNodeId,
+        bundleGraphEdgeTypes.contains,
+      );
+      let containedAssets = containedAssetNodeIds
+        .map((nodeId) => bundleGraph._graph.getNode(nodeId))
+        .flatMap((node) => {
+          if (node?.type !== 'asset') return [];
+          return [
+            {
+              id: node.value.id,
+              filePath: fromProjectPathRelative(node.value.filePath),
+            },
+          ];
+        })
+        .sort((a, b) => a.filePath.localeCompare(b.filePath));
+
+      // Resolve mainEntry and entry asset file paths
+      let mainEntryPath: string | null = null;
+      let entryAssetPaths: string[] = [];
+      if (bundle.mainEntryId) {
+        let mainEntryNodeId = bundleGraph._graph.getNodeIdByContentKey(
+          bundle.mainEntryId,
+        );
+        let mainEntryNode = bundleGraph._graph.getNode(mainEntryNodeId);
+        if (mainEntryNode?.type === 'asset') {
+          mainEntryPath = fromProjectPathRelative(mainEntryNode.value.filePath);
+        }
+      }
+      for (let entryId of bundle.entryAssetIds) {
+        let entryNodeId = bundleGraph._graph.getNodeIdByContentKey(entryId);
+        let entryNode = bundleGraph._graph.getNode(entryNodeId);
+        if (entryNode?.type === 'asset') {
+          entryAssetPaths.push(
+            fromProjectPathRelative(entryNode.value.filePath),
+          );
+        }
+      }
+      entryAssetPaths.sort();
+
+      return {
+        id: bundle.id,
+        type: bundle.type,
+        bundleBehavior: bundle.bundleBehavior ?? null,
+        needsStableName: bundle.needsStableName,
+        isSplittable: bundle.isSplittable,
+        isPlaceholder: bundle.isPlaceholder,
+        mainEntryPath,
+        entryAssetPaths,
+        assets: containedAssets.map((a) => a.filePath),
+      };
+    })
+    .sort((a, b) => {
+      // Sort by mainEntryPath first, then by sorted assets as tiebreaker
+      let aKey = a.mainEntryPath || a.assets.join(',');
+      let bKey = b.mainEntryPath || b.assets.join(',');
+      return aKey.localeCompare(bKey);
+    });
+
+  let bundleGroupsSnapshot = bundleGraph._graph.nodes
+    .flatMap((node) => {
+      if (node?.type !== 'bundle_group') return [];
+
+      let bundleGroup = node.value;
+
+      // Resolve entry asset file path
+      let entryAssetPath: string | null = null;
+      try {
+        let entryNodeId = bundleGraph._graph.getNodeIdByContentKey(
+          bundleGroup.entryAssetId,
+        );
+        let entryNode = bundleGraph._graph.getNode(entryNodeId);
+        if (entryNode?.type === 'asset') {
+          entryAssetPath = fromProjectPathRelative(entryNode.value.filePath);
+        }
+      } catch {
+        // Content key not found
+      }
+
+      let bundlesInGroup = bundleGraph.getBundlesInBundleGroup(bundleGroup);
+      let bundlePaths = bundlesInGroup
+        .map((b) => {
+          // Use mainEntry file path if available, otherwise bundle id as fallback
+          if (b.mainEntryId) {
+            try {
+              let nodeId = bundleGraph._graph.getNodeIdByContentKey(
+                b.mainEntryId,
+              );
+              let node = bundleGraph._graph.getNode(nodeId);
+              if (node?.type === 'asset') {
+                return fromProjectPathRelative(node.value.filePath);
+              }
+            } catch {
+              // fallback
+            }
+          }
+          return `[bundle:${b.id}]`;
+        })
+        .sort();
+
+      return [
+        {
+          entryAssetPath:
+            entryAssetPath ?? `[unknown:${bundleGroup.entryAssetId}]`,
+          bundlePaths,
+        },
+      ];
+    })
+    .sort((a, b) => a.entryAssetPath.localeCompare(b.entryAssetPath));
+
+  let totalAssets = bundleGraph._graph.nodes.filter(
+    (node) => node?.type === 'asset',
+  ).length;
+
+  let snapshot = {
+    version: 1,
+    variant,
+    stats: {
+      totalBundles: bundlesSnapshot.length,
+      totalBundleGroups: bundleGroupsSnapshot.length,
+      totalAssets,
+    },
+    bundles: bundlesSnapshot,
+    bundleGroups: bundleGroupsSnapshot,
+  };
+
+  fs.writeFileSync(outPath, JSON.stringify(snapshot, null, 2), 'utf8');
+  // eslint-disable-next-line no-console
+  console.log(`[BundleGraphSnapshot] Wrote ${variant} snapshot to ${outPath}`);
 }
 
 /**

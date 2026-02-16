@@ -32,6 +32,7 @@ import {
   nameBundle,
   loadPluginConfigWithDevDeps,
   runDevDepRequest,
+  dumpBundleGraphSnapshot,
 } from './BundleGraphRequestUtils';
 import {toEnvironmentRef} from '../EnvironmentManager';
 import {getEnvironmentHash} from '../Environment';
@@ -108,6 +109,8 @@ export default function createBundleGraphRequestRust(
         'atlaspack_v3_getBundleGraph',
         () => getBundleGraph(serializedBundleGraph),
       );
+
+      dumpBundleGraphSnapshot(bundleGraph, 'rust');
 
       const runner = new NativeBundlerRunner(
         {api, options} as any,
