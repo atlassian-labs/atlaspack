@@ -1,5 +1,19 @@
 use std::collections::{HashMap, HashSet};
 
+fn vec_get<T>(v: &[Option<T>], idx: usize) -> Option<&T> {
+  v.get(idx).and_then(|o| o.as_ref())
+}
+
+fn vec_get_mut<T>(v: &mut [Option<T>], idx: usize) -> Option<&mut T> {
+  v.get_mut(idx).and_then(|o| o.as_mut())
+}
+
+fn vec_set_len<T>(v: &mut Vec<Option<T>>, new_len: usize) {
+  if v.len() < new_len {
+    v.resize_with(new_len, || None);
+  }
+}
+
 use atlaspack_core::{
   asset_graph::AssetGraph,
   types::{MaybeBundleBehavior, Priority},
@@ -273,7 +287,9 @@ impl IdealBundle {
 #[derive(Debug, Default, Clone)]
 pub struct IdealGraph {
   /// Bundles with assets assigned (zero duplication).
-  pub bundles: HashMap<IdealBundleId, IdealBundle>,
+  ///
+  /// Indexed by `IdealBundleId.0 as usize`.
+  pub bundles: Vec<Option<IdealBundle>>,
 
   /// Bundle dependency graph (which bundles load which).
   ///
@@ -284,7 +300,9 @@ pub struct IdealGraph {
   pub bundle_edge_set: HashSet<(IdealBundleId, IdealBundleId, IdealEdgeType)>,
 
   /// Asset -> Bundle mapping.
-  pub asset_to_bundle: HashMap<AssetKey, IdealBundleId>,
+  ///
+  /// Indexed by `AssetKey.0 as usize`.
+  pub asset_to_bundle: Vec<Option<IdealBundleId>>,
 
   /// Mapping between `AssetKey` and the original asset id string.
   pub assets: AssetInterner,
@@ -294,9 +312,47 @@ pub struct IdealGraph {
 }
 
 impl IdealGraph {
+  fn bundle_slot(id: &IdealBundleId) -> usize {
+    id.0 as usize
+  }
+
+  fn asset_slot(key: &AssetKey) -> usize {
+    key.0 as usize
+  }
+
+  pub fn get_bundle(&self, id: &IdealBundleId) -> Option<&IdealBundle> {
+    vec_get(&self.bundles, Self::bundle_slot(id))
+  }
+
+  pub fn get_bundle_mut(&mut self, id: &IdealBundleId) -> Option<&mut IdealBundle> {
+    vec_get_mut(&mut self.bundles, Self::bundle_slot(id))
+  }
+
+  pub fn bundle_count(&self) -> usize {
+    self.bundles.iter().filter(|b| b.is_some()).count()
+  }
+
+  pub fn bundles_iter(&self) -> impl Iterator<Item = (&IdealBundleId, &IdealBundle)> {
+    self
+      .bundles
+      .iter()
+      .filter_map(|b| b.as_ref())
+      .map(|b| (&b.id, b))
+  }
+
+  pub fn asset_bundle(&self, asset: &AssetKey) -> Option<IdealBundleId> {
+    vec_get(&self.asset_to_bundle, Self::asset_slot(asset)).copied()
+  }
+
+  pub(crate) fn set_asset_bundle(&mut self, asset: AssetKey, bundle: Option<IdealBundleId>) {
+    let idx = Self::asset_slot(&asset);
+    vec_set_len(&mut self.asset_to_bundle, idx + 1);
+    self.asset_to_bundle[idx] = bundle;
+  }
+
   /// Test helper: check whether a bundle contains an asset by its string id.
   pub fn bundle_has_asset(&self, bundle_id: &IdealBundleId, asset_id: &str) -> bool {
-    let Some(bundle) = self.bundles.get(bundle_id) else {
+    let Some(bundle) = self.get_bundle(bundle_id) else {
       return false;
     };
     let Some(key) = self.assets.key_for(asset_id) else {
@@ -306,17 +362,25 @@ impl IdealGraph {
   }
 
   pub fn create_bundle(&mut self, bundle: IdealBundle) -> anyhow::Result<()> {
+    let idx = Self::bundle_slot(&bundle.id);
+    vec_set_len(&mut self.bundles, idx + 1);
+
     anyhow::ensure!(
-      !self.bundles.contains_key(&bundle.id),
+      self.bundles[idx].is_none(),
       "bundle already exists: {}",
       bundle.id.0
     );
-    self.bundles.insert(bundle.id, bundle);
+    self.bundles[idx] = Some(bundle);
     Ok(())
   }
 
   pub fn ensure_bundle(&mut self, bundle: IdealBundle) {
-    self.bundles.entry(bundle.id).or_insert(bundle);
+    let idx = Self::bundle_slot(&bundle.id);
+    vec_set_len(&mut self.bundles, idx + 1);
+
+    if self.bundles[idx].is_none() {
+      self.bundles[idx] = Some(bundle);
+    }
   }
 
   pub fn add_bundle_edge(&mut self, from: IdealBundleId, to: IdealBundleId, ty: IdealEdgeType) {
@@ -346,14 +410,18 @@ impl IdealGraph {
   /// Remove a bundle entirely: delete the bundle, remove all edges to/from it,
   /// and remove its assets from `asset_to_bundle`.
   pub fn remove_bundle(&mut self, bundle_id: &IdealBundleId) {
-    if let Some(bundle) = self.bundles.remove(bundle_id) {
+    let idx = Self::bundle_slot(bundle_id);
+    let bundle = self.bundles.get_mut(idx).and_then(|s| s.take());
+
+    if let Some(bundle) = bundle {
       for asset_idx in bundle.assets.ones() {
         let key = AssetKey(asset_idx as u32);
-        if self.asset_to_bundle.get(&key) == Some(bundle_id) {
-          self.asset_to_bundle.remove(&key);
+        if self.asset_bundle(&key) == Some(*bundle_id) {
+          self.set_asset_bundle(key, None);
         }
       }
     }
+
     self
       .bundle_edges
       .retain(|(a, b, _)| a != bundle_id && b != bundle_id);
@@ -399,21 +467,20 @@ impl IdealGraph {
     asset: AssetKey,
     to: &IdealBundleId,
   ) -> anyhow::Result<Option<IdealBundleId>> {
-    let prev = self.asset_to_bundle.get(&asset).copied();
+    let prev = self.asset_bundle(&asset);
 
     if let Some(prev_bundle) = prev
-      && let Some(b) = self.bundles.get_mut(&prev_bundle)
+      && let Some(b) = self.get_bundle_mut(&prev_bundle)
     {
       b.assets.set(asset.0 as usize, false);
     }
 
     let to_bundle = self
-      .bundles
-      .get_mut(to)
+      .get_bundle_mut(to)
       .ok_or_else(|| anyhow::anyhow!("missing bundle: {}", to.0))?;
 
     to_bundle.assets.insert(asset.0 as usize);
-    self.asset_to_bundle.insert(asset, *to);
+    self.set_asset_bundle(asset, Some(*to));
 
     Ok(prev)
   }

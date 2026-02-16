@@ -98,13 +98,11 @@ impl Bundler for IdealGraphBundler {
         .context("entry asset missing from AssetInterner")?;
 
       let ideal_bundle_id = ideal_graph
-        .asset_to_bundle
-        .get(&entry_asset_key)
+        .asset_bundle(&entry_asset_key)
         .context("entry asset not assigned to any ideal bundle")?;
 
       let ideal_bundle = ideal_graph
-        .bundles
-        .get(ideal_bundle_id)
+        .get_bundle(&ideal_bundle_id)
         .context("ideal bundle missing")?;
 
       // Create the bundle group.
@@ -116,7 +114,7 @@ impl Bundler for IdealGraphBundler {
       let bundle_node_id = materialize_ideal_bundle(
         bundle_graph,
         &ideal_graph,
-        ideal_bundle_id,
+        &ideal_bundle_id,
         ideal_bundle,
         &target,
         entry_dep,
@@ -177,7 +175,7 @@ impl Bundler for IdealGraphBundler {
 
     let default_entry_dep = entries.first().map(|(dep, _)| dep).unwrap();
 
-    for (ideal_bundle_id, ideal_bundle) in &ideal_graph.bundles {
+    for (ideal_bundle_id, ideal_bundle) in ideal_graph.bundles_iter() {
       if materialized_bundle_nodes.contains_key(ideal_bundle_id) {
         continue;
       }
@@ -294,7 +292,7 @@ impl Bundler for IdealGraphBundler {
 
     // Wire shared bundles into the bundle groups of the async bundles that depend on them.
     // Shared bundles don't have their own bundle groups - they're siblings in existing groups.
-    for (ideal_bundle_id, ideal_bundle) in &ideal_graph.bundles {
+    for (ideal_bundle_id, ideal_bundle) in ideal_graph.bundles_iter() {
       if ideal_bundle.root_asset_id.is_some() {
         continue; // Not a shared bundle.
       }
@@ -311,7 +309,7 @@ impl Bundler for IdealGraphBundler {
 
         // `from_id` is a bundle that depends on this shared bundle.
         // Find that bundle's root asset and its bundle group.
-        if let Some(from_bundle) = ideal_graph.bundles.get(from_id)
+        if let Some(from_bundle) = ideal_graph.get_bundle(from_id)
           && let Some(from_root_asset_id) = &from_bundle.root_asset_id
         {
           let bg_key = format!("bundle_group:{}{}", default_target.name, from_root_asset_id);
@@ -350,11 +348,11 @@ impl Bundler for IdealGraphBundler {
           continue;
         };
 
-        let Some(from_bundle) = ideal_graph.bundles.get(from_id) else {
+        let Some(from_bundle) = ideal_graph.get_bundle(from_id) else {
           continue;
         };
 
-        let Some(to_bundle) = ideal_graph.bundles.get(to_id) else {
+        let Some(to_bundle) = ideal_graph.get_bundle(to_id) else {
           continue;
         };
 
@@ -459,7 +457,7 @@ impl Bundler for IdealGraphBundler {
     // entry bundle rather than using zero-duplication placement.
     use std::collections::HashSet;
 
-    for (ideal_bundle_id, ideal_bundle) in &ideal_graph.bundles {
+    for (ideal_bundle_id, ideal_bundle) in ideal_graph.bundles_iter() {
       let Some(&bundle_node_id) = materialized_bundle_nodes.get(ideal_bundle_id) else {
         continue;
       };
@@ -545,7 +543,7 @@ impl Bundler for IdealGraphBundler {
                 let target_key = ideal_graph.assets.key_for(&target_asset.id);
                 let is_other_bundle_root = target_key.is_some_and(|k| {
                   let target_bundle_id = types::IdealBundleId::from_asset_key(k);
-                  ideal_graph.bundles.contains_key(&target_bundle_id)
+                  ideal_graph.get_bundle(&target_bundle_id).is_some()
                     && target_bundle_id != *ideal_bundle_id
                 });
 
@@ -756,13 +754,13 @@ mod tests {
   }
 
   fn format_bundle_snapshot(g: &IdealGraph) -> String {
-    let mut bundle_ids: Vec<types::IdealBundleId> = g.bundles.keys().copied().collect();
+    let mut bundle_ids: Vec<types::IdealBundleId> = g.bundles_iter().map(|(id, _)| *id).collect();
     bundle_ids.sort();
 
     let mut out = String::new();
     for bundle_id in bundle_ids {
       let bundle_id_str = g.assets.id_for(bundle_id.as_asset_key());
-      let bundle = &g.bundles[&bundle_id];
+      let bundle = g.get_bundle(&bundle_id).expect("bundle must exist");
       let mut assets: Vec<&str> = bundle
         .assets
         .ones()
@@ -795,8 +793,8 @@ mod tests {
     // 2. Check bundle contents.
     // Build actual: sort asset lists for comparison.
     let mut actual: Vec<Vec<String>> = g
-      .bundles
-      .values()
+      .bundles_iter()
+      .map(|(_id, b)| b)
       .map(|b| {
         let mut assets: Vec<String> = b
           .assets
@@ -838,8 +836,9 @@ mod tests {
             .key_for(name)
             .unwrap_or_else(|| panic!("Edge bundle '{}' not found in AssetInterner", name));
           let id = types::IdealBundleId::from_asset_key(asset_key);
-          if g.bundles.contains_key(&id) {
-            vec![&g.bundles.get_key_value(&id).unwrap().0]
+          if g.get_bundle(&id).is_some() {
+            // return a stable reference for comparisons
+            vec![Box::leak(Box::new(id))]
           } else {
             panic!(
               "Edge bundle '{}' not found.\nActual graph:\n{}",
@@ -861,10 +860,9 @@ mod tests {
 
           // Match against actual shared bundles by asset contents.
           let matches: Vec<_> = g
-            .bundles
-            .iter()
+            .bundles_iter()
             .filter(|(id, _)| g.assets.id_for(id.as_asset_key()).starts_with("@@shared:"))
-            .filter(|(_, bundle)| {
+            .filter(|(_id, bundle)| {
               let mut actual_assets: Vec<String> = bundle
                 .assets
                 .ones()
@@ -1200,8 +1198,13 @@ mod tests {
 
   fn assert_invariants(g: &IdealGraph) {
     // asset_to_bundle is consistent with bundle.assets
-    for (asset, bundle_id) in &g.asset_to_bundle {
-      let bundle = g.bundles.get(bundle_id).expect("bundle must exist");
+    // asset_to_bundle is consistent with bundle.assets
+    for (asset_idx, maybe_bundle_id) in g.asset_to_bundle.iter().enumerate() {
+      let Some(bundle_id) = maybe_bundle_id else {
+        continue;
+      };
+      let asset = types::AssetKey(asset_idx as u32);
+      let bundle = g.get_bundle(bundle_id).expect("bundle must exist");
       assert!(
         bundle.assets.contains(asset.0 as usize),
         "asset_to_bundle points to bundle that doesn't contain it: {:?} -> {}\n{}",
@@ -1216,15 +1219,15 @@ mod tests {
     // needs-stable-name) is expected -- they must be self-contained.
     // For simplicity, we allow duplication across any non-shared rooted bundles.
     let entry_like_bundles: std::collections::HashSet<types::IdealBundleId> = g
-      .bundles
-      .values()
+      .bundles_iter()
+      .map(|(_id, b)| b)
       .filter(|b| b.root_asset_id.is_some())
       .map(|b| b.id)
       .collect();
 
     let mut seen: std::collections::HashMap<&str, types::IdealBundleId> =
       std::collections::HashMap::new();
-    for (bundle_id, bundle) in &g.bundles {
+    for (bundle_id, bundle) in g.bundles_iter() {
       for asset_idx in bundle.assets.ones() {
         let asset = g.assets.id_for(types::AssetKey(asset_idx as u32));
         if let Some(prev) = seen.insert(asset, *bundle_id) {
@@ -2131,7 +2134,7 @@ mod tests {
     let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
     // helpers.js should only be in the entry bundle, NOT in c.js bundle
     let c_id = types::IdealBundleId::from_asset_key(g.assets.key_for("c.js").unwrap());
-    let c_bundle = g.bundles.get(&c_id).expect("c.js bundle should exist");
+    let c_bundle = g.get_bundle(&c_id).expect("c.js bundle should exist");
     assert!(
       !g.bundle_has_asset(&c_id, "helpers.js"),
       "helpers.js should NOT be in c.js bundle. c.js bundle assets: {:?}",
@@ -2140,7 +2143,7 @@ mod tests {
 
     // helpers.js SHOULD be in the entry bundle
     let entry_id = types::IdealBundleId::from_asset_key(g.assets.key_for("index.js").unwrap());
-    let entry_bundle = g.bundles.get(&entry_id).expect("entry bundle should exist");
+    let entry_bundle = g.get_bundle(&entry_id).expect("entry bundle should exist");
     assert!(
       g.bundle_has_asset(&entry_id, "helpers.js"),
       "helpers.js should be in entry bundle. Entry bundle assets: {:?}",

@@ -388,10 +388,10 @@ impl IdealGraphBuilder {
     self.entry_like_roots = self.entry_roots.clone();
 
     let mut ideal = IdealGraph {
-      bundles: HashMap::new(),
+      bundles: Vec::new(),
       bundle_edges: Vec::new(),
       bundle_edge_set: HashSet::new(),
-      asset_to_bundle: HashMap::new(),
+      asset_to_bundle: Vec::new(),
       assets: self.assets.clone(),
       debug: None,
     };
@@ -448,24 +448,21 @@ impl IdealGraphBuilder {
 
       let bundle_id = IdealBundleId::from_asset_key(root_key);
 
-      ideal.bundles.insert(
-        bundle_id,
-        IdealBundle {
-          id: bundle_id,
-          root_asset_id: Some(root_asset_id.clone()),
-          assets: {
-            let mut bs = FixedBitSet::with_capacity(self.assets.len());
-            bs.insert(root_key.0 as usize);
-            bs
-          },
-          bundle_type: asset.file_type.clone(),
-          needs_stable_name,
-          behavior: asset.bundle_behavior,
-          ancestor_assets: FixedBitSet::with_capacity(self.assets.len()),
+      ideal.create_bundle(IdealBundle {
+        id: bundle_id,
+        root_asset_id: Some(root_asset_id.clone()),
+        assets: {
+          let mut bs = FixedBitSet::with_capacity(self.assets.len());
+          bs.insert(root_key.0 as usize);
+          bs
         },
-      );
+        bundle_type: asset.file_type.clone(),
+        needs_stable_name,
+        behavior: asset.bundle_behavior,
+        ancestor_assets: FixedBitSet::with_capacity(self.assets.len()),
+      })?;
 
-      ideal.asset_to_bundle.insert(root_key, bundle_id);
+      ideal.move_asset_to_bundle(root_key, &bundle_id)?;
 
       self.decision(
         "placement",
@@ -476,7 +473,7 @@ impl IdealGraphBuilder {
     }
 
     debug!(
-      bundles = ideal.bundles.len(),
+      bundles = ideal.bundle_count(),
       "ideal graph: created bundle root shells"
     );
     Ok(ideal)
@@ -504,7 +501,7 @@ impl IdealGraphBuilder {
         continue;
       };
 
-      let Some(from_bundle) = ideal.asset_to_bundle.get(&from_key).copied() else {
+      let Some(from_bundle) = ideal.asset_bundle(&from_key) else {
         continue;
       };
 
@@ -569,8 +566,10 @@ impl IdealGraphBuilder {
   #[instrument(level = "debug", skip_all)]
   fn compute_availability(&mut self, ideal: &mut IdealGraph) -> anyhow::Result<()> {
     // Default: root bundles start with empty availability.
-    for bundle in ideal.bundles.values_mut() {
-      bundle.ancestor_assets.clear();
+    for slot in ideal.bundles.iter_mut() {
+      if let Some(bundle) = slot.as_mut() {
+        bundle.ancestor_assets.clear();
+      }
     }
 
     // ----------------------------
@@ -581,7 +580,7 @@ impl IdealGraphBuilder {
     // especially when the number of edges is small. We compute topo order directly from
     // `ideal.bundle_edges` and only fall back to SCC condensation when a cycle is detected.
     {
-      let bundle_ids: Vec<IdealBundleId> = ideal.bundles.keys().cloned().collect();
+      let bundle_ids: Vec<IdealBundleId> = ideal.bundles_iter().map(|(id, _)| *id).collect();
       let mut indegree: HashMap<IdealBundleId, usize> = HashMap::new();
       for id in &bundle_ids {
         indegree.insert(*id, 0);
@@ -624,7 +623,7 @@ impl IdealGraphBuilder {
       if order.len() == indegree.len() {
         self.compute_availability_dag_fast(ideal, &outgoing, &order)?;
         debug!(
-          bundles = ideal.bundles.len(),
+          bundles = ideal.bundle_count(),
           "ideal graph: computed availability (dag)"
         );
         return Ok(());
@@ -637,7 +636,7 @@ impl IdealGraphBuilder {
     let mut g: StableDiGraph<IdealBundleId, IdealEdgeType> = StableDiGraph::new();
     let mut idx_by_bundle: HashMap<IdealBundleId, NodeIndex> = HashMap::new();
 
-    for bundle_id in ideal.bundles.keys() {
+    for (bundle_id, _bundle) in ideal.bundles_iter() {
       idx_by_bundle.insert(*bundle_id, g.add_node(*bundle_id));
     }
 
@@ -654,7 +653,7 @@ impl IdealGraphBuilder {
     debug!("ideal graph: bundle graph has cycles; computing availability via SCC condensation");
     self.compute_availability_scc(&g, ideal)?;
     debug!(
-      bundles = ideal.bundles.len(),
+      bundles = ideal.bundle_count(),
       "ideal graph: computed availability (scc)"
     );
     Ok(())
@@ -675,30 +674,38 @@ impl IdealGraphBuilder {
     let capacity = self.assets.len();
 
     // Computed ancestor-availability per bundle as a FixedBitSet.
-    let mut availability: HashMap<IdealBundleId, FixedBitSet> = HashMap::new();
+    // Indexed by `IdealBundleId.0 as usize`.
+    let mut availability: Vec<Option<FixedBitSet>> = Vec::new();
 
     // Bundle assets as bitsets.
-    let mut bundle_assets_bs: HashMap<IdealBundleId, FixedBitSet> = HashMap::new();
-    for (id, bundle) in &ideal.bundles {
-      bundle_assets_bs.insert(*id, bundle.assets.clone());
+    // Indexed by `IdealBundleId.0 as usize`.
+    let mut bundle_assets_bs: Vec<Option<FixedBitSet>> = Vec::new();
+
+    for (id, bundle) in ideal.bundles_iter() {
+      let idx = id.0 as usize;
+      if bundle_assets_bs.len() <= idx {
+        bundle_assets_bs.resize_with(idx + 1, || None);
+      }
+      bundle_assets_bs[idx] = Some(bundle.assets.clone());
     }
 
     for parent_id in order {
       let parent_is_isolated = ideal
-        .bundles
-        .get(parent_id)
+        .get_bundle(parent_id)
         .map(|b| {
           b.behavior == Some(BundleBehavior::Isolated)
             || b.behavior == Some(BundleBehavior::InlineIsolated)
         })
         .unwrap_or(false);
 
-      let parent_ancestor_bs = availability.get(parent_id);
+      let parent_ancestor_bs = availability
+        .get(parent_id.0 as usize)
+        .and_then(|o| o.as_ref());
 
       // What this parent makes available to its children.
       let mut parent_available = bundle_assets_bs
-        .get(parent_id)
-        .cloned()
+        .get(parent_id.0 as usize)
+        .and_then(|o| o.clone())
         .unwrap_or_else(|| FixedBitSet::with_capacity(capacity));
       if !parent_is_isolated && let Some(bs) = parent_ancestor_bs {
         parent_available.union_with(bs);
@@ -713,8 +720,7 @@ impl IdealGraphBuilder {
 
       for (child_id, edge_type) in children {
         let child_is_isolated = ideal
-          .bundles
-          .get(&child_id)
+          .get_bundle(&child_id)
           .map(|b| {
             b.behavior == Some(BundleBehavior::Isolated)
               || b.behavior == Some(BundleBehavior::InlineIsolated)
@@ -722,7 +728,11 @@ impl IdealGraphBuilder {
           .unwrap_or(false);
 
         if child_is_isolated {
-          availability.insert(child_id, FixedBitSet::with_capacity(capacity));
+          let child_idx = child_id.0 as usize;
+          if availability.len() <= child_idx {
+            availability.resize_with(child_idx + 1, || None);
+          }
+          availability[child_idx] = Some(FixedBitSet::with_capacity(capacity));
           continue;
         }
 
@@ -734,15 +744,24 @@ impl IdealGraphBuilder {
           parent_available.clone()
         };
 
-        availability
-          .entry(child_id)
-          .and_modify(|prev| prev.intersect_with(&current_available))
-          .or_insert(current_available);
+        let child_idx = child_id.0 as usize;
+        if availability.len() <= child_idx {
+          availability.resize_with(child_idx + 1, || None);
+        }
+
+        match &mut availability[child_idx] {
+          Some(prev) => {
+            prev.intersect_with(&current_available);
+          }
+          None => {
+            availability[child_idx] = Some(current_available);
+          }
+        }
 
         if edge_type == IdealEdgeType::Parallel {
           let child_assets = bundle_assets_bs
-            .get(&child_id)
-            .cloned()
+            .get(child_id.0 as usize)
+            .and_then(|o| o.clone())
             .unwrap_or_else(|| FixedBitSet::with_capacity(capacity));
           parallel_availability.union_with(&child_assets);
         }
@@ -751,14 +770,17 @@ impl IdealGraphBuilder {
 
     // Final pass: assign `ancestor_assets` once per bundle.
     for bundle_id in order {
-      let bundle = ideal.bundles.get_mut(bundle_id).context("bundle missing")?;
+      let bundle = ideal.get_bundle_mut(bundle_id).context("bundle missing")?;
 
       if bundle.behavior == Some(BundleBehavior::Isolated)
         || bundle.behavior == Some(BundleBehavior::InlineIsolated)
       {
         bundle.ancestor_assets.clear();
       } else {
-        bundle.ancestor_assets = availability.get(bundle_id).cloned().unwrap_or_default();
+        bundle.ancestor_assets = availability
+          .get(bundle_id.0 as usize)
+          .and_then(|o| o.clone())
+          .unwrap_or_default();
       }
 
       self.decision(
@@ -790,8 +812,7 @@ impl IdealGraphBuilder {
       }
 
       let bs = ideal
-        .bundles
-        .get(bundle_id)
+        .get_bundle(bundle_id)
         .map(|b| b.assets.clone())
         .unwrap_or_else(|| FixedBitSet::with_capacity(capacity));
 
@@ -816,8 +837,7 @@ impl IdealGraphBuilder {
       let parent_ancestor_bs = node_availability[parent_node.index()].as_ref();
 
       let parent_is_isolated = ideal
-        .bundles
-        .get(&parent_id)
+        .get_bundle(&parent_id)
         .map(|b| {
           b.behavior == Some(BundleBehavior::Isolated)
             || b.behavior == Some(BundleBehavior::InlineIsolated)
@@ -865,8 +885,7 @@ impl IdealGraphBuilder {
 
         // Skip children with bundle behavior (isolated, etc).
         let child_is_isolated = ideal
-          .bundles
-          .get(&child_id)
+          .get_bundle(&child_id)
           .map(|b| {
             b.behavior == Some(BundleBehavior::Isolated)
               || b.behavior == Some(BundleBehavior::InlineIsolated)
@@ -914,10 +933,7 @@ impl IdealGraphBuilder {
 
       let ancestor_bs = node_availability[node.index()].as_ref();
 
-      let bundle = ideal
-        .bundles
-        .get_mut(&bundle_id)
-        .context("bundle missing")?;
+      let bundle = ideal.get_bundle_mut(&bundle_id).context("bundle missing")?;
 
       if bundle.behavior == Some(BundleBehavior::Isolated)
         || bundle.behavior == Some(BundleBehavior::InlineIsolated)
@@ -1015,10 +1031,7 @@ impl IdealGraphBuilder {
           .cloned()
           .context("bundle node missing")?;
 
-        let bundle = ideal
-          .bundles
-          .get_mut(&bundle_id)
-          .context("bundle missing")?;
+        let bundle = ideal.get_bundle_mut(&bundle_id).context("bundle missing")?;
 
         if bundle.behavior == Some(BundleBehavior::Isolated)
           || bundle.behavior == Some(BundleBehavior::InlineIsolated)
@@ -1045,7 +1058,7 @@ impl IdealGraphBuilder {
           .node_weight(bundle_node)
           .cloned()
           .context("bundle node missing")?;
-        if let Some(b) = ideal.bundles.get(&bundle_id) {
+        if let Some(b) = ideal.get_bundle(&bundle_id) {
           scc_available.union_with(&self.bundle_available_bitset(b));
         }
       }
@@ -1301,8 +1314,7 @@ impl IdealGraphBuilder {
       for &root in &reaching_entry_like {
         let bundle_id = &root_bundle_ids[&root];
         let bundle = ideal
-          .bundles
-          .get_mut(bundle_id)
+          .get_bundle_mut(bundle_id)
           .context("entry-like bundle missing for duplication")?;
         bundle.assets.insert(asset_key.0 as usize);
 
@@ -1320,7 +1332,9 @@ impl IdealGraphBuilder {
       if !reaching_entry_like.is_empty() {
         let canonical = reaching_entry_like.iter().copied().min().unwrap();
         let bundle_id = root_bundle_ids[&canonical];
-        ideal.asset_to_bundle.insert(asset_key, bundle_id);
+        // Only record canonical placement here (asset may have been duplicated into multiple bundles).
+        // `move_asset_to_bundle` would remove it from the other entry-like bundles, which we don't want.
+        ideal.set_asset_bundle(asset_key, Some(bundle_id));
       }
 
       // If this asset is reachable from an entry root, do not place it into splittable
@@ -1345,11 +1359,16 @@ impl IdealGraphBuilder {
         let root = splittable_roots[0];
         let bundle_id = &root_bundle_ids[&root];
         let bundle = ideal
-          .bundles
-          .get_mut(bundle_id)
+          .get_bundle_mut(bundle_id)
           .context("bundle missing for single-root placement")?;
         bundle.assets.insert(asset_key.0 as usize);
-        ideal.asset_to_bundle.insert(asset_key, *bundle_id);
+
+        // If this asset was duplicated into one or more entry-like bundles, we must not
+        // "move" it here (which would remove it from the canonical entry-like bundle).
+        // Keep the canonical `asset_to_bundle` mapping stable in that case.
+        if reaching_entry_like.is_empty() {
+          ideal.move_asset_to_bundle(asset_key, bundle_id)?;
+        }
 
         self.decision(
           "placement",
@@ -1363,7 +1382,7 @@ impl IdealGraphBuilder {
     }
 
     debug!(
-      placed = ideal.asset_to_bundle.len(),
+      placed = ideal.asset_to_bundle.iter().filter(|b| b.is_some()).count(),
       "ideal graph: placed single-root assets"
     );
     Ok(())
@@ -1502,7 +1521,7 @@ impl IdealGraphBuilder {
 
       let mut eligible: Vec<AssetKey> = Vec::new();
       for (root, bundle_id) in &splittable_root_ids {
-        let Some(bundle) = ideal.bundles.get(*bundle_id) else {
+        let Some(bundle) = ideal.get_bundle(bundle_id) else {
           // Still treat this root as an "earlier sibling" for subsequent roots.
           earlier_sibling_bundle_ids.insert(*bundle_id);
           continue;
@@ -1563,11 +1582,10 @@ impl IdealGraphBuilder {
         let root = eligible[0];
         let bundle_id = &root_bundle_ids[&root];
         let bundle = ideal
-          .bundles
-          .get_mut(bundle_id)
+          .get_bundle_mut(bundle_id)
           .context("bundle missing for single-eligible placement")?;
         bundle.assets.insert(asset_key.0 as usize);
-        ideal.asset_to_bundle.insert(asset_key, *bundle_id);
+        ideal.move_asset_to_bundle(asset_key, bundle_id)?;
         self.decision(
           "placement",
           super::types::DecisionKind::AssetAssignedToBundle {
@@ -1640,11 +1658,10 @@ impl IdealGraphBuilder {
 
       for asset in assets {
         let bundle = ideal
-          .bundles
-          .get_mut(&shared_bundle_id)
+          .get_bundle_mut(&shared_bundle_id)
           .context("shared bundle missing")?;
         bundle.assets.insert(asset.0 as usize);
-        ideal.asset_to_bundle.insert(asset, shared_bundle_id);
+        ideal.move_asset_to_bundle(asset, &shared_bundle_id)?;
 
         if let Some(&from_root) = roots.first() {
           self.decision(
@@ -1666,7 +1683,7 @@ impl IdealGraphBuilder {
     }
 
     debug!(
-      bundles = ideal.bundles.len(),
+      bundles = ideal.bundle_count(),
       "ideal graph: shared bundles created"
     );
     Ok(())
@@ -1837,7 +1854,7 @@ impl IdealGraphBuilder {
       let root_id = self.assets.id_for(root_key);
       let bundle_id = IdealBundleId::from_asset_key(root_key);
 
-      let Some(bundle) = ideal.bundles.get(&bundle_id) else {
+      let Some(bundle) = ideal.get_bundle(&bundle_id) else {
         continue;
       };
 
@@ -1862,7 +1879,7 @@ impl IdealGraphBuilder {
             self
               .assets
               .key_for(sid)
-              .and_then(|k| ideal.asset_to_bundle.get(&k).copied())
+              .and_then(|k| ideal.asset_bundle(&k))
           })
         })
         .collect();
@@ -1880,7 +1897,7 @@ impl IdealGraphBuilder {
       // 3. The parent can sync-reach the bundle root (via sync graph walk).
       let mut can_internalize = true;
       for parent_id in &parent_bundle_ids {
-        let Some(parent_bundle) = ideal.bundles.get(parent_id) else {
+        let Some(parent_bundle) = ideal.get_bundle(parent_id) else {
           can_internalize = false;
           break;
         };
@@ -1929,14 +1946,13 @@ impl IdealGraphBuilder {
     for (bundle_id, parents) in &internalized {
       // Collect the bundle's assets before removing it.
       let bundle_assets: Vec<usize> = ideal
-        .bundles
-        .get(bundle_id)
+        .get_bundle(bundle_id)
         .map(|b| b.assets.ones().collect())
         .unwrap_or_default();
 
       // Add the internalized bundle's assets to each parent bundle.
       for parent_id in parents {
-        if let Some(parent_bundle) = ideal.bundles.get_mut(parent_id) {
+        if let Some(parent_bundle) = ideal.get_bundle_mut(parent_id) {
           for idx in &bundle_assets {
             parent_bundle.assets.insert(*idx);
           }
@@ -1985,7 +2001,7 @@ impl IdealGraphBuilder {
         continue;
       }
 
-      if let Some(bundle) = ideal.bundles.get(&id)
+      if let Some(bundle) = ideal.get_bundle(&id)
         && (bundle.assets.contains(asset_key.0 as usize)
           || bundle.ancestor_assets.contains(asset_key.0 as usize))
       {
@@ -2003,7 +2019,7 @@ impl IdealGraphBuilder {
       }
 
       // Check sync-reachability from any asset in this bundle.
-      if let Some(bundle) = ideal.bundles.get(&id)
+      if let Some(bundle) = ideal.get_bundle(&id)
         && bundle
           .assets
           .ones()
