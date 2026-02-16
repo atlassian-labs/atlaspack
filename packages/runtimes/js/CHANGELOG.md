@@ -1,5 +1,45 @@
 # @atlaspack/runtime-js
 
+## 2.20.12
+
+### Patch Changes
+
+- Updated dependencies [[`ad3c822`](https://github.com/atlassian-labs/atlaspack/commit/ad3c8223ab1abce9e8da81239cc56f27d37c7cad), [`936209f`](https://github.com/atlassian-labs/atlaspack/commit/936209f3c6c201288720dd62b61e1f538368268c), [`857962a`](https://github.com/atlassian-labs/atlaspack/commit/857962a352bb0aebaf74a8765e8c44d7e875a4e9)]:
+  - @atlaspack/feature-flags@2.30.1
+  - @atlaspack/types-internal@2.24.0
+  - @atlaspack/utils@3.3.7
+  - @atlaspack/plugin@2.14.55
+
+## 2.20.11
+
+### Patch Changes
+
+- Updated dependencies [[`d8e984b`](https://github.com/atlassian-labs/atlaspack/commit/d8e984b7f6d04fa03707fa299bfd8b8bf9f58280), [`45a0dc5`](https://github.com/atlassian-labs/atlaspack/commit/45a0dc530fd9472dbfdebcbb05f1aad812ab3b23)]:
+  - @atlaspack/feature-flags@2.30.0
+  - @atlaspack/utils@3.3.6
+  - @atlaspack/types-internal@2.23.2
+  - @atlaspack/plugin@2.14.54
+
+## 2.20.10
+
+### Patch Changes
+
+- Updated dependencies [[`1815c2c`](https://github.com/atlassian-labs/atlaspack/commit/1815c2ce48e32f4df97ccdd668fd650fc79d1051)]:
+  - @atlaspack/feature-flags@2.29.1
+  - @atlaspack/utils@3.3.5
+  - @atlaspack/types-internal@2.23.1
+  - @atlaspack/plugin@2.14.53
+
+## 2.20.9
+
+### Patch Changes
+
+- Updated dependencies [[`e058f0e`](https://github.com/atlassian-labs/atlaspack/commit/e058f0e7a0423ba9373e85a7dbd5c1dd43b47916), [`349b19c`](https://github.com/atlassian-labs/atlaspack/commit/349b19c3aca2ccb1ffb5cdcdc74890f4b62228be)]:
+  - @atlaspack/types-internal@2.23.0
+  - @atlaspack/feature-flags@2.29.0
+  - @atlaspack/plugin@2.14.52
+  - @atlaspack/utils@3.3.4
+
 ## 2.20.8
 
 ### Patch Changes

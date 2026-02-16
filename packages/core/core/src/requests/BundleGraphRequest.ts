@@ -68,9 +68,9 @@ type RunInput = {
 // TODO: Rename to BundleGraphRequestResult
 export type BundleGraphResult = {
   bundleGraph: InternalBundleGraph;
-  assetGraphBundlingVersion: number;
   changedAssets: Map<string, Asset>;
   assetRequests: Array<AssetGroup>;
+  didIncrementallyBundle: boolean;
 };
 
 type BundleGraphRequest = {
@@ -145,6 +145,7 @@ export default function createBundleGraphRequest(
         lazyIncludes: options.lazyIncludes,
         lazyExcludes: options.lazyExcludes,
         requestedAssetIds,
+        skipSymbolProp: getFeatureFlag('rustSymbolTracker'),
       });
 
       let {assetGraph, changedAssets, assetRequests} = await instrumentAsync(
@@ -207,7 +208,6 @@ export default function createBundleGraphRequest(
 
       if (subRequestsInvalid) {
         assetGraph.safeToIncrementallyBundle = false;
-        assetGraph.setNeedsBundling();
       }
 
       let configResult = nullthrows(
@@ -276,21 +276,12 @@ class BundlerRunner {
     this.pluginOptions = new PluginOptions(
       optionsProxy(this.options, api.invalidateOnOptionChange),
     );
-    if (getFeatureFlag('cachePerformanceImprovements')) {
-      const key = hashString(
+    this.cacheKey =
+      hashString(
         `${ATLASPACK_VERSION}:BundleGraph:${
           JSON.stringify(options.entries) ?? ''
         }${options.mode}${options.shouldBuildLazily ? 'lazy' : 'eager'}`,
-      );
-      this.cacheKey = `BundleGraph/${ATLASPACK_VERSION}/${options.mode}/${key}`;
-    } else {
-      this.cacheKey =
-        hashString(
-          `${ATLASPACK_VERSION}:BundleGraph:${
-            JSON.stringify(options.entries) ?? ''
-          }${options.mode}${options.shouldBuildLazily ? 'lazy' : 'eager'}`,
-        ) + '-BundleGraph';
-    }
+      ) + '-BundleGraph';
   }
 
   async loadConfigs() {
@@ -337,7 +328,7 @@ class BundlerRunner {
       type: 'buildProgress',
       phase: 'bundling',
     });
-
+    let didIncrementallyBundle = false;
     await this.loadConfigs();
 
     let plugin = await this.config.getBundler();
@@ -347,14 +338,10 @@ class BundlerRunner {
     const previousBundleGraphResult: BundleGraphResult | null | undefined =
       await this.api.getPreviousResult();
     const canIncrementallyBundle =
-      previousBundleGraphResult?.assetGraphBundlingVersion != null &&
-      graph.canIncrementallyBundle(
-        previousBundleGraphResult.assetGraphBundlingVersion,
-      );
+      previousBundleGraphResult != null && graph.canIncrementallyBundle();
 
     if (graph.safeToIncrementallyBundle && previousBundleGraphResult == null) {
       graph.safeToIncrementallyBundle = false;
-      graph.setNeedsBundling();
     }
 
     let internalBundleGraph;
@@ -375,6 +362,7 @@ class BundlerRunner {
           invariant(changedAssetNode.type === 'asset');
           internalBundleGraph.updateAsset(changedAssetNode);
         }
+        didIncrementallyBundle = true;
       } else {
         internalBundleGraph = InternalBundleGraph.fromAssetGraph(
           graph,
@@ -469,9 +457,9 @@ class BundlerRunner {
         this.api.storeResult(
           {
             bundleGraph: internalBundleGraph,
-            assetGraphBundlingVersion: graph.getBundlingVersion(),
             changedAssets: new Map(),
             assetRequests: [],
+            didIncrementallyBundle,
           },
           this.cacheKey,
         );
@@ -555,18 +543,18 @@ class BundlerRunner {
     this.api.storeResult(
       {
         bundleGraph: internalBundleGraph,
-        assetGraphBundlingVersion: graph.getBundlingVersion(),
         changedAssets: new Map(),
         assetRequests: [],
+        didIncrementallyBundle,
       },
       this.cacheKey,
     );
 
     return {
       bundleGraph: internalBundleGraph,
-      assetGraphBundlingVersion: graph.getBundlingVersion(),
       changedAssets: changedRuntimes,
       assetRequests,
+      didIncrementallyBundle,
     };
   }
 }

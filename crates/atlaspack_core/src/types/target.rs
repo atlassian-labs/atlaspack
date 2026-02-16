@@ -39,6 +39,12 @@ pub struct Target {
   /// The URL bundles will be loaded with at runtime
   pub public_url: String,
 
+  /// Whether require() variable declarations should be inlined at their use sites.
+  /// When true, `const x = require("id")` is removed and usages of `x` are replaced
+  /// with `(0, require("id"))`, deferring module initialisation to first use.
+  #[serde(default)]
+  pub inline_requires: bool,
+
   // We need all fields in `type Target` to be captured so that we can hash
   // target objects including for things rust is unaware of right now.
   #[serde(flatten)]
@@ -55,6 +61,7 @@ impl Default for Target {
       loc: None,
       name: String::from("default"),
       public_url: String::from("/"),
+      inline_requires: false,
       extra: std::collections::BTreeMap::new(),
     }
   }

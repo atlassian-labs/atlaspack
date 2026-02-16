@@ -41,7 +41,7 @@ export class DevPackager {
     contents: string;
     map: SourceMap | null | undefined;
   }> {
-    const span = tracer.enter('DevPackager.package');
+    const span = tracer.enter('DevPackager.package', 'debug');
     let assetCount = 0;
 
     // Load assets

@@ -160,6 +160,8 @@ export interface Target {
   readonly publicUrl: string;
   /** The location that created this Target, e.g. `package.json#main`*/
   readonly loc: SourceLocation | null | undefined;
+  /** Whether require() declarations should be inlined at their use sites */
+  readonly inlineRequires?: boolean;
 }
 
 /** In which environment the output should run (influces e.g. bundle loaders) */
@@ -195,6 +197,7 @@ export type PackageTargetDescriptor = {
   readonly isLibrary?: boolean;
   readonly optimize?: boolean;
   readonly scopeHoist?: boolean;
+  readonly inlineRequires?: boolean;
   readonly source?: FilePath | Array<FilePath>;
   readonly env?: EnvMap;
   readonly __unstable_singleFileOutput?: boolean;

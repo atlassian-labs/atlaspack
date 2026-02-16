@@ -1,6 +1,5 @@
 use std::cmp::Ordering;
 
-use atlassian_swc_compiled_css::TransformError;
 use serde::Deserialize;
 use serde::Serialize;
 use swc_core::common::DUMMY_SP;
@@ -61,26 +60,43 @@ pub fn match_member_expr(expr: &ast::MemberExpr, idents: Vec<&str>, unresolved_m
   false
 }
 
+/// When attribution_span is Some(s), the created CallExpr (and thus the emitted
+/// source mapping) uses s. When None, uses DUMMY_SP so the mapping is skipped
+/// by SWC's codegen (avoiding "Source out of range" errors when a file contains
+/// only synthesized code and no real source is registered).
+///
+/// Note: SYNTHESIZED_SP (BytePos::SYNTHESIZED / u32::MAX) was previously tried
+/// here to avoid the DUMMY_SP bug (GH swc-project/swc#6767) where codegen
+/// reuses the next node's mapping. However, SYNTHESIZED emits a mapping that
+/// references src_id which defaults to 0 even when no source file has been
+/// registered, causing "Source out of range" for files that consist entirely of
+/// synthesized code (e.g. type-only re-export files after stripping).
 pub fn create_require(
   specifier: swc_core::ecma::atoms::Atom,
   unresolved_mark: Mark,
+  attribution_span: Option<Span>,
 ) -> ast::CallExpr {
   let mut normalized_specifier = specifier;
   if normalized_specifier.starts_with("node:") {
     normalized_specifier = normalized_specifier.replace("node:", "").into();
   }
+  let span = attribution_span.unwrap_or(DUMMY_SP);
 
   ast::CallExpr {
     callee: ast::Callee::Expr(Box::new(ast::Expr::Ident(ast::Ident::new(
       "require".into(),
-      DUMMY_SP,
+      span,
       SyntaxContext::empty().apply_mark(unresolved_mark),
     )))),
     args: vec![ast::ExprOrSpread {
-      expr: Box::new(ast::Expr::Lit(ast::Lit::Str(normalized_specifier.into()))),
+      expr: Box::new(ast::Expr::Lit(ast::Lit::Str(ast::Str {
+        span,
+        value: normalized_specifier,
+        raw: None,
+      }))),
       spread: None,
     }],
-    span: DUMMY_SP,
+    span,
     ctxt: SyntaxContext::empty(),
     type_args: None,
   }
@@ -217,27 +233,30 @@ pub fn match_import_cond(node: &ast::Expr, ignore_mark: Mark) -> Option<(Atom, A
   }
 }
 
+/// When attribution_span is Some(s), the created VarDecl uses s so the emitted
+/// source mapping points to that location instead of reusing the next node's.
+/// When None, uses DUMMY_SP (see create_require for rationale).
 // `name` must not be an existing binding.
 pub fn create_global_decl_stmt(
   name: swc_core::ecma::atoms::Atom,
   init: ast::Expr,
   global_mark: Mark,
+  attribution_span: Option<Span>,
 ) -> (ast::Stmt, SyntaxContext) {
   // The correct value would actually be `DUMMY_SP.apply_mark(Mark::fresh(Mark::root()))`.
   // But this saves us from running the resolver again in some cases.
   let ctxt = SyntaxContext::empty().apply_mark(global_mark);
+  let span = attribution_span.unwrap_or(DUMMY_SP);
 
   (
     ast::Stmt::Decl(ast::Decl::Var(Box::new(ast::VarDecl {
       kind: ast::VarDeclKind::Var,
       declare: false,
-      span: DUMMY_SP,
+      span,
       ctxt,
       decls: vec![ast::VarDeclarator {
-        name: ast::Pat::Ident(ast::BindingIdent::from(ast::Ident::new(
-          name, DUMMY_SP, ctxt,
-        ))),
-        span: DUMMY_SP,
+        name: ast::Pat::Ident(ast::BindingIdent::from(ast::Ident::new(name, span, ctxt))),
+        span,
         definite: false,
         init: Some(Box::new(init)),
       }],
@@ -490,32 +509,52 @@ pub fn error_buffer_to_diagnostics(
     .collect()
 }
 
-pub fn transform_errors_to_diagnostics(
-  errors: Vec<TransformError>,
-  source_map: &SourceMap,
-) -> Vec<Diagnostic> {
-  errors
-    .into_iter()
-    .map(|error| {
-      let code_highlights = error.span.and_then(|span| {
-        if span.lo().is_dummy() || span.hi().is_dummy() {
-          None
-        } else {
-          Some(vec![CodeHighlight {
-            message: None,
-            loc: SourceLocation::from(source_map, span),
-          }])
-        }
-      });
+/// Convert atlaspack_core::types::Diagnostic to utils::Diagnostic
+///
+/// Note: This conversion loses some fidelity as atlaspack_core diagnostics support
+/// multiple code frames, while utils diagnostics only support a single list of highlights.
+/// We flatten all code frames into a single list of highlights.
+pub fn atlaspack_diagnostic_to_utils_diagnostic(
+  diagnostic: atlaspack_core::types::Diagnostic,
+) -> Diagnostic {
+  // Flatten all code_frames into a single list of code_highlights
+  let code_highlights = if !diagnostic.code_frames.is_empty() {
+    let highlights: Vec<CodeHighlight> = diagnostic
+      .code_frames
+      .iter()
+      .flat_map(|frame| &frame.code_highlights)
+      .map(|highlight| CodeHighlight {
+        message: highlight.message.clone(),
+        loc: SourceLocation {
+          start_line: highlight.start.line,
+          start_col: highlight.start.column,
+          end_line: highlight.end.line,
+          end_col: highlight.end.column,
+        },
+      })
+      .collect();
 
-      Diagnostic {
-        message: error.message,
-        code_highlights,
-        hints: None,
-        show_environment: false,
-        severity: DiagnosticSeverity::Error,
-        documentation_url: None,
-      }
-    })
-    .collect()
+    if highlights.is_empty() {
+      None
+    } else {
+      Some(highlights)
+    }
+  } else {
+    None
+  };
+
+  let hints = if diagnostic.hints.is_empty() {
+    None
+  } else {
+    Some(diagnostic.hints)
+  };
+
+  Diagnostic {
+    message: diagnostic.message,
+    code_highlights,
+    hints,
+    show_environment: false,
+    severity: DiagnosticSeverity::Error,
+    documentation_url: diagnostic.documentation_url,
+  }
 }

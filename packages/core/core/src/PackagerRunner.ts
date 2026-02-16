@@ -30,7 +30,6 @@ import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
 import {Readable} from 'stream';
 import nullthrows from 'nullthrows';
 import path from 'path';
-import url from 'url';
 import {hashString, hashBuffer, Hash} from '@atlaspack/rust';
 
 import {NamedBundle, bundleToInternalBundle} from './public/Bundle';
@@ -60,9 +59,9 @@ import {
 import {getInvalidationId, getInvalidationHash} from './assetUtils';
 import {optionsProxy} from './utils';
 import {invalidateDevDeps} from './requests/DevDepRequest';
+import {computeSourceMapRoot} from './requests/WriteBundleRequest';
 import {tracer, PluginTracer} from '@atlaspack/profiler';
 import {fromEnvironmentId} from './EnvironmentManager';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 type Opts = {
   config: AtlaspackConfig;
@@ -590,64 +589,24 @@ export default class PackagerRunner {
     bundle: InternalBundle,
     map: SourceMap,
   ): Promise<string> {
-    // sourceRoot should be a relative path between outDir and rootDir for node.js targets
+    let sourceRoot = computeSourceMapRoot(bundle, this.options);
+    let inlineSources = sourceRoot === undefined;
+
     let filePath = joinProjectPath(
       bundle.target.distDir,
       nullthrows(bundle.name),
     );
     let fullPath = fromProjectPath(this.options.projectRoot, filePath);
-    let sourceRoot: string = path.relative(
-      path.dirname(fullPath),
-      this.options.projectRoot,
-    );
-    let inlineSources = false;
+    let mapFilename = fullPath + '.map';
 
     const bundleEnv = fromEnvironmentId(bundle.env);
-    if (bundle.target) {
-      const bundleTargetEnv = fromEnvironmentId(bundle.target.env);
-
-      if (bundleEnv.sourceMap && bundleEnv.sourceMap.sourceRoot !== undefined) {
-        sourceRoot = bundleEnv.sourceMap.sourceRoot;
-      } else if (
-        this.options.serveOptions &&
-        bundleTargetEnv.context === 'browser'
-      ) {
-        sourceRoot = '/__parcel_source_root';
-      }
-
-      if (
-        bundleEnv.sourceMap &&
-        bundleEnv.sourceMap.inlineSources !== undefined
-      ) {
-        inlineSources = bundleEnv.sourceMap.inlineSources;
-      } else if (bundleTargetEnv.context !== 'node') {
-        // inlining should only happen in production for browser targets by default
-        inlineSources = this.options.mode === 'production';
-      }
-    }
-
-    let mapFilename = fullPath + '.map';
     let isInlineMap = bundleEnv.sourceMap && bundleEnv.sourceMap.inline;
-
-    if (getFeatureFlag('omitSourcesContentInMemory') && !isInlineMap) {
-      if (
-        !(bundleEnv.sourceMap && bundleEnv.sourceMap.inlineSources === false)
-      ) {
-        /*
-          We're omitting sourcesContent during transformation to allow GC to run.
-          Ensure sources are still inlined into the final source maps written to disk. UNLESS the user explicitly disabled inlineSources.
-        */
-        inlineSources = true;
-      }
-    }
 
     let stringified = await map.stringify({
       file: path.basename(mapFilename),
       fs: this.options.inputFS,
       rootDir: this.options.projectRoot,
-      sourceRoot: !inlineSources
-        ? url.format(url.parse(sourceRoot + '/'))
-        : undefined,
+      sourceRoot,
       inlineSources,
       format: isInlineMap ? 'inline' : 'string',
     });
@@ -693,21 +652,6 @@ export default class PackagerRunner {
       invalidations,
       this.options,
     );
-
-    if (getFeatureFlag('cachePerformanceImprovements')) {
-      const hash = hashString(
-        ATLASPACK_VERSION +
-          devDepHashes +
-          invalidationHash +
-          bundle.target.publicUrl +
-          bundleGraph.getHash(bundle) +
-          JSON.stringify(configResults) +
-          JSON.stringify(globalInfoResults) +
-          this.options.mode +
-          (this.options.shouldBuildLazily ? 'lazy' : 'eager'),
-      );
-      return path.join(bundle.displayName ?? bundle.name ?? bundle.id, hash);
-    }
 
     return hashString(
       ATLASPACK_VERSION +
@@ -755,27 +699,20 @@ export default class PackagerRunner {
     let mapKey = PackagerRunner.getMapKey(cacheKey);
 
     let isLargeBlob = await this.options.cache.hasLargeBlob(contentKey);
-    let contentExists = getFeatureFlag('cachePerformanceImprovements')
-      ? isLargeBlob
-      : isLargeBlob || (await this.options.cache.has(contentKey));
+    let contentExists =
+      isLargeBlob || (await this.options.cache.has(contentKey));
     if (!contentExists) {
       return null;
     }
 
-    let mapExists = getFeatureFlag('cachePerformanceImprovements')
-      ? await this.options.cache.hasLargeBlob(mapKey)
-      : await this.options.cache.has(mapKey);
+    let mapExists = await this.options.cache.has(mapKey);
 
     return {
       contents: isLargeBlob
         ? this.options.cache.getStream(contentKey)
         : blobToStream(await this.options.cache.getBlob(contentKey)),
       map: mapExists
-        ? blobToStream(
-            getFeatureFlag('cachePerformanceImprovements')
-              ? await this.options.cache.getLargeBlob(mapKey)
-              : await this.options.cache.getBlob(mapKey),
-          )
+        ? blobToStream(await this.options.cache.getBlob(mapKey))
         : null,
     };
   }
@@ -790,13 +727,11 @@ export default class PackagerRunner {
     let hash;
     // @ts-expect-error TS2702
     let hashReferences: RegExp.matchResult | Array<string> = [];
-    let isLargeBlob = getFeatureFlag('cachePerformanceImprovements');
+    let isLargeBlob = false;
 
     // TODO: don't replace hash references in binary files??
     if (contents instanceof Readable) {
-      if (!getFeatureFlag('cachePerformanceImprovements')) {
-        isLargeBlob = true;
-      }
+      isLargeBlob = true;
 
       let boundaryStr = '';
       let h = new Hash();
@@ -822,29 +757,17 @@ export default class PackagerRunner {
       hash = hashBuffer(buffer);
       hashReferences = contents.match(HASH_REF_REGEX) ?? [];
 
-      if (getFeatureFlag('cachePerformanceImprovements')) {
-        await this.options.cache.setLargeBlob(cacheKeys.content, buffer);
-      } else {
-        await this.options.cache.setBlob(cacheKeys.content, buffer);
-      }
+      await this.options.cache.setBlob(cacheKeys.content, buffer);
     } else {
       size = contents.length;
       hash = hashBuffer(contents);
       hashReferences = contents.toString().match(HASH_REF_REGEX) ?? [];
 
-      if (getFeatureFlag('cachePerformanceImprovements')) {
-        await this.options.cache.setLargeBlob(cacheKeys.content, contents);
-      } else {
-        await this.options.cache.setBlob(cacheKeys.content, contents);
-      }
+      await this.options.cache.setBlob(cacheKeys.content, contents);
     }
 
     if (map != null) {
-      if (getFeatureFlag('cachePerformanceImprovements')) {
-        await this.options.cache.setLargeBlob(cacheKeys.map, map);
-      } else {
-        await this.options.cache.setBlob(cacheKeys.map, map);
-      }
+      await this.options.cache.setBlob(cacheKeys.map, map);
     }
 
     let info = {
@@ -861,23 +784,14 @@ export default class PackagerRunner {
   }
 
   static getContentKey(cacheKey: string): string {
-    if (getFeatureFlag('cachePerformanceImprovements')) {
-      return `PackagerRunner/${ATLASPACK_VERSION}/${cacheKey}/content`;
-    }
     return hashString(`${cacheKey}:content`);
   }
 
   static getMapKey(cacheKey: string): string {
-    if (getFeatureFlag('cachePerformanceImprovements')) {
-      return `PackagerRunner/${ATLASPACK_VERSION}/${cacheKey}/map`;
-    }
     return hashString(`${cacheKey}:map`);
   }
 
   static getInfoKey(cacheKey: string): string {
-    if (getFeatureFlag('cachePerformanceImprovements')) {
-      return `PackagerRunner/${ATLASPACK_VERSION}/${cacheKey}/info`;
-    }
     return hashString(`${cacheKey}:info`);
   }
 }

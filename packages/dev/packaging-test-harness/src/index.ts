@@ -193,6 +193,7 @@ export async function packageBundle(
   bundleGraph: InstanceType<typeof InternalBundleGraph>,
   bundle: Bundle,
   cache: InstanceType<typeof LMDBLiteCache>,
+  cacheDir: string,
   options: {verbose?: boolean} = {},
 ): Promise<PackagingResult> {
   const inputFS = new NodeFS();
@@ -205,9 +206,10 @@ export async function packageBundle(
   // Create AtlaspackV3 instance
   // We use minimal configuration since we're just packaging
   const atlaspackV3 = await AtlaspackV3.create({
+    cacheDir,
     corePath: path.join(__dirname, '..', '..', '..', 'core', 'core'),
     serveOptions: false,
-    env: process.env,
+    env: process.env as Record<string, string>,
     // Entries are not used for packaging, but required for creation
     entries: [],
     fs: new FileSystemV3(inputFS),
@@ -217,7 +219,7 @@ export async function packageBundle(
       atlaspackV3: true,
     },
     defaultTargetOptions: {
-      shouldScopeHoist: true,
+      shouldScopeHoist: false,
     },
   });
 
@@ -452,33 +454,42 @@ export function formatComparisonResults(comparison: ComparisonResult): string {
 }
 
 /**
- * Read the packaged bundle content from LMDB cache.
+ * Read the packaged bundle content from cache.
+ * The native packager writes large blobs to the filesystem using the same path
+ * convention as LMDBLiteCache.getStream/setStream: `{cacheDir}/{key}`.
+ * We check the filesystem first, then fall back to LMDB for content written
+ * by older versions or the JS packager.
  */
 export async function readPackagedContent(
   cache: InstanceType<typeof LMDBLiteCache>,
   cacheKeys: {content: string; map: string; info: string},
 ): Promise<{content: Buffer; sourceMap: Buffer | null}> {
-  // Try to read content as a large blob first, then fall back to regular blob
   let content: Buffer;
-  const hasLargeBlob = await cache.hasLargeBlob(cacheKeys.content);
+  // The native packager writes via set_large_blob which uses
+  // `{cache_dir}/{key}` — the same convention as LMDBLiteCache.getStream.
+  const filePath = path.join(cache.dir, cacheKeys.content);
 
-  if (hasLargeBlob) {
-    content = await cache.getLargeBlob(cacheKeys.content);
-  } else {
+  try {
+    // Try filesystem first (native packager always writes here)
+    content = await fs.promises.readFile(filePath);
+  } catch {
+    // Fall back to LMDB
     content = await cache.getBlob(cacheKeys.content);
   }
 
   // Try to read source map if available
   let sourceMap: Buffer | null = null;
   try {
-    const hasMapLargeBlob = await cache.hasLargeBlob(cacheKeys.map);
-    if (hasMapLargeBlob) {
-      sourceMap = await cache.getLargeBlob(cacheKeys.map);
-    } else if (await cache.has(cacheKeys.map)) {
-      sourceMap = await cache.getBlob(cacheKeys.map);
-    }
+    const mapFilePath = path.join(cache.dir, cacheKeys.map);
+    sourceMap = await fs.promises.readFile(mapFilePath);
   } catch {
-    // Source map not available
+    try {
+      if (await cache.has(cacheKeys.map)) {
+        sourceMap = await cache.getBlob(cacheKeys.map);
+      }
+    } catch {
+      // Source map not available
+    }
   }
 
   return {content, sourceMap};
@@ -536,9 +547,15 @@ export async function runPackagingTest(
   if (verbose) {
     console.log('\n--- Running Native Packager ---');
   }
-  const nativeResult = await packageBundle(bundleGraph, bundle, cache, {
-    verbose,
-  });
+  const nativeResult = await packageBundle(
+    bundleGraph,
+    bundle,
+    cache,
+    cacheDir,
+    {
+      verbose,
+    },
+  );
 
   // Read packaged content from cache
   const {content: nativeContent, sourceMap} = await readPackagedContent(

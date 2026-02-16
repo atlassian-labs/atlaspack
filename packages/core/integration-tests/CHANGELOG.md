@@ -1,5 +1,17 @@
 # @atlaspack/integration-tests
 
+## 2.20.5
+
+### Patch Changes
+
+- [#1035](https://github.com/atlassian-labs/atlaspack/pull/1035) [`936209f`](https://github.com/atlassian-labs/atlaspack/commit/936209f3c6c201288720dd62b61e1f538368268c) Thanks [@marcins](https://github.com/marcins)! - Remove `cachePerformanceImprovements` feature flag
+
+## 2.20.4
+
+### Patch Changes
+
+- [#1013](https://github.com/atlassian-labs/atlaspack/pull/1013) [`e712283`](https://github.com/atlassian-labs/atlaspack/commit/e712283425e077370aa0ebe3ac28384e39be2372) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - remove old test data
+
 ## 2.20.3
 
 ### Patch Changes

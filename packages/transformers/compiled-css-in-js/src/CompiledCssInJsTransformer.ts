@@ -13,7 +13,6 @@ import ThrowableDiagnostic, {
   convertSourceLocationToHighlight,
 } from '@atlaspack/diagnostic';
 import {remapSourceLocation} from '@atlaspack/utils';
-
 import {loadCompiledCssInJsConfig} from '@atlaspack/transformer-js';
 
 export default new Transformer({
@@ -96,9 +95,6 @@ export default new Transformer({
 
     if (result.diagnostics?.length > 0) {
       const diagnostics = result.diagnostics ?? [];
-      asset.meta.compiledCssDiagnostics = JSON.parse(
-        JSON.stringify(diagnostics),
-      );
 
       const original = await ensureOriginalMap();
       type PluginDiagnostic = (typeof diagnostics)[number];
@@ -145,6 +141,7 @@ export default new Transformer({
           codeFrames: [
             {
               filePath: asset.filePath,
+              code: code,
               codeHighlights,
             },
           ],
@@ -170,6 +167,10 @@ export default new Transformer({
         return converted;
       };
 
+      asset.meta.compiledCssDiagnostics = JSON.parse(
+        JSON.stringify(diagnostics.map(convertDiagnostic)),
+      );
+
       const errors = diagnostics.filter(
         (diagnostic) =>
           diagnostic.severity === 'Error' ||
@@ -184,8 +185,57 @@ export default new Transformer({
             logger.warn(convertDiagnostic(error));
           }
         } else {
+          // Embed a V8-format stack string in each diagnostic so that Sentry
+          // renders a clickable stacktrace panel with the source location.
+          //
+          // Background: errors cross the WorkerFarm boundary via
+          // anyToDiagnostic(), which only preserves the Diagnostic[] array.
+          // The stack must therefore live inside the Diagnostic object itself
+          // so it survives serialisation and is picked up by the
+          // ThrowableDiagnostic constructor on the other side.
+          //
+          // meta.sentryOnly: true signals prettyDiagnostic to skip rendering
+          // the stack in the terminal (avoiding duplication with codeFrames).
+          //
+          // One V8 frame is emitted per highlighted line. The source line
+          // content is used as the frame label so it appears inline in
+          // Sentry's stacktrace list without needing source maps.
+          // Parentheses are replaced with square brackets to prevent breaking
+          // the V8 parser, which splits on ' (' to find the (file:line:col).
           throw new ThrowableDiagnostic({
-            diagnostic: errors.map(convertDiagnostic),
+            diagnostic: errors.map((error) => {
+              const converted = convertDiagnostic(error);
+              const frames = (converted.codeFrames ?? []).flatMap((frame) => {
+                const filePath = frame.filePath ?? asset.filePath;
+                const sourceLines = frame.code?.split('\n') ?? [];
+                return frame.codeHighlights.flatMap((h) => {
+                  const lineFrames = [];
+                  for (
+                    let lineNum = h.start.line;
+                    lineNum <= h.end.line;
+                    lineNum++
+                  ) {
+                    const raw = (sourceLines[lineNum - 1] ?? '').trim();
+                    const label = raw
+                      ? raw.replace(/\(/g, '[').replace(/\)/g, ']')
+                      : 'compiled css source error';
+                    const col = lineNum === h.start.line ? h.start.column : 0;
+                    lineFrames.push(
+                      `    at ${label} (${filePath}:${lineNum}:${col})`,
+                    );
+                  }
+                  return lineFrames;
+                });
+              });
+              if (frames.length > 0) {
+                return {
+                  ...converted,
+                  stack: `Error: ${converted.message}\n${frames.join('\n')}`,
+                  meta: {...converted.meta, sentryOnly: true},
+                };
+              }
+              return converted;
+            }),
           });
         }
       }
@@ -205,9 +255,6 @@ export default new Transformer({
     if (config.unsafeReportSafeAssetsForMigration) {
       // We need to run the transform without returning the result, so we can report the safe assets
       asset.meta.swcStyleRules = result.styleRules;
-      asset.meta.compiledCssDiagnostics = result.diagnostics.map(
-        (d) => d.message,
-      );
       asset.meta.compiledBailOut = result.bailOut;
 
       return [asset];

@@ -40,7 +40,7 @@ pub fn cp_dir_recursive<S: AsRef<Path>, D: AsRef<Path>>(source: S, dest: D) -> a
     let entry_path_rel = entry_path_abs.strip_prefix(source)?;
     let dest_path_abs = dest.join(entry_path_rel);
 
-    if entry_path_rel == PathBuf::from("") {
+    if entry_path_rel == Path::new("") {
       continue;
     }
 

@@ -184,10 +184,8 @@ export default async function resolveOptions(
     const needsRustLmdbCache =
       getFeatureFlag('atlaspackV3') || getFeatureFlag('nativePackager');
 
-    if (!getFeatureFlag('cachePerformanceImprovements')) {
-      if (!needsRustLmdbCache && !(outputFS instanceof NodeFS)) {
-        return new FSCache(outputFS, cacheDir);
-      }
+    if (!needsRustLmdbCache && !(outputFS instanceof NodeFS)) {
+      return new FSCache(outputFS, cacheDir);
     }
 
     return new LMDBLiteCache(cacheDir);

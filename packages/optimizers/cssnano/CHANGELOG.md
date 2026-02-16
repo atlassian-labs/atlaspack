@@ -1,5 +1,37 @@
 # @atlaspack/optimizer-cssnano
 
+## 2.15.16
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.2.10
+  - @atlaspack/plugin@2.14.55
+
+## 2.15.15
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.2.9
+  - @atlaspack/plugin@2.14.54
+
+## 2.15.14
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.2.8
+  - @atlaspack/plugin@2.14.53
+
+## 2.15.13
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.52
+  - @atlaspack/source-map@3.2.7
+
 ## 2.15.12
 
 ### Patch Changes

@@ -590,8 +590,10 @@ impl Fold for Hoist<'_> {
             ModuleDecl::ExportDefaultDecl(export) => {
               let decl = match export.decl {
                 DefaultDecl::Class(class) => Decl::Class(ClassDecl {
-                  ident: if self.collect.should_wrap && class.ident.is_some() {
-                    class.ident.unwrap()
+                  ident: if self.collect.should_wrap
+                    && let Some(ident) = class.ident
+                  {
+                    ident
                   } else {
                     self.get_export_ident(DUMMY_SP, &"default".into())
                   },
@@ -599,8 +601,10 @@ impl Fold for Hoist<'_> {
                   class: class.class.fold_with(self),
                 }),
                 DefaultDecl::Fn(func) => Decl::Fn(FnDecl {
-                  ident: if self.collect.should_wrap && func.ident.is_some() {
-                    func.ident.unwrap()
+                  ident: if self.collect.should_wrap
+                    && let Some(ident) = func.ident
+                  {
+                    ident
                   } else {
                     self.get_export_ident(DUMMY_SP, &"default".into())
                   },

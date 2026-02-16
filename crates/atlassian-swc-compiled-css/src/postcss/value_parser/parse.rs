@@ -45,7 +45,11 @@ pub fn parse(input: &str) -> ParsedValue {
       continue;
     }
     if code == b')' {
-      // Unbalanced ')': advance to avoid infinite loop
+      // Preserve unbalanced ')' as Word node to match Babel behavior
+      // This handles cases like extra parentheses in invalid CSS
+      stack.last_mut().unwrap().push(Node::Word {
+        value: ")".to_string(),
+      });
       pos += 1;
       continue;
     }
@@ -234,4 +238,41 @@ fn is_ident_start(c: u8) -> bool {
 
 fn is_ident_continue(c: u8) -> bool {
   is_ident_start(c) || (c >= b'0' && c <= b'9') || c == b'.'
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::postcss::value_parser::stringify;
+
+  #[test]
+  fn test_preserves_extra_closing_paren() {
+    // Babel preserves extra/unbalanced parentheses, SWC should too
+    // This matches the source bug in: min(100%, calc(...)))
+    let input = "min(100%, calc(var(--a, 2000)*1px - var(--b, 40px))))";
+    let parsed = parse(input);
+    let output = stringify(&parsed.nodes);
+    assert_eq!(output, input, "extra closing paren should be preserved");
+  }
+
+  #[test]
+  fn test_preserves_stray_closing_paren() {
+    // Stray closing parens should be preserved as Word nodes
+    let input = "foo)bar";
+    let parsed = parse(input);
+    let output = stringify(&parsed.nodes);
+    assert_eq!(output, input, "stray closing paren should be preserved");
+  }
+
+  #[test]
+  fn test_preserves_multiple_stray_closing_parens() {
+    // Multiple stray closing parens should all be preserved
+    let input = "foo)))";
+    let parsed = parse(input);
+    let output = stringify(&parsed.nodes);
+    assert_eq!(
+      output, input,
+      "multiple stray closing parens should be preserved"
+    );
+  }
 }

@@ -4,7 +4,9 @@ use serde::Serialize;
 
 use anyhow::anyhow;
 
-use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode, DependencyState};
+use atlaspack_core::asset_graph::{
+  AssetGraph, AssetGraphNode, DependencyState, FinalizedSymbolTracker, UsedSymbol,
+};
 use atlaspack_core::types::{Asset, Dependency};
 
 /// Returns
@@ -17,6 +19,7 @@ use atlaspack_core::types::{Asset, Dependency};
 #[tracing::instrument(level = "info", skip_all)]
 pub fn serialize_asset_graph(
   env: &Env,
+  symbol_tracker: Option<&FinalizedSymbolTracker>,
   asset_graph: &AssetGraph,
   had_previous_graph: bool,
 ) -> anyhow::Result<JsObject> {
@@ -24,12 +27,22 @@ pub fn serialize_asset_graph(
 
   napi_asset_graph.set_named_property(
     "nodes",
-    serialize_asset_graph_nodes(env, asset_graph, &asset_graph.new_nodes().collect())?,
+    serialize_asset_graph_nodes(
+      env,
+      symbol_tracker,
+      asset_graph,
+      &asset_graph.new_nodes().collect(),
+    )?,
   )?;
 
   napi_asset_graph.set_named_property(
     "updates",
-    serialize_asset_graph_nodes(env, asset_graph, &asset_graph.updated_nodes().collect())?,
+    serialize_asset_graph_nodes(
+      env,
+      symbol_tracker,
+      asset_graph,
+      &asset_graph.updated_nodes().collect(),
+    )?,
   )?;
 
   if !asset_graph.safe_to_skip_bundling {
@@ -44,6 +57,7 @@ pub fn serialize_asset_graph(
 
 fn serialize_asset_graph_nodes(
   env: &Env,
+  symbol_tracker: Option<&FinalizedSymbolTracker>,
   asset_graph: &AssetGraph,
   nodes: &Vec<&AssetGraphNode>,
 ) -> anyhow::Result<JsObject> {
@@ -67,12 +81,17 @@ fn serialize_asset_graph_nodes(
 
           let dep_state = asset_graph.get_dependency_state(dep_node_id);
 
+          let used_symbols_up: Option<Vec<&UsedSymbol>> = symbol_tracker
+            .and_then(|tracker| tracker.get_used_symbols_for_dependency(&dependency.id))
+            .map(|u| u.values().collect());
+
           SerializedAssetGraphNode::Dependency {
             value: SerializedDependency {
               id: dependency.id(),
               dependency: dependency.as_ref(),
             },
             has_deferred: *dep_state == DependencyState::Deferred,
+            used_symbols_up,
           }
         }
       }))
@@ -111,5 +130,6 @@ enum SerializedAssetGraphNode<'a> {
   Dependency {
     value: SerializedDependency<'a>,
     has_deferred: bool,
+    used_symbols_up: Option<Vec<&'a UsedSymbol>>,
   },
 }

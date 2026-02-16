@@ -28,12 +28,7 @@ import {ATLASPACK_VERSION} from './constants';
 import {createAsset, createAssetIdFromOptions} from './assetUtils';
 import {BundleBehaviorNames} from './types';
 import {invalidateOnFileCreateToInternal, createInvalidations} from './utils';
-import {
-  ProjectPath,
-  fromProjectPath,
-  fromProjectPathRelative,
-} from './projectPath';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
+import {ProjectPath, fromProjectPath} from './projectPath';
 import {fromEnvironmentId} from './EnvironmentManager';
 
 type UncommittedAssetOptions = {
@@ -308,11 +303,6 @@ export default class UncommittedAsset {
   }
 
   getCacheKey(key: string): string {
-    if (getFeatureFlag('cachePerformanceImprovements')) {
-      const filePath = fromProjectPathRelative(this.value.filePath);
-      return `Asset/${ATLASPACK_VERSION}/${filePath}/${this.value.id}/${key}`;
-    }
-
     return hashString(ATLASPACK_VERSION + key + this.value.id);
   }
 

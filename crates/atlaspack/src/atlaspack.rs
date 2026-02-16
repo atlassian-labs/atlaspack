@@ -3,9 +3,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use atlaspack_config::atlaspack_rc_config_loader::{AtlaspackRcConfigLoader, LoadConfigOptions};
-use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode};
+use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode, FinalizedSymbolTracker};
 use atlaspack_core::bundle_graph::bundle_graph_from_js::{
-  BundleGraphEdgeType, BundleGraphFromJs, BundleGraphNode,
+  BundleGraphEdgeType, BundleGraphFromJs, BundleGraphNode, types::AssetNode,
 };
 use atlaspack_core::config_loader::ConfigLoader;
 use atlaspack_core::package_result::PackageResult;
@@ -27,6 +27,7 @@ use crate::request_tracker::{DynCacheHandler, RequestNode, RequestTracker};
 use crate::requests::{
   AssetGraphRequest, BundleGraphRequest, BundleGraphRequestOutput, RequestResult,
 };
+use atlaspack_core::debug_tools::DebugTools;
 pub struct AtlaspackInitOptions {
   pub db: Arc<DatabaseHandle>,
   pub fs: Option<FileSystemRef>,
@@ -50,6 +51,7 @@ pub struct Atlaspack {
   /// bundle graph implementation. Starts empty and is populated via `load_bundle_graph`.
   /// Uses non-async RwLock so the packager (and any Rayon threads) can take a read lock when needed.
   pub bundle_graph: Arc<parking_lot::RwLock<BundleGraphFromJs>>,
+  pub debug_tools: DebugTools,
 }
 
 impl Atlaspack {
@@ -165,6 +167,8 @@ impl Atlaspack {
       ))),
     );
 
+    let debug_tools = DebugTools::from_env();
+
     Ok(Self {
       db,
       fs,
@@ -177,12 +181,15 @@ impl Atlaspack {
       plugins,
       request_tracker: Arc::new(RwLock::new(request_tracker)),
       bundle_graph: Arc::new(parking_lot::RwLock::new(BundleGraphFromJs::default())),
+      debug_tools,
     })
   }
 }
 
 impl Atlaspack {
-  pub fn build_asset_graph(&self) -> anyhow::Result<(Arc<AssetGraph>, bool)> {
+  pub fn build_asset_graph(
+    &self,
+  ) -> anyhow::Result<(Option<FinalizedSymbolTracker>, Arc<AssetGraph>, bool)> {
     self.runtime.block_on(async move {
       // Notify all resolver plugins that a new build is starting
       for resolver in self.plugins.resolvers()? {
@@ -227,13 +234,16 @@ impl Atlaspack {
         })
         .await?;
 
+      request_tracker.clear_invalid_nodes();
+
       let RequestResult::AssetGraph(asset_graph_request_output) = request_result.as_ref() else {
         panic!("Something went wrong with the request tracker")
       };
 
       let asset_graph = asset_graph_request_output.graph.clone();
+      let symbol_tracker = asset_graph_request_output.symbol_tracker.clone();
 
-      Ok((asset_graph, had_previous_graph))
+      Ok((symbol_tracker, asset_graph, had_previous_graph))
     })
   }
 
@@ -254,12 +264,27 @@ impl Atlaspack {
     Ok(())
   }
 
+  /// Returns the bundle graph's environment map
+  pub fn get_bundle_graph_environments(&self) -> Vec<Arc<Environment>> {
+    self.bundle_graph.read().get_environments()
+  }
+
+  /// Updates existing asset nodes in the bundle graph. `nodes` are pre-deserialized
+  /// at the node-bindings level using the graph's existing environment map.
+  #[tracing::instrument(level = "info", skip_all, fields(node_count = nodes.len()))]
+  pub fn update_bundle_graph(&self, nodes: Vec<AssetNode>) -> anyhow::Result<()> {
+    let mut graph = self.bundle_graph.write();
+    graph.update_assets(nodes)
+  }
+
   #[tracing::instrument(level = "info", skip_all)]
   pub fn build_bundle_graph(
     &self,
   ) -> anyhow::Result<(Arc<AssetGraph>, BundleGraphRequestOutput, bool)> {
     // First, build the asset graph
-    let (asset_graph, had_previous_graph) = self.build_asset_graph()?;
+    // Eventually we will pass the symbol tracker into bundling to acces
+    // directly, but for now it is ignored
+    let (_symbol_tracker, asset_graph, had_previous_graph) = self.build_asset_graph()?;
 
     // Then run the bundle graph request
     let asset_graph_for_request = asset_graph.clone();
@@ -288,7 +313,18 @@ impl Atlaspack {
   pub fn package(&self, bundle_id: String) -> anyhow::Result<PackageResult> {
     // This possibly could be persistent between pacakges? But right now with SSR builds only we're talking about a few packages at most
     // so we can worry about that refactor later.
-    let packager = JsPackager::new(Arc::clone(&self.db), Arc::clone(&self.bundle_graph));
+    let packager = JsPackager::new(
+      atlaspack_packager_js::PackagingContext {
+        db: Arc::clone(&self.db),
+        cache: Arc::new(crate::cache::LmdbCache::new(
+          Arc::clone(&self.db),
+          Arc::new(OsFileSystem),
+        )),
+        project_root: self.project_root.clone(),
+        debug_tools: self.debug_tools.clone(),
+      },
+      Arc::clone(&self.bundle_graph),
+    );
     packager.package(&bundle_id)
   }
 

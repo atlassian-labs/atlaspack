@@ -789,7 +789,6 @@ const atlaspack = new Atlaspack({
   entries: ['src/index.html'],
   featureFlags: {
     atlaspackV3: true,
-    cachePerformanceImprovements: true,
   },
 });
 ```

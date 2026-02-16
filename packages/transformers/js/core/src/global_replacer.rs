@@ -81,10 +81,15 @@ impl VisitMut for GlobalReplacer<'_> {
     }
 
     let unresolved_mark = self.unresolved_mark;
+    let attribution_span = id.span;
     match id.sym.to_string().as_str() {
       "process" => {
         if self.update_binding(id, |_| {
-          Call(create_require(atom!("process"), unresolved_mark))
+          Call(create_require(
+            atom!("process"),
+            unresolved_mark,
+            Some(attribution_span),
+          ))
         }) {
           let specifier = id.sym.clone();
           self.items.push(DependencyDescriptor {
@@ -103,7 +108,11 @@ impl VisitMut for GlobalReplacer<'_> {
         let specifier = swc_core::ecma::atoms::Atom::from("buffer");
         if self.update_binding(id, |_| {
           Member(MemberExpr {
-            obj: Box::new(Call(create_require(specifier.clone(), unresolved_mark))),
+            obj: Box::new(Call(create_require(
+              specifier.clone(),
+              unresolved_mark,
+              Some(attribution_span),
+            ))),
             prop: MemberProp::Ident(ast::IdentName::new("Buffer".into(), DUMMY_SP)),
             span: DUMMY_SP,
           })
@@ -192,7 +201,7 @@ impl GlobalReplacer<'_> {
       false
     } else {
       let (decl, syntax_context) =
-        create_global_decl_stmt(id.sym.clone(), expr(self), self.global_mark);
+        create_global_decl_stmt(id.sym.clone(), expr(self), self.global_mark, Some(id.span));
 
       id.ctxt = syntax_context;
 

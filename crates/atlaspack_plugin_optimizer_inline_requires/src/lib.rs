@@ -624,4 +624,195 @@ function run() {
     .trim();
     assert_eq!(output_code.trim(), expected_output);
   }
+
+  /// Helper: decode a base64-VLQ value from the mappings string.
+  /// Returns (value, bytes_consumed).
+  fn decode_vlq(mappings: &[u8], start: usize) -> (i64, usize) {
+    const B64: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut value: i64 = 0;
+    let mut shift = 0u32;
+    let mut i = start;
+    loop {
+      let c = mappings[i];
+      let digit = B64.iter().position(|&b| b == c).expect("invalid VLQ char") as i64;
+      i += 1;
+      value |= (digit & 0x1f) << shift;
+      shift += 5;
+      if digit & 0x20 == 0 {
+        break;
+      }
+    }
+    let is_negative = value & 1 == 1;
+    value >>= 1;
+    if is_negative {
+      value = -value;
+    }
+    (value, i - start)
+  }
+
+  /// Parse a VLQ source map mappings string and return all segments.
+  /// Each segment is (gen_line 0-based, gen_col 0-based, src_idx, orig_line 0-based, orig_col 0-based).
+  fn parse_mappings(mappings_str: &str) -> Vec<(usize, usize, usize, usize, usize)> {
+    let bytes = mappings_str.as_bytes();
+    let mut result = vec![];
+    let mut gen_line: usize = 0;
+    let mut gen_col: i64 = 0;
+    let mut src_idx: i64 = 0;
+    let mut orig_line: i64 = 0;
+    let mut orig_col: i64 = 0;
+    let mut pos = 0;
+
+    while pos < bytes.len() {
+      if bytes[pos] == b';' {
+        gen_line += 1;
+        gen_col = 0;
+        pos += 1;
+        continue;
+      }
+      if bytes[pos] == b',' {
+        pos += 1;
+        continue;
+      }
+      // Decode segment: gen_col_delta[, src_delta, orig_line_delta, orig_col_delta[, name_delta]]
+      let (d, consumed) = decode_vlq(bytes, pos);
+      pos += consumed;
+      gen_col += d;
+
+      if pos < bytes.len() && bytes[pos] != b',' && bytes[pos] != b';' {
+        let (d, consumed) = decode_vlq(bytes, pos);
+        pos += consumed;
+        src_idx += d;
+        let (d, consumed) = decode_vlq(bytes, pos);
+        pos += consumed;
+        orig_line += d;
+        let (d, consumed) = decode_vlq(bytes, pos);
+        pos += consumed;
+        orig_col += d;
+
+        // Optional name index
+        if pos < bytes.len() && bytes[pos] != b',' && bytes[pos] != b';' {
+          let (_d, consumed) = decode_vlq(bytes, pos);
+          pos += consumed;
+        }
+
+        result.push((
+          gen_line,
+          gen_col as usize,
+          src_idx as usize,
+          orig_line as usize,
+          orig_col as usize,
+        ));
+      } else {
+        // Segment with only gen_col (no source mapping)
+        result.push((gen_line, gen_col as usize, 0, 0, 0));
+      }
+    }
+    result
+  }
+
+  /// Find the mapping closest to (but not after) the given generated column on the given line.
+  fn find_mapping(
+    mappings: &[(usize, usize, usize, usize, usize)],
+    gen_line: usize,
+    gen_col: usize,
+  ) -> Option<(usize, usize, usize, usize, usize)> {
+    mappings
+      .iter()
+      .filter(|(gl, gc, _, _, _)| *gl == gen_line && *gc <= gen_col)
+      .max_by_key(|(_, gc, _, _, _)| *gc)
+      .copied()
+  }
+
+  #[test]
+  fn source_map_member_access_maps_to_original_identifier() {
+    // Input: scope-hoisted code where `$modId` is a require'd module namespace.
+    // After inline requires: `$modId.collectAll(collection)` becomes
+    // `(0, require("module-id")).collectAll(collection)`
+    //
+    // We want `.collectAll` in the output to map back to where `$modId.collectAll`
+    // was used in the input (specifically the `.collectAll` property access).
+    let code = r#"
+const $modId = require("module-id");
+
+function run(collection, events, experience) {
+    return $modId.collectAll(collection)(events, experience);
+}
+    "#
+    .trim();
+
+    let RunVisitResult {
+      output_code,
+      source_map,
+      ..
+    } = run_test_visit(code, |ctx| InlineRequiresOptimizer {
+      unresolved_mark: ctx.unresolved_mark,
+      ..Default::default()
+    });
+
+    // Verify the output has the expected shape
+    let output = output_code.trim();
+    assert!(
+      output.contains(r#"(0, require("module-id")).collectAll"#),
+      "Output should contain inline require wrapper with member access"
+    );
+
+    // Find `.collectAll(` in the output
+    let output_collect_all_dot = output
+      .find(".collectAll(")
+      .expect(".collectAll( not found in output");
+    let output_collect_all_col = output_collect_all_dot + 1; // skip the '.'
+
+    // Find `$modId.collectAll(` in the input (the usage, not the declaration).
+    let input_usage = code.find("$modId.collectAll(").expect("usage not found");
+    let input_dot_collect_abs = input_usage + "$modId".len();
+    let input_ident_collect_abs = input_dot_collect_abs + 1; // `collectAll` starts here
+    let input_before = &code[..input_usage];
+    let input_line = input_before.matches('\n').count(); // 0-based
+    let input_mod_col = input_usage - input_before.rfind('\n').map(|p| p + 1).unwrap_or(0);
+    let input_collect_col =
+      input_ident_collect_abs - input_before.rfind('\n').map(|p| p + 1).unwrap_or(0);
+
+    // Parse the source map
+    let sm_json: serde_json::Value =
+      serde_json::from_slice(&source_map).expect("invalid source map JSON");
+    let mappings_str = sm_json["mappings"].as_str().expect("no mappings field");
+    let all_mappings = parse_mappings(mappings_str);
+
+    // Find the mapping for .collectAll in the output
+    let output_before = &output[..output_collect_all_col];
+    let output_gen_line = output_before.matches('\n').count();
+    let output_gen_col =
+      output_collect_all_col - output_before.rfind('\n').map(|p| p + 1).unwrap_or(0);
+
+    let mapping = find_mapping(&all_mappings, output_gen_line, output_gen_col);
+    assert!(
+      mapping.is_some(),
+      "Should find a mapping for .collectAll in the output"
+    );
+    let (_gen_line, _gen_col, _src, orig_line, orig_col) = mapping.unwrap();
+
+    // The mapping should point to the `$modId.collectAll(` usage in the input.
+    // Ideally it points to either `$modId` (the object) or `.collectAll` (the property).
+    // Both are acceptable since the inline require replaces `$modId` and the member
+    // expression `$modId.collectAll` is preserved.
+    assert_eq!(
+      orig_line, input_line,
+      "collectAll mapping should point to the correct line in the input"
+    );
+
+    // Accept mapping to `$modId` col OR `.collectAll` col OR `collectAll` col
+    let acceptable_cols = [
+      input_mod_col,
+      input_mod_col + "$modId".len(),
+      input_collect_col,
+    ];
+    assert!(
+      acceptable_cols.contains(&orig_col),
+      "collectAll mapping should point to $modId (col {}) or .collectAll (col {}) or collectAll (col {}), got col {}",
+      input_mod_col,
+      input_mod_col + "$modId".len(),
+      input_collect_col,
+      orig_col
+    );
+  }
 }

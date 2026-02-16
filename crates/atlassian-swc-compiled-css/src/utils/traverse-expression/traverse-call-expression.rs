@@ -7,6 +7,7 @@ use swc_core::ecma::ast::{
 use crate::types::Metadata;
 use crate::utils_create_result_pair::{ResultPair, create_result_pair};
 use crate::utils_resolve_binding::resolve_binding;
+use crate::utils_traverse_expression_traverse_function::traverse_function;
 use crate::utils_traverse_expression_traverse_member_expression::traverse_member_expression_with_arguments;
 use crate::utils_traversers_object::get_object_property_value;
 use crate::utils_types::{BindingPath, BindingSource, EvaluateExpression, PartialBindingWithMeta};
@@ -211,6 +212,13 @@ pub fn traverse_call_expression(
         bind_pattern(pattern, argument, &updated_meta, evaluate_expression);
       }
     }
+
+    // After binding parameters, directly evaluate the function body with the
+    // updated metadata that contains the parameter bindings. This is critical
+    // because calling evaluate_expression on an identifier would resolve the
+    // binding and use binding.meta instead of updated_meta, losing the
+    // parameter bindings.
+    return traverse_function(&function_expr, updated_meta, evaluate_expression);
   }
 
   (evaluate_expression)(callee_expr, updated_meta)
@@ -400,5 +408,61 @@ mod tests {
     let pair = traverse_call_expression(&call, meta, evaluate as EvaluateExpression);
     let reduced = evaluate(&pair.value, pair.meta.clone());
     assert_number_literal(&reduced.value, 10.0);
+  }
+
+  #[test]
+  fn evaluates_function_returning_object_with_bound_parameters() {
+    // Test case mirroring the backgroundLines function pattern:
+    // const fn = (a, b) => ({ prop1: a, prop2: b })
+    // fn('value1', 'value2')
+    let expr = parse_expression("((a, b) => ({ prop1: a, prop2: b }))('value1', 'value2')");
+    let meta = create_metadata();
+
+    let Expr::Call(call) = expr else {
+      panic!("expected call expression");
+    };
+
+    let pair = traverse_call_expression(&call, meta, evaluate as EvaluateExpression);
+
+    // The result should be an object expression
+    match pair.value {
+      Expr::Object(object) => {
+        assert_eq!(object.props.len(), 2);
+      }
+      other => panic!("expected object expression, found {:?}", other),
+    }
+  }
+
+  #[test]
+  fn evaluates_bound_function_returning_object() {
+    // Test case where the function is bound to a variable:
+    // const myFunc = (x) => ({ result: x })
+    // myFunc('test')
+    let expr = parse_expression("myFunc('test')");
+    let meta = create_metadata();
+
+    let binding_expr = parse_expression("(x) => ({ result: x })");
+    let binding = PartialBindingWithMeta::new(
+      Some(binding_expr),
+      Some(BindingPath::new(Some(DUMMY_SP))),
+      true,
+      meta.clone(),
+      BindingSource::Module,
+    );
+    meta.insert_parent_binding("myFunc", binding);
+
+    let Expr::Call(call) = expr else {
+      panic!("expected call expression");
+    };
+
+    let pair = traverse_call_expression(&call, meta, evaluate as EvaluateExpression);
+
+    // The result should be an object expression
+    match pair.value {
+      Expr::Object(object) => {
+        assert_eq!(object.props.len(), 1);
+      }
+      other => panic!("expected object expression, found {:?}", other),
+    }
   }
 }

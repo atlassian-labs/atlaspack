@@ -704,7 +704,7 @@ pub fn plugin() -> pc::BuiltPlugin {
           "list-style" => rules::list_style::normalize(&parsed),
           "columns" => rules::columns::normalize(&parsed),
           "flex-flow" => rules::flex_flow::normalize(&parsed),
-          "animation" => library::get_value::get_value(library::arguments::get_arguments(&parsed)),
+          "animation" => rules::animation::normalize(&parsed),
           "box-shadow" => match rules::box_shadow::normalize(&parsed) {
             Ok(s) => s,
             Err(()) => vp::stringify(&parsed.nodes),

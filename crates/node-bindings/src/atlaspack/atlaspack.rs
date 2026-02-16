@@ -153,9 +153,13 @@ pub fn atlaspack_napi_build_asset_graph(
       let mut commit_deferred_opt = Some(second_deferred);
       deferred.resolve(move |env| {
         match result {
-          Ok((asset_graph, had_previous_graph)) => {
-            let serialize_result =
-              serialize_asset_graph(&env, &asset_graph.clone(), had_previous_graph)?;
+          Ok((symbol_tracker, asset_graph, had_previous_graph)) => {
+            let serialize_result = serialize_asset_graph(
+              &env,
+              symbol_tracker.as_ref(),
+              &asset_graph.clone(),
+              had_previous_graph,
+            )?;
             if let Some(commit_deferred) = commit_deferred_opt.take() {
               thread::spawn(move || {
                 {
@@ -298,6 +302,38 @@ pub fn atlaspack_napi_load_bundle_graph(
         )
       })();
 
+      deferred.resolve(move |env| match result {
+        Ok(()) => NapiAtlaspackResult::ok(&env, ()),
+        Err(error) => {
+          let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
+          NapiAtlaspackResult::error(&env, js_object)
+        }
+      })
+    }
+  });
+  Ok(promise)
+}
+
+#[napi]
+pub fn atlaspack_napi_update_bundle_graph(
+  env: Env,
+  atlaspack_napi: AtlaspackNapi,
+  nodes_json: String,
+) -> napi::Result<JsObject> {
+  let (deferred, promise) = env.create_deferred()?;
+  thread::spawn({
+    let atlaspack = atlaspack_napi.clone();
+    move || {
+      let result: anyhow::Result<()> = (|| {
+        let environments = {
+          let atlaspack = atlaspack.read();
+          atlaspack.get_bundle_graph_environments()
+        };
+        let nodes =
+          BundleGraphFromJs::deserialize_asset_nodes_from_json(&nodes_json, &environments)?;
+        let atlaspack = atlaspack.write();
+        atlaspack.update_bundle_graph(nodes)
+      })();
       deferred.resolve(move |env| match result {
         Ok(()) => NapiAtlaspackResult::ok(&env, ()),
         Err(error) => {

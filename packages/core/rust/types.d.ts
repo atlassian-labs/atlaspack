@@ -235,7 +235,10 @@ export class Hash {
 }
 export class AtlaspackTracer {
   constructor();
-  enter(label: string): SpanId;
+  enter(
+    label: string,
+    level?: 'error' | 'warn' | 'info' | 'debug' | 'trace' | null,
+  ): SpanId;
   exit(id: SpanId): void;
   record(id: SpanId, data?: any | undefined | null): void;
 }
@@ -340,6 +343,15 @@ export interface NativeMemoryStats {
   sampleCount: number;
 }
 
+export interface PackageOptions {
+  /**
+   * When true, top-level `require()` variable declarations are removed and their
+   * usages are replaced with inline `(0, require("id"))` calls, deferring module
+   * initialisation to first use and improving startup performance.
+   */
+  inlineRequires?: boolean;
+}
+
 export type JsSourceMap = SourceMap;
 export class SourceMap {
   constructor(projectRoot: string, buffer?: Buffer | undefined | null);
@@ -385,6 +397,7 @@ export class SourceMap {
 export declare function atlaspackNapiPackage(
   atlaspackNapi: AtlaspackNapi,
   bundleId: string,
+  options?: PackageOptions,
 ): Promise<[RunPackagerRunnerResult, AtlaspackNapiError]>;
 export interface CompiledCssInJsConfigPlugin {
   configPath?: string;
@@ -425,4 +438,9 @@ export declare function atlaspackNapiLoadBundleGraph(
   edges: Array<[number, number, number]>,
   publicIdByAssetId: Record<string, string>,
   environments: string,
+): object;
+
+export declare function atlaspackNapiUpdateBundleGraph(
+  atlaspackNapi: AtlaspackNapi,
+  assets: string,
 ): object;

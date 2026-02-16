@@ -4,6 +4,8 @@ import {SourceMap as AtlaspackSourceMap} from '@atlaspack/rust';
 
 // Re-export types for consumers
 export type * from './types';
+export {decodeVLQ, encodeVLQ} from './vlq';
+export type {VLQDecodeResult} from './vlq';
 
 export default class NodeSourceMap extends SourceMap {
   constructor(projectRoot: string = '/', buffer?: Buffer) {

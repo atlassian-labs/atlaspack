@@ -159,7 +159,7 @@ impl DependencyCollector<'_> {
       } else {
         specifier
       };
-      return Expr::Call(self.create_require(specifier));
+      return Expr::Call(self.create_require(specifier, Some(span)));
     }
 
     // For library builds, we need to create something that can be statically analyzed by another bundler,
@@ -193,15 +193,16 @@ impl DependencyCollector<'_> {
     )
   }
 
-  fn create_require(&mut self, specifier: Atom) -> CallExpr {
-    let mut res = create_require(specifier, self.unresolved_mark);
+  fn create_require(&mut self, specifier: Atom, attribution_span: Option<Span>) -> CallExpr {
+    let mut res = create_require(specifier, self.unresolved_mark, attribution_span);
 
     // For scripts, we replace with __parcel__require__, which is later replaced
     // by a real atlaspackRequire of the resolved asset in the packager.
     if self.config.source_type == SourceType::Script {
+      let span = res.span;
       res.callee = Callee::Expr(Box::new(Expr::Ident(Ident::new_no_ctxt(
         "__parcel__require__".into(),
-        DUMMY_SP,
+        span,
       ))));
     }
     res
@@ -671,7 +672,7 @@ impl VisitMut for DependencyCollector<'_> {
           return;
         };
 
-        node.args[0].expr = Box::new(self.add_url_dependency(specifier, span, kind, source_type));
+        *node.args[0].expr = self.add_url_dependency(specifier, span, kind, source_type);
 
         match opts {
           Some(opts) => {
@@ -702,11 +703,11 @@ impl VisitMut for DependencyCollector<'_> {
           );
 
           if let Some(placeholder) = placeholder {
-            node.args[0].expr = Box::new(Expr::Lit(Lit::Str(Str {
+            *node.args[0].expr = Expr::Lit(Lit::Str(Str {
               raw: None,
               span,
               value: placeholder,
-            })));
+            }));
           }
         }
       }
@@ -948,7 +949,7 @@ impl VisitMut for DependencyCollector<'_> {
 
       // Replace argument with a require call to resolve the URL at runtime.
       if let Some(mut args) = node.args.clone() {
-        args[0].expr = Box::new(placeholder);
+        *args[0].expr = placeholder;
 
         // If module workers aren't supported natively, remove the `type: 'module'` option.
         // If no other options are passed, remove the argument entirely.

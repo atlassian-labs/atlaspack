@@ -38,9 +38,6 @@ import './b.js';
   );
 
   const atlaspack = new Atlaspack({
-    featureFlags: {
-      cachePerformanceImprovements: true,
-    },
     entries: [path.join(tempDir.get(), 'index.js')],
   });
   await atlaspack.run();

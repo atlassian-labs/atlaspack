@@ -2,7 +2,7 @@ import invariant from 'assert';
 
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import type {Async} from '@atlaspack/types';
-import {instrument} from '@atlaspack/logger';
+import logger, {instrument} from '@atlaspack/logger';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 import AssetGraph from '../AssetGraph';
@@ -51,8 +51,8 @@ export function createAssetGraphRequestRust(
   return (input: AssetGraphRequestInput) => ({
     type: requestTypes.asset_graph_request,
     id: input.name,
-    run: async (input) => {
-      let options = input.options;
+    run: async (runInput) => {
+      let options = runInput.options;
       let {assetGraphPromise, commitPromise} =
         await rustAtlaspack.buildAssetGraph();
 
@@ -69,7 +69,7 @@ export function createAssetGraphRequestRust(
       let prevResult = null;
       if (serializedAssetGraph.hadPreviousGraph) {
         prevResult =
-          await input.api.getPreviousResult<AssetGraphRequestResult>();
+          await runInput.api.getPreviousResult<AssetGraphRequestResult>();
       }
 
       let {assetGraph, changedAssets} = instrument(
@@ -78,20 +78,28 @@ export function createAssetGraphRequestRust(
       );
 
       let changedAssetsPropagation = new Set(changedAssets.keys());
-      let errors = propagateSymbols({
-        options,
-        assetGraph,
-        changedAssetsPropagation,
-        assetGroupsWithRemovedParents: new Set(),
-        previousErrors: new Map(), //this.previousSymbolPropagationErrors,
-      });
-
-      if (errors.size > 0) {
-        // Just throw the first error. Since errors can bubble (e.g. reexporting a reexported symbol also fails),
-        // determining which failing export is the root cause is nontrivial (because of circular dependencies).
-        throw new ThrowableDiagnostic({
-          diagnostic: [...errors.values()][0],
+      // Skip symbol propagation for runtime assets - they have pre-computed symbol data
+      if (input.skipSymbolProp) {
+        logger.verbose({
+          origin: '@atlaspack/core',
+          message: 'Skipping symbol propagation for runtime asset graph',
         });
+      } else {
+        let errors = propagateSymbols({
+          options,
+          assetGraph,
+          changedAssetsPropagation,
+          assetGroupsWithRemovedParents: new Set(),
+          previousErrors: new Map(), //this.previousSymbolPropagationErrors,
+        });
+
+        if (errors.size > 0) {
+          // Just throw the first error. Since errors can bubble (e.g. reexporting a reexported symbol also fails),
+          // determining which failing export is the root cause is nontrivial (because of circular dependencies).
+          throw new ThrowableDiagnostic({
+            diagnostic: [...errors.values()][0],
+          });
+        }
       }
 
       await dumpGraphToGraphViz(assetGraph, 'AssetGraphV3');
@@ -116,8 +124,8 @@ export function createAssetGraphRequestRust(
         });
       }
 
-      await input.api.storeResult(result);
-      input.api.invalidateOnBuild();
+      await runInput.api.storeResult(result);
+      runInput.api.invalidateOnBuild();
 
       return result;
     },
@@ -230,7 +238,32 @@ export function getAssetGraph(
     return envId;
   };
 
-  function updateNode(newNode: AssetGraphNode, isUpdateNode: boolean) {
+  function describeNode(node: AssetGraphNode): Record<string, unknown> {
+    const base = {type: node.type, id: node.id};
+    if (node.type === 'asset') {
+      return {
+        ...base,
+        filePath: node.value.filePath,
+        fileType: node.value.type,
+        pipeline: node.value.pipeline,
+      };
+    } else if (node.type === 'dependency') {
+      return {
+        ...base,
+        specifier: node.value.specifier,
+        specifierType: node.value.specifierType,
+        sourceAssetId: node.value.sourceAssetId,
+        sourcePath: node.value.sourcePath,
+      };
+    }
+    return base;
+  }
+
+  function updateNode(
+    newNode: AssetGraphNode,
+    isUpdateNode: boolean,
+    index: number,
+  ) {
     if (isUpdateNode) {
       let existingNode = graph.getNodeByContentKey(newNode.id);
 
@@ -238,7 +271,34 @@ export function getAssetGraph(
 
       Object.assign(existingNode, newNode);
     } else {
-      graph.addNodeByContentKey(newNode.id, newNode);
+      try {
+        graph.addNodeByContentKey(newNode.id, newNode);
+      } catch (e) {
+        if (
+          e instanceof Error &&
+          e.message.includes('already has content key')
+        ) {
+          let existingNode = graph.getNodeByContentKey(newNode.id);
+          let diagnostics = {
+            contentKey: newNode.id,
+            newNode: describeNode(newNode),
+            existingNode: existingNode ? describeNode(existingNode) : null,
+            iterationIndex: index,
+            totalSerializedNodes: nodesCount,
+            newNodesCount: serializedGraph.nodes.length,
+            updatesCount: serializedGraph.updates.length,
+            edgesCount: serializedGraph.edges.length,
+            hadPreviousGraph: !!prevAssetGraph,
+            safeToSkipBundling: serializedGraph.safeToSkipBundling,
+            graphNodeCount: graph._contentKeyToNodeId.size,
+          };
+
+          throw new Error(
+            `Graph already has content key '${newNode.id}'. Diagnostics: ${JSON.stringify(diagnostics, null, 2)}`,
+          );
+        }
+        throw e;
+      }
     }
   }
 
@@ -297,7 +357,7 @@ export function getAssetGraph(
         usedSymbolsUpDirty: true,
         value: asset,
       };
-      updateNode(assetNode, isUpdateNode);
+      updateNode(assetNode, isUpdateNode, index);
     } else if (node.type === 'dependency') {
       let {dependency, id} = node.value;
 
@@ -314,6 +374,19 @@ export function getAssetGraph(
 
       let usedSymbolsDown = new Set();
       let usedSymbolsUp = new Map();
+
+      if (node.used_symbols_up) {
+        for (let usedSymbol of node.used_symbols_up) {
+          // Transform Rust UsedSymbol { symbol: Symbol, asset: string, resolved_symbol: string }
+          // to JS format { symbol: string, asset: string } where symbol is the resolved name
+          const exportedName = usedSymbol.symbol.exported;
+          usedSymbolsUp.set(exportedName, {
+            asset: usedSymbol.asset,
+            symbol: usedSymbol.resolved_symbol ?? exportedName,
+          });
+        }
+      }
+
       if (dependency.isEntry && dependency.isLibrary) {
         usedSymbolsDown.add('*');
         usedSymbolsUp.set('*', undefined);
@@ -334,7 +407,7 @@ export function getAssetGraph(
         value: dependency,
       };
 
-      updateNode(depNode, isUpdateNode);
+      updateNode(depNode, isUpdateNode, index);
     }
   }
 

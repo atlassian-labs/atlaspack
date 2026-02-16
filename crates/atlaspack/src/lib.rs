@@ -5,6 +5,7 @@ pub use error::*;
 pub use watch::*;
 
 pub mod atlaspack;
+pub(crate) mod cache;
 pub(crate) mod request_tracker;
 
 mod error;

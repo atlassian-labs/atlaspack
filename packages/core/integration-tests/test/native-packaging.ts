@@ -11,6 +11,7 @@ import {
 
 describe('Native packaging', function () {
   it('should package two SSR entries', async function () {
+    this.timeout(30_000);
     await fsFixture(overlayFS, __dirname)`
       index.js:
         const init = async () => {
@@ -43,23 +44,30 @@ describe('Native packaging', function () {
         exports.default = _default;
     `;
 
-    let b = await bundle(
-      [path.join(__dirname, 'index.js'), path.join(__dirname, 'index2.js')],
-      {
-        inputFS: overlayFS,
-        targets: {
-          ssr: {
-            context: 'tesseract',
-            distDir: path.join(__dirname, 'dist'),
-            outputFormat: 'commonjs',
+    let b;
+    try {
+      b = await bundle(
+        [path.join(__dirname, 'index.js'), path.join(__dirname, 'index2.js')],
+        {
+          inputFS: overlayFS,
+          outputFS: overlayFS,
+          targets: {
+            ssr: {
+              context: 'tesseract',
+              distDir: path.join(__dirname, 'dist'),
+              outputFormat: 'commonjs',
+            },
+          },
+          featureFlags: {
+            nativePackager: true,
+            nativePackagerSSRDev: true,
+            cachePerformanceImprovements: false,
           },
         },
-        featureFlags: {
-          nativePackager: true,
-          nativePackagerSSRDev: true,
-        },
-      },
-    );
+      );
+    } catch (error) {
+      assert.fail(JSON.stringify(error, null, 2));
+    }
 
     assert.equal(b.getBundles().length, 2, 'Should have 2 bundles');
 

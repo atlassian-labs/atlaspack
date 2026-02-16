@@ -1,5 +1,49 @@
 # @atlaspack/workers
 
+## 2.14.55
+
+### Patch Changes
+
+- Updated dependencies [[`857962a`](https://github.com/atlassian-labs/atlaspack/commit/857962a352bb0aebaf74a8765e8c44d7e875a4e9)]:
+  - @atlaspack/types-internal@2.24.0
+  - @atlaspack/logger@2.14.47
+  - @atlaspack/utils@3.3.7
+  - @atlaspack/build-cache@2.13.13
+  - @atlaspack/profiler@2.15.16
+
+## 2.14.54
+
+### Patch Changes
+
+- Updated dependencies [[`d8e984b`](https://github.com/atlassian-labs/atlaspack/commit/d8e984b7f6d04fa03707fa299bfd8b8bf9f58280)]:
+  - @atlaspack/utils@3.3.6
+  - @atlaspack/logger@2.14.46
+  - @atlaspack/build-cache@2.13.12
+  - @atlaspack/types-internal@2.23.2
+  - @atlaspack/profiler@2.15.15
+
+## 2.14.53
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/logger@2.14.45
+  - @atlaspack/utils@3.3.5
+  - @atlaspack/build-cache@2.13.11
+  - @atlaspack/types-internal@2.23.1
+  - @atlaspack/profiler@2.15.14
+
+## 2.14.52
+
+### Patch Changes
+
+- Updated dependencies [[`e058f0e`](https://github.com/atlassian-labs/atlaspack/commit/e058f0e7a0423ba9373e85a7dbd5c1dd43b47916)]:
+  - @atlaspack/types-internal@2.23.0
+  - @atlaspack/logger@2.14.44
+  - @atlaspack/profiler@2.15.13
+  - @atlaspack/utils@3.3.4
+  - @atlaspack/build-cache@2.13.10
+
 ## 2.14.51
 
 ### Patch Changes
