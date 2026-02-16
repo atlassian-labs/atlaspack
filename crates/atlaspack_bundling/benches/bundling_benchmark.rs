@@ -33,6 +33,15 @@ struct GraphConfig {
   css_ratio: f64,
   /// Fraction of non-entry assets that should be routes/lazy roots (0.0 - 1.0).
   route_ratio: f64,
+  /// Fraction of components that should be shared across all routes (0.0 - 1.0).
+  shared_component_ratio: f64,
+  /// Number of shared components imported by each route.
+  ///
+  /// This is intentionally a *subset* to avoid an all-to-all explosion in structured deps.
+  /// A small "core" subset is imported by all routes to ensure meaningful overlap.
+  shared_imports_per_route: usize,
+  /// Fraction of deps that should be back-edges creating cycles (0.0 - 1.0).
+  cycle_ratio: f64,
   seed: u64,
 }
 
@@ -127,7 +136,7 @@ fn generate_asset_graph(cfg: GraphConfig) -> AssetGraph {
   // Keep utilities relatively small but heavily shared.
   let mut num_routes = ((remaining_assets as f64) * cfg.route_ratio).round() as usize;
   // Components take the bulk of remaining assets after routes.
-  let component_ratio = 1.0 - cfg.route_ratio - 0.15; // 15% reserved for utilities
+  let component_ratio = 1.0 - cfg.route_ratio - 0.05; // 5% reserved for utilities
   let mut num_components = ((remaining_assets as f64) * component_ratio).round() as usize;
   let mut num_utils = remaining_assets.saturating_sub(num_routes + num_components);
 
@@ -239,6 +248,13 @@ fn generate_asset_graph(cfg: GraphConfig) -> AssetGraph {
   let mut dep_counter: usize = 0;
   let mut dep_count: usize = 0;
 
+  // Keep the structured (layered) portion well below the total dep target so we still have
+  // budget left for the fill-up loop, which adds random connectivity and a realistic number of
+  // lazy deps/bundle boundaries.
+  let num_cycle_edges = ((cfg.num_deps as f64) * cfg.cycle_ratio.clamp(0.0, 1.0)).round() as usize;
+  let pre_cycle_target_deps = cfg.num_deps.saturating_sub(num_cycle_edges);
+  let structured_budget = ((pre_cycle_target_deps as f64) * 0.55).round() as usize;
+
   // Helper to add an edge and count.
   let add_dep = |asset_graph: &mut AssetGraph,
                  from: &str,
@@ -255,6 +271,9 @@ fn generate_asset_graph(cfg: GraphConfig) -> AssetGraph {
   // Each entry lazily imports a handful of routes.
   let routes_per_entry = (5usize).min(route_asset_ids.len()).max(1);
   for entry in &entry_asset_ids {
+    if dep_count >= structured_budget {
+      break;
+    }
     let chosen: Vec<_> = route_asset_ids
       .choose_multiple(&mut rng, routes_per_entry)
       .cloned()
@@ -280,22 +299,171 @@ fn generate_asset_graph(cfg: GraphConfig) -> AssetGraph {
   }
 
   // 2) Routes -> components (sync)
-  let components_per_route = (20usize).min(component_asset_ids.len()).max(1);
-  for route in &route_asset_ids {
-    let chosen: Vec<_> = component_asset_ids
-      .choose_multiple(&mut rng, components_per_route)
-      .cloned()
-      .collect();
-    for (j, component) in chosen.iter().enumerate() {
+  //
+  // Real apps tend to have a significant core set of components that are imported by nearly every
+  // route, leading to many multi-root assets.
+  //
+  // --- Shared core components (imported by ALL routes) ---
+  let num_shared_components = ((component_asset_ids.len() as f64)
+    * cfg.shared_component_ratio.clamp(0.0, 1.0))
+  .round() as usize;
+  let num_shared_components = num_shared_components.min(component_asset_ids.len());
+  let shared_component_ids: Vec<String> = component_asset_ids[..num_shared_components].to_vec();
+  let non_shared_component_ids: Vec<String> = component_asset_ids[num_shared_components..].to_vec();
+
+  // Each route imports an overlapping *subset* of shared core components.
+  //
+  // We intentionally avoid all-to-all edges here. To still create a realistic number of
+  // multi-root assets, we include a small "core" subset imported by every route, and then
+  // add randomized per-route shared imports from the remainder.
+  let shared_imports_per_route = cfg
+    .shared_imports_per_route
+    .max(1)
+    .min(shared_component_ids.len());
+  let core_shared_count = (shared_imports_per_route / 3)
+    .clamp(1, shared_imports_per_route)
+    .min(shared_component_ids.len());
+  let (core_shared_component_ids, shared_component_pool) =
+    shared_component_ids.split_at(core_shared_count);
+
+  for route_id in &route_asset_ids {
+    // 1) Always import the small core set.
+    for shared_comp_id in core_shared_component_ids {
+      if dep_count >= structured_budget {
+        break;
+      }
+      let n = dep_count;
       add_dep(
         &mut asset_graph,
-        route,
-        component,
+        route_id.as_str(),
+        shared_comp_id.as_str(),
         Priority::Sync,
-        format!(
-          "./{}?r={j}",
-          &component_file_paths[j % component_file_paths.len()]
-        ),
+        format!("./shared-comp?core=1&rc={n}"),
+        &mut dep_counter,
+        &mut dep_count,
+      );
+    }
+
+    // 2) Import a random subset from the remaining pool.
+    let remaining_needed = shared_imports_per_route.saturating_sub(core_shared_count);
+    if remaining_needed == 0 || shared_component_pool.is_empty() {
+      continue;
+    }
+
+    let chosen: Vec<_> = shared_component_pool
+      .choose_multiple(&mut rng, remaining_needed.min(shared_component_pool.len()))
+      .cloned()
+      .collect();
+
+    for shared_comp_id in chosen {
+      if dep_count >= structured_budget {
+        break;
+      }
+      let n = dep_count;
+      add_dep(
+        &mut asset_graph,
+        route_id.as_str(),
+        shared_comp_id.as_str(),
+        Priority::Sync,
+        format!("./shared-comp?core=0&rc={n}"),
+        &mut dep_counter,
+        &mut dep_count,
+      );
+    }
+  }
+
+  // Additionally, each route imports some non-shared components.
+  let components_per_route = (20usize).min(non_shared_component_ids.len());
+  if components_per_route > 0 {
+    for route_id in &route_asset_ids {
+      if dep_count >= structured_budget {
+        break;
+      }
+      let chosen: Vec<_> = non_shared_component_ids
+        .choose_multiple(&mut rng, components_per_route)
+        .cloned()
+        .collect();
+
+      for (j, component_id) in chosen.iter().enumerate() {
+        if dep_count >= structured_budget {
+          break;
+        }
+        add_dep(
+          &mut asset_graph,
+          route_id.as_str(),
+          component_id.as_str(),
+          Priority::Sync,
+          format!(
+            "./{}?r={j}",
+            &component_file_paths[j % component_file_paths.len()]
+          ),
+          &mut dep_counter,
+          &mut dep_count,
+        );
+      }
+    }
+  }
+
+  // --- Shared core utils (imported by shared core components) ---
+  //
+  // Avoid all-to-all (shared components -> all shared utils). Instead each shared component imports
+  // a small overlapping subset.
+  let num_shared_utils = (util_asset_ids.len() / 2).max(1);
+  let shared_util_ids: Vec<String> = util_asset_ids
+    .iter()
+    .take(num_shared_utils.min(util_asset_ids.len()))
+    .cloned()
+    .collect();
+
+  // Ensure overlap by importing a tiny core set from every shared component.
+  let core_utils_count = 1usize.min(shared_util_ids.len());
+  let (core_shared_util_ids, shared_util_pool) = shared_util_ids.split_at(core_utils_count);
+
+  for shared_comp_id in &shared_component_ids {
+    // 1) core util(s)
+    for shared_util_id in core_shared_util_ids {
+      if dep_count >= structured_budget {
+        break;
+      }
+      let n = dep_count;
+      add_dep(
+        &mut asset_graph,
+        shared_comp_id.as_str(),
+        shared_util_id.as_str(),
+        Priority::Sync,
+        format!("./shared-util?core=1&su={n}"),
+        &mut dep_counter,
+        &mut dep_count,
+      );
+    }
+
+    // 2) random subset from the remaining pool
+    if dep_count >= structured_budget || shared_util_pool.is_empty() {
+      continue;
+    }
+
+    let shared_utils_per_component = rng.r#gen_range(3..=5).min(shared_util_ids.len());
+    let remaining_needed = shared_utils_per_component.saturating_sub(core_utils_count);
+    if remaining_needed == 0 {
+      continue;
+    }
+
+    let chosen: Vec<_> = shared_util_pool
+      .choose_multiple(&mut rng, remaining_needed.min(shared_util_pool.len()))
+      .cloned()
+      .collect();
+
+    for shared_util_id in chosen {
+      if dep_count >= structured_budget {
+        break;
+      }
+      let n = dep_count;
+      add_dep(
+        &mut asset_graph,
+        shared_comp_id.as_str(),
+        shared_util_id.as_str(),
+        Priority::Sync,
+        format!("./shared-util?core=0&su={n}"),
         &mut dep_counter,
         &mut dep_count,
       );
@@ -304,13 +472,31 @@ fn generate_asset_graph(cfg: GraphConfig) -> AssetGraph {
 
   // 3) Components -> utilities (sync, shared)
   // Many components import a few shared utils.
-  let utils_per_component = (3usize).min(util_asset_ids.len()).max(1);
+  //
+  // Keep this relatively bounded so that the structured portion doesn't hit cfg.num_deps before the
+  // fill-up loop (which adds the remaining edges incl. lazy deps).
+  let remaining_structured = structured_budget.saturating_sub(dep_count);
+  let utils_per_component = if component_asset_ids.is_empty() {
+    1usize
+  } else {
+    (remaining_structured / component_asset_ids.len()).clamp(1, 3)
+  }
+  .min(util_asset_ids.len())
+  .max(1);
+
   for component in &component_asset_ids {
+    if dep_count >= structured_budget {
+      break;
+    }
+
     let chosen: Vec<_> = util_asset_ids
       .choose_multiple(&mut rng, utils_per_component)
       .cloned()
       .collect();
     for (j, util) in chosen.iter().enumerate() {
+      if dep_count >= structured_budget {
+        break;
+      }
       add_dep(
         &mut asset_graph,
         component,
@@ -335,12 +521,15 @@ fn generate_asset_graph(cfg: GraphConfig) -> AssetGraph {
       .cloned()
       .collect::<Vec<_>>()
     {
-      let imports = rng.gen_range(1..=2).min(css_asset_ids.len());
+      let imports = rng.r#gen_range(1..=2).min(css_asset_ids.len());
       let chosen: Vec<_> = css_asset_ids
         .choose_multiple(&mut rng, imports)
         .cloned()
         .collect();
       for (j, css) in chosen.iter().enumerate() {
+        if dep_count >= structured_budget {
+          break;
+        }
         add_dep(
           &mut asset_graph,
           component.as_str(),
@@ -369,8 +558,10 @@ fn generate_asset_graph(cfg: GraphConfig) -> AssetGraph {
     .cloned()
     .collect();
 
+  // (computed above)
+
   let mut safety = 0usize;
-  while dep_count < cfg.num_deps && safety < cfg.num_deps.saturating_mul(2) {
+  while dep_count < pre_cycle_target_deps && safety < cfg.num_deps.saturating_mul(2) {
     safety += 1;
 
     // Choose a pattern type.
@@ -395,14 +586,27 @@ fn generate_asset_graph(cfg: GraphConfig) -> AssetGraph {
       continue;
     }
 
-    if roll < 0.75 && !route_asset_ids.is_empty() {
-      // entry/route -> route lazy
+    if roll < 0.66 {
+      // entry/route/component -> route/component lazy
+      //
+      // Many real apps lazily load both routes and components.
       let from = if rng.gen_bool(0.5) {
         entry_asset_ids.choose(&mut rng).unwrap().as_str()
       } else {
         route_asset_ids.choose(&mut rng).unwrap().as_str()
       };
-      let to = route_asset_ids.choose(&mut rng).unwrap().as_str();
+
+      // Weight targets toward components (they are the majority of JS assets).
+      let to =
+        if !component_asset_ids.is_empty() && (route_asset_ids.is_empty() || rng.gen_bool(0.8)) {
+          component_asset_ids.choose(&mut rng).unwrap().as_str()
+        } else if !route_asset_ids.is_empty() {
+          route_asset_ids.choose(&mut rng).unwrap().as_str()
+        } else {
+          // No viable lazy targets.
+          from
+        };
+
       if from != to {
         let n = dep_count;
         add_dep(
@@ -410,7 +614,7 @@ fn generate_asset_graph(cfg: GraphConfig) -> AssetGraph {
           from,
           to,
           Priority::Lazy,
-          format!("./route?lazy={n}"),
+          format!("./lazy?to={to}&n={n}"),
           &mut dep_counter,
           &mut dep_count,
         );
@@ -454,6 +658,35 @@ fn generate_asset_graph(cfg: GraphConfig) -> AssetGraph {
     }
   }
 
+  // --- Add back-edges to create cycles (realistic apps have cycles) ---
+  // Prefer targeting earlier assets to increase the probability of producing a cycle.
+  for _ in 0..num_cycle_edges {
+    if dep_count >= cfg.num_deps {
+      break;
+    }
+
+    if all_js_assets.len() >= 2 {
+      // Prefer component -> route or util -> component back-edges.
+      let from_idx = rng.r#gen_range(0..all_js_assets.len());
+      let to_idx = rng.r#gen_range(0..from_idx.max(1));
+      let from = &all_js_assets[from_idx];
+      let to = &all_js_assets[to_idx];
+
+      if from != to {
+        let n = dep_count;
+        add_dep(
+          &mut asset_graph,
+          from,
+          to,
+          Priority::Sync,
+          format!("./{to}?cycle={n}"),
+          &mut dep_counter,
+          &mut dep_count,
+        );
+      }
+    }
+  }
+
   asset_graph
 }
 
@@ -474,7 +707,7 @@ fn apply_group_tuning(
     }
     "xlarge" => {
       group.sample_size(10);
-      group.measurement_time(Duration::from_secs(15));
+      group.measurement_time(Duration::from_secs(60));
     }
     _ => {}
   }
@@ -484,10 +717,10 @@ fn benchmark_ideal_graph(c: &mut Criterion) {
   let mut group = c.benchmark_group("ideal_graph");
 
   let configs = [
-    ("small", 2, 100, 700, 0.05),
-    ("medium", 5, 1_000, 7_000, 0.05),
-    ("large", 10, 10_000, 70_000, 0.05),
-    ("xlarge", 20, 120_000, 900_000, 0.05),
+    ("small", 2, 100, 371, 0.10),
+    ("medium", 4, 1_000, 3_710, 0.10),
+    ("large", 4, 10_000, 37_100, 0.10),
+    ("xlarge", 4, 60_000, 222_600, 0.10),
   ];
 
   for (name, entries, assets, deps, route_ratio) in configs {
@@ -497,9 +730,12 @@ fn benchmark_ideal_graph(c: &mut Criterion) {
       num_entries: entries,
       num_assets: assets,
       num_deps: deps,
-      lazy_ratio: 0.15,
-      css_ratio: 0.10,
+      lazy_ratio: 0.028,
+      css_ratio: 0.001,
       route_ratio,
+      shared_component_ratio: 0.20,
+      shared_imports_per_route: 15,
+      cycle_ratio: 0.02,
       seed: 42,
     });
 
@@ -520,10 +756,10 @@ fn benchmark_full_bundle(c: &mut Criterion) {
   let mut group = c.benchmark_group("full_bundle");
 
   let configs = [
-    ("small", 2, 100, 700, 0.05),
-    ("medium", 5, 1_000, 7_000, 0.05),
-    ("large", 10, 10_000, 70_000, 0.05),
-    ("xlarge", 20, 120_000, 900_000, 0.05),
+    ("small", 2, 100, 371, 0.10),
+    ("medium", 4, 1_000, 3_710, 0.10),
+    ("large", 4, 10_000, 37_100, 0.10),
+    ("xlarge", 4, 60_000, 222_600, 0.10),
   ];
 
   for (name, entries, assets, deps, route_ratio) in configs {
@@ -533,9 +769,12 @@ fn benchmark_full_bundle(c: &mut Criterion) {
       num_entries: entries,
       num_assets: assets,
       num_deps: deps,
-      lazy_ratio: 0.15,
-      css_ratio: 0.10,
+      lazy_ratio: 0.028,
+      css_ratio: 0.001,
       route_ratio,
+      shared_component_ratio: 0.20,
+      shared_imports_per_route: 15,
+      cycle_ratio: 0.02,
       seed: 42,
     });
 
