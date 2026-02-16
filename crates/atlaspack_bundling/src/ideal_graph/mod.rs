@@ -16,6 +16,7 @@ use atlaspack_core::{
   asset_graph::AssetGraph,
   bundle_graph::{NativeBundleGraph, native_bundle_graph::NativeBundleGraphEdgeType},
 };
+use tracing::instrument;
 
 use crate::Bundler;
 
@@ -39,6 +40,7 @@ impl IdealGraphBundler {
   }
 
   /// Builds the intermediate ideal graph representation.
+  #[instrument(level = "info", skip_all)]
   pub fn build_ideal_graph(
     &self,
     asset_graph: &AssetGraph,
@@ -50,6 +52,7 @@ impl IdealGraphBundler {
 }
 
 impl Bundler for IdealGraphBundler {
+  #[instrument(level = "info", skip_all)]
   fn bundle(
     &self,
     asset_graph: &AssetGraph,

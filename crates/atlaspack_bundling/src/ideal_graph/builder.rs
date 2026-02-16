@@ -390,6 +390,7 @@ impl IdealGraphBuilder {
     let mut ideal = IdealGraph {
       bundles: HashMap::new(),
       bundle_edges: Vec::new(),
+      bundle_edge_set: HashSet::new(),
       asset_to_bundle: HashMap::new(),
       assets: self.assets.clone(),
       debug: None,
@@ -492,6 +493,7 @@ impl IdealGraphBuilder {
     ideal: &mut IdealGraph,
   ) -> anyhow::Result<()> {
     ideal.bundle_edges.clear();
+    ideal.bundle_edge_set.clear();
 
     for asset_node_id in self.asset_node_ids(asset_graph) {
       let Some(from_asset) = asset_graph.get_asset(&asset_node_id) else {
@@ -502,7 +504,7 @@ impl IdealGraphBuilder {
         continue;
       };
 
-      let Some(from_bundle) = ideal.asset_to_bundle.get(&from_key) else {
+      let Some(from_bundle) = ideal.asset_to_bundle.get(&from_key).cloned() else {
         continue;
       };
 
@@ -533,13 +535,11 @@ impl IdealGraphBuilder {
           }
 
           let to_bundle = IdealBundleId(target_asset.id.clone());
-          if *from_bundle == to_bundle {
+          if from_bundle == to_bundle {
             continue;
           }
 
-          ideal
-            .bundle_edges
-            .push((from_bundle.clone(), to_bundle, edge_type));
+          ideal.add_bundle_edge(from_bundle.clone(), to_bundle, edge_type);
         }
       }
     }
@@ -1480,7 +1480,6 @@ impl IdealGraphBuilder {
       let (Some(first), Some(second)) = (first, second) else {
         continue; // Not multi-root.
       };
-
       let mut splittable_roots: Vec<AssetKey> = Vec::with_capacity(2 + extra.len());
       splittable_roots.push(first);
       splittable_roots.push(second);
@@ -1502,14 +1501,28 @@ impl IdealGraphBuilder {
       // 1. It's in R's ancestor_assets (already in an ancestor bundle), OR
       // 2. Another root in the reachable set is an ancestor of R (the asset will
       //    be placed in that ancestor's bundle, making it available via bundle reuse).
+      //
+      // Performance notes:
+      // - Check 2 (bundle reuse) is optimized from O(roots^2) to O(roots) by precomputing a
+      //   set of all splittable root bundle ids and doing set membership checks.
+      // - Check 3 (parallel sibling) is optimized similarly by incrementally tracking bundle
+      //   ids for earlier roots (roots are deterministically sorted).
+      let splittable_bundle_id_set: HashSet<&IdealBundleId> =
+        splittable_root_ids.iter().map(|(_, id)| *id).collect();
+
+      let mut earlier_sibling_bundle_ids: HashSet<&IdealBundleId> = HashSet::new();
+
       let mut eligible: Vec<AssetKey> = Vec::new();
       for (root, bundle_id) in &splittable_root_ids {
         let Some(bundle) = ideal.bundles.get(*bundle_id) else {
+          // Still treat this root as an "earlier sibling" for subsequent roots.
+          earlier_sibling_bundle_ids.insert(*bundle_id);
           continue;
         };
 
         // Check 1: standard availability.
         if bundle.ancestor_assets.contains(asset_key.0 as usize) {
+          earlier_sibling_bundle_ids.insert(*bundle_id);
           continue;
         }
 
@@ -1517,19 +1530,14 @@ impl IdealGraphBuilder {
         // If there's a bundle edge path from this root to another reachable root
         // that dominates the asset, the asset will be in that other root's bundle.
         // This root can load it via the edge rather than needing a shared bundle.
-        let available_via_reuse =
-          splittable_root_ids
+        let available_via_reuse = edge_targets.get(*bundle_id).is_some_and(|targets| {
+          targets
             .iter()
-            .any(|(other_root, other_bundle_id)| {
-              if other_root == root {
-                return false;
-              }
-              edge_targets
-                .get(*bundle_id)
-                .is_some_and(|targets| targets.contains(*other_bundle_id))
-            });
+            .any(|t| t != *bundle_id && splittable_bundle_id_set.contains(t))
+        });
 
         if available_via_reuse {
+          earlier_sibling_bundle_ids.insert(*bundle_id);
           continue;
         }
 
@@ -1537,33 +1545,25 @@ impl IdealGraphBuilder {
         // If this root has a parallel sibling that also reaches the asset and
         // comes before it in deterministic ordering, the asset will be placed
         // in the earlier sibling's bundle and available via parallel loading.
-        let available_via_parallel =
-          splittable_root_ids
-            .iter()
-            .any(|(other_root, other_bundle_id)| {
-              if *other_root >= *root {
-                // Only earlier siblings (deterministic order) provide availability.
-                return false;
-              }
-
-              // If both roots are parallel children of the same parent, then the earlier one
-              // provides availability.
-              parallel_parents_by_child
-                .get(*other_bundle_id)
-                .into_iter()
-                .flatten()
-                .any(|parent| {
-                  parallel_children
-                    .get(parent)
-                    .is_some_and(|children| children.contains(*bundle_id))
-                })
-            });
+        let available_via_parallel = parallel_parents_by_child
+          .get(*bundle_id)
+          .into_iter()
+          .flatten()
+          .any(|parent| {
+            parallel_children.get(parent).is_some_and(|children| {
+              children
+                .iter()
+                .any(|child| earlier_sibling_bundle_ids.contains(child))
+            })
+          });
 
         if available_via_parallel {
+          earlier_sibling_bundle_ids.insert(*bundle_id);
           continue;
         }
 
         eligible.push(*root);
+        earlier_sibling_bundle_ids.insert(*bundle_id);
       }
 
       if eligible.len() > 1 {
@@ -1580,7 +1580,6 @@ impl IdealGraphBuilder {
           .context("bundle missing for single-eligible placement")?;
         bundle.assets.insert(asset_key.0 as usize);
         ideal.asset_to_bundle.insert(asset_key, bundle_id.clone());
-
         self.decision(
           "placement",
           super::types::DecisionKind::AssetAssignedToBundle {
@@ -1589,8 +1588,9 @@ impl IdealGraphBuilder {
             reason: super::types::AssetAssignmentReason::SingleEligibleRoot,
           },
         );
+      } else {
+        // available from all roots -> no placement needed.
       }
-      // else: available from all roots -> no placement needed.
     }
 
     if eligible_roots_by_asset.is_empty() {
@@ -1603,6 +1603,10 @@ impl IdealGraphBuilder {
     for (asset, roots) in eligible_roots_by_asset {
       assets_by_root_set.entry(roots).or_default().push(asset);
     }
+    tracing::debug!(
+      unique_root_sets = assets_by_root_set.len(),
+      "create_shared_bundles: grouped assets by root set"
+    );
 
     for (mut roots, assets) in assets_by_root_set {
       roots.sort();

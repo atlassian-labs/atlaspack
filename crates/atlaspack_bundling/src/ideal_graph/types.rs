@@ -263,7 +263,12 @@ pub struct IdealGraph {
   pub bundles: HashMap<IdealBundleId, IdealBundle>,
 
   /// Bundle dependency graph (which bundles load which).
+  ///
+  /// This is kept for ordered iteration.
   pub bundle_edges: Vec<(IdealBundleId, IdealBundleId, IdealEdgeType)>,
+
+  /// Dedup set for bundle edges (kept in sync with `bundle_edges`).
+  pub bundle_edge_set: HashSet<(IdealBundleId, IdealBundleId, IdealEdgeType)>,
 
   /// Asset -> Bundle mapping.
   pub asset_to_bundle: HashMap<AssetKey, IdealBundleId>,
@@ -303,17 +308,25 @@ impl IdealGraph {
 
   pub fn add_bundle_edge(&mut self, from: IdealBundleId, to: IdealBundleId, ty: IdealEdgeType) {
     // Dedup to keep later phases simpler.
-    if self
-      .bundle_edges
-      .iter()
-      .any(|(a, b, t)| *a == from && *b == to && *t == ty)
-    {
+    if !self.bundle_edge_set.insert((from.clone(), to.clone(), ty)) {
       return;
     }
+
     self.bundle_edges.push((from, to, ty));
   }
 
   pub fn remove_bundle_edge(&mut self, from: &IdealBundleId, to: &IdealBundleId) {
+    // `remove_bundle_edge` intentionally removes *all* edge types between the two bundles.
+    // Since `IdealEdgeType` has a small fixed set of variants, we can remove from the set in O(1).
+    for ty in [
+      IdealEdgeType::Sync,
+      IdealEdgeType::Parallel,
+      IdealEdgeType::Lazy,
+      IdealEdgeType::Conditional,
+    ] {
+      self.bundle_edge_set.remove(&(from.clone(), to.clone(), ty));
+    }
+
     self.bundle_edges.retain(|(a, b, _)| a != from || b != to);
   }
 
@@ -331,6 +344,10 @@ impl IdealGraph {
     self
       .bundle_edges
       .retain(|(a, b, _)| a != bundle_id && b != bundle_id);
+
+    self
+      .bundle_edge_set
+      .retain(|(a, b, _)| a != bundle_id && b != bundle_id);
   }
 
   /// Retarget all bundle edges whose `to` is in `targets` to instead point at `new_to`.
@@ -345,16 +362,23 @@ impl IdealGraph {
 
     for (from, to, ty) in self.bundle_edges.iter_mut() {
       if targets.contains(to) {
+        // Keep set consistent while mutating the ordered vec.
+        self
+          .bundle_edge_set
+          .remove(&(from.clone(), to.clone(), *ty));
+
         rewritten.push((from.clone(), to.clone(), *ty));
         *to = new_to.clone();
+
+        self.bundle_edge_set.insert((from.clone(), to.clone(), *ty));
       }
     }
 
-    // Dedup any edges that became identical.
-    let mut seen = HashSet::new();
+    // Dedup any edges that became identical, while rebuilding the set.
+    self.bundle_edge_set.clear();
     self
       .bundle_edges
-      .retain(|(a, b, t)| seen.insert((a.clone(), b.clone(), *t)));
+      .retain(|(a, b, t)| self.bundle_edge_set.insert((a.clone(), b.clone(), *t)));
 
     rewritten
   }
