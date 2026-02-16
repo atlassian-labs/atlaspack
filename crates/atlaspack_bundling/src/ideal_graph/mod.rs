@@ -1320,6 +1320,62 @@ mod tests {
   }
 
   #[test]
+  fn test_sync_type_change_from_non_root_asset() {
+    // entry.js -> sync utils.js (same type, not a bundle root)
+    // utils.js -> sync icon.svg (type change, icon.svg is a bundle root)
+    //
+    // The bundle edge should be from the containing entry.js bundle -> icon.svg bundle,
+    // even though the dependency originates from an unplaced non-root asset at Phase 4.
+    let asset_graph = fixture_graph(
+      &["entry.js"],
+      &[
+        EdgeSpec::new("entry.js", "utils.js", Priority::Sync),
+        EdgeSpec::new("utils.js", "icon.svg", Priority::Sync),
+      ],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js", "utils.js"],
+        "icon.svg" => ["icon.svg"],
+      },
+      edges: {
+        "entry.js" sync "icon.svg",
+      },
+    });
+  }
+
+  #[test]
+  fn test_sync_type_change_from_deep_non_root_asset() {
+    // entry.js -> a.js -> b.js -> styles.css (all sync)
+    // b.js is 2 levels deep, styles.css is a type change and therefore a bundle root.
+    let asset_graph = fixture_graph(
+      &["entry.js"],
+      &[
+        EdgeSpec::new("entry.js", "a.js", Priority::Sync),
+        EdgeSpec::new("a.js", "b.js", Priority::Sync),
+        EdgeSpec::new("b.js", "styles.css", Priority::Sync),
+      ],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js", "a.js", "b.js"],
+        "styles.css" => ["styles.css"],
+      },
+      edges: {
+        "entry.js" sync "styles.css",
+      },
+    });
+  }
+
+  #[test]
   fn materialization_materializes_sync_type_change_boundary_as_sibling_bundle() {
     use atlaspack_core::bundle_graph::NativeBundleGraph;
     use atlaspack_core::types::Priority;

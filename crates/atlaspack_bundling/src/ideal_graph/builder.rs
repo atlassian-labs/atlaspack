@@ -489,6 +489,57 @@ impl IdealGraphBuilder {
     ideal.bundle_edges.clear();
     ideal.bundle_edge_set.clear();
 
+    // Precompute a mapping from every asset to its containing bundle.
+    // Bundle roots map to their own bundle; non-root assets are resolved by
+    // walking incoming sync edges (BFS) to the nearest ancestor bundle root.
+    // This is done once instead of per-edge to avoid repeated allocations.
+    let asset_to_containing_bundle: HashMap<AssetKey, IdealBundleId> = {
+      let mut map = HashMap::with_capacity(self.assets.len());
+
+      // Seed with all placed assets (bundle roots).
+      for key in self.bundle_roots.iter() {
+        if let Some(bundle_id) = ideal.asset_bundle(key) {
+          map.insert(*key, bundle_id);
+        }
+      }
+
+      // For unplaced assets, BFS up incoming sync edges to find nearest root.
+      let mut queue: VecDeque<NodeIndex> = VecDeque::new();
+      let mut visited: HashSet<NodeIndex> = HashSet::new();
+
+      for (&asset_key, &sync_node) in &self.asset_to_sync_node {
+        if map.contains_key(&asset_key) {
+          continue;
+        }
+
+        queue.clear();
+        visited.clear();
+        queue.push_back(sync_node);
+
+        while let Some(node) = queue.pop_front() {
+          if !visited.insert(node) {
+            continue;
+          }
+          if let Some(SyncNode::Asset(key)) = self.sync_graph.node_weight(node) {
+            if let Some(&bundle_id) = map.get(key) {
+              map.insert(asset_key, bundle_id);
+              break;
+            }
+          }
+          for pred in self
+            .sync_graph
+            .neighbors_directed(node, Direction::Incoming)
+          {
+            if let Some(SyncNode::Asset(_)) = self.sync_graph.node_weight(pred) {
+              queue.push_back(pred);
+            }
+          }
+        }
+      }
+
+      map
+    };
+
     for asset_node_id in self.asset_node_ids(asset_graph) {
       let Some(from_asset) = asset_graph.get_asset(&asset_node_id) else {
         continue;
@@ -498,7 +549,7 @@ impl IdealGraphBuilder {
         continue;
       };
 
-      let Some(from_bundle) = ideal.asset_bundle(&from_key) else {
+      let Some(&from_bundle) = asset_to_containing_bundle.get(&from_key) else {
         continue;
       };
 
