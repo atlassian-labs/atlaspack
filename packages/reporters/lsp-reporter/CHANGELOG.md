@@ -1,5 +1,21 @@
 # @atlaspack/reporter-lsp
 
+## 2.14.53
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.3.5
+  - @atlaspack/plugin@2.14.53
+
+## 2.14.52
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.52
+  - @atlaspack/utils@3.3.4
+
 ## 2.14.51
 
 ### Patch Changes

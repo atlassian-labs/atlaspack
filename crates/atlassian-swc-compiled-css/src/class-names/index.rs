@@ -320,7 +320,8 @@ where
     return false;
   };
 
-  if !class_names_import_contains(meta, ident.sym.as_ref()) {
+  let name = ident.sym.as_ref();
+  if !class_names_import_contains(meta, name) {
     return false;
   }
 
@@ -353,7 +354,6 @@ where
 
   let body = pick_function_body(children_expr);
   *node = compiled_template(body, &collected_sheets, meta);
-
   true
 }
 

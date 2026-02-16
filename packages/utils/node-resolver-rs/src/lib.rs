@@ -229,10 +229,7 @@ impl<'a> Resolver<'a> {
     invalidations: &Invalidations,
     options: ResolveOptions,
   ) -> Result<(Resolution, Option<String>), ResolverError> {
-    let (specifier, query) = match Specifier::parse(specifier, specifier_type, self.flags) {
-      Ok(s) => s,
-      Err(e) => return Err(e.into()),
-    };
+    let (specifier, query) = Specifier::parse(specifier, specifier_type, self.flags)?;
     let mut request = ResolveRequest::new(self, &specifier, specifier_type, from, invalidations);
     if !options.conditions.is_empty() || !options.custom_conditions.is_empty() {
       // If custom conditions are defined, these override the default conditions inferred from the specifier type.

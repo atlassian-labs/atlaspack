@@ -3,7 +3,8 @@ use std::collections::HashMap;
 use swc_core::common::{DUMMY_SP, SyntaxContext};
 use swc_core::ecma::ast::{
   ArrayPat, ArrowExpr, BinExpr, BinaryOp, BindingIdent, BlockStmtOrExpr, Expr, FnExpr, Function,
-  Ident, IdentName, MemberExpr, MemberProp, ObjectPatProp, ParenExpr, Pat, PropName,
+  Ident, IdentName, KeyValueProp, MemberExpr, MemberProp, ObjectPatProp, ParenExpr, Pat, Prop,
+  PropName,
 };
 use swc_core::ecma::atoms::Atom;
 use swc_core::ecma::visit::{VisitMut, VisitMutWith};
@@ -346,6 +347,23 @@ impl<'a> VisitMut for ReplaceBindingsVisitor<'a> {
 
     expr.visit_mut_children_with(self);
   }
+
+  fn visit_mut_prop(&mut self, prop: &mut Prop) {
+    // Handle shorthand properties like { hasExtraFields } which need to become
+    // { hasExtraFields: __cmplp.hasExtraFields } when hasExtraFields is a prop binding
+    if let Prop::Shorthand(ident) = prop {
+      if let Some(replacement) = self.replace_identifier(ident) {
+        // Convert shorthand to key-value with the replacement as the value
+        *prop = Prop::KeyValue(KeyValueProp {
+          key: PropName::Ident(IdentName::new(ident.sym.clone(), DUMMY_SP)),
+          value: Box::new(replacement),
+        });
+        return;
+      }
+    }
+
+    prop.visit_mut_children_with(self);
+  }
 }
 
 fn replace_bindings(
@@ -506,5 +524,24 @@ mod tests {
   #[should_panic]
   fn rejects_array_destructuring() {
     let _ = transform("styled.div(({ a: [, second] }) => second)");
+  }
+
+  #[test]
+  fn transforms_shorthand_properties_in_object_literals() {
+    // Shorthand properties like { hasExtraFields } should become { hasExtraFields: __cmplp.hasExtraFields }
+    let output = transform(
+      "styled.div(({ hasExtraFields, isCompact = false }) => calculate({ hasExtraFields, isCompact }))",
+    );
+    assert!(output.contains(&format!("({})=>", PROPS_IDENTIFIER_NAME)));
+    // Shorthand property should be converted to key-value
+    assert!(output.contains(&format!(
+      "hasExtraFields:{}.hasExtraFields",
+      PROPS_IDENTIFIER_NAME
+    )));
+    // Property with default should use nullish coalescing
+    assert!(output.contains(&format!(
+      "isCompact:{}.isCompact??false",
+      PROPS_IDENTIFIER_NAME
+    )));
   }
 }

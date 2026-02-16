@@ -1,0 +1,10 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "include": ["src", "src/rolldown.config.ts"],
+  "compilerOptions": {
+    "composite": true
+  },
+  "references": [
+
+  ]
+}

@@ -1,5 +1,51 @@
 # @atlaspack/core
 
+## 2.33.1
+
+### Patch Changes
+
+- Updated dependencies [[`95914a7`](https://github.com/atlassian-labs/atlaspack/commit/95914a7f33f9370cdb0c8a3fd6845c042911af59), [`883c107`](https://github.com/atlassian-labs/atlaspack/commit/883c107e60dab2f459e27342017c54e3a7db8bc5), [`1815c2c`](https://github.com/atlassian-labs/atlaspack/commit/1815c2ce48e32f4df97ccdd668fd650fc79d1051)]:
+  - @atlaspack/rust@3.22.1
+  - @atlaspack/feature-flags@2.29.1
+  - @atlaspack/cache@3.2.48
+  - @atlaspack/fs@2.15.48
+  - @atlaspack/logger@2.14.45
+  - @atlaspack/source-map@3.2.8
+  - @atlaspack/utils@3.3.5
+  - @atlaspack/build-cache@2.13.11
+  - @atlaspack/graph@3.6.15
+  - @atlaspack/package-manager@2.14.53
+  - @atlaspack/profiler@2.15.14
+  - @atlaspack/workers@2.14.53
+  - @atlaspack/plugin@2.14.53
+  - @atlaspack/types@2.15.43
+
+## 2.33.0
+
+### Minor Changes
+
+- [#993](https://github.com/atlassian-labs/atlaspack/pull/993) [`e058f0e`](https://github.com/atlassian-labs/atlaspack/commit/e058f0e7a0423ba9373e85a7dbd5c1dd43b47916) Thanks [@matt-koko](https://github.com/matt-koko)! - Add disableCache option to TransformerSetup API
+
+### Patch Changes
+
+- [#998](https://github.com/atlassian-labs/atlaspack/pull/998) [`349b19c`](https://github.com/atlassian-labs/atlaspack/commit/349b19c3aca2ccb1ffb5cdcdc74890f4b62228be) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add initial native bundler boilerplate and single file bundler
+
+- Updated dependencies [[`e058f0e`](https://github.com/atlassian-labs/atlaspack/commit/e058f0e7a0423ba9373e85a7dbd5c1dd43b47916), [`053e375`](https://github.com/atlassian-labs/atlaspack/commit/053e3754c08c5b5dc239e9f7267df289cbbf31ab), [`25c976e`](https://github.com/atlassian-labs/atlaspack/commit/25c976e01c30e536fb1027eab5b17594c604efff), [`1a86b65`](https://github.com/atlassian-labs/atlaspack/commit/1a86b657868ee881ca5acc68661cca208ac37779), [`349b19c`](https://github.com/atlassian-labs/atlaspack/commit/349b19c3aca2ccb1ffb5cdcdc74890f4b62228be), [`9959efe`](https://github.com/atlassian-labs/atlaspack/commit/9959efe30699a2de3b69275be7ecb47afe81c0b6)]:
+  - @atlaspack/rust@3.22.0
+  - @atlaspack/feature-flags@2.29.0
+  - @atlaspack/fs@2.15.47
+  - @atlaspack/graph@3.6.14
+  - @atlaspack/logger@2.14.44
+  - @atlaspack/plugin@2.14.52
+  - @atlaspack/profiler@2.15.13
+  - @atlaspack/types@2.15.42
+  - @atlaspack/utils@3.3.4
+  - @atlaspack/workers@2.14.52
+  - @atlaspack/cache@3.2.47
+  - @atlaspack/source-map@3.2.7
+  - @atlaspack/build-cache@2.13.10
+  - @atlaspack/package-manager@2.14.52
+
 ## 2.32.1
 
 ### Patch Changes

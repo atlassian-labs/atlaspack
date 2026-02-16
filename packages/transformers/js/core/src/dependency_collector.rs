@@ -671,7 +671,7 @@ impl VisitMut for DependencyCollector<'_> {
           return;
         };
 
-        node.args[0].expr = Box::new(self.add_url_dependency(specifier, span, kind, source_type));
+        *node.args[0].expr = self.add_url_dependency(specifier, span, kind, source_type);
 
         match opts {
           Some(opts) => {
@@ -702,11 +702,11 @@ impl VisitMut for DependencyCollector<'_> {
           );
 
           if let Some(placeholder) = placeholder {
-            node.args[0].expr = Box::new(Expr::Lit(Lit::Str(Str {
+            *node.args[0].expr = Expr::Lit(Lit::Str(Str {
               raw: None,
               span,
               value: placeholder,
-            })));
+            }));
           }
         }
       }
@@ -948,7 +948,7 @@ impl VisitMut for DependencyCollector<'_> {
 
       // Replace argument with a require call to resolve the URL at runtime.
       if let Some(mut args) = node.args.clone() {
-        args[0].expr = Box::new(placeholder);
+        *args[0].expr = placeholder;
 
         // If module workers aren't supported natively, remove the `type: 'module'` option.
         // If no other options are passed, remove the argument entirely.

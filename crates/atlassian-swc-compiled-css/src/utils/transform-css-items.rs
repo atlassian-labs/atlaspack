@@ -147,7 +147,9 @@ fn order_class_names_by_bucket(class_names: &[String], sheets: &[String]) -> Vec
 }
 use swc_core::atoms::Atom;
 use swc_core::common::{DUMMY_SP, SyntaxContext};
-use swc_core::ecma::ast::{BinExpr, BinaryOp, CondExpr, Expr, Ident, Lit, Str, UnaryExpr, UnaryOp};
+use swc_core::ecma::ast::{
+  BinExpr, BinaryOp, CondExpr, Expr, Ident, Lit, ParenExpr, Str, UnaryExpr, UnaryOp,
+};
 
 use crate::postcss::transform::{TransformCssOptions, transform_css};
 use crate::types::Metadata;
@@ -262,18 +264,62 @@ fn order_class_names_from_sheet_order(class_names: &[String], sheets: &[String])
 }
 
 fn negate_expression(expr: Expr) -> Expr {
+  // Wrap the expression in parentheses before negating to match Babel's output.
+  // This produces !(test) instead of !test, which is important for:
+  // 1. Correct operator precedence (e.g., !(a === b) vs !a === b)
+  // 2. Hash consistency with the Babel plugin
   Expr::Unary(UnaryExpr {
     span: DUMMY_SP,
     op: UnaryOp::Bang,
-    arg: Box::new(expr),
+    arg: Box::new(Expr::Paren(ParenExpr {
+      span: DUMMY_SP,
+      expr: Box::new(expr),
+    })),
   })
 }
 
+/// Checks if an expression contains a nullish coalescing operator (??) at the top level.
+/// This is needed to determine if parentheses are required when combining with &&.
+fn contains_nullish_coalescing_top_level(expr: &Expr) -> bool {
+  match expr {
+    Expr::Bin(bin) => bin.op == BinaryOp::NullishCoalescing,
+    Expr::Paren(paren) => contains_nullish_coalescing_top_level(&paren.expr),
+    _ => false,
+  }
+}
+
+/// Wraps an expression in parentheses if it contains a nullish coalescing operator.
+/// This is necessary because ?? has lower precedence than &&, so without parentheses,
+/// `a ?? b && c` would be parsed as `a ?? (b && c)` instead of `(a ?? b) && c`.
+fn wrap_if_nullish_coalescing(expr: Expr) -> Expr {
+  if contains_nullish_coalescing_top_level(&expr) {
+    Expr::Paren(ParenExpr {
+      span: DUMMY_SP,
+      expr: Box::new(expr),
+    })
+  } else {
+    expr
+  }
+}
+
 fn logical_expression(operator: LogicalOperator, left: Expr, right: Expr) -> Expr {
+  // When creating a && expression, if the left operand contains ??, we need to wrap it
+  // in parentheses to maintain correct operator precedence. Without this, `a ?? b && c`
+  // would be parsed as `a ?? (b && c)` instead of `(a ?? b) && c`.
+  let wrapped_left =
+    if operator == LogicalOperator::And && contains_nullish_coalescing_top_level(&left) {
+      Expr::Paren(ParenExpr {
+        span: DUMMY_SP,
+        expr: Box::new(left),
+      })
+    } else {
+      left
+    };
+
   Expr::Bin(BinExpr {
     span: DUMMY_SP,
     op: logical_operator_to_binary_op(operator),
-    left: Box::new(left),
+    left: Box::new(wrapped_left),
     right: Box::new(right),
   })
 }
@@ -443,22 +489,39 @@ fn transform_css_item(item: &CssItem, meta: &Metadata) -> TransformCssItemResult
       let mut sheets = consequent.sheets;
       sheets.extend(alternate.sheets);
 
+      // Build the ternary expression for the class name
+      let ternary_expr = Expr::Cond(CondExpr {
+        span: DUMMY_SP,
+        test: Box::new(conditional.test.clone()),
+        cons: Box::new(
+          consequent
+            .class_expression
+            .unwrap_or_else(|| default_expression.clone()),
+        ),
+        alt: Box::new(
+          alternate
+            .class_expression
+            .unwrap_or_else(|| default_expression),
+        ),
+      });
+
+      // If there's a guard expression, wrap the ternary with guard && (ternary)
+      // The parentheses around the ternary are required because && has higher precedence
+      // than ?:, so without parens `guard && test ? cons : alt` would be parsed as
+      // `(guard && test) ? cons : alt` instead of `guard && (test ? cons : alt)`.
+      let class_expression = if let Some(guard) = conditional.guard {
+        let wrapped_ternary = Expr::Paren(ParenExpr {
+          span: DUMMY_SP,
+          expr: Box::new(ternary_expr),
+        });
+        logical_expression(LogicalOperator::And, guard, wrapped_ternary)
+      } else {
+        ternary_expr
+      };
+
       TransformCssItemResult {
         sheets,
-        class_expression: Some(Expr::Cond(CondExpr {
-          span: DUMMY_SP,
-          test: Box::new(conditional.test.clone()),
-          cons: Box::new(
-            consequent
-              .class_expression
-              .unwrap_or_else(|| default_expression.clone()),
-          ),
-          alt: Box::new(
-            alternate
-              .class_expression
-              .unwrap_or_else(|| default_expression),
-          ),
-        })),
+        class_expression: Some(class_expression),
       }
     }
     CssItem::Logical(logical) => {
@@ -602,7 +665,7 @@ mod tests {
   use swc_core::atoms::Atom;
   use swc_core::common::sync::Lrc;
   use swc_core::common::{DUMMY_SP, SourceMap, SyntaxContext};
-  use swc_core::ecma::ast::{BinaryOp, Expr, Ident, Lit, Str};
+  use swc_core::ecma::ast::{BinExpr, BinaryOp, Expr, Ident, Lit, Str};
 
   use crate::postcss::transform::transform_css;
   use crate::types::{Metadata, PluginOptions, TransformFile, TransformState};
@@ -657,6 +720,7 @@ mod tests {
         expression: string_lit("secondary"),
         css: String::new(),
       })),
+      guard: None,
     });
 
     let result = transform_css_items(&[conditional], &meta);
@@ -707,6 +771,7 @@ mod tests {
       alternate: Box::new(CssItem::Unconditional(UnconditionalCssItem {
         css: "".into(),
       })),
+      guard: None,
     });
 
     let result = transform_css_items(&[conditional], &meta);
@@ -756,6 +821,7 @@ mod tests {
       alternate: Box::new(CssItem::Unconditional(UnconditionalCssItem {
         css: "color: blue;".into(),
       })),
+      guard: None,
     });
 
     apply_selectors(&mut item, &["@media print {".into()]);
@@ -784,5 +850,208 @@ mod tests {
 
     let css1 = transform_css("a{min-height:100%;}", options).expect("transform css");
     assert_eq!(css1.class_names.len(), 1);
+  }
+
+  #[test]
+  fn transform_keyframes_preserves_negative_percent() {
+    let meta = create_metadata();
+    let (mut options, _) = create_transform_css_options(&meta);
+
+    // This tests that -100% is preserved in keyframes, not truncated to -100
+    let css = "@keyframes test{0%{background-position:100%}to{background-position:-100%}}";
+
+    // Test WITH optimization - should preserve the -100% unit
+    options.optimize_css = Some(true);
+    let result = transform_css(css, options).expect("transform css with opt");
+
+    // The keyframes should be in sheets with -100% preserved
+    assert!(
+      result.sheets.iter().any(|s| s.contains("-100%")),
+      "Expected -100%% to be preserved in keyframes but got: {:?}",
+      result.sheets
+    );
+  }
+
+  #[test]
+  fn contains_nullish_coalescing_detects_top_level() {
+    // Test that ?? is detected at top level
+    let expr = Expr::Bin(BinExpr {
+      span: DUMMY_SP,
+      op: BinaryOp::NullishCoalescing,
+      left: Box::new(Expr::Ident(Ident::new(
+        Atom::from("a"),
+        DUMMY_SP,
+        SyntaxContext::empty(),
+      ))),
+      right: Box::new(Expr::Lit(Lit::Bool(swc_core::ecma::ast::Bool {
+        span: DUMMY_SP,
+        value: false,
+      }))),
+    });
+    assert!(
+      super::contains_nullish_coalescing_top_level(&expr),
+      "Should detect ?? at top level"
+    );
+
+    // Test that && is not detected
+    let expr = Expr::Bin(BinExpr {
+      span: DUMMY_SP,
+      op: BinaryOp::LogicalAnd,
+      left: Box::new(Expr::Ident(Ident::new(
+        Atom::from("a"),
+        DUMMY_SP,
+        SyntaxContext::empty(),
+      ))),
+      right: Box::new(Expr::Lit(Lit::Bool(swc_core::ecma::ast::Bool {
+        span: DUMMY_SP,
+        value: false,
+      }))),
+    });
+    assert!(
+      !super::contains_nullish_coalescing_top_level(&expr),
+      "Should not detect && as nullish coalescing"
+    );
+  }
+
+  #[test]
+  fn wrap_if_nullish_coalescing_wraps_correctly() {
+    // Test that ?? expressions get wrapped in parentheses
+    let expr = Expr::Bin(BinExpr {
+      span: DUMMY_SP,
+      op: BinaryOp::NullishCoalescing,
+      left: Box::new(Expr::Ident(Ident::new(
+        Atom::from("prop"),
+        DUMMY_SP,
+        SyntaxContext::empty(),
+      ))),
+      right: Box::new(Expr::Lit(Lit::Bool(swc_core::ecma::ast::Bool {
+        span: DUMMY_SP,
+        value: false,
+      }))),
+    });
+
+    let wrapped = super::wrap_if_nullish_coalescing(expr);
+    assert!(
+      matches!(wrapped, Expr::Paren(_)),
+      "Expression containing ?? should be wrapped in parentheses"
+    );
+
+    // Test that non-?? expressions are not wrapped
+    let expr = Expr::Ident(Ident::new(
+      Atom::from("prop"),
+      DUMMY_SP,
+      SyntaxContext::empty(),
+    ));
+    let not_wrapped = super::wrap_if_nullish_coalescing(expr);
+    assert!(
+      matches!(not_wrapped, Expr::Ident(_)),
+      "Expression without ?? should not be wrapped"
+    );
+  }
+
+  #[test]
+  fn logical_expression_wraps_nullish_coalescing_for_and() {
+    use crate::utils_types::LogicalOperator;
+
+    // Create a ?? expression: prop ?? false
+    let nullish_expr = Expr::Bin(BinExpr {
+      span: DUMMY_SP,
+      op: BinaryOp::NullishCoalescing,
+      left: Box::new(Expr::Ident(Ident::new(
+        Atom::from("prop"),
+        DUMMY_SP,
+        SyntaxContext::empty(),
+      ))),
+      right: Box::new(Expr::Lit(Lit::Bool(swc_core::ecma::ast::Bool {
+        span: DUMMY_SP,
+        value: false,
+      }))),
+    });
+
+    let class_name = Expr::Lit(Lit::Str(Str {
+      span: DUMMY_SP,
+      value: Atom::from("_class"),
+      raw: None,
+    }));
+
+    // Create (prop ?? false) && '_class'
+    let result = super::logical_expression(LogicalOperator::And, nullish_expr, class_name);
+
+    // The result should be (prop ?? false) && '_class'
+    // where (prop ?? false) is wrapped in parentheses
+    match &result {
+      Expr::Bin(bin) => {
+        assert_eq!(bin.op, BinaryOp::LogicalAnd);
+        assert!(
+          matches!(bin.left.as_ref(), Expr::Paren(_)),
+          "Left operand containing ?? should be wrapped in parentheses for &&"
+        );
+      }
+      _ => panic!("Expected binary expression"),
+    }
+  }
+
+  #[test]
+  fn conditional_with_guard_produces_wrapped_ternary() {
+    use crate::utils_types::{ConditionalCssItem, UnconditionalCssItem};
+
+    let meta = create_metadata();
+
+    // Create a conditional with a guard:
+    // guard && (test ? consequent : alternate)
+    let guard = Expr::Ident(Ident::new(
+      Atom::from("isDragging"),
+      DUMMY_SP,
+      SyntaxContext::empty(),
+    ));
+
+    let conditional = CssItem::Conditional(ConditionalCssItem {
+      test: Expr::Ident(Ident::new(
+        Atom::from("isHovered"),
+        DUMMY_SP,
+        SyntaxContext::empty(),
+      )),
+      consequent: Box::new(CssItem::Unconditional(UnconditionalCssItem {
+        css: "color: red;".into(),
+      })),
+      alternate: Box::new(CssItem::Unconditional(UnconditionalCssItem {
+        css: "color: blue;".into(),
+      })),
+      guard: Some(guard),
+    });
+
+    let result = transform_css_items(&[conditional], &meta);
+
+    // The class expression should be guard && (test ? consequent : alternate)
+    assert_eq!(result.class_names.len(), 1);
+
+    match &result.class_names[0] {
+      Expr::Bin(bin) => {
+        assert_eq!(
+          bin.op,
+          BinaryOp::LogicalAnd,
+          "Should use && to combine guard with ternary"
+        );
+        // Left should be the guard (isDragging)
+        match bin.left.as_ref() {
+          Expr::Ident(ident) => assert_eq!(ident.sym.as_ref(), "isDragging"),
+          other => panic!("Expected identifier for guard, got {:?}", other),
+        }
+        // Right should be the ternary wrapped in parentheses
+        match bin.right.as_ref() {
+          Expr::Paren(paren) => {
+            assert!(
+              matches!(paren.expr.as_ref(), Expr::Cond(_)),
+              "Parenthesized expression should contain a ternary"
+            );
+          }
+          other => panic!(
+            "Right operand should be a parenthesized ternary, got {:?}",
+            other
+          ),
+        }
+      }
+      other => panic!("Expected binary expression, got {:?}", other),
+    }
   }
 }

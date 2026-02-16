@@ -14,7 +14,7 @@
     "test:integration:ci": "yarn run test-ci"
   },
   "devDependencies": {
-    "@atlaspack/cli": "2.15.12",
+    "@atlaspack/cli": "2.15.14",
     "@atlaspack/mocha-profiler": "*",
     "@babel/core": "^7.22.11",
     "@babel/plugin-syntax-class-properties": "^7.12.13",

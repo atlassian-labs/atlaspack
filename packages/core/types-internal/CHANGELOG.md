@@ -1,5 +1,25 @@
 # @atlaspack/types-internal
 
+## 2.23.1
+
+### Patch Changes
+
+- Updated dependencies [[`1815c2c`](https://github.com/atlassian-labs/atlaspack/commit/1815c2ce48e32f4df97ccdd668fd650fc79d1051)]:
+  - @atlaspack/feature-flags@2.29.1
+  - @atlaspack/source-map@3.2.8
+
+## 2.23.0
+
+### Minor Changes
+
+- [#993](https://github.com/atlassian-labs/atlaspack/pull/993) [`e058f0e`](https://github.com/atlassian-labs/atlaspack/commit/e058f0e7a0423ba9373e85a7dbd5c1dd43b47916) Thanks [@matt-koko](https://github.com/matt-koko)! - Add disableCache option to TransformerSetup API
+
+### Patch Changes
+
+- Updated dependencies [[`349b19c`](https://github.com/atlassian-labs/atlaspack/commit/349b19c3aca2ccb1ffb5cdcdc74890f4b62228be)]:
+  - @atlaspack/feature-flags@2.29.0
+  - @atlaspack/source-map@3.2.7
+
 ## 2.22.8
 
 ### Patch Changes

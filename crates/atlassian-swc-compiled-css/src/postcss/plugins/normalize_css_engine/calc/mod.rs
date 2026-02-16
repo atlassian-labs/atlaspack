@@ -709,6 +709,55 @@ fn stringify_ast(node: &Node, precision: usize) -> String {
   stringify_node(node, precision)
 }
 
+/// Normalizes calc expressions in a CSS value for hashing.
+/// This removes whitespace around `*` and `/` operators while preserving
+/// spaces around `+` and `-` (which are required by CSS spec).
+///
+/// Example: `calc(-100% * var(--x))` -> `calc(-100%*var(--x))`
+pub fn normalize_calc_value_for_hash(value: &str) -> String {
+  let mut parsed = vp::parse(value);
+  let opt = Options::default();
+  process_nodes_for_calc(&mut parsed.nodes, &opt);
+  vp::stringify(&parsed.nodes)
+}
+
+fn process_nodes_for_calc(nodes: &mut Vec<vp::Node>, opt: &Options) {
+  for n in nodes.iter_mut() {
+    if let vp::Node::Function {
+      value: name,
+      nodes: inner_nodes,
+      ..
+    } = n
+    {
+      let name_l = name.to_ascii_lowercase();
+      let is_calc = name_l == "calc" || name_l == "-webkit-calc" || name_l == "-moz-calc";
+      if is_calc {
+        let inner = vp::stringify(inner_nodes);
+        if let Some(ast) = parse_calc_expression(&inner) {
+          let reduced = reduce_node(ast, opt.precision);
+          match reduced {
+            Node::Value(ValueKind { num, unit }) => {
+              let mut v = fmt_number(num, opt.precision);
+              if let Some(u) = unit {
+                v.push_str(&u);
+              }
+              *n = vp::Node::Word { value: v };
+            }
+            other => {
+              let expr = stringify_ast(&other, opt.precision);
+              let wrapped = format!("{}({})", name, expr);
+              *n = vp::Node::Word { value: wrapped };
+            }
+          }
+        }
+      } else {
+        // Recursively process nested functions (e.g., translateX(calc(...)))
+        process_nodes_for_calc(inner_nodes, opt);
+      }
+    }
+  }
+}
+
 pub fn plugin() -> pc::BuiltPlugin {
   let opt = Options::default();
   pc::plugin("postcss-calc")
@@ -837,5 +886,35 @@ mod tests {
     let reduced = reduce_node(ast, 5);
     let output = stringify_ast(&reduced, 5);
     assert_eq!(output, "var(--board-scroll-element-height)*1px - 8px");
+  }
+
+  #[test]
+  fn normalize_calc_value_for_hash_removes_whitespace_around_multiplication() {
+    // This is the exact case from side-nav.tsx that was causing hash mismatches
+    let input = "translateX(calc(-100% * var(--animation-direction)))";
+    let output = normalize_calc_value_for_hash(input);
+    // The * should have whitespace removed, matching Babel's postcss-calc behavior
+    assert_eq!(output, "translateX(calc(-100%*var(--animation-direction)))");
+  }
+
+  #[test]
+  fn normalize_calc_value_for_hash_preserves_addition_spacing() {
+    // Addition and subtraction must keep spaces per CSS spec
+    // Note: whitespace inside var() parameters is preserved by the value parser
+    let input = "calc(100vh - var(--topNavigationHeight, 0px) - var(--bannerHeight, 0px))";
+    let output = normalize_calc_value_for_hash(input);
+    assert_eq!(
+      output,
+      "calc(100vh - var(--topNavigationHeight, 0px) - var(--bannerHeight, 0px))"
+    );
+  }
+
+  #[test]
+  fn normalize_calc_value_for_hash_handles_nested_var() {
+    // Note: the parser evaluates the expression and may reorder operands
+    // The important thing is that whitespace around * is removed
+    let input = "calc(-1 * var(--topNavMountedVar, 0px))";
+    let output = normalize_calc_value_for_hash(input);
+    assert_eq!(output, "calc(var(--topNavMountedVar, 0px)*-1)");
   }
 }

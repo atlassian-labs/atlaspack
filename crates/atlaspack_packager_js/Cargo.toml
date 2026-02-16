@@ -11,7 +11,18 @@ workspace = true
 atlaspack_core = { path = "../atlaspack_core" }
 lmdb-js-lite = { path = "../lmdb-js-lite" }
 anyhow = { workspace = true }
+oxc_allocator = { workspace = true }
+oxc_ast = { workspace = true }
+oxc_ast_visit = "0.112.0"
+oxc_codegen = { workspace = true }
+oxc_parser = { workspace = true }
+oxc_span = { workspace = true }
+oxc_syntax = { workspace = true }
 parking_lot = { workspace = true }
+pathdiff = { workspace = true }
+pretty_assertions = { workspace = true }
 rayon = { workspace = true }
-regex = { workspace = true }
 tracing = { workspace = true }
+
+[build-dependencies]
+glob = { workspace = true }

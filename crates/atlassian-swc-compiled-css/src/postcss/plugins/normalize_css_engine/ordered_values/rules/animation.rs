@@ -114,3 +114,29 @@ pub fn normalize(parsed: &vp::ParsedValue) -> String {
   }
   get_value(out_lists)
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_animation_preserves_timing_functions_in_multiple_animations() {
+    // Test case: "reaction-particle-fade ease-in-out, reaction-particle-float ease"
+    // Both animations should preserve their timing functions
+    let input = "reaction-particle-fade ease-in-out, reaction-particle-float ease";
+    let parsed = vp::parse(input);
+    let result = normalize(&parsed);
+
+    // Should preserve ease-in-out for first animation
+    assert!(
+      result.contains("ease-in-out"),
+      "Expected ease-in-out to be preserved, got: {}",
+      result
+    );
+    // Expected output should have both timing functions
+    assert_eq!(
+      result,
+      "reaction-particle-fade ease-in-out,reaction-particle-float ease"
+    );
+  }
+}

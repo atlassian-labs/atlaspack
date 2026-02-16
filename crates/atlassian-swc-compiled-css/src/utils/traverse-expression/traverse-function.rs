@@ -1,6 +1,6 @@
 use swc_core::common::{DUMMY_SP, SyntaxContext};
 use swc_core::ecma::ast::{
-  ArrowExpr, BlockStmt, BlockStmtOrExpr, Expr, FnExpr, Function, Ident, ReturnStmt,
+  ArrowExpr, BlockStmt, BlockStmtOrExpr, Expr, FnExpr, Function, Ident, ReturnStmt, Stmt,
 };
 use swc_core::ecma::visit::{Visit, VisitWith};
 
@@ -14,6 +14,23 @@ fn undefined_ident() -> Expr {
     DUMMY_SP,
     SyntaxContext::empty(),
   ))
+}
+
+/// Checks if a block contains any control flow statements that could result
+/// in different return values depending on runtime conditions.
+fn has_control_flow(block: &BlockStmt) -> bool {
+  block.stmts.iter().any(|stmt| {
+    matches!(
+      stmt,
+      Stmt::If(_)
+        | Stmt::Switch(_)
+        | Stmt::For(_)
+        | Stmt::ForIn(_)
+        | Stmt::ForOf(_)
+        | Stmt::While(_)
+        | Stmt::DoWhile(_)
+    )
+  })
 }
 
 struct ReturnFinder {
@@ -70,13 +87,33 @@ fn evaluate_block(
     .unwrap_or_else(|| create_result_pair(undefined_ident(), meta))
 }
 
+fn evaluate_block_with_fallback(
+  block: &BlockStmt,
+  meta: Metadata,
+  evaluate_expression: EvaluateExpression,
+  fallback: &Expr,
+) -> ResultPair {
+  // If the block has control flow, we can't statically determine the return value
+  // since different branches may return different values. Return the original
+  // expression so it can be processed as a dynamic value.
+  if has_control_flow(block) {
+    return create_result_pair(fallback.clone(), meta);
+  }
+
+  ReturnFinder::find(block, evaluate_expression, meta.clone())
+    .unwrap_or_else(|| create_result_pair(undefined_ident(), meta))
+}
+
 fn evaluate_arrow(
   arrow: &ArrowExpr,
   meta: Metadata,
   evaluate_expression: EvaluateExpression,
 ) -> ResultPair {
   match arrow.body.as_ref() {
-    BlockStmtOrExpr::BlockStmt(block) => evaluate_block(block, meta, evaluate_expression),
+    BlockStmtOrExpr::BlockStmt(block) => {
+      let fallback = Expr::Arrow(arrow.clone());
+      evaluate_block_with_fallback(block, meta, evaluate_expression, &fallback)
+    }
     BlockStmtOrExpr::Expr(expr) => (evaluate_expression)(expr, meta),
   }
 }
