@@ -13,6 +13,7 @@ import type {ProjectPath} from '../projectPath';
 import {HASH_REF_HASH_LEN, HASH_REF_PREFIX} from '../constants';
 import nullthrows from 'nullthrows';
 import path from 'path';
+import url from 'url';
 import {NamedBundle} from '../public/Bundle';
 import {blobToStream, TapStream} from '@atlaspack/utils';
 import {Readable, Transform, pipeline} from 'stream';
@@ -209,6 +210,7 @@ async function run({input, options, api}) {
       const mapJson = await sourceMap.stringify({
         format: 'string',
         file: name,
+        sourceRoot: computeSourceMapRoot(bundle, options),
       });
       mapStream = blobToStream(
         Buffer.from(
@@ -271,6 +273,65 @@ export function applyReplacementsToSourceMap(
       }
     }
   }
+}
+
+/**
+ * Computes the sourceRoot for a source map file. This is the relative path from
+ * the output directory back to the project root, so that source paths (stored
+ * relative to projectRoot) resolve correctly from the .map file location.
+ *
+ * Returns undefined when sources are inlined (inlineSources), since the browser
+ * doesn't need to fetch them and sourceRoot would be unnecessary.
+ *
+ * This logic must stay in sync with PackagerRunner.generateSourceMap.
+ */
+export function computeSourceMapRoot(
+  bundle: Bundle,
+  options: AtlaspackOptions,
+): string | undefined {
+  let name = nullthrows(bundle.name);
+  let filePath = joinProjectPath(bundle.target.distDir, name);
+  let fullPath = fromProjectPath(options.projectRoot, filePath);
+  let sourceRoot: string = path.relative(
+    path.dirname(fullPath),
+    options.projectRoot,
+  );
+
+  let inlineSources = false;
+
+  const bundleEnv = fromEnvironmentId(bundle.env);
+  if (bundle.target) {
+    const bundleTargetEnv = fromEnvironmentId(bundle.target.env);
+
+    if (bundleEnv.sourceMap && bundleEnv.sourceMap.sourceRoot !== undefined) {
+      sourceRoot = bundleEnv.sourceMap.sourceRoot;
+    } else if (options.serveOptions && bundleTargetEnv.context === 'browser') {
+      sourceRoot = '/__parcel_source_root';
+    }
+
+    if (
+      bundleEnv.sourceMap &&
+      bundleEnv.sourceMap.inlineSources !== undefined
+    ) {
+      inlineSources = bundleEnv.sourceMap.inlineSources;
+    } else if (bundleTargetEnv.context !== 'node') {
+      inlineSources = options.mode === 'production';
+    }
+  }
+
+  let isInlineMap = bundleEnv.sourceMap && bundleEnv.sourceMap.inline;
+
+  if (getFeatureFlag('omitSourcesContentInMemory') && !isInlineMap) {
+    if (!(bundleEnv.sourceMap && bundleEnv.sourceMap.inlineSources === false)) {
+      inlineSources = true;
+    }
+  }
+
+  if (inlineSources) {
+    return undefined;
+  }
+
+  return url.format(url.parse(sourceRoot + '/'));
 }
 
 async function writeFiles(
