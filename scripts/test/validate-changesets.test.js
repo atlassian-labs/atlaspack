@@ -4,6 +4,8 @@ const sinon = require('sinon');
 const {
   checkForRustPackageBump,
   validateChangesets,
+  isChangesetCheckboxTicked,
+  hasNoChangesetAnnotation,
 } = require('../validate-changesets.js');
 
 describe('validate-changesets', () => {
@@ -303,5 +305,228 @@ This is malformed frontmatter without closing ---`;
 
     assert.equal(process.exitCode, 0);
     sinon.assert.notCalled(mockOctokit.rest.issues.createComment);
+  });
+
+  describe('isChangesetCheckboxTicked', () => {
+    it('should return true when checkbox is ticked with lowercase x', () => {
+      const body =
+        '- [x] There is a changeset for this change, or one is not required';
+      assert.equal(isChangesetCheckboxTicked(body), true);
+    });
+
+    it('should return true when checkbox is ticked with uppercase X', () => {
+      const body =
+        '- [X] There is a changeset for this change, or one is not required';
+      assert.equal(isChangesetCheckboxTicked(body), true);
+    });
+
+    it('should return false when checkbox is not ticked', () => {
+      const body =
+        '- [ ] There is a changeset for this change, or one is not required';
+      assert.equal(isChangesetCheckboxTicked(body), false);
+    });
+
+    it('should return false when there is no changeset checkbox', () => {
+      const body = '- [x] Some other task\n- [ ] Another task';
+      assert.equal(isChangesetCheckboxTicked(body), false);
+    });
+
+    it('should return true with asterisk list marker', () => {
+      const body =
+        '* [x] There is a changeset for this change, or one is not required';
+      assert.equal(isChangesetCheckboxTicked(body), true);
+    });
+
+    it('should return true with plus list marker', () => {
+      const body =
+        '+ [x] There is a changeset for this change, or one is not required';
+      assert.equal(isChangesetCheckboxTicked(body), true);
+    });
+
+    it('should return true when checkbox is among other items', () => {
+      const body = [
+        '## Checklist',
+        '- [x] Existing or new tests cover this change',
+        '- [x] There is a changeset for this change, or one is not required',
+        '- [ ] Added documentation for any new features',
+      ].join('\n');
+      assert.equal(isChangesetCheckboxTicked(body), true);
+    });
+
+    it('should return false for empty body', () => {
+      assert.equal(isChangesetCheckboxTicked(''), false);
+    });
+  });
+
+  describe('hasNoChangesetAnnotation', () => {
+    it('should return true when [no-changeset] tag is present', () => {
+      assert.equal(
+        hasNoChangesetAnnotation('[no-changeset]: Not needed'),
+        true,
+      );
+    });
+
+    it('should return false when [no-changeset] is inside an HTML comment', () => {
+      assert.equal(
+        hasNoChangesetAnnotation(
+          '<!-- [no-changeset]: Internal refactoring -->',
+        ),
+        false,
+      );
+    });
+
+    it('should return false when [no-changeset] is inside a multi-line HTML comment', () => {
+      assert.equal(
+        hasNoChangesetAnnotation(
+          '<!--\n[no-changeset]: Internal refactoring\n-->',
+        ),
+        false,
+      );
+    });
+
+    it('should return false for the default PR template with commented-out tag', () => {
+      const templateBody = [
+        '## Checklist',
+        '- [ ] There is a changeset for this change, or one is not required',
+        '<!-- If this change does not require a changeset, uncomment the tag and explain why -->',
+        '<!-- [no-changeset]: -->',
+      ].join('\n');
+      assert.equal(hasNoChangesetAnnotation(templateBody), false);
+    });
+
+    it('should return true when [no-changeset] exists both in and outside an HTML comment', () => {
+      const body = [
+        '<!-- [no-changeset]: -->',
+        '[no-changeset]: Actually I do want to skip',
+      ].join('\n');
+      assert.equal(hasNoChangesetAnnotation(body), true);
+    });
+
+    it('should return false when no tag is present', () => {
+      assert.equal(hasNoChangesetAnnotation('Regular PR description'), false);
+    });
+
+    it('should return false for empty body', () => {
+      assert.equal(hasNoChangesetAnnotation(''), false);
+    });
+  });
+
+  describe('changeset checkbox cross-validation', () => {
+    it('should fail with specific message when checkbox is ticked but no changeset file exists', async () => {
+      setupMockFiles(['src/index.js']);
+      setupMockComments([]);
+      setupMockPR(
+        [
+          '## Checklist',
+          '- [x] There is a changeset for this change, or one is not required',
+        ].join('\n'),
+      );
+
+      try {
+        await validateChangesets({
+          octokit: mockOctokit,
+          owner: 'test',
+          repo: 'test',
+          pullNumber: 1,
+        });
+        assert.fail('Expected function to throw');
+      } catch (error) {
+        assert.equal(
+          error.message,
+          'Changeset checkbox is ticked but no changeset file was found',
+        );
+      }
+    });
+
+    it('should pass when checkbox is ticked and changeset file exists', async () => {
+      setupMockFiles(['.changeset/happy-cats-run.md', 'src/index.js']);
+      setupMockComments([]);
+      setupMockPR(
+        [
+          '## Checklist',
+          '- [x] There is a changeset for this change, or one is not required',
+        ].join('\n'),
+      );
+
+      await validateChangesets({
+        octokit: mockOctokit,
+        owner: 'test',
+        repo: 'test',
+        pullNumber: 1,
+      });
+
+      assert.equal(process.exitCode, 0);
+    });
+
+    it('should pass when checkbox is ticked and uncommented [no-changeset] annotation exists', async () => {
+      setupMockFiles(['src/index.js']);
+      setupMockComments([]);
+      setupMockPR(
+        [
+          '## Checklist',
+          '- [x] There is a changeset for this change, or one is not required',
+          '[no-changeset]: Internal refactoring',
+        ].join('\n'),
+      );
+
+      await validateChangesets({
+        octokit: mockOctokit,
+        owner: 'test',
+        repo: 'test',
+        pullNumber: 1,
+      });
+
+      assert.equal(process.exitCode, 0);
+    });
+
+    it('should fail when checkbox is ticked and [no-changeset] is only in an HTML comment', async () => {
+      setupMockFiles(['src/index.js']);
+      setupMockComments([]);
+      setupMockPR(
+        [
+          '## Checklist',
+          '- [x] There is a changeset for this change, or one is not required',
+          '<!-- [no-changeset]: Internal refactoring -->',
+        ].join('\n'),
+      );
+
+      try {
+        await validateChangesets({
+          octokit: mockOctokit,
+          owner: 'test',
+          repo: 'test',
+          pullNumber: 1,
+        });
+        assert.fail('Expected function to throw');
+      } catch (error) {
+        assert.equal(
+          error.message,
+          'Changeset checkbox is ticked but no changeset file was found',
+        );
+      }
+    });
+
+    it('should fail with generic message when checkbox is not ticked and no changeset exists', async () => {
+      setupMockFiles(['src/index.js']);
+      setupMockComments([]);
+      setupMockPR(
+        [
+          '## Checklist',
+          '- [ ] There is a changeset for this change, or one is not required',
+        ].join('\n'),
+      );
+
+      try {
+        await validateChangesets({
+          octokit: mockOctokit,
+          owner: 'test',
+          repo: 'test',
+          pullNumber: 1,
+        });
+        assert.fail('Expected function to throw');
+      } catch (error) {
+        assert.equal(error.message, 'No changeset found in PR');
+      }
+    });
   });
 });

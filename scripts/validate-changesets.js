@@ -146,15 +146,29 @@ async function checkForChangesetFile({octokit, owner, repo, pullNumber}) {
 }
 
 const noChangesetRegex = /\[no-changeset\]/;
+// Matches HTML comments like <!-- ... -->
+const htmlCommentRegex = /<!--[\s\S]*?-->/g;
 
-async function checkForExplanationTag({octokit, owner, repo, pullNumber}) {
+// Matches the changeset checkbox in the PR description checklist.
+// Handles variations like:
+//   - [x] There is a changeset for this change, or one is not required
+//   - [X] There is a changeset for this change, or one is not required
+const changesetCheckboxRegex = /^\s*[-*+]\s+\[[xX]\]\s+.*changeset.*$/m;
+
+async function getPrBody({octokit, owner, repo, pullNumber}) {
   const prDetails = await octokit.rest.pulls.get({
     owner,
     repo,
     pull_number: pullNumber,
   });
 
-  const hasExplanationTag = noChangesetRegex.test(prDetails.data.body);
+  return prDetails.data.body || '';
+}
+
+async function checkForExplanationTag({octokit, owner, repo, pullNumber}) {
+  const body = await getPrBody({octokit, owner, repo, pullNumber});
+
+  const hasExplanationTag = hasNoChangesetAnnotation(body);
 
   if (!hasExplanationTag) {
     debugLog('No explanation tag found in PR description');
@@ -165,18 +179,53 @@ async function checkForExplanationTag({octokit, owner, repo, pullNumber}) {
   return hasExplanationTag;
 }
 
+function isChangesetCheckboxTicked(body) {
+  const isTicked = changesetCheckboxRegex.test(body);
+
+  if (isTicked) {
+    debugLog('Changeset checkbox is ticked in PR description');
+  } else {
+    debugLog('Changeset checkbox is not ticked in PR description');
+  }
+
+  return isTicked;
+}
+
+function hasNoChangesetAnnotation(body) {
+  // Strip HTML comments so that the default PR template's
+  // <!-- [no-changeset]: --> does not produce a false positive.
+  const bodyWithoutComments = body.replace(htmlCommentRegex, '');
+  return noChangesetRegex.test(bodyWithoutComments);
+}
+
 async function enforceChangeset(prOptions) {
   const {octokit, owner, repo, pullNumber} = prOptions;
 
-  const [hasChangeset, hasExplanationTag] = await Promise.all([
+  const [hasChangeset, body] = await Promise.all([
     checkForChangesetFile(prOptions),
-    checkForExplanationTag(prOptions),
+    getPrBody(prOptions),
   ]);
 
-  if (hasChangeset || hasExplanationTag) {
+  const hasExplanation = hasNoChangesetAnnotation(body);
+  const checkboxTicked = isChangesetCheckboxTicked(body);
+
+  // A changeset file exists — the check passes
+  if (hasChangeset) {
     process.exitCode = 0;
     return;
   }
+
+  // No changeset file, but [no-changeset] annotation is present — the check passes
+  if (hasExplanation) {
+    process.exitCode = 0;
+    return;
+  }
+
+  // No changeset file and no [no-changeset] annotation.
+  // Provide a more specific error when the checkbox is ticked.
+  const errorDetail = checkboxTicked
+    ? 'The changeset checkbox is ticked in the PR description, but no changeset file was found in `.changeset/`.'
+    : 'No changeset found in PR.';
 
   await octokit.rest.issues.createComment({
     owner,
@@ -184,12 +233,16 @@ async function enforceChangeset(prOptions) {
     issue_number: pullNumber,
     body: `
 ${generalCommentTitle}
-No changeset found in PR.
-Please add a changeset file (\`yarn changeset\`), or add a '[no-changeset]' tag with explanation to the PR description.
+${errorDetail}
+Please add a changeset file (\`yarn changeset\`), or add a \`[no-changeset]\` tag with explanation to the PR description.
 `.trim(),
   });
 
-  throw new Error('No changeset found in PR');
+  throw new Error(
+    checkboxTicked
+      ? 'Changeset checkbox is ticked but no changeset file was found'
+      : 'No changeset found in PR',
+  );
 }
 
 async function validateChangesets(prOptions) {
@@ -212,11 +265,18 @@ async function validateChangesets(prOptions) {
     return;
   }
 
-  // Otherwise, run both validations
-  await Promise.all([
+  // Otherwise, run both validations.
+  // Use allSettled so both checks run to completion (e.g. both comments get
+  // posted) even if one of them fails.
+  const results = await Promise.allSettled([
     enforceChangeset(prOptions),
     checkRustChanges(rustOptions),
   ]);
+
+  const firstError = results.find((r) => r.status === 'rejected');
+  if (firstError) {
+    throw firstError.reason;
+  }
 }
 
 async function checkRustChanges(prOptions) {
@@ -342,4 +402,6 @@ module.exports = {
   validateChangesets,
   // Keep these for testing purposes
   checkForRustPackageBump,
+  isChangesetCheckboxTicked,
+  hasNoChangesetAnnotation,
 };
