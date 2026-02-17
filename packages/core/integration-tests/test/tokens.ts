@@ -77,6 +77,37 @@ describe('tokens', () => {
     );
   });
 
+  it('should produce a diagnostic with code frame for syntax errors', async () => {
+    try {
+      await bundle(
+        path.join(__dirname, './integration/tokens-syntax-error/index.js'),
+        {
+          outputFS: overlayFS,
+          mode: 'production',
+        },
+      );
+      assert.fail(
+        'Build should have failed due to syntax error in source file',
+      );
+    } catch (error: any) {
+      // The error should be a ThrowableDiagnostic with code frame info,
+      // not a generic "Failed to transform tokens in..." error
+      assert(
+        !error.message?.includes('Failed to transform tokens in'),
+        `Expected a diagnostic error, not a generic catch error. Got: ${error.message}`,
+      );
+      assert(
+        error.diagnostics != null && error.diagnostics.length > 0,
+        `Expected error to have diagnostics array, got: ${JSON.stringify(error)}`,
+      );
+      const diagnostic = error.diagnostics[0];
+      assert(
+        diagnostic.codeFrames != null && diagnostic.codeFrames.length > 0,
+        `Expected diagnostic to have codeFrames, got: ${JSON.stringify(diagnostic)}`,
+      );
+    }
+  });
+
   it.v2(
     'should fail when token() is called with invalid arguments',
     async () => {
