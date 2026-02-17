@@ -45,7 +45,11 @@ pub struct LmdbCache {
 }
 
 impl LmdbCache {
-  pub fn new(db: Arc<lmdb_js_lite::DatabaseHandle>, cache_dir: PathBuf) -> Self {
+  pub fn new(db: Arc<lmdb_js_lite::DatabaseHandle>) -> Self {
+    // The LMDB database is opened at the cache directory path, so we can derive
+    // cache_dir directly from the database handle. This avoids requiring cache_dir
+    // to be threaded through AtlaspackOptions separately.
+    let cache_dir = db.database().path().to_path_buf();
     Self { db, cache_dir }
   }
 }
