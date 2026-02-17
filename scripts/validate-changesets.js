@@ -201,9 +201,10 @@ function hasNoChangesetAnnotation(body) {
 async function enforceChangeset(prOptions) {
   const {octokit, owner, repo, pullNumber} = prOptions;
 
-  const [hasChangeset, body] = await Promise.all([
+  const [hasChangeset, body, commentId] = await Promise.all([
     checkForChangesetFile(prOptions),
     getPrBody(prOptions),
+    getCommentId(prOptions, generalCommentTitle, 'github-actions[bot]'),
   ]);
 
   const hasExplanation = hasNoChangesetAnnotation(body);
@@ -212,12 +213,34 @@ async function enforceChangeset(prOptions) {
   // A changeset file exists — the check passes
   if (hasChangeset) {
     process.exitCode = 0;
+
+    // Clean up any stale error comment from a previous run
+    if (commentId) {
+      await octokit.rest.issues.deleteComment({
+        owner,
+        repo,
+        comment_id: commentId,
+      });
+      debugLog('Changeset found, deleted stale error comment');
+    }
+
     return;
   }
 
   // No changeset file, but [no-changeset] annotation is present — the check passes
   if (hasExplanation) {
     process.exitCode = 0;
+
+    // Clean up any stale error comment from a previous run
+    if (commentId) {
+      await octokit.rest.issues.deleteComment({
+        owner,
+        repo,
+        comment_id: commentId,
+      });
+      debugLog('[no-changeset] tag found, deleted stale error comment');
+    }
+
     return;
   }
 
@@ -227,16 +250,28 @@ async function enforceChangeset(prOptions) {
     ? 'The changeset checkbox is ticked in the PR description, but no changeset file was found in `.changeset/`.'
     : 'No changeset found in PR.';
 
-  await octokit.rest.issues.createComment({
-    owner,
-    repo,
-    issue_number: pullNumber,
-    body: `
+  const commentBody = `
 ${generalCommentTitle}
 ${errorDetail}
 Please add a changeset file (\`yarn changeset\`), or add a \`[no-changeset]\` tag with explanation to the PR description.
-`.trim(),
-  });
+`.trim();
+
+  if (commentId) {
+    // Update existing comment instead of creating a duplicate
+    await octokit.rest.issues.updateComment({
+      owner,
+      repo,
+      comment_id: commentId,
+      body: commentBody,
+    });
+  } else {
+    await octokit.rest.issues.createComment({
+      owner,
+      repo,
+      issue_number: pullNumber,
+      body: commentBody,
+    });
+  }
 
   throw new Error(
     checkboxTicked

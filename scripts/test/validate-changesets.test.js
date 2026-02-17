@@ -528,5 +528,131 @@ This is malformed frontmatter without closing ---`;
         assert.equal(error.message, 'No changeset found in PR');
       }
     });
+
+    it('should delete stale error comment when changeset file is added', async () => {
+      const staleCommentId = 42;
+      setupMockFiles(['.changeset/happy-cats-run.md', 'src/index.js']);
+      setupMockComments([
+        {
+          id: staleCommentId,
+          body: '## Missing Changeset\nNo changeset found in PR.',
+          user: {login: 'github-actions[bot]'},
+        },
+      ]);
+      setupMockPR(
+        [
+          '## Checklist',
+          '- [x] There is a changeset for this change, or one is not required',
+        ].join('\n'),
+      );
+
+      await validateChangesets({
+        octokit: mockOctokit,
+        owner: 'test',
+        repo: 'test',
+        pullNumber: 1,
+      });
+
+      assert.equal(process.exitCode, 0);
+      sinon.assert.calledWith(mockOctokit.rest.issues.deleteComment, {
+        owner: 'test',
+        repo: 'test',
+        comment_id: staleCommentId,
+      });
+    });
+
+    it('should delete stale error comment when [no-changeset] annotation is added', async () => {
+      const staleCommentId = 99;
+      setupMockFiles(['src/index.js']);
+      setupMockComments([
+        {
+          id: staleCommentId,
+          body: '## Missing Changeset\nNo changeset found in PR.',
+          user: {login: 'github-actions[bot]'},
+        },
+      ]);
+      setupMockPR(
+        [
+          '## Checklist',
+          '- [x] There is a changeset for this change, or one is not required',
+          '[no-changeset]: Internal refactoring',
+        ].join('\n'),
+      );
+
+      await validateChangesets({
+        octokit: mockOctokit,
+        owner: 'test',
+        repo: 'test',
+        pullNumber: 1,
+      });
+
+      assert.equal(process.exitCode, 0);
+      sinon.assert.calledWith(mockOctokit.rest.issues.deleteComment, {
+        owner: 'test',
+        repo: 'test',
+        comment_id: staleCommentId,
+      });
+    });
+
+    it('should update existing error comment instead of creating a duplicate when validation still fails', async () => {
+      const existingCommentId = 77;
+      setupMockFiles(['src/index.js']);
+      setupMockComments([
+        {
+          id: existingCommentId,
+          body: '## Missing Changeset\nNo changeset found in PR.',
+          user: {login: 'github-actions[bot]'},
+        },
+      ]);
+      setupMockPR(
+        [
+          '## Checklist',
+          '- [x] There is a changeset for this change, or one is not required',
+        ].join('\n'),
+      );
+
+      try {
+        await validateChangesets({
+          octokit: mockOctokit,
+          owner: 'test',
+          repo: 'test',
+          pullNumber: 1,
+        });
+        assert.fail('Expected function to throw');
+      } catch (error) {
+        assert.equal(
+          error.message,
+          'Changeset checkbox is ticked but no changeset file was found',
+        );
+        sinon.assert.notCalled(mockOctokit.rest.issues.createComment);
+        sinon.assert.calledWith(mockOctokit.rest.issues.updateComment, {
+          owner: 'test',
+          repo: 'test',
+          comment_id: existingCommentId,
+          body: sinon.match.string,
+        });
+      }
+    });
+
+    it('should not call deleteComment when there is no stale comment', async () => {
+      setupMockFiles(['.changeset/happy-cats-run.md', 'src/index.js']);
+      setupMockComments([]);
+      setupMockPR(
+        [
+          '## Checklist',
+          '- [x] There is a changeset for this change, or one is not required',
+        ].join('\n'),
+      );
+
+      await validateChangesets({
+        octokit: mockOctokit,
+        owner: 'test',
+        repo: 'test',
+        pullNumber: 1,
+      });
+
+      assert.equal(process.exitCode, 0);
+      sinon.assert.notCalled(mockOctokit.rest.issues.deleteComment);
+    });
   });
 });
