@@ -1,0 +1,14 @@
+{
+  "name": "tokens-syntax-error",
+  "dependencies": {
+    "react": "*",
+    "react-dom": "*"
+  },
+  "devDependencies": {
+    "@atlaskit/tokens": "*",
+    "@atlaspack/transformer-tokens": "*"
+  },
+  "@atlaspack/transformer-tokens": {
+    "tokenDataPath": "../tokens/token-data.json5"
+  }
+}
