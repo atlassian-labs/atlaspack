@@ -22,6 +22,16 @@ import {createPackageRequest} from './PackageRequest';
 import createWriteBundleRequest from './WriteBundleRequest';
 import {debugTools} from '@atlaspack/utils';
 
+/** Length of the hash suffix in output filenames (e.g. .runtime.13dc01ac.js). */
+const NAME_HASH_DISPLAY_LEN = 8;
+
+/** Use at most NAME_HASH_DISPLAY_LEN chars for the name hash so filenames stay short. */
+function nameHashForFilename(hash: string): string {
+  return hash.length <= NAME_HASH_DISPLAY_LEN
+    ? hash
+    : hash.slice(-NAME_HASH_DISPLAY_LEN);
+}
+
 type WriteBundlesRequestInput = {
   bundleGraph: BundleGraph;
   optionsRef: SharedReference;
@@ -111,12 +121,12 @@ async function run({
       // Do not package and write placeholder bundles to disk. We just
       // need to update the name so other bundles can reference it.
       if (bundle.isPlaceholder) {
-        let hash = bundle.id.slice(-8);
-        hashRefToNameHash.set(bundle.hashReference, hash);
+        const nameHash = nameHashForFilename(bundle.id);
+        hashRefToNameHash.set(bundle.hashReference, nameHash);
         let name = nullthrows(
           bundle.name,
           `Expected ${bundle.type} bundle to have a name`,
-        ).replace(bundle.hashReference, hash);
+        ).replace(bundle.hashReference, nameHash);
         res.set(bundle.id, {
           filePath: joinProjectPath(bundle.target.distDir, name),
           bundleId: bundle.id,
@@ -178,9 +188,9 @@ async function run({
         if (!info.hashReferences.length) {
           hashRefToNameHash.set(
             bundle.hashReference,
-            options.shouldContentHash
-              ? info.hash.slice(-8)
-              : bundle.id.slice(-8),
+            nameHashForFilename(
+              options.shouldContentHash ? info.hash : bundle.id,
+            ),
           );
           let writeBundleRequest = createWriteBundleRequest({
             bundle,
@@ -256,13 +266,15 @@ function assignComplexNameHashes(
     }
     hashRefToNameHash.set(
       bundle.hashReference,
-      options.shouldContentHash
-        ? hashString(
-            [...getBundlesIncludedInHash(bundle.id, bundleInfoMap)]
-              .map((bundleId) => bundleInfoMap[bundleId].hash)
-              .join(':'),
-          ).slice(-8)
-        : bundle.id.slice(-8),
+      nameHashForFilename(
+        options.shouldContentHash
+          ? hashString(
+              [...getBundlesIncludedInHash(bundle.id, bundleInfoMap)]
+                .map((bundleId) => bundleInfoMap[bundleId].hash)
+                .join(':'),
+            )
+          : bundle.id,
+      ),
     );
   }
 }
