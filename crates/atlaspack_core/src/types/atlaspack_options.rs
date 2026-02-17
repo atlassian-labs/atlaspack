@@ -21,6 +21,11 @@ use super::engines::Engines;
 pub struct AtlaspackOptions {
   pub config: Option<String>,
 
+  /// Path to the cache directory where intermediate build artifacts are stored.
+  /// This should typically be set to `.parcel-cache` relative to the project root,
+  /// but consumers have full control over this location.
+  pub cache_dir: PathBuf,
+
   /// Path to the atlaspack core node_module. This will be used to resolve built-ins or runtime files.
   ///
   /// In the future this may be replaced with embedding those files into the rust binary.
