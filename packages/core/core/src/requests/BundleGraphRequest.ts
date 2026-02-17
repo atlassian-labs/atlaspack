@@ -214,6 +214,12 @@ export default function createBundleGraphRequest(
 
       if (subRequestsInvalid) {
         assetGraph.safeToIncrementallyBundle = false;
+        report({
+          type: 'log',
+          level: 'progress',
+          message:
+            '[BundleGraphRequest] safeToIncrementallyBundle = false (subrequests invalid or option change)',
+        });
         assetGraph.setNeedsBundling();
       }
 
@@ -352,7 +358,35 @@ class BundlerRunner {
 
     if (graph.safeToIncrementallyBundle && previousBundleGraphResult == null) {
       graph.safeToIncrementallyBundle = false;
+      report({
+        type: 'log',
+        level: 'progress',
+        message:
+          '[BundleGraphRequest] safeToIncrementallyBundle = false (no previous bundle graph result)',
+      });
       graph.setNeedsBundling();
+    }
+
+    function getRebuildReason(): string {
+      if (previousBundleGraphResult == null) {
+        return 'no previous bundle graph result (first build or cache miss)';
+      }
+      if (previousBundleGraphResult.assetGraphBundlingVersion == null) {
+        return 'previous result has no assetGraphBundlingVersion';
+      }
+      if (!graph.safeToIncrementallyBundle) {
+        return 'incremental bundling disabled (e.g. production mode or invalidated subrequests)';
+      }
+      if (
+        graph.getBundlingVersion() !==
+        previousBundleGraphResult.assetGraphBundlingVersion
+      ) {
+        return `bundling version mismatch (current: ${graph.getBundlingVersion()}, previous: ${previousBundleGraphResult.assetGraphBundlingVersion})`;
+      }
+      if (graph.testing_getDisableIncrementalBundling?.() === true) {
+        return 'incremental bundling disabled on asset graph (e.g. production mode)';
+      }
+      return 'unknown';
     }
 
     let internalBundleGraph;
@@ -364,6 +398,12 @@ class BundlerRunner {
     });
     try {
       if (canIncrementallyBundle && previousBundleGraphResult) {
+        report({
+          type: 'log',
+          level: 'progress',
+          message: `[BundleGraphRequest] Updated bundle graph incrementally (${changedAssets.size} changed asset(s))`,
+        });
+
         internalBundleGraph = previousBundleGraphResult.bundleGraph;
         for (let changedAssetId of changedAssets.keys()) {
           // Copy over the whole node to also have correct symbol data
@@ -374,6 +414,12 @@ class BundlerRunner {
           internalBundleGraph.updateAsset(changedAssetNode);
         }
       } else {
+        report({
+          type: 'log',
+          level: 'progress',
+          message: `[BundleGraphRequest] Rebuilt bundle graph from scratch (${getRebuildReason()})`,
+        });
+
         internalBundleGraph = InternalBundleGraph.fromAssetGraph(
           graph,
           this.options.mode === 'production',

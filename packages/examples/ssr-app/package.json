@@ -5,9 +5,12 @@
   "private": true,
   "scripts": {
     "build": "rm -rf dist && atlaspack build src/index.js src/index2.js --target ssr",
+    "dev": "atlaspack watch src/index.js src/index2.js --target ssr",
     "clean": "rm -rf dist .parcel-cache",
     "build:native": "rm -rf dist && ATLASPACK_TRACING_MODE=\"stdout\" RUST_LOG=\"atlaspack=debug,atlaspack_resolver=info\" RUST_BACKTRACE=1 atlaspack build --feature-flag nativePackager=true --feature-flag nativePackagerSSRDev=true --target ssr src/index.js src/index2.js",
     "build:native-src": "rm -rf dist && ATLASPACK_REGISTER_USE_SRC=true ATLASPACK_SOURCES=true ATLASPACK_TRACING_MODE=\"stdout\" RUST_LOG=\"atlaspack=debug,atlaspack_resolver=info\" RUST_BACKTRACE=1 ../../core/cli/bin/atlaspack.js build --no-cache --feature-flag nativePackager=true --feature-flag nativePackagerSSRDev=true --target ssr src/index.js src/index2.js",
+    "dev:native": "rm -rf dist && ATLASPACK_TRACING_MODE=\"stdout\" RUST_LOG=\"atlaspack=debug,atlaspack_resolver=info\" RUST_BACKTRACE=1 atlaspack watch --feature-flag nativePackager=true --feature-flag nativePackagerSSRDev=true --target ssr src/index.js src/index2.js",
+    "dev:native-src": "rm -rf dist && ATLASPACK_REGISTER_USE_SRC=true ATLASPACK_SOURCES=true ATLASPACK_TRACING_MODE=\"stdout\" RUST_LOG=\"atlaspack=debug,atlaspack_resolver=info\" RUST_BACKTRACE=1 ../../core/cli/bin/atlaspack.js watch --no-cache --feature-flag nativePackager=true --feature-flag nativePackagerSSRDev=true --target ssr src/index.js src/index2.js",
     "start": "atlas tesseract run --use-snapvm",
     "viewer": "node server.js",
     "validate": "node validate.js"
