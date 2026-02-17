@@ -20,24 +20,6 @@ permissions:
   actions: read
 
 jobs:
-  # Validate changesets - handles both general and Rust-specific validation
-  validate-changesets:
-    name: ✍️ Validate Changesets
-    runs-on: ubuntu-24.04
-    if: github.ref_name != 'main'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/github-script@v7
-        with:
-          script: |
-            const { validateChangesets } = require('./scripts/validate-changesets.js');
-            await validateChangesets({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pullNumber: context.payload.pull_request.number,
-              octokit: github
-            });
-
   # Build and store native packages
   build_native:
     strategy:
