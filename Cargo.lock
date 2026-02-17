@@ -549,7 +549,6 @@ dependencies = [
  "derivative",
  "derive_builder",
  "dyn-hash",
- "lmdb-js-lite",
  "mockall",
  "nodejs-semver",
  "petgraph",

@@ -37,29 +37,21 @@ pub fn get_file_key(cache_dir: &Path, key: &str) -> PathBuf {
   cache_dir.join("files").join(clean_key)
 }
 
-/// A cache implementation backed by LMDB for small blobs and the filesystem for large blobs.
-/// Mirrors the behaviour of LMDBLiteCache in JavaScript.
-pub struct LmdbCache {
-  db: Arc<lmdb_js_lite::DatabaseHandle>,
+/// A filesystem-only cache implementation.
+/// Stores all blobs on the filesystem under `{cache_dir}/files/{key}`.
+pub struct FsCache {
   cache_dir: PathBuf,
 }
 
-impl LmdbCache {
-  pub fn new(db: Arc<lmdb_js_lite::DatabaseHandle>) -> Self {
-    // The LMDB database is opened at the cache directory path, so we can derive
-    // cache_dir directly from the database handle. This avoids requiring cache_dir
-    // to be threaded through AtlaspackOptions separately.
-    let cache_dir = db.database().path().to_path_buf();
-    Self { db, cache_dir }
+impl FsCache {
+  pub fn new(cache_dir: PathBuf) -> Self {
+    Self { cache_dir }
   }
 }
 
-impl Cache for LmdbCache {
+impl Cache for FsCache {
   fn set_blob(&self, key: &str, blob: &[u8]) -> anyhow::Result<()> {
-    let mut write_txn = self.db.database().write_txn()?;
-    self.db.database().put(&mut write_txn, key, blob)?;
-    write_txn.commit()?;
-    Ok(())
+    self.set_large_blob(key, blob)
   }
 
   fn set_large_blob(&self, key: &str, blob: &[u8]) -> anyhow::Result<()> {

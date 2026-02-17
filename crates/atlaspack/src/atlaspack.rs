@@ -296,7 +296,7 @@ impl Atlaspack {
     let packager = JsPackager::new(
       atlaspack_packager_js::PackagingContext {
         db: Arc::clone(&self.db),
-        cache: Arc::new(atlaspack_core::cache::LmdbCache::new(Arc::clone(&self.db))),
+        cache: Arc::new(crate::cache::LmdbCache::new(Arc::clone(&self.db))),
         project_root: self.project_root.clone(),
         debug_tools: self.debug_tools.clone(),
       },
