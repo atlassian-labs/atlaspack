@@ -196,6 +196,7 @@ export default class Atlaspack {
         ...options,
         // @ts-expect-error TS2353
         corePath: path.join(__dirname, '..'),
+        cacheDir: resolvedOptions.cacheDir,
         threads,
         entries: Array.isArray(entries)
           ? entries
