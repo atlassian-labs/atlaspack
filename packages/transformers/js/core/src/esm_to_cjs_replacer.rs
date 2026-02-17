@@ -100,6 +100,7 @@ impl EsmToCjsReplacer {
         init: Some(Box::new(Expr::Call(crate::utils::create_require(
           src,
           self.unresolved_mark,
+          Some(span),
         )))),
         definite: false,
       }],
@@ -582,6 +583,7 @@ impl VisitMut for EsmToCjsReplacer {
             init: Some(Box::new(Expr::Call(crate::utils::create_require(
               "@atlaspack/transformer-js/src/esmodule-helpers.js".into(),
               self.unresolved_mark,
+              None,
             )))),
             definite: false,
           }],

@@ -30,7 +30,6 @@ import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
 import {Readable} from 'stream';
 import nullthrows from 'nullthrows';
 import path from 'path';
-import url from 'url';
 import {hashString, hashBuffer, Hash} from '@atlaspack/rust';
 
 import {NamedBundle, bundleToInternalBundle} from './public/Bundle';
@@ -60,6 +59,7 @@ import {
 import {getInvalidationId, getInvalidationHash} from './assetUtils';
 import {optionsProxy} from './utils';
 import {invalidateDevDeps} from './requests/DevDepRequest';
+import {computeSourceMapRoot} from './requests/WriteBundleRequest';
 import {tracer, PluginTracer} from '@atlaspack/profiler';
 import {fromEnvironmentId} from './EnvironmentManager';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
@@ -590,64 +590,24 @@ export default class PackagerRunner {
     bundle: InternalBundle,
     map: SourceMap,
   ): Promise<string> {
-    // sourceRoot should be a relative path between outDir and rootDir for node.js targets
+    let sourceRoot = computeSourceMapRoot(bundle, this.options);
+    let inlineSources = sourceRoot === undefined;
+
     let filePath = joinProjectPath(
       bundle.target.distDir,
       nullthrows(bundle.name),
     );
     let fullPath = fromProjectPath(this.options.projectRoot, filePath);
-    let sourceRoot: string = path.relative(
-      path.dirname(fullPath),
-      this.options.projectRoot,
-    );
-    let inlineSources = false;
+    let mapFilename = fullPath + '.map';
 
     const bundleEnv = fromEnvironmentId(bundle.env);
-    if (bundle.target) {
-      const bundleTargetEnv = fromEnvironmentId(bundle.target.env);
-
-      if (bundleEnv.sourceMap && bundleEnv.sourceMap.sourceRoot !== undefined) {
-        sourceRoot = bundleEnv.sourceMap.sourceRoot;
-      } else if (
-        this.options.serveOptions &&
-        bundleTargetEnv.context === 'browser'
-      ) {
-        sourceRoot = '/__parcel_source_root';
-      }
-
-      if (
-        bundleEnv.sourceMap &&
-        bundleEnv.sourceMap.inlineSources !== undefined
-      ) {
-        inlineSources = bundleEnv.sourceMap.inlineSources;
-      } else if (bundleTargetEnv.context !== 'node') {
-        // inlining should only happen in production for browser targets by default
-        inlineSources = this.options.mode === 'production';
-      }
-    }
-
-    let mapFilename = fullPath + '.map';
     let isInlineMap = bundleEnv.sourceMap && bundleEnv.sourceMap.inline;
-
-    if (getFeatureFlag('omitSourcesContentInMemory') && !isInlineMap) {
-      if (
-        !(bundleEnv.sourceMap && bundleEnv.sourceMap.inlineSources === false)
-      ) {
-        /*
-          We're omitting sourcesContent during transformation to allow GC to run.
-          Ensure sources are still inlined into the final source maps written to disk. UNLESS the user explicitly disabled inlineSources.
-        */
-        inlineSources = true;
-      }
-    }
 
     let stringified = await map.stringify({
       file: path.basename(mapFilename),
       fs: this.options.inputFS,
       rootDir: this.options.projectRoot,
-      sourceRoot: !inlineSources
-        ? url.format(url.parse(sourceRoot + '/'))
-        : undefined,
+      sourceRoot,
       inlineSources,
       format: isInlineMap ? 'inline' : 'string',
     });

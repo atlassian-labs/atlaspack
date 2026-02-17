@@ -270,7 +270,7 @@ export default new Transformer<Config>({
 
     assert(result?.ast, 'Babel transform returned no AST');
 
-    const {code: generatedCode, rawMappings} = generate(result.ast.program, {
+    let {code: generatedCode, rawMappings} = generate(result.ast.program, {
       sourceFileName,
       sourceMaps: !!asset.env.sourceMap,
       comments: true,
@@ -292,15 +292,13 @@ export default new Transformer<Config>({
     }
 
     if (originalSourceMap) {
-      // The babel AST already contains the correct mappings, but not the source contents.
-      // We need to copy over the source contents from the original map.
-      const sourcesContent = originalSourceMap.getSourcesContentMap();
-      for (const filePath in sourcesContent) {
-        const content = sourcesContent[filePath];
-        if (content != null) {
-          map.setSourceContent(filePath, content);
-        }
-      }
+      // Compose the new mappings (generated → intermediate) with the previous map
+      // (intermediate → original) so the final map traces back to the original source.
+      map.extends(originalSourceMap);
+    }
+
+    if (asset.env.sourceMap) {
+      asset.setMap(map);
     }
 
     return [asset];

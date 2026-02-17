@@ -58,13 +58,16 @@ impl MappingLine {
     {
       Ok(index) => index,
       Err(index) => {
-        if index == 0 || index == self.mappings.len() {
+        if index == 0 {
+          // Before all mappings on this line — return the first mapping
           return Some(LineMapping {
             generated_column: 0,
             original: self.mappings[0].original,
           });
         }
 
+        // Between mappings or past all mappings (index == len):
+        // return the previous segment, which covers this column range.
         index - 1
       }
     };

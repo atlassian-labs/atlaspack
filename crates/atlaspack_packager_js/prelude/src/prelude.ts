@@ -16,12 +16,18 @@ export interface AtlaspackPrelude {
 }
 
 const globalObject = globalThis ?? global ?? window ?? this ?? {};
-declare const MODE: 'dev' | 'prod';
+declare const MODE: 'debug' | 'dev' | 'prod';
 
 let registry: Record<string, ModuleFactory> = {};
 let modules: Record<string, Module> = {};
+
+// Debug-only: tracks the current require call chain
+const requireStack: string[] = MODE === 'debug' ? [] : (undefined as unknown as string[]);
+
 const require = (id: string): ModuleExports => {
   if (modules[id]) {
+    // eslint-disable-next-line no-console
+    MODE === 'debug' && console.log(`${' '.repeat(requireStack.length)}require(${id})`);
     return modules[id].exports;
   }
   const module: Module = {exports: {}};
@@ -32,13 +38,38 @@ const require = (id: string): ModuleExports => {
     e.code = 'MODULE_NOT_FOUND';
     throw e;
   }
-  registry[id].call(
-    module.exports,
-    require,
-    module,
-    module.exports,
-    globalObject,
-  );
+  // eslint-disable-next-line no-console
+  MODE === 'debug' && console.log(`${' '.repeat(requireStack.length)}require(${id})::factory`);
+  if (MODE === 'debug') {
+    requireStack.push(id);
+    try {
+      registry[id].call(
+        module.exports,
+        require,
+        module,
+        module.exports,
+        globalObject,
+      );
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error(`\nRequire stack trace (module that threw listed first):`);
+      for (let i = requireStack.length - 1; i >= 0; i--) {
+        // eslint-disable-next-line no-console
+        console.error(`  ${i === requireStack.length - 1 ? '>' : ' '} ${requireStack[i]}`);
+      }
+      throw e;
+    } finally {
+      requireStack.pop();
+    }
+  } else {
+    registry[id].call(
+      module.exports,
+      require,
+      module,
+      module.exports,
+      globalObject,
+    );
+  }
   return module.exports;
 };
 const define = (id: string, factory: ModuleFactory): void => {
