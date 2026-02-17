@@ -1,36 +1,27 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 use atlaspack_core::{
   bundle_graph::bundle_graph::BundleGraph,
-  debug_tools::DebugTools,
   hash::{hash_bytes, hash_string},
   types::{Asset, Bundle, OutputFormat},
   version::atlaspack_rust_version,
 };
-use lmdb_js_lite::DatabaseHandle;
 use parking_lot::RwLock;
 use pathdiff::diff_paths;
 use rayon::prelude::*;
 
 use atlaspack_core::package_result::{BundleInfo, CacheKeyMap, PackageResult};
 
-use super::JsPackager;
 use super::process_asset::rewrite_asset_code;
+use super::{JsPackager, PackagingContext};
 
 type PackagedAsset<'a> = (&'a Asset, String);
 
 impl<B: BundleGraph + Send + Sync> JsPackager<B> {
-  pub fn new(
-    db: Arc<DatabaseHandle>,
-    bundle_graph: Arc<RwLock<B>>,
-    project_root: PathBuf,
-    debug_tools: DebugTools,
-  ) -> Self {
+  pub fn new(context: PackagingContext, bundle_graph: Arc<RwLock<B>>) -> Self {
     Self {
-      db,
+      context,
       bundle_graph,
-      project_root,
-      debug_tools,
     }
   }
 
@@ -47,8 +38,8 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       .par_iter()
       .map(|asset| {
         let span = tracing::trace_span!("read_code", asset_id = asset.id).entered();
-        let txn = self.db.database().read_txn()?;
-        let code = self.db.database().get(
+        let txn = self.context.db.database().read_txn()?;
+        let code = self.context.db.database().get(
           &txn,
           asset
             .content_key
@@ -79,16 +70,12 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       atlaspack_rust_version()
     );
 
-    let mut write_txn = self.db.database().write_txn()?;
+    // Write bundle content to filesystem cache instead of LMDB.
+    // Large blobs are stored on the filesystem to avoid bloating LMDB.
     self
-      .db
-      .database()
-      .put(&mut write_txn, &content_cache_key, bundle_contents)?;
-
-    // As the "info" object needs to be read from JS, it needs to be serialized by JS - for now
-    // we return it to JS and write it to LMDB there..
-
-    write_txn.commit()?;
+      .context
+      .cache
+      .set_large_blob(&content_cache_key, bundle_contents)?;
 
     Ok(PackageResult {
       bundle_info: BundleInfo {
@@ -102,7 +89,7 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
           map: "TODO".to_string(), // Has to exist for JS, but won't be found in LMDB
           info: info_cache_key,
         },
-        is_large_blob: false,
+        is_large_blob: true, // Always true for native packager - content is on filesystem
         time: Some(0),
       },
       config_requests: vec![],
@@ -168,14 +155,14 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       .to_string();
 
     // Only add comments if debug flag is enabled
-    let comment = if self.debug_tools.asset_file_names_in_output {
+    let comment = if self.context.debug_tools.asset_file_names_in_output {
       // Show file path for real files (e.g. node_modules inside or outside project root).
       // Skip path for virtual/generated assets.
       let file_path_comment = if asset.is_virtual {
         String::new()
       } else {
         // Relative to project root (use .. when outside, e.g. node_modules above project).
-        let display_path = diff_paths(&asset.file_path, &self.project_root)
+        let display_path = diff_paths(&asset.file_path, &self.context.project_root)
           .unwrap_or_else(|| asset.file_path.clone());
         display_path
           .to_str()
@@ -240,7 +227,7 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       .join("\n");
 
     // For now we just always use the dev prelude
-    let prelude_string = match self.debug_tools.debug_prelude {
+    let prelude_string = match self.context.debug_tools.debug_prelude {
       true => include_str!("../prelude/lib/prelude.debug.js"),
       false => include_str!("../prelude/lib/prelude.dev.js"),
     };

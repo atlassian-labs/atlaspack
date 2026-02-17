@@ -41,6 +41,7 @@ pub struct Atlaspack {
   pub fs: FileSystemRef,
   pub options: AtlaspackOptions,
   pub project_root: PathBuf,
+  pub cache_dir: PathBuf,
   pub rpc: RpcFactoryRef,
   pub rpc_worker: RpcWorkerRef,
   pub runtime: Runtime,
@@ -169,11 +170,14 @@ impl Atlaspack {
 
     let debug_tools = DebugTools::from_env();
 
+    let cache_dir = resolved_options.cache_dir.clone();
+
     Ok(Self {
       db,
       fs,
       options: resolved_options,
       project_root,
+      cache_dir,
       rpc,
       rpc_worker,
       runtime,
@@ -294,10 +298,16 @@ impl Atlaspack {
     // This possibly could be persistent between pacakges? But right now with SSR builds only we're talking about a few packages at most
     // so we can worry about that refactor later.
     let packager = JsPackager::new(
-      Arc::clone(&self.db),
+      atlaspack_packager_js::PackagingContext {
+        db: Arc::clone(&self.db),
+        cache: Arc::new(atlaspack_core::cache::LmdbCache::new(
+          Arc::clone(&self.db),
+          self.cache_dir.clone(),
+        )),
+        project_root: self.project_root.clone(),
+        debug_tools: self.debug_tools.clone(),
+      },
       Arc::clone(&self.bundle_graph),
-      self.project_root.clone(),
-      self.debug_tools.clone(),
     );
     packager.package(&bundle_id)
   }

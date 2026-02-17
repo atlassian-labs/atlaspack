@@ -27,6 +27,14 @@ impl FileSystem for OsFileSystem {
     std::fs::create_dir_all(path)
   }
 
+  fn create_dir_all(&self, path: &Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(path)
+  }
+
+  fn write(&self, path: &Path, contents: &[u8]) -> std::io::Result<()> {
+    std::fs::write(path, contents)
+  }
+
   fn read(&self, path: &Path) -> std::io::Result<Vec<u8>> {
     std::fs::read(path)
   }
