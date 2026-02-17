@@ -39,7 +39,8 @@ define_feature_flags!(JsTransformerFlags, {
   exportsRebindingOptimisation,
   hmrImprovements,
   nestedPromiseImportFix,
-  newJsxConfig
+  newJsxConfig,
+  syncDynamicImportRejectWithError
 });
 
 #[derive(Clone, Hash)]
@@ -326,7 +327,7 @@ impl AtlaspackJsTransformerPlugin {
           let fallback = SyncDynamicImportConfig {
             entrypoint_filepath_suffix: "__NO_MATCH__".into(),
             actual_require_paths: vec![],
-            activate_reject_on_unresolved_imports: false,
+            sync_require_paths: vec![],
           };
 
           Some(fallback)
@@ -671,6 +672,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       enable_dead_returns_removal,
       enable_unused_bindings_removal,
       sync_dynamic_import_config,
+      sync_dynamic_import_reject_with_error: self.feature_flags.syncDynamicImportRejectWithError(),
       enable_tokens_and_compiled_css_in_js_transform: self.tokens_config.is_some()
         || self.compiled_css_in_js_config.is_some(),
       tokens_config: self.tokens_config.clone(),
