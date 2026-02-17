@@ -152,6 +152,7 @@ impl Bundler for IdealGraphBundler {
         &target,
         entry_dep,
         &mut materialized_bundle_nodes,
+        asset_graph,
       )?;
 
       // Wire up: root -> bundle_group, entry_dep -> bundle_group, bundle_group -> bundle.
@@ -221,6 +222,7 @@ impl Bundler for IdealGraphBundler {
         &default_target,
         default_entry_dep,
         &mut materialized_bundle_nodes,
+        asset_graph,
       )?;
 
       // Create a bundle group only for async boundary bundles (not shared bundles, and not
@@ -257,11 +259,6 @@ impl Bundler for IdealGraphBundler {
           }
         }
 
-        bundle_graph.add_edge(
-          &root_node_id,
-          &bundle_group_node_id,
-          NativeBundleGraphEdgeType::Bundle,
-        );
         bundle_graph.add_edge(
           &bundle_group_node_id,
           &bundle_node_id,
@@ -625,6 +622,7 @@ fn materialize_ideal_bundle(
   target: &atlaspack_core::types::Target,
   _entry_dep: &atlaspack_core::types::Dependency,
   materialized: &mut std::collections::HashMap<types::IdealBundleId, usize>,
+  asset_graph: &AssetGraph,
 ) -> anyhow::Result<usize> {
   use atlaspack_core::hash::hash_string;
   use atlaspack_core::types::Bundle;
@@ -646,6 +644,19 @@ fn materialize_ideal_bundle(
   let entry_asset_id = ideal_bundle.root_asset_id.clone();
   let is_shared_bundle = entry_asset_id.is_none();
 
+  // Determine is_splittable from the root asset's `is_bundle_splittable` property.
+  // This matches the JS bundler's behavior where `isSplittable` is set from
+  // `entryAsset.isBundleSplittable`. Shared bundles (no root asset) default to true
+  // since they are always splittable.
+  let is_splittable = entry_asset_id
+    .as_ref()
+    .and_then(|id| {
+      let node_id = asset_graph.get_node_id_by_content_key(id)?;
+      let asset = asset_graph.get_asset(node_id)?;
+      Some(asset.is_bundle_splittable)
+    })
+    .unwrap_or(true);
+
   let bundle = Bundle {
     id: bundle_id.clone(),
     public_id: None,
@@ -665,7 +676,7 @@ fn materialize_ideal_bundle(
       ideal_bundle.needs_stable_name
     }),
     bundle_behavior: ideal_bundle.behavior,
-    is_splittable: Some(false),
+    is_splittable: Some(is_splittable),
     manual_shared_bundle: None,
     name: None,
     pipeline: None,
@@ -2399,6 +2410,101 @@ mod tests {
       edges: {
         "entry.js" lazy "page.js",
         "page.js" lazy "dialog.js",
+      },
+    });
+  }
+
+  #[test]
+  fn deep_async_chain_shared_absorbed_into_first_root() {
+    // entry -> lazy a; a -> sync shared, lazy b; b -> lazy c; c -> sync shared
+    //
+    // shared.js is sync-reachable from both a and c (two async roots).
+    // Availability propagates through the async chain: entry -> a -> b -> c.
+    // Since a's bundle contains shared.js, it becomes available to b and then c
+    // via ancestor_assets. This means c does NOT need its own copy of shared.js,
+    // reducing the eligible roots to just [a]. shared.js is therefore absorbed
+    // directly into a's bundle rather than being extracted into a shared bundle.
+    //
+    // This matches the JS bundler's behavior, verified by the integration test
+    // "Deep async chain: Entry → async A → async B → async C, with a module shared by A and C".
+    let asset_graph = fixture_graph(
+      &["entry.js"],
+      &[
+        EdgeSpec::new("entry.js", "a.js", Priority::Lazy),
+        EdgeSpec::new("a.js", "shared.js", Priority::Sync),
+        EdgeSpec::new("a.js", "b.js", Priority::Lazy),
+        EdgeSpec::new("b.js", "c.js", Priority::Lazy),
+        EdgeSpec::new("c.js", "shared.js", Priority::Sync),
+      ],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js"],
+        "a.js"     => ["a.js", "shared.js"],
+        "b.js"     => ["b.js"],
+        "c.js"     => ["c.js"],
+      },
+      edges: {
+        "entry.js" lazy "a.js",
+        "a.js" lazy "b.js",
+        "b.js" lazy "c.js",
+      },
+    });
+  }
+
+  #[test]
+  fn many_async_roots_with_overlapping_shared_subsets() {
+    // 4 async roots with pairwise-shared modules creating 4 distinct shared bundles
+    let asset_graph = fixture_graph(
+      &["entry.js"],
+      &[
+        EdgeSpec::new("entry.js", "a.js", Priority::Lazy),
+        EdgeSpec::new("entry.js", "b.js", Priority::Lazy),
+        EdgeSpec::new("entry.js", "c.js", Priority::Lazy),
+        EdgeSpec::new("entry.js", "d.js", Priority::Lazy),
+        EdgeSpec::new("a.js", "shared_ab.js", Priority::Sync),
+        EdgeSpec::new("a.js", "shared_ac.js", Priority::Sync),
+        EdgeSpec::new("b.js", "shared_ab.js", Priority::Sync),
+        EdgeSpec::new("b.js", "shared_bd.js", Priority::Sync),
+        EdgeSpec::new("c.js", "shared_ac.js", Priority::Sync),
+        EdgeSpec::new("c.js", "shared_cd.js", Priority::Sync),
+        EdgeSpec::new("d.js", "shared_bd.js", Priority::Sync),
+        EdgeSpec::new("d.js", "shared_cd.js", Priority::Sync),
+      ],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js"],
+        "a.js"     => ["a.js"],
+        "b.js"     => ["b.js"],
+        "c.js"     => ["c.js"],
+        "d.js"     => ["d.js"],
+        shared(ab) => ["shared_ab.js"],
+        shared(ac) => ["shared_ac.js"],
+        shared(bd) => ["shared_bd.js"],
+        shared(cd) => ["shared_cd.js"],
+      },
+      edges: {
+        "entry.js" lazy "a.js",
+        "entry.js" lazy "b.js",
+        "entry.js" lazy "c.js",
+        "entry.js" lazy "d.js",
+        "a.js" sync shared(ab),
+        "a.js" sync shared(ac),
+        "b.js" sync shared(ab),
+        "b.js" sync shared(bd),
+        "c.js" sync shared(ac),
+        "c.js" sync shared(cd),
+        "d.js" sync shared(bd),
+        "d.js" sync shared(cd),
       },
     });
   }
