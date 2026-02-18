@@ -6,6 +6,7 @@ import {
   atlaspackNapiCompleteSession,
   atlaspackNapiLoadBundleGraph,
   atlaspackNapiPackage,
+  atlaspackNapiUpdateBundleGraph,
   AtlaspackNapi,
   Lmdb,
   AtlaspackNapiOptions,
@@ -116,6 +117,17 @@ export class AtlaspackV3 {
       edges,
       publicIdByAssetId,
       environmentsJson,
+    ) as Promise<void>;
+  }
+
+  updateBundleGraph(
+    bundleGraph: BundleGraph,
+    changedAssetIds: string[],
+  ): Promise<void> {
+    const nodesJson = bundleGraph.serializeAssetNodesForNative(changedAssetIds);
+    return atlaspackNapiUpdateBundleGraph(
+      this._atlaspack_napi,
+      nodesJson,
     ) as Promise<void>;
   }
 

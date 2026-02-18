@@ -77,6 +77,7 @@ export type BundleGraphResult = {
   assetGraphBundlingVersion: number;
   changedAssets: Map<string, Asset>;
   assetRequests: Array<AssetGroup>;
+  didIncrementallyBundle: boolean;
 };
 
 type BundleGraphRequest = {
@@ -341,7 +342,7 @@ class BundlerRunner {
       type: 'buildProgress',
       phase: 'bundling',
     });
-
+    let didIncrementallyBundle = false;
     await this.loadConfigs();
 
     let plugin = await this.config.getBundler();
@@ -413,6 +414,7 @@ class BundlerRunner {
           invariant(changedAssetNode.type === 'asset');
           internalBundleGraph.updateAsset(changedAssetNode);
         }
+        didIncrementallyBundle = true;
       } else {
         report({
           type: 'log',
@@ -514,6 +516,7 @@ class BundlerRunner {
             assetGraphBundlingVersion: graph.getBundlingVersion(),
             changedAssets: new Map(),
             assetRequests: [],
+            didIncrementallyBundle,
           },
           this.cacheKey,
         );
@@ -600,6 +603,7 @@ class BundlerRunner {
         assetGraphBundlingVersion: graph.getBundlingVersion(),
         changedAssets: new Map(),
         assetRequests: [],
+        didIncrementallyBundle,
       },
       this.cacheKey,
     );
@@ -609,6 +613,7 @@ class BundlerRunner {
       assetGraphBundlingVersion: graph.getBundlingVersion(),
       changedAssets: changedRuntimes,
       assetRequests,
+      didIncrementallyBundle,
     };
   }
 }
