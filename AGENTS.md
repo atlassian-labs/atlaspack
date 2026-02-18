@@ -148,7 +148,8 @@ When to rebuild:
 Native (Rust) artifacts:
 
 ```bash
-yarn build-native              # Development build (faster)
+yarn build-native --fast       # Build native code for development, skips apvm (use during active iteration)
+yarn build-native              # Build native code for development (full)
 yarn build-native-release      # Release build (optimized, slower)
 yarn build-native-wasm         # WASM build
 ```

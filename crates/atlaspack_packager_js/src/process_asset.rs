@@ -1,10 +1,11 @@
 use std::collections::HashMap;
+use std::path::Path;
 
 use oxc_allocator::Allocator;
 use oxc_ast::AstBuilder;
 use oxc_ast::ast::*;
 use oxc_ast_visit::{VisitMut, walk_mut};
-use oxc_codegen::Codegen;
+use oxc_codegen::{Codegen, CodegenOptions};
 use oxc_parser::Parser;
 use oxc_span::{SPAN, SourceType};
 
@@ -18,13 +19,15 @@ use oxc_span::{SPAN, SourceType};
 /// # Arguments
 /// * `code` - The JavaScript code to transform
 /// * `deps` - Map of specifiers to their resolved public IDs (None means skipped dependency)
+/// * `source_map_path` - If Some, enables source map generation; the path sets the `sources` field
 ///
 /// # Returns
-/// The transformed code as a String
+/// A tuple of (transformed code, optional OXC source map when source_map_path is Some)
 pub fn rewrite_asset_code(
   code: String,
   deps: &HashMap<String, Option<String>>,
-) -> anyhow::Result<String> {
+  source_map_path: Option<&Path>,
+) -> anyhow::Result<(String, Option<oxc_sourcemap::SourceMap>)> {
   let allocator = Allocator::default();
   let source_type = SourceType::default().with_module(true);
 
@@ -45,11 +48,20 @@ pub fn rewrite_asset_code(
   let mut visitor = AssetCodeVisitor::new(&ast_builder, deps);
   visitor.visit_program(&mut program);
 
-  // Generate code back from the AST
-  let codegen = Codegen::new();
-  let generated = codegen.build(&program);
+  let generated = if let Some(path) = source_map_path {
+    let options = CodegenOptions {
+      source_map_path: Some(path.to_path_buf()),
+      ..CodegenOptions::default()
+    };
+    Codegen::new()
+      .with_options(options)
+      .with_source_text(&code)
+      .build(&program)
+  } else {
+    Codegen::new().build(&program)
+  };
 
-  Ok(generated.code)
+  Ok((generated.code, generated.map))
 }
 
 /// Visitor that replaces require() call specifiers with resolved public IDs
@@ -118,9 +130,9 @@ impl<'a: 'alloc, 'alloc> VisitMut<'alloc> for AssetCodeVisitor<'a, 'alloc> {
 mod tests {
   use super::*;
 
-  /// Helper: run rewrite_asset_code
+  /// Helper: run rewrite_asset_code and return just the code (for tests that don't need source map)
   fn rewrite(code: &str, deps: &HashMap<String, Option<String>>) -> String {
-    rewrite_asset_code(code.to_string(), deps).unwrap()
+    rewrite_asset_code(code.to_string(), deps, None).unwrap().0
   }
 
   #[test]
@@ -423,5 +435,27 @@ mod tests {
     // module.bundle.root should be replaced with require
     assert!(result.contains("require(id)"));
     assert!(!result.contains("module.bundle.root"));
+  }
+
+  #[test]
+  fn test_rewrite_asset_code_source_map_none_when_path_none() {
+    let deps = HashMap::new();
+    let (code, map) = rewrite_asset_code("const x = 1;".to_string(), &deps, None).unwrap();
+    assert!(map.is_none());
+    assert!(code.contains("const x = 1"));
+  }
+
+  #[test]
+  fn test_rewrite_asset_code_source_map_some_when_path_provided() {
+    use std::path::Path;
+    let deps = HashMap::new();
+    let path = Path::new("/fake/path/foo.js");
+    let (code, map) = rewrite_asset_code("const x = 1;".to_string(), &deps, Some(path)).unwrap();
+    assert!(map.is_some(), "expected source map when path is provided");
+    assert!(code.contains("const x = 1"));
+    let oxc_map = map.unwrap();
+    let json = oxc_map.to_json_string();
+    assert!(!json.is_empty());
+    assert!(json.contains("mappings"));
   }
 }

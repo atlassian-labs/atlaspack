@@ -34,3 +34,7 @@ debug-symbols/
 mocha-cpu-profiles/
 *.trace
 packaging-output/
+
+# Artifacts from testing
+tesseract-shared.lmdb
+tesseract-shared.lmdb-lock

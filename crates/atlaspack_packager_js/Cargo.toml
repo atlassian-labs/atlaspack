@@ -9,7 +9,9 @@ workspace = true
 
 [dependencies]
 atlaspack_core = { path = "../atlaspack_core" }
+atlaspack_sourcemap = { path = "../atlaspack_sourcemap" }
 lmdb-js-lite = { path = "../lmdb-js-lite" }
+oxc_sourcemap = "6.0.1"
 anyhow = { workspace = true }
 oxc_allocator = { workspace = true }
 oxc_ast = { workspace = true }
