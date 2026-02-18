@@ -185,6 +185,7 @@ export default function createBundleGraphRequestRust(
         assetGraphBundlingVersion: 0,
         changedAssets: changedRuntimes,
         assetRequests: [],
+        didIncrementallyBundle: false,
       };
     },
     input,

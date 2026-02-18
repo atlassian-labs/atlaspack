@@ -14,6 +14,7 @@ use petgraph::{
 use rayon::prelude::*;
 
 use crate::bundle_graph::BundleGraph;
+use crate::bundle_graph::bundle_graph_from_js::types::AssetNode;
 use crate::types::{Asset, Bundle, Dependency, Environment};
 
 type BundleGraphNodeId = String;
@@ -165,6 +166,46 @@ impl BundleGraphFromJs {
 
     tracing::Span::current().record("nodes", nodes.len());
     Ok(nodes)
+  }
+
+  /// Updates existing asset nodes by id. Expects `nodes_json` to be a JSON array of
+  /// asset nodes in the same shape as in the full serialization (id, type, value, usedSymbols, etc.).
+  /// Uses the graph's existing environment map for env resolution.
+  pub fn update_assets_from_json(&mut self, nodes_json: &str) -> anyhow::Result<()> {
+    let json_values: Vec<serde_json::Value> =
+      serde_json::from_str(nodes_json).map_err(|e| anyhow!("Invalid nodes JSON: {}", e))?;
+
+    let environments_by_id = self._environments_by_id.clone();
+
+    // Parallelize deserialization of asset nodes
+    let assets: Vec<(String, AssetNode)> = json_values
+      .into_par_iter()
+      .map(|value| {
+        let node = Self::deserialize_node_with_env_lookup(value, &environments_by_id)
+          .map_err(|e| anyhow!("Failed to deserialize node: {}", e))?;
+        let BundleGraphNode::Asset(asset_node) = node else {
+          return Err(anyhow!("Expected asset node"));
+        };
+        Ok((asset_node.id.clone(), asset_node))
+      })
+      .collect::<anyhow::Result<Vec<_>>>()?;
+
+    // Apply updates
+    for (id, asset_node) in assets {
+      let node_idx = self
+        .nodes_by_key
+        .get(&id)
+        .ok_or_else(|| anyhow!("Asset not found in graph: {}", id))?;
+      let weight = self
+        .graph
+        .node_weight_mut(*node_idx)
+        .ok_or_else(|| anyhow!("Node index invalid: {}", id))?;
+      if !matches!(weight, BundleGraphNode::Asset(_)) {
+        anyhow::bail!("Node {} is not an asset", id);
+      }
+      *weight = BundleGraphNode::Asset(asset_node);
+    }
+    Ok(())
   }
 
   /// Deserialize a single node, replacing environment ID strings with Arc<Environment> references

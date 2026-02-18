@@ -429,3 +429,8 @@ export declare function atlaspackNapiLoadBundleGraph(
   publicIdByAssetId: Record<string, string>,
   environments: string,
 ): object;
+
+export declare function atlaspackNapiUpdateBundleGraph(
+  atlaspackNapi: AtlaspackNapi,
+  assets: string,
+): object;

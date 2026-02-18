@@ -259,6 +259,14 @@ impl Atlaspack {
     Ok(())
   }
 
+  /// Updates existing asset nodes in the bundle graph from a JSON array of asset nodes.
+  /// Used for incremental updates when only some assets changed.
+  #[tracing::instrument(level = "info", skip_all, fields(nodes_json_len = nodes_json.len()))]
+  pub fn update_bundle_graph(&self, nodes_json: String) -> anyhow::Result<()> {
+    let mut graph = self.bundle_graph.write();
+    graph.update_assets_from_json(&nodes_json)
+  }
+
   #[tracing::instrument(level = "info", skip_all)]
   pub fn build_bundle_graph(
     &self,

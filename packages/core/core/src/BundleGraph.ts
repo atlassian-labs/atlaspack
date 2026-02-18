@@ -655,6 +655,42 @@ export default class BundleGraph {
   }
 
   /**
+   * Serialize only the given asset nodes for native incremental update.
+   * Same node shape and env/omit logic as serializeForNative.
+   */
+  serializeAssetNodesForNative(assetIds: Array<string>): string {
+    if (assetIds.length === 0) {
+      return '[]';
+    }
+    const environmentMap = new Map<string, Environment>();
+    const extractEnvironment = (envRef: EnvironmentRef): string => {
+      const env = fromEnvironmentId(envRef);
+      const envId = env.id;
+      if (!environmentMap.has(envId)) {
+        environmentMap.set(envId, env);
+      }
+      return envId;
+    };
+    const nodes: Array<BundleGraphNode> = [];
+    for (const assetId of assetIds) {
+      const node = this._graph.getNodeByContentKey(assetId);
+      if (node?.type !== 'asset') {
+        continue;
+      }
+      const processedNode = {...node};
+      if (node.value?.env) {
+        processedNode.value = {
+          ...node.value,
+          env: extractEnvironment(node.value.env),
+        };
+      }
+      nodes.push(processedNode);
+    }
+    const optimizedNodes = nodes.map((node) => this._omitNulls(node));
+    return JSON.stringify(optimizedNodes);
+  }
+
+  /**
    * Remove null and undefined values from an object to reduce JSON size.
    * Preserves false, 0, empty strings, and arrays.
    */

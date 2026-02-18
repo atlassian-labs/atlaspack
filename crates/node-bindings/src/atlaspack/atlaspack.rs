@@ -311,6 +311,30 @@ pub fn atlaspack_napi_load_bundle_graph(
 }
 
 #[napi]
+pub fn atlaspack_napi_update_bundle_graph(
+  env: Env,
+  atlaspack_napi: AtlaspackNapi,
+  nodes_json: String,
+) -> napi::Result<JsObject> {
+  let (deferred, promise) = env.create_deferred()?;
+  thread::spawn({
+    let atlaspack = atlaspack_napi.clone();
+    move || {
+      let atlaspack = atlaspack.write();
+      let result = atlaspack.update_bundle_graph(nodes_json);
+      deferred.resolve(move |env| match result {
+        Ok(()) => NapiAtlaspackResult::ok(&env, ()),
+        Err(error) => {
+          let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
+          NapiAtlaspackResult::error(&env, js_object)
+        }
+      })
+    }
+  });
+  Ok(promise)
+}
+
+#[napi]
 pub fn atlaspack_napi_package(
   env: Env,
   atlaspack_napi: AtlaspackNapi,
