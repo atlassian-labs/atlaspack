@@ -299,8 +299,8 @@ export class LMDBLiteCache implements Cache {
         await this.store.delete(key);
       }
 
-      await this.fs.rimraf(this.cacheFilesDirectory);
-      await this.fs.mkdirp(this.cacheFilesDirectory);
+      await this.blobFs.rimraf(this.cacheFilesDirectory);
+      await this.blobFs.mkdirp(this.cacheFilesDirectory);
     });
   }
 }
