@@ -48,21 +48,33 @@ pub struct AssetKey(pub u32);
 pub struct AssetInterner {
   by_id: HashMap<String, AssetKey>,
   ids: Vec<String>,
+  file_paths: Vec<String>,
 }
 
 impl AssetInterner {
   pub fn from_asset_graph(asset_graph: &AssetGraph) -> Self {
-    let mut ids: Vec<String> = asset_graph.get_assets().map(|a| a.id.clone()).collect();
-    ids.sort();
-    ids.dedup();
+    let mut assets_sorted: Vec<(String, String)> = asset_graph
+      .get_assets()
+      .map(|a| (a.id.clone(), a.file_path.to_string_lossy().to_string()))
+      .collect();
+    assets_sorted.sort_by(|a, b| a.0.cmp(&b.0));
+    assets_sorted.dedup_by(|a, b| a.0 == b.0);
 
-    let mut by_id = HashMap::with_capacity(ids.len());
-    for (i, id) in ids.iter().enumerate() {
+    let mut by_id = HashMap::with_capacity(assets_sorted.len());
+    let mut ids = Vec::with_capacity(assets_sorted.len());
+    let mut file_paths = Vec::with_capacity(assets_sorted.len());
+    for (i, (id, fp)) in assets_sorted.into_iter().enumerate() {
       let key = AssetKey(u32::try_from(i).expect("too many assets to key"));
       by_id.insert(id.clone(), key);
+      ids.push(id);
+      file_paths.push(fp);
     }
 
-    Self { by_id, ids }
+    Self {
+      by_id,
+      ids,
+      file_paths,
+    }
   }
 
   pub fn key_for(&self, asset_id: &str) -> Option<AssetKey> {
@@ -71,6 +83,10 @@ impl AssetInterner {
 
   pub fn id_for(&self, key: AssetKey) -> &str {
     &self.ids[key.0 as usize]
+  }
+
+  pub fn file_path_for(&self, key: AssetKey) -> &str {
+    &self.file_paths[key.0 as usize]
   }
 
   pub fn len(&self) -> usize {
@@ -94,6 +110,7 @@ impl AssetInterner {
   pub fn insert_synthetic(&mut self, asset_id: String) -> AssetKey {
     let next = AssetKey(u32::try_from(self.ids.len()).expect("too many assets to key"));
     self.by_id.insert(asset_id.clone(), next);
+    self.file_paths.push(asset_id.clone());
     self.ids.push(asset_id);
     next
   }

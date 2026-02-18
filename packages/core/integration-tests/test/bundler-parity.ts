@@ -61,16 +61,29 @@ async function compareBundlers(fixtureName: string, entryFile: string) {
   let jsBundles = extractBundles(jsBundleGraph);
   let rustBundles = extractBundles(rustBundleGraph);
 
+  // Compute diff between bundle sets for readable error messages.
+  const toKey = (b: {assets: string[]}) => b.assets.join(',');
+  const jsKeys = new Set(jsBundles.map(toKey));
+  const rustKeys = new Set(rustBundles.map(toKey));
+  const onlyInJs = jsBundles.filter((b) => !rustKeys.has(toKey(b)));
+  const onlyInRust = rustBundles.filter((b) => !jsKeys.has(toKey(b)));
+
+  const diffMsg =
+    onlyInJs.length || onlyInRust.length
+      ? `\n\nOnly in JS (${onlyInJs.length}):\n${onlyInJs.map((b) => `  [${b.assets.join(', ')}]`).join('\n')}` +
+        `\n\nOnly in Rust (${onlyInRust.length}):\n${onlyInRust.map((b) => `  [${b.assets.join(', ')}]`).join('\n')}`
+      : '';
+
   assert.equal(
     jsBundles.length,
     rustBundles.length,
-    `Bundle count mismatch for ${fixtureName}.\nJS bundles (${jsBundles.length}):\n${JSON.stringify(jsBundles, null, 2)}\nRust bundles (${rustBundles.length}):\n${JSON.stringify(rustBundles, null, 2)}`,
+    `Bundle count mismatch for ${fixtureName}: JS=${jsBundles.length}, Rust=${rustBundles.length}${diffMsg}`,
   );
 
   assert.deepEqual(
     rustBundles,
     jsBundles,
-    `Bundle structure mismatch for ${fixtureName}.\nJS bundles:\n${JSON.stringify(jsBundles, null, 2)}\nRust bundles:\n${JSON.stringify(rustBundles, null, 2)}`,
+    `Bundle structure mismatch for ${fixtureName}.${diffMsg}`,
   );
 }
 

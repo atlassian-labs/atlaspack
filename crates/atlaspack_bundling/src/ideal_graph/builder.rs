@@ -341,7 +341,13 @@ impl IdealGraphBuilder {
             continue;
           };
 
-          if self.bundle_boundaries.contains(&target_key) {
+          // Skip sync edges to type-change boundaries (e.g. JS → CSS).
+          // These belong in separate bundles and should not be sync-reachable.
+          // Same-type boundaries (e.g. lazy JS imports) ARE traversed, matching
+          // the JS bundler's reachability behavior.
+          if self.bundle_boundaries.contains(&target_key)
+            && from_asset.file_type != target_asset.file_type
+          {
             continue;
           }
 
@@ -1165,35 +1171,32 @@ impl IdealGraphBuilder {
     // Precompute bundle ids for all known bundle roots once.
     //
     // This avoids repeated `self.assets.id_for(root).to_string()` allocations in hot loops.
+    // Include reachability roots because some may have been removed from `bundle_roots`
+    // during internalization but still appear in the reachability data.
     let root_bundle_ids: HashMap<AssetKey, IdealBundleId> = self
       .bundle_roots
       .iter()
       .chain(self.entry_like_roots.iter())
+      .chain(reachability.roots.iter())
       .map(|&key| (key, IdealBundleId::from_asset_key(key)))
       .collect();
 
     let mut eligible_roots_by_asset: HashMap<AssetKey, Vec<AssetKey>> = HashMap::new();
 
-    // Precompute bundle-edge lookups to avoid O(n^2) scans of `ideal.bundle_edges`.
-    //
-    // Map: from_bundle -> {to_bundle}
+    // Precompute bundle-edge lookups for Check 2 (subgraph reuse).
+    // Map: from_bundle -> {to_bundle} (excluding parallel edges)
     let mut edge_targets: HashMap<IdealBundleId, HashSet<IdealBundleId>> = HashMap::new();
 
-    // For parallel sibling checks.
+    // Precompute parallel-edge lookups for Check 3 (parallel sibling availability).
     // Map: parent_bundle -> {parallel_child_bundle}
     let mut parallel_children: HashMap<IdealBundleId, HashSet<IdealBundleId>> = HashMap::new();
     // Map: parallel_child_bundle -> [parent_bundle]
     let mut parallel_parents_by_child: HashMap<IdealBundleId, Vec<IdealBundleId>> = HashMap::new();
 
     for (from, to, ty) in &ideal.bundle_edges {
-      // Bundle reuse / subgraph detection should not consider `Parallel` edges.
-      // Parallel bundles are loaded in the same bundle group, and treating those edges
-      // as a reuse path can incorrectly eliminate all eligible roots for an asset once
-      // availability includes sync-reachable assets from the group.
       if *ty != IdealEdgeType::Parallel {
         edge_targets.entry(*from).or_default().insert(*to);
       }
-
       if *ty == IdealEdgeType::Parallel {
         parallel_children.entry(*from).or_default().insert(*to);
         parallel_parents_by_child
@@ -1294,10 +1297,6 @@ impl IdealGraphBuilder {
           continue;
         }
 
-        // Check 2: bundle reuse / subgraph detection.
-        // If there's a bundle edge path from this root to another reachable root
-        // that dominates the asset, the asset will be in that other root's bundle.
-        // This root can load it via the edge rather than needing a shared bundle.
         // Check 2: bundle reuse / subgraph detection.
         //
         // If this root has a (non-parallel) bundle edge to an *earlier* reachable root, it can
@@ -1635,6 +1634,24 @@ impl IdealGraphBuilder {
       let root_id = self.assets.id_for(root_key);
       let bundle_id = IdealBundleId::from_asset_key(root_key);
 
+      // Internalization guard.
+      //
+      // Only internalize async roots that are effectively "redundant" for *some* reason:
+      // - A single source asset both lazy-imports and sync-imports the root (classic redundant async).
+      // - OR an entry root sync-imports the root (the root is already in the entry-like bundle).
+      //
+      // Internalization is always eligible here.
+      //
+      // The JS bundler's `deleteBundle()` behavior simply removes the async bundle without
+      // merging its assets into parents. Since we match that behavior, we don't need the
+      // more conservative eligibility guard that would be required if we were copying
+      // assets across bundle boundaries.
+      let eligible_for_internalization = true;
+
+      if !eligible_for_internalization {
+        continue;
+      }
+
       let Some(bundle) = ideal.get_bundle(&bundle_id) else {
         continue;
       };
@@ -1723,23 +1740,18 @@ impl IdealGraphBuilder {
       }
     }
 
-    // Remove internalized bundles and place their assets into parent bundles.
-    for (bundle_id, parents) in &internalized {
-      // Collect the bundle's assets before removing it.
-      let bundle_assets: Vec<usize> = ideal
-        .get_bundle(bundle_id)
-        .map(|b| b.assets.ones().collect())
-        .unwrap_or_default();
-
-      // Add the internalized bundle's assets to each parent bundle.
-      for parent_id in parents {
-        if let Some(parent_bundle) = ideal.get_bundle_mut(parent_id) {
-          for idx in &bundle_assets {
-            parent_bundle.assets.insert(*idx);
-          }
-        }
-      }
-
+    // Remove internalized bundles. Unlike the previous approach of copying assets
+    // into parent bundles, we match the JS bundler's behavior: the bundle is simply
+    // deleted. Parent bundles mark the root as "internalized" (handled during
+    // NativeBundleGraph conversion in mod.rs), meaning the runtime won't try to
+    // load the bundle separately.
+    //
+    // Also remove the root from `bundle_roots` so that Phase 9 (shared bundles) can
+    // re-process the asset as a regular multi-root candidate — matching JS where
+    // `deleteBundle` calls `bundleRoots.delete(bundleRoot)`.
+    for (bundle_id, _parents) in &internalized {
+      let root_key = bundle_id.as_asset_key();
+      self.bundle_roots.remove(&root_key);
       ideal.remove_bundle(bundle_id);
     }
 
@@ -1790,12 +1802,19 @@ impl IdealGraphBuilder {
       }
 
       // Check sync-reachability from this bundle's root asset using Phase 5 reachability.
-      if let Some(asset_sync_node_idx) = asset_sync_node_idx {
-        let from_root_key = id.as_asset_key();
-        if let Some(&root_bit) = reachability.root_to_bit.get(&from_root_key)
-          && reachability.reach_bits[asset_sync_node_idx.index()].contains(root_bit)
-        {
-          return true;
+      //
+      // IMPORTANT: for bundle-root boundary assets (async roots and type-change boundaries),
+      // we must NOT treat "sync-reachable" as "available" for internalization.
+      // Otherwise, allowing sync traversal through boundaries would incorrectly internalize
+      // async bundles whose *root* becomes reachable via another bundle's sync tree.
+      if !self.bundle_boundaries.contains(&asset_key) {
+        if let Some(asset_sync_node_idx) = asset_sync_node_idx {
+          let from_root_key = id.as_asset_key();
+          if let Some(&root_bit) = reachability.root_to_bit.get(&from_root_key)
+            && reachability.reach_bits[asset_sync_node_idx.index()].contains(root_bit)
+          {
+            return true;
+          }
         }
       }
 

@@ -1284,6 +1284,55 @@ mod tests {
   }
 
   #[test]
+  fn follows_sync_edges_through_bundle_root_boundaries_for_shared_bundle_eligibility() {
+    // Regression test for sync-graph reachability: sync edges should traverse THROUGH
+    // bundle-root assets when computing eligible roots for shared bundles.
+    //
+    // Graph:
+    // entry -> lazy route-1, lazy route-2
+    // route-1 -> sync comp-x, lazy comp-y
+    // route-2 -> sync comp-x
+    // comp-x  -> sync comp-y   (sync edge to a boundary!)
+    // comp-y  -> sync lib-z
+    //
+    // Expected: comp-x and lib-z are reachable from BOTH route roots, so they should be
+    // extracted into a shared bundle referenced by both route bundles.
+    //
+    // Note: comp-y is an async bundle root (lazy boundary) but is internalized via
+    // delete-only internalization and therefore does not appear in the ideal graph.
+    let asset_graph = fixture_graph(
+      &["entry.js"],
+      &[
+        EdgeSpec::new("entry.js", "route-1.js", Priority::Lazy),
+        EdgeSpec::new("entry.js", "route-2.js", Priority::Lazy),
+        EdgeSpec::new("route-1.js", "comp-x.js", Priority::Sync),
+        EdgeSpec::new("route-1.js", "comp-y.js", Priority::Lazy),
+        EdgeSpec::new("route-2.js", "comp-x.js", Priority::Sync),
+        EdgeSpec::new("comp-x.js", "comp-y.js", Priority::Sync),
+        EdgeSpec::new("comp-y.js", "lib-z.js", Priority::Sync),
+      ],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    assert_graph!(g, {
+      bundles: {
+        "entry.js"    => ["entry.js"],
+        "route-1.js"  => ["route-1.js"],
+        "route-2.js"  => ["route-2.js"],
+        shared(libz) => ["comp-x.js", "comp-y.js", "lib-z.js"],
+      },
+      edges: {
+        "entry.js" lazy "route-1.js",
+        "entry.js" lazy "route-2.js",
+        "route-1.js" sync shared(libz),
+        "route-2.js" sync shared(libz),
+      },
+    });
+  }
+
+  #[test]
   fn boundary_created_for_parallel_and_conditional() {
     let asset_graph = fixture_graph(
       &["entry.js"],
@@ -1982,8 +2031,8 @@ mod tests {
     // entry -> sync b
     //
     // b.js is both sync-imported by entry and async-imported by a.
-    // Since b.js is already in the entry bundle (sync reachable), the async
-    // bundle for b.js is redundant and should be internalized (deleted).
+    // With delete-only internalization, the async bundle for b.js is removed and
+    // b.js itself is not merged into any parent bundle.
     let asset_graph = fixture_graph(
       &["entry.js"],
       &[
@@ -1996,11 +2045,11 @@ mod tests {
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
     let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
-    // b.js should NOT exist as a separate bundle.
-    // It should be in the entry bundle since it's sync-reachable.
+    // b.js should NOT exist as a bundle root after internalization.
+    // Parent bundles should NOT receive b.js's assets.
     assert_graph!(g, {
       bundles: {
-        "entry.js" => ["entry.js", "a.js", "b.js"],
+        "entry.js" => ["entry.js", "a.js"],
       },
     });
   }
@@ -2013,8 +2062,8 @@ mod tests {
     // a -> sync b
     //
     // b.js is a bundle boundary (lazy), but also sync-imported by a which is in the entry.
-    // Since b.js is sync-reachable from the entry, the async bundle for b.js should be
-    // internalized and b.js should end up in the entry bundle.
+    // With delete-only internalization, the async bundle for b.js is removed and b.js is
+    // not merged into any parent bundle.
     let asset_graph = fixture_graph(
       &["entry.js"],
       &[
@@ -2056,8 +2105,43 @@ mod tests {
 
     assert_graph!(g, {
       bundles: {
-        "entry.js" => ["entry.js", "a.js", "b.js"],
+        "entry.js" => ["entry.js", "a.js"],
       },
+    });
+  }
+
+  #[test]
+  fn internalize_async_bundle_removes_bundle_and_places_root_in_parent() {
+    // entry -> lazy route-1
+    // route-1 -> sync comp-x, lazy comp-y
+    // comp-x -> sync comp-y (sync edge to a boundary)
+    // comp-y -> sync lib-z
+    //
+    // With delete-only internalization, async bundles may be removed even if a sync edge
+    // crosses the bundle boundary. The important invariant is that internalization does
+    // not merge comp-y's assets into parent bundles; it simply removes the comp-y bundle.
+    let asset_graph = fixture_graph(
+      &["entry.js"],
+      &[
+        EdgeSpec::new("entry.js", "route-1.js", Priority::Lazy),
+        EdgeSpec::new("route-1.js", "comp-x.js", Priority::Sync),
+        EdgeSpec::new("route-1.js", "comp-y.js", Priority::Lazy).specifier("comp-y.js?lazy"),
+        EdgeSpec::new("comp-x.js", "comp-y.js", Priority::Sync).specifier("comp-y.js?sync"),
+        EdgeSpec::new("comp-y.js", "lib-z.js", Priority::Sync),
+      ],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js"],
+        "route-1.js" => ["route-1.js", "comp-x.js", "comp-y.js", "lib-z.js"],
+      },
+      edges: {
+        "entry.js" lazy "route-1.js",
+      }
     });
   }
 
