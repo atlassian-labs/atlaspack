@@ -98,13 +98,10 @@ A failure happened when loading atlaspack cache data.
 This might happen because:
 
 - There is a version mismatch between the atlaspack-inspector and the atlaspack CLI used to build the cache
-- The cache was built without the required 'cachePerformanceImprovements' feature flag set to true
-
 The inspector will try to load caches even if there are version mismatches, but it might fail due to breaking
 changes between versions.
 
-You can run "atlaspack-inspector build <entrypoint...>" to build the app for the inspector with correct
-feature-flags.`,
+You can run "atlaspack-inspector build <entrypoint...>" to build the app for the inspector.`,
     );
     return {
       requestTracker: null,
@@ -213,8 +210,6 @@ export async function loadCacheData({
   if (!cachePath) {
     throw new Error(
       `Invalid cache path provided, could not find cache in any directory above the path provided: ${target}.
-
-Make sure you have run "atlaspack build --feature-flag cachePerformanceImprovements=true" before running the inspector.
 
 Alternatively you can run "atlaspack-inspector build <entrypoint...>" to build the app for the inspector.`,
     );

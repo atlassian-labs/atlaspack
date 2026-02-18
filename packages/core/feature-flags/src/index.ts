@@ -67,17 +67,6 @@ export const DEFAULT_FEATURE_FLAGS = {
   vcsMode: 'OLD' as ConsistencyCheckFeatureFlagValue,
 
   /**
-   * Refactor cache to:
-   * - Split writes into multiple entries
-   * - Remove "large file blob" writes
-   * - Reduce size of the caches by deduplicating data
-   *
-   * @author Pedro Tacla Yamada <pyamada@atlassian.com>
-   * @since 2025-05-13
-   */
-  cachePerformanceImprovements: process.env.ATLASPACK_BUILD_ENV === 'test',
-
-  /**
    * Deduplicates environments across cache / memory entities
    *
    * @author Pedro Tacla Yamada <pyamada@atlassian.com>

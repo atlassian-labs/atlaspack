@@ -185,9 +185,7 @@ async function run({input, options, api}) {
     bundleReplacements,
   );
 
-  const hasSourceMap = getFeatureFlag('cachePerformanceImprovements')
-    ? await options.cache.hasLargeBlob(mapKey)
-    : await options.cache.has(mapKey);
+  const hasSourceMap = await options.cache.has(mapKey);
   if (mapKey && env.sourceMap && !env.sourceMap.inline && hasSourceMap) {
     let mapStream: Readable;
     if (
@@ -195,9 +193,7 @@ async function run({input, options, api}) {
       bundleReplacements &&
       bundleReplacements.length > 0
     ) {
-      const mapEntry = getFeatureFlag('cachePerformanceImprovements')
-        ? await options.cache.getLargeBlob(mapKey)
-        : await options.cache.getBlob(mapKey);
+      const mapEntry = await options.cache.getBlob(mapKey);
       const mapBuffer = Buffer.isBuffer(mapEntry)
         ? mapEntry
         : Buffer.from(mapEntry);
@@ -219,9 +215,7 @@ async function run({input, options, api}) {
         ),
       );
     } else {
-      const mapEntry = getFeatureFlag('cachePerformanceImprovements')
-        ? await options.cache.getLargeBlob(mapKey)
-        : await options.cache.getBlob(mapKey);
+      const mapEntry = await options.cache.getBlob(mapKey);
       mapStream = blobToStream(mapEntry);
     }
     await writeFiles(
