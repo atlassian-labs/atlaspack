@@ -48,6 +48,7 @@ export let cache: LMDBLiteCache = new LMDBLiteCache(cacheDir);
 cache.ensure();
 
 export {fsFixture} from './fsFixture';
+export {generateSyntheticApp} from './generateSyntheticApp';
 export * from './stubs';
 export * from './paths';
 

@@ -4,6 +4,7 @@ import {
   bundle,
   overlayFS,
   fsFixture,
+  generateSyntheticApp,
   describe,
   it,
 } from '@atlaspack/test-utils';
@@ -333,6 +334,17 @@ describe.v3('bundler parity (js vs native)', function () {
         yarn.lock:
     `;
 
+    await compareBundlers(fixtureName, entryFile);
+  });
+
+  it('Generated app: ~150 assets with realistic structure', async function () {
+    this.timeout(60000);
+    const {fixtureName, entryFile} = await generateSyntheticApp(
+      overlayFS,
+      __dirname,
+      150,
+      42,
+    );
     await compareBundlers(fixtureName, entryFile);
   });
 });
