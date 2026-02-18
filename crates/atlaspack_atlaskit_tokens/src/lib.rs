@@ -103,15 +103,18 @@ impl AtlaskitTokensHandler {
         &swc_config,
       ) {
         Ok(result) => result,
-        Err(_parsing_errors) => {
+        Err(parsing_errors) => {
+          // Emit each parse error to the handler so they are captured in the error buffer
+          // with proper source locations for diagnostic code highlights
+          for err in parsing_errors {
+            err.into_diagnostic(&handler).emit();
+          }
           let diagnostics = error_buffer_to_diagnostics(&error_buffer, &source_map);
-          let error_msg = diagnostics
-            .iter()
-            .map(|d| &d.message)
-            .cloned()
-            .collect::<Vec<_>>()
-            .join("\n");
-          return Err(anyhow!("Parse error: {}", error_msg));
+          return Ok(TokensPluginResult {
+            code: String::new(),
+            map: None,
+            diagnostics,
+          });
         }
       };
 

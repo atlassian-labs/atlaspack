@@ -242,14 +242,18 @@ mod tests {
     "#};
 
     let result = process_tokens_sync(invalid_code, &napi_config);
-    assert!(result.is_err(), "Invalid syntax should result in an error");
-    let error = result.unwrap_err();
-    let error_string = error.to_string();
-    // Just verify an error occurred - the exact error message format can vary
     assert!(
-      error_string.contains("Parse error") || !error_string.is_empty(),
-      "Expected some error message, got: {}",
-      error_string
+      result.is_ok(),
+      "Invalid syntax should return Ok with diagnostics, not Err"
+    );
+    let plugin_result = result.unwrap();
+    assert!(
+      !plugin_result.diagnostics.is_empty(),
+      "Parse errors should be returned as diagnostics"
+    );
+    assert!(
+      plugin_result.code.is_empty(),
+      "Code should be empty when there are parse errors"
     );
   }
 

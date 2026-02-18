@@ -110,6 +110,7 @@ impl VisitMut for NodeReplacer<'_> {
                   obj: (Box::new(Call(create_require(
                     path_module_specifier.clone(),
                     unresolved_mark,
+                    None,
                   )))),
                   prop: MemberProp::Ident(ast::IdentName::new("resolve".into(), DUMMY_SP)),
                 }))),
@@ -164,6 +165,7 @@ impl VisitMut for NodeReplacer<'_> {
                   obj: (Box::new(Call(create_require(
                     path_module_specifier.clone(),
                     unresolved_mark,
+                    None,
                   )))),
                   prop: MemberProp::Ident(ast::IdentName::new("resolve".into(), DUMMY_SP)),
                 }))),
@@ -224,7 +226,12 @@ impl NodeReplacer<'_> {
     } else {
       id_ref.sym = new_name;
 
-      let (decl, ctxt) = create_global_decl_stmt(id_ref.sym.clone(), expr(self), self.global_mark);
+      let (decl, ctxt) = create_global_decl_stmt(
+        id_ref.sym.clone(),
+        expr(self),
+        self.global_mark,
+        Some(id_ref.span),
+      );
       id_ref.ctxt = ctxt;
 
       self.globals.insert(id_ref.sym.clone(), (ctxt, decl));

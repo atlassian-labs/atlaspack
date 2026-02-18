@@ -5,9 +5,6 @@
       "path": "./crates/atlaspack_packager_js/prelude/tsconfig.json"
     },
     {
-      "path": "./packages/bundlers/bundler-experimental/tsconfig.json"
-    },
-    {
       "path": "./packages/bundlers/default/tsconfig.json"
     },
     {
@@ -210,9 +207,6 @@
     },
     {
       "path": "./packages/reporters/conditional-manifest/tsconfig.json"
-    },
-    {
-      "path": "./packages/reporters/dev-server-sw/tsconfig.json"
     },
     {
       "path": "./packages/reporters/dev-server/tsconfig.json"

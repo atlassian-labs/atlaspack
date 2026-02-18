@@ -20,7 +20,7 @@
     "@atlaspack/plugin": "2.14.53",
     "@atlaspack/source-map": "3.2.8",
     "@atlaspack/utils": "3.3.5",
-    "@swc/core": "^1.10.0",
+    "@swc/core": "1.15.11",
     "nullthrows": "^1.1.1"
   },
   "type": "commonjs",

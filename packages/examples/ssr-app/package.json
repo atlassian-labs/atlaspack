@@ -9,7 +9,8 @@
     "build:native": "rm -rf dist && ATLASPACK_TRACING_MODE=\"stdout\" RUST_LOG=\"atlaspack=debug,atlaspack_resolver=info\" RUST_BACKTRACE=1 atlaspack build --feature-flag nativePackager=true --feature-flag nativePackagerSSRDev=true --target ssr src/index.js src/index2.js",
     "build:native-src": "rm -rf dist && ATLASPACK_REGISTER_USE_SRC=true ATLASPACK_SOURCES=true ATLASPACK_TRACING_MODE=\"stdout\" RUST_LOG=\"atlaspack=debug,atlaspack_resolver=info\" RUST_BACKTRACE=1 ../../core/cli/bin/atlaspack.js build --no-cache --feature-flag nativePackager=true --feature-flag nativePackagerSSRDev=true --target ssr src/index.js src/index2.js",
     "start": "atlas tesseract run --use-snapvm",
-    "viewer": "node server.js"
+    "viewer": "node server.js",
+    "validate": "node validate.js"
   },
   "dependencies": {
     "react": "^17.0.2",
