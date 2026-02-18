@@ -23,14 +23,9 @@ import fs from 'fs';
 
 import {buildTreemap, Treemap} from './buildTreemap';
 import {logger} from '../config/logger';
-import {LazyValue} from './LazyValue';
 
 /**
  * Represents the cache data loaded.
- *
- * The current implementation will only load or compute the data when these properties are read,
- * using {@link LazyValue}. This speeds-up starting up the inspector app UI, but the cache data
- * will be loaded when relevant endpoints are first requested.
  */
 export interface CacheData {
   assetGraph: AssetGraph | null;
@@ -38,6 +33,37 @@ export interface CacheData {
   treemap: Treemap | null;
   requestTracker: RequestTracker;
   cache: LMDBLiteCache;
+}
+
+/**
+ * Scans the cache directory for request graph files.
+ *
+ * The request graph is stored as FSCache large blob files on disk
+ * (e.g., `requestGraph-${hash}-0`), not in LMDB. This function finds those
+ * files and returns the keys needed to read them.
+ */
+function findRequestGraphInFilesystem(
+  cacheDir: string,
+): {requestGraphKey: string; cacheKey: string} | null {
+  try {
+    const files = fs.readdirSync(cacheDir);
+    const requestGraphFile = files.find(
+      (file) =>
+        file.startsWith('requestGraph-') &&
+        !file.startsWith('requestGraph-nodes-') &&
+        file.endsWith('-0'),
+    );
+    if (!requestGraphFile) {
+      return null;
+    }
+    // Strip the '-0' chunk suffix to recover the cache key
+    const requestGraphKey = requestGraphFile.slice(0, -2);
+    // Strip the 'requestGraph-' prefix to recover the cacheKey used for node keys
+    const cacheKey = requestGraphKey.replace(/^requestGraph-/, '');
+    return {requestGraphKey, cacheKey};
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -55,28 +81,38 @@ export interface CacheData {
 export async function loadRequestTracker(cache: LMDBLiteCache): Promise<{
   requestTracker: RequestTracker | null;
 }> {
-  let requestGraphBlob: string | null = null;
+  let requestGraphKey: string | null = null;
+  let cacheKey: string | null = null;
+
+  // Check LMDB for the request graph key (legacy path, kept for forward compatibility)
   for (let key of cache.keys()) {
     if (key.startsWith('RequestTracker/') && key.endsWith('/RequestGraph')) {
-      requestGraphBlob = key as string;
+      requestGraphKey = key as string;
+      cacheKey = (key as string).split('/').slice(0, -1).join('/');
+      break;
     }
   }
 
-  if (!requestGraphBlob) {
+  // The request graph is stored as FSCache large blob files on disk, not in LMDB
+  if (!requestGraphKey) {
+    const found = findRequestGraphInFilesystem(cache.dir);
+    if (found) {
+      requestGraphKey = found.requestGraphKey;
+      cacheKey = found.cacheKey;
+    }
+  }
+
+  if (!requestGraphKey || !cacheKey) {
     logger.warn('No request graph key found in cache');
     return {requestTracker: null};
   }
 
-  const requestGraphKey = requestGraphBlob.split('/').slice(0, -1).join('/');
   try {
-    logger.debug(
-      {requestGraphBlob, requestGraphKey},
-      'Loading RequestGraph...',
-    );
+    logger.debug({requestGraphKey, cacheKey}, 'Loading RequestGraph...');
     const {requestGraph} = await readAndDeserializeRequestGraph(
       cache,
-      requestGraphBlob,
       requestGraphKey,
+      cacheKey,
     );
 
     const requestTracker = new RequestTracker({
@@ -177,9 +213,22 @@ function mapObjectStringValues(
   );
 }
 
-function getSync(cache: LMDBLiteCache, key: string): CacheResult | null {
-  const blob = cache.getBlobSync(key);
-  if (!blob) {
+async function getAsync(
+  cache: LMDBLiteCache,
+  key: string,
+): Promise<CacheResult | null> {
+  // Try LMDB first (legacy path, kept for forward compatibility)
+  let blob: Buffer | null | undefined = await cache.getBuffer(key);
+
+  // The cache stores request results as FSCache large blob files on disk
+  if (blob == null) {
+    const hasBlob = await cache.hasLargeBlob(key);
+    if (hasBlob) {
+      blob = await cache.getLargeBlob(key);
+    }
+  }
+
+  if (!blob || blob.length === 0) {
     return null;
   }
 
@@ -224,65 +273,52 @@ Alternatively you can run "atlaspack-inspector build <entrypoint...>" to build t
   }
   logger.debug('Loaded RequestTracker');
 
-  const bundleGraphLazyValue = new LazyValue(() => {
-    logger.info('Loading BundleGraph...');
-    const bundleGraphRequest = requestTracker.graph.nodes.find(
-      (node: RequestGraphNode) =>
-        node &&
-        node.type === 1 &&
-        node.requestType === requestTypes.bundle_graph_request,
-    );
-    const bundleGraph =
-      bundleGraphRequest?.resultCacheKey &&
-      getSync(cache, bundleGraphRequest.resultCacheKey)?.bundleGraph;
-    if (!bundleGraphRequest) {
-      logger.error('Failed to find bundle graph request');
-    } else if (bundleGraph != null) {
-      logger.debug('Loaded BundleGraph');
-    }
-    return bundleGraph;
-  });
+  logger.info('Loading BundleGraph...');
+  const bundleGraphRequest = requestTracker.graph.nodes.find(
+    (node: RequestGraphNode) =>
+      node &&
+      node.type === 1 &&
+      node.requestType === requestTypes.bundle_graph_request,
+  );
+  const bundleGraphResult =
+    bundleGraphRequest?.resultCacheKey != null
+      ? await getAsync(cache, bundleGraphRequest.resultCacheKey)
+      : null;
+  const bundleGraph = bundleGraphResult?.bundleGraph ?? null;
+  if (!bundleGraphRequest) {
+    logger.error('Failed to find bundle graph request');
+  } else if (bundleGraph != null) {
+    logger.debug('Loaded BundleGraph');
+  }
 
-  const treemap = new LazyValue(() => {
-    logger.info({projectRoot}, 'Building treemap...');
-    const bundleGraph = bundleGraphLazyValue.get();
-    return bundleGraph && requestTracker
+  logger.info({projectRoot}, 'Building treemap...');
+  const treemap =
+    bundleGraph && requestTracker
       ? buildTreemap({projectRoot, repositoryRoot, bundleGraph, requestTracker})
       : null;
-  });
 
-  const assetGraph = new LazyValue(() => {
-    logger.info('Loading AssetGraph...');
-    const assetGraphRequest = requestTracker.graph.nodes.find(
-      (node: RequestGraphNode) =>
-        node &&
-        node.type === 1 &&
-        node.requestType === requestTypes.asset_graph_request,
-    );
-
-    const assetGraph =
-      assetGraphRequest?.resultCacheKey &&
-      getSync(cache, assetGraphRequest.resultCacheKey)?.assetGraph;
-
-    if (!assetGraphRequest) {
-      logger.error('Failed to find asset graph request');
-    } else if (assetGraph != null) {
-      logger.debug('Loaded AssetGraph');
-    }
-
-    return assetGraph;
-  });
+  logger.info('Loading AssetGraph...');
+  const assetGraphRequest = requestTracker.graph.nodes.find(
+    (node: RequestGraphNode) =>
+      node &&
+      node.type === 1 &&
+      node.requestType === requestTypes.asset_graph_request,
+  );
+  const assetGraphResult =
+    assetGraphRequest?.resultCacheKey != null
+      ? await getAsync(cache, assetGraphRequest.resultCacheKey)
+      : null;
+  const assetGraph = assetGraphResult?.assetGraph ?? null;
+  if (!assetGraphRequest) {
+    logger.error('Failed to find asset graph request');
+  } else if (assetGraph != null) {
+    logger.debug('Loaded AssetGraph');
+  }
 
   return {
-    get assetGraph() {
-      return assetGraph.get();
-    },
-    get bundleGraph() {
-      return bundleGraphLazyValue.get();
-    },
-    get treemap() {
-      return treemap.get();
-    },
+    assetGraph,
+    bundleGraph,
+    treemap,
     cache,
     requestTracker,
   };
