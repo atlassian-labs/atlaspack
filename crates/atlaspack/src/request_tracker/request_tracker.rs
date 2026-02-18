@@ -210,6 +210,13 @@ impl RequestTracker {
       .map(|node_index| &self.graph[*node_index])
   }
 
+  /// Clear all invalid nodes. Called after a successful top-level build to
+  /// remove orphaned entries whose request IDs changed between builds
+  /// (e.g. due to a transformer overriding `side_effects`).
+  pub fn clear_invalid_nodes(&mut self) {
+    self.invalid_nodes.clear();
+  }
+
   /// Before a request is run, a 'pending' [`RequestNode::Incomplete`] entry is added to the graph.
   fn prepare_request(&mut self, request_id: u64) -> anyhow::Result<Option<Arc<RequestResult>>> {
     let node_index = *self
