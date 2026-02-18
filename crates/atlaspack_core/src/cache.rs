@@ -11,8 +11,8 @@ pub trait Cache {
   fn set_blob(&self, _key: &str, _blob: &[u8]) -> anyhow::Result<()>;
 
   /// Write a large blob to the filesystem cache.
-  /// Mirrors LMDBLiteCache.setLargeBlob() in JavaScript - stores data in
-  /// `{cache_dir}/files/{sanitized_key}` to avoid bloating LMDB with large values.
+  /// Mirrors LMDBLiteCache:
+  /// path is `{cache_dir}/{sanitized_key}` so JS getStream(path.join(this.dir, key)) finds it.
   fn set_large_blob(&self, key: &str, blob: &[u8]) -> anyhow::Result<()>;
 
   /// Get a large blob from the filesystem cache.
@@ -20,8 +20,7 @@ pub trait Cache {
 }
 
 /// Convert a cache key to a safe filesystem path.
-/// Mirrors the logic in JavaScript's LMDBLiteCache.getFileKey() -
-/// sanitizes `..` in path segments to avoid directory traversal.
+/// Sanitizes `..` in path segments to avoid directory traversal.
 pub fn get_file_key(cache_dir: &Path, key: &str) -> PathBuf {
   let clean_key = key
     .split('/')
@@ -34,11 +33,11 @@ pub fn get_file_key(cache_dir: &Path, key: &str) -> PathBuf {
     })
     .collect::<Vec<_>>()
     .join("/");
-  cache_dir.join("files").join(clean_key)
+  cache_dir.join(clean_key)
 }
 
 /// A filesystem-only cache implementation.
-/// Stores all blobs on the filesystem under `{cache_dir}/files/{key}`.
+/// Stores all blobs on the filesystem under `{cache_dir}/{key}`.
 pub struct FsCache {
   cache_dir: PathBuf,
 }
