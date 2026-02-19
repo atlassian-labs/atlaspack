@@ -21,9 +21,12 @@ pub struct SymbolRequirement {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FinalSymbolLocation {
+  /// The local name in the providing asset (used for scope hoisting)
   pub local_name: String,
+  /// The exported/imported name from the providing asset
   pub imported_name: String,
-  pub providing_asset: Arc<Asset>,
+  /// The ID of the asset that provides this symbol (cheaper than Arc<Asset>)
+  pub providing_asset_id: AssetId,
 }
 
 fn dep_has_symbol(dep: &Dependency, symbol: &Symbol) -> bool {
@@ -154,7 +157,7 @@ impl SymbolTracker {
           let final_location = FinalSymbolLocation {
             local_name: sym.local.clone(),
             imported_name: sym.exported.clone(),
-            providing_asset: asset.clone(),
+            providing_asset_id: asset.id.clone(),
           };
 
           self.handle_answer_propagation(asset_graph, final_location, incoming_dep)?;
@@ -175,39 +178,47 @@ impl SymbolTracker {
     // The symbol_name_to_match is the exported name we're looking for at this level
     let mut work_queue = vec![(dep, located_symbol.imported_name.clone())];
 
+    // Reusable buffer for matched requirements to avoid repeated allocations
+    let mut matched_locals: Vec<String> = Vec::new();
+
     while let Some((dep, symbol_name_to_match)) = work_queue.pop() {
+      matched_locals.clear();
+
       // Process the requirements for this dependency
-      let Some(required_symbols) = self.requirements_by_dep.get_mut(&dep.id) else {
-        continue;
-      };
-
-      for required in required_symbols {
-        if required.symbol.exported != symbol_name_to_match {
+      {
+        let Some(required_symbols) = self.requirements_by_dep.get_mut(&dep.id) else {
           continue;
-        }
+        };
 
-        // If the requirement is already satisfied, and we have a new location that
-        // matches, we have a conflict
-        if required.final_location.is_some() {
-          return Err(anyhow!(
-            "Required symbol {} for dep [{}] has already been located",
-            required.symbol.exported,
-            dep.id
-          ));
-        } else {
+        for required in required_symbols.iter_mut() {
+          if required.symbol.exported != symbol_name_to_match {
+            continue;
+          }
+
+          // If the requirement is already satisfied, and we have a new location that
+          // matches, we have a conflict
+          if required.final_location.is_some() {
+            return Err(anyhow!(
+              "Required symbol {} for dep [{}] has already been located",
+              required.symbol.exported,
+              dep.id
+            ));
+          }
+
           required.final_location = Some(located_symbol.clone());
+          // Store the local name for propagation lookup
+          matched_locals.push(required.symbol.local.clone());
         }
+      }
 
+      // Now propagate for matched requirements (outside the mutable borrow)
+      for symbol_local in &matched_locals {
         // If we satisfied this requirement, we need to propagate the location
         // up to the parent asset's dependencies as well
         let parent_asset_node_id = get_parent_asset_node_id(asset_graph, dep)?;
 
         // Get the parent asset to check for re-export mappings (local -> exported name)
         let parent_asset_node = asset_graph.get_node(&parent_asset_node_id);
-        let parent_asset = match parent_asset_node {
-          Some(AssetGraphNode::Asset(asset)) => Some(asset.clone()),
-          _ => None,
-        };
 
         // For each incoming dependency of the parent asset, we need to determine
         // what symbol name to look for. If the parent asset has a symbol that
@@ -219,8 +230,8 @@ impl SymbolTracker {
           // Use the mangled local name from the requirement to find what the
           // parent asset exports this symbol as. The mangled local is shared
           // between the dependency symbol and the asset symbol.
-          let symbol_for_parent = if let Some(ref asset) = parent_asset {
-            find_exported_name_for_local(asset, &required.symbol.local)
+          let symbol_for_parent = if let Some(AssetGraphNode::Asset(asset)) = parent_asset_node {
+            find_exported_name_for_local(asset, symbol_local)
               .unwrap_or_else(|| symbol_name_to_match.clone())
           } else {
             symbol_name_to_match.clone()
@@ -266,8 +277,8 @@ impl SymbolTracker {
           requirement.symbol.clone(),
           UsedSymbol {
             symbol: requirement.symbol,
-            asset: final_location.providing_asset.id.clone(),
-            resolved_symbol: final_location.imported_name.clone(),
+            asset: final_location.providing_asset_id,
+            resolved_symbol: final_location.imported_name,
           },
         );
       }
@@ -428,7 +439,7 @@ mod tests {
       .final_location
       .as_ref()
       .expect("Symbol should be resolved");
-    assert_eq!(final_location.providing_asset.id, asset_a.id);
+    assert_eq!(final_location.providing_asset_id, asset_a.id);
     assert_eq!(final_location.local_name, "a");
     assert_eq!(final_location.imported_name, "a");
   }
@@ -526,7 +537,7 @@ mod tests {
       .as_ref()
       .expect("lib_dep requirement should be satisfied");
     assert_eq!(
-      lib_final.providing_asset.id, a_asset.id,
+      lib_final.providing_asset_id, a_asset.id,
       "lib_dep should point to a.js as provider"
     );
 
@@ -536,7 +547,7 @@ mod tests {
       .as_ref()
       .expect("a_dep requirement should be satisfied");
     assert_eq!(
-      a_final.providing_asset.id, a_asset.id,
+      a_final.providing_asset_id, a_asset.id,
       "a_dep should point to a.js as provider"
     );
   }
@@ -693,7 +704,7 @@ mod tests {
       .as_ref()
       .expect("barrel1_dep requirement should be satisfied");
     assert_eq!(
-      barrel1_final.providing_asset.id, source_asset.id,
+      barrel1_final.providing_asset_id, source_asset.id,
       "barrel1_dep should point to source.js as provider"
     );
     assert_eq!(
@@ -707,7 +718,7 @@ mod tests {
       .as_ref()
       .expect("barrel2_dep requirement should be satisfied");
     assert_eq!(
-      barrel2_final.providing_asset.id, source_asset.id,
+      barrel2_final.providing_asset_id, source_asset.id,
       "barrel2_dep should point to source.js as provider"
     );
 
@@ -717,7 +728,7 @@ mod tests {
       .as_ref()
       .expect("source_dep requirement should be satisfied");
     assert_eq!(
-      source_final.providing_asset.id, source_asset.id,
+      source_final.providing_asset_id, source_asset.id,
       "source_dep should point to source.js as provider"
     );
 
@@ -813,7 +824,7 @@ mod tests {
       .as_ref()
       .expect("barrel_dep requirement should be satisfied");
     assert_eq!(
-      barrel_final.providing_asset.id, foo_asset.id,
+      barrel_final.providing_asset_id, foo_asset.id,
       "barrel_dep should point to foo.js as provider"
     );
 
@@ -823,7 +834,7 @@ mod tests {
       .as_ref()
       .expect("foo_dep requirement should be satisfied");
     assert_eq!(
-      foo_final.providing_asset.id, foo_asset.id,
+      foo_final.providing_asset_id, foo_asset.id,
       "foo_dep should point to foo.js as provider"
     );
 
