@@ -137,4 +137,48 @@ describe.v3('rust symbol tracker parity', () => {
 
     await assertSymbolsEqual(bundleGraphOn, bundleGraphOff);
   });
+
+  it('should handle chained renames through multiple barrel files', async () => {
+    let dir = path.join(__dirname, 'rust-symbol-tracker-parity-chained');
+    await overlayFS.mkdirp(dir);
+
+    // index.js imports "finalName" from barrel1
+    // barrel1 re-exports "middleName" as "finalName" from barrel2
+    // barrel2 re-exports "originalName" as "middleName" from source
+    // source exports "originalName"
+    await fsFixture(overlayFS, dir)`
+      yarn.lock:
+        // required for .parcelrc
+
+      package.json:
+        {
+          "name": "rust-symbol-tracker-parity-chained",
+          "sideEffects": false,
+          "version": "1.0.0"
+        }
+
+      index.js:
+        import {finalName} from './barrel1';
+        console.log(finalName());
+
+      barrel1.js:
+        export {middleName as finalName} from './barrel2';
+
+      barrel2.js:
+        export {originalName as middleName} from './source';
+
+      source.js:
+        export function originalName() { return 42; }
+    `;
+
+    let entry = path.join(dir, 'index.js');
+
+    let {bundleGraphOn, bundleGraphOff} = await doubleBundleForFeatureFlag(
+      'rustSymbolTracker',
+      entry,
+      overlayFS,
+    );
+
+    await assertSymbolsEqual(bundleGraphOn, bundleGraphOff);
+  });
 });

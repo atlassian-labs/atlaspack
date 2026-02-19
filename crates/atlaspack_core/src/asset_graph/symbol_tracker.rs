@@ -609,6 +609,141 @@ mod tests {
   }
 
   #[test]
+  fn track_symbols_handles_chained_renames() {
+    // Test case: chained renames through multiple barrel files
+    // index.js imports "finalName" from barrel1
+    // barrel1 re-exports "middleName" as "finalName" from barrel2
+    // barrel2 re-exports "originalName" as "middleName" from source
+    // source exports "originalName"
+    //
+    // Graph: entry_dep -> index -> barrel1_dep -> barrel1 -> barrel2_dep -> barrel2 -> source_dep -> source
+
+    let mut graph = AssetGraph::new();
+
+    let entry_dep = make_entry_dependency();
+    let entry_dep_node = graph.add_entry_dependency(entry_dep, false);
+
+    // index.js - imports finalName from barrel1
+    let index_asset = make_asset("index.js", vec![]);
+    let index_asset_node = graph.add_asset(index_asset.clone(), false);
+    graph.add_edge(&entry_dep_node, &index_asset_node);
+
+    // Dependency from index.js to barrel1.js requesting "finalName"
+    let barrel1_dep = make_dependency(
+      &index_asset,
+      "./barrel1.js",
+      vec![("$index$import$finalName", "finalName", false)],
+    );
+    let barrel1_dep_node = graph.add_dependency(barrel1_dep.clone(), false);
+    graph.add_edge(&index_asset_node, &barrel1_dep_node);
+
+    // barrel1.js - re-exports middleName as finalName (weak symbol)
+    let mangled_reexport_1 = "$barrel1$re_export$finalName";
+    let barrel1_asset = make_asset("barrel1.js", vec![(mangled_reexport_1, "finalName", true)]);
+    let barrel1_asset_node = graph.add_asset(barrel1_asset.clone(), false);
+    graph.add_edge(&barrel1_dep_node, &barrel1_asset_node);
+
+    // Dependency from barrel1.js to barrel2.js requesting "middleName"
+    let barrel2_dep = make_dependency(
+      &barrel1_asset,
+      "./barrel2.js",
+      vec![(mangled_reexport_1, "middleName", true)],
+    );
+    let barrel2_dep_node = graph.add_dependency(barrel2_dep.clone(), false);
+    graph.add_edge(&barrel1_asset_node, &barrel2_dep_node);
+
+    // barrel2.js - re-exports originalName as middleName (weak symbol)
+    let mangled_reexport_2 = "$barrel2$re_export$middleName";
+    let barrel2_asset = make_asset("barrel2.js", vec![(mangled_reexport_2, "middleName", true)]);
+    let barrel2_asset_node = graph.add_asset(barrel2_asset.clone(), false);
+    graph.add_edge(&barrel2_dep_node, &barrel2_asset_node);
+
+    // Dependency from barrel2.js to source.js requesting "originalName"
+    let source_dep = make_dependency(
+      &barrel2_asset,
+      "./source.js",
+      vec![(mangled_reexport_2, "originalName", true)],
+    );
+    let source_dep_node = graph.add_dependency(source_dep.clone(), false);
+    graph.add_edge(&barrel2_asset_node, &source_dep_node);
+
+    // source.js - provides "originalName" (strong symbol)
+    let source_asset = make_asset("source.js", vec![("originalName", "originalName", false)]);
+    let source_asset_node = graph.add_asset(source_asset.clone(), false);
+    graph.add_edge(&source_dep_node, &source_asset_node);
+
+    let mut tracker = SymbolTracker::default();
+
+    // Process in traversal order
+    tracker
+      .track_symbols(&graph, &index_asset, std::slice::from_ref(&barrel1_dep))
+      .unwrap();
+    tracker
+      .track_symbols(&graph, &barrel1_asset, std::slice::from_ref(&barrel2_dep))
+      .unwrap();
+    tracker
+      .track_symbols(&graph, &barrel2_asset, std::slice::from_ref(&source_dep))
+      .unwrap();
+    tracker.track_symbols(&graph, &source_asset, &[]).unwrap();
+
+    // Verify all dependencies are satisfied pointing to source_asset
+    let barrel1_requirements = tracker.requirements_by_dep.get(&barrel1_dep.id).unwrap();
+    let barrel1_final = barrel1_requirements[0]
+      .final_location
+      .as_ref()
+      .expect("barrel1_dep requirement should be satisfied");
+    assert_eq!(
+      barrel1_final.providing_asset.id, source_asset.id,
+      "barrel1_dep should point to source.js as provider"
+    );
+    assert_eq!(
+      barrel1_final.imported_name, "originalName",
+      "barrel1_dep should resolve to originalName"
+    );
+
+    let barrel2_requirements = tracker.requirements_by_dep.get(&barrel2_dep.id).unwrap();
+    let barrel2_final = barrel2_requirements[0]
+      .final_location
+      .as_ref()
+      .expect("barrel2_dep requirement should be satisfied");
+    assert_eq!(
+      barrel2_final.providing_asset.id, source_asset.id,
+      "barrel2_dep should point to source.js as provider"
+    );
+
+    let source_requirements = tracker.requirements_by_dep.get(&source_dep.id).unwrap();
+    let source_final = source_requirements[0]
+      .final_location
+      .as_ref()
+      .expect("source_dep requirement should be satisfied");
+    assert_eq!(
+      source_final.providing_asset.id, source_asset.id,
+      "source_dep should point to source.js as provider"
+    );
+
+    // Finalize should succeed without panic
+    let finalized = tracker.finalize();
+
+    // All dependencies should have used symbols
+    assert!(
+      finalized
+        .get_used_symbols_for_dependency(&barrel1_dep.id)
+        .is_some(),
+      "barrel1_dep should have used symbols"
+    );
+
+    // Check that resolved_symbol is correct for barrel1_dep
+    let barrel1_used = finalized
+      .get_used_symbols_for_dependency(&barrel1_dep.id)
+      .unwrap();
+    let barrel1_symbol = barrel1_used.values().next().unwrap();
+    assert_eq!(
+      barrel1_symbol.resolved_symbol, "originalName",
+      "barrel1_dep used symbol should resolve to originalName"
+    );
+  }
+
+  #[test]
   fn track_symbols_handles_renamed_exports() {
     // Test case: export {foo as renamedFoo} from './foo'
     // index.js imports "renamedFoo" from barrel.js
