@@ -3,7 +3,6 @@ import {
   registerSerializableClass,
   serialize,
 } from '@atlaspack/build-cache';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {Lmdb} from '@atlaspack/rust';
 import type {FilePath} from '@atlaspack/types';
 import type {Cache} from './types';
@@ -126,9 +125,7 @@ export class LMDBLiteCache implements Cache {
   }
 
   async ensure(): Promise<void> {
-    if (!getFeatureFlag('cachePerformanceImprovements')) {
-      await this.fsCache.ensure();
-    }
+    await this.fsCache.ensure();
     await this.fs.mkdirp(this.cacheFilesDirectory);
     return Promise.resolve();
   }
@@ -161,24 +158,14 @@ export class LMDBLiteCache implements Cache {
   }
 
   getStream(key: string): Readable {
-    if (!getFeatureFlag('cachePerformanceImprovements')) {
-      return this.fs.createReadStream(path.join(this.dir, key));
-    }
-
-    return this.fs.createReadStream(this.getFileKey(key));
+    return this.fs.createReadStream(path.join(this.dir, key));
   }
 
-  async setStream(key: string, stream: Readable): Promise<void> {
-    if (!getFeatureFlag('cachePerformanceImprovements')) {
-      return pipeline(
-        stream,
-        this.fs.createWriteStream(path.join(this.dir, key)),
-      );
-    }
-
-    const filePath = this.getFileKey(key);
-    await this.fs.mkdirp(path.dirname(filePath));
-    return pipeline(stream, this.fs.createWriteStream(filePath));
+  setStream(key: string, stream: Readable): Promise<void> {
+    return pipeline(
+      stream,
+      this.fs.createWriteStream(path.join(this.dir, key)),
+    );
   }
 
   // eslint-disable-next-line require-await
@@ -203,45 +190,28 @@ export class LMDBLiteCache implements Cache {
   }
 
   hasLargeBlob(key: string): Promise<boolean> {
-    if (!getFeatureFlag('cachePerformanceImprovements')) {
-      return this.fsCache.hasLargeBlob(key);
-    }
-
-    return this.fs.exists(this.getFileKey(key));
+    return this.fsCache.hasLargeBlob(key);
   }
 
   getLargeBlob(key: string): Promise<Buffer> {
-    if (!getFeatureFlag('cachePerformanceImprovements')) {
-      return this.fsCache.getLargeBlob(key);
-    }
-    return this.fs.readFile(this.getFileKey(key));
+    return this.fsCache.getLargeBlob(key);
   }
 
-  async setLargeBlob(
+  setLargeBlob(
     key: string,
     contents: Buffer | string,
     options?: {
       signal?: AbortSignal;
     },
   ): Promise<void> {
-    if (!getFeatureFlag('cachePerformanceImprovements')) {
-      return this.fsCache.setLargeBlob(key, contents, options);
-    }
-
-    const targetPath = this.getFileKey(key);
-    await this.fs.mkdirp(path.dirname(targetPath));
-    return this.fs.writeFile(targetPath, contents);
+    return this.fsCache.setLargeBlob(key, contents, options);
   }
 
   /**
    * @deprecated Use store.delete instead.
    */
   deleteLargeBlob(key: string): Promise<void> {
-    if (!getFeatureFlag('cachePerformanceImprovements')) {
-      return this.fsCache.deleteLargeBlob(key);
-    }
-
-    return this.store.delete(key);
+    return this.fsCache.deleteLargeBlob(key);
   }
 
   keys(): Iterable<string> {

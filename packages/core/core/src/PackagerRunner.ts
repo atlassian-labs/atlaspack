@@ -62,7 +62,6 @@ import {invalidateDevDeps} from './requests/DevDepRequest';
 import {computeSourceMapRoot} from './requests/WriteBundleRequest';
 import {tracer, PluginTracer} from '@atlaspack/profiler';
 import {fromEnvironmentId} from './EnvironmentManager';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 type Opts = {
   config: AtlaspackConfig;
@@ -654,21 +653,6 @@ export default class PackagerRunner {
       this.options,
     );
 
-    if (getFeatureFlag('cachePerformanceImprovements')) {
-      const hash = hashString(
-        ATLASPACK_VERSION +
-          devDepHashes +
-          invalidationHash +
-          bundle.target.publicUrl +
-          bundleGraph.getHash(bundle) +
-          JSON.stringify(configResults) +
-          JSON.stringify(globalInfoResults) +
-          this.options.mode +
-          (this.options.shouldBuildLazily ? 'lazy' : 'eager'),
-      );
-      return path.join(bundle.displayName ?? bundle.name ?? bundle.id, hash);
-    }
-
     return hashString(
       ATLASPACK_VERSION +
         devDepHashes +
@@ -715,27 +699,20 @@ export default class PackagerRunner {
     let mapKey = PackagerRunner.getMapKey(cacheKey);
 
     let isLargeBlob = await this.options.cache.hasLargeBlob(contentKey);
-    let contentExists = getFeatureFlag('cachePerformanceImprovements')
-      ? isLargeBlob
-      : isLargeBlob || (await this.options.cache.has(contentKey));
+    let contentExists =
+      isLargeBlob || (await this.options.cache.has(contentKey));
     if (!contentExists) {
       return null;
     }
 
-    let mapExists = getFeatureFlag('cachePerformanceImprovements')
-      ? await this.options.cache.hasLargeBlob(mapKey)
-      : await this.options.cache.has(mapKey);
+    let mapExists = await this.options.cache.has(mapKey);
 
     return {
       contents: isLargeBlob
         ? this.options.cache.getStream(contentKey)
         : blobToStream(await this.options.cache.getBlob(contentKey)),
       map: mapExists
-        ? blobToStream(
-            getFeatureFlag('cachePerformanceImprovements')
-              ? await this.options.cache.getLargeBlob(mapKey)
-              : await this.options.cache.getBlob(mapKey),
-          )
+        ? blobToStream(await this.options.cache.getBlob(mapKey))
         : null,
     };
   }
@@ -750,13 +727,11 @@ export default class PackagerRunner {
     let hash;
     // @ts-expect-error TS2702
     let hashReferences: RegExp.matchResult | Array<string> = [];
-    let isLargeBlob = getFeatureFlag('cachePerformanceImprovements');
+    let isLargeBlob = false;
 
     // TODO: don't replace hash references in binary files??
     if (contents instanceof Readable) {
-      if (!getFeatureFlag('cachePerformanceImprovements')) {
-        isLargeBlob = true;
-      }
+      isLargeBlob = true;
 
       let boundaryStr = '';
       let h = new Hash();
@@ -782,29 +757,17 @@ export default class PackagerRunner {
       hash = hashBuffer(buffer);
       hashReferences = contents.match(HASH_REF_REGEX) ?? [];
 
-      if (getFeatureFlag('cachePerformanceImprovements')) {
-        await this.options.cache.setLargeBlob(cacheKeys.content, buffer);
-      } else {
-        await this.options.cache.setBlob(cacheKeys.content, buffer);
-      }
+      await this.options.cache.setBlob(cacheKeys.content, buffer);
     } else {
       size = contents.length;
       hash = hashBuffer(contents);
       hashReferences = contents.toString().match(HASH_REF_REGEX) ?? [];
 
-      if (getFeatureFlag('cachePerformanceImprovements')) {
-        await this.options.cache.setLargeBlob(cacheKeys.content, contents);
-      } else {
-        await this.options.cache.setBlob(cacheKeys.content, contents);
-      }
+      await this.options.cache.setBlob(cacheKeys.content, contents);
     }
 
     if (map != null) {
-      if (getFeatureFlag('cachePerformanceImprovements')) {
-        await this.options.cache.setLargeBlob(cacheKeys.map, map);
-      } else {
-        await this.options.cache.setBlob(cacheKeys.map, map);
-      }
+      await this.options.cache.setBlob(cacheKeys.map, map);
     }
 
     let info = {
@@ -821,23 +784,14 @@ export default class PackagerRunner {
   }
 
   static getContentKey(cacheKey: string): string {
-    if (getFeatureFlag('cachePerformanceImprovements')) {
-      return `PackagerRunner/${ATLASPACK_VERSION}/${cacheKey}/content`;
-    }
     return hashString(`${cacheKey}:content`);
   }
 
   static getMapKey(cacheKey: string): string {
-    if (getFeatureFlag('cachePerformanceImprovements')) {
-      return `PackagerRunner/${ATLASPACK_VERSION}/${cacheKey}/map`;
-    }
     return hashString(`${cacheKey}:map`);
   }
 
   static getInfoKey(cacheKey: string): string {
-    if (getFeatureFlag('cachePerformanceImprovements')) {
-      return `PackagerRunner/${ATLASPACK_VERSION}/${cacheKey}/info`;
-    }
     return hashString(`${cacheKey}:info`);
   }
 }

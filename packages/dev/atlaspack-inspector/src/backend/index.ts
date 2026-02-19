@@ -69,7 +69,6 @@ export function configureInspectorApp({
 }: ConfigureInspectorAppParams): BuildInspectorAppParams {
   const flags = {
     ...DEFAULT_FEATURE_FLAGS,
-    cachePerformanceImprovements: true,
   };
   setFeatureFlags(flags);
 
@@ -154,27 +153,15 @@ export function buildInspectorApp({
 /**
  * Executes `atlaspack build` to build the client application for the inspector.
  *
- * The inspector requires `cachePerformanceImprovements` to be enabled.
- *
  * @param targets - The targets/entry-points to build.
  */
 async function buildClientApplicationForInspector(targets: string[]) {
   logger.info({targets}, 'Building app...');
 
-  const child = spawn(
-    'yarn',
-    [
-      'atlaspack',
-      'build',
-      '--feature-flag',
-      'cachePerformanceImprovements=true',
-      ...targets,
-    ],
-    {
-      shell: true,
-      stdio: 'inherit',
-    },
-  );
+  const child = spawn('yarn', ['atlaspack', 'build', ...targets], {
+    shell: true,
+    stdio: 'inherit',
+  });
 
   await new Promise((resolve, reject) => {
     child.on('error', (error) => {

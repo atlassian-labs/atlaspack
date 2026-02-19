@@ -113,7 +113,6 @@ export async function loadGraphs(cacheDir: string): Promise<{
   let assetGraph;
   if (assetGraphBlob != null) {
     try {
-      // TODO: this should be reviewed when `cachePerformanceImprovements` flag is removed, as we'll be writing files to LMDB cache instead of large blobs
       let file = await cache.getBlob(assetGraphBlob);
 
       let timeToDeserialize = Date.now();

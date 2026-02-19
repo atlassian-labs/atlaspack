@@ -2,7 +2,7 @@ import invariant, {AssertionError} from 'assert';
 import path from 'path';
 
 import {deserialize, serialize} from '@atlaspack/build-cache';
-import {LMDBLiteCache, Cache} from '@atlaspack/cache';
+import {Cache} from '@atlaspack/cache';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {ContentGraph} from '@atlaspack/graph';
 import type {
@@ -12,7 +12,7 @@ import type {
   SerializedContentGraph,
   Graph,
 } from '@atlaspack/graph';
-import logger, {instrument} from '@atlaspack/logger';
+import logger from '@atlaspack/logger';
 import {hashString} from '@atlaspack/rust';
 import type {Async, EnvMap} from '@atlaspack/types';
 import {
@@ -1315,13 +1315,11 @@ export default class RequestTracker {
       return result;
     } else if (node.resultCacheKey != null && ifMatch == null) {
       let key = node.resultCacheKey;
-      if (!getFeatureFlag('cachePerformanceImprovements')) {
-        invariant(this.options.cache.hasLargeBlob(key));
-      }
+      invariant(this.options.cache.hasLargeBlob(key));
 
-      let cachedResult: T = getFeatureFlag('cachePerformanceImprovements')
-        ? nullthrows(await this.options.cache.get<T>(key))
-        : deserialize(await this.options.cache.getLargeBlob(key));
+      let cachedResult: T = deserialize(
+        await this.options.cache.getLargeBlob(key),
+      );
       node.result = cachedResult;
       return cachedResult;
     }
@@ -1559,40 +1557,15 @@ export default class RequestTracker {
   }
 
   async writeToCache(signal?: AbortSignal) {
-    const options = this.options;
-    async function runCacheImprovements<T>(
-      newPath: (cache: LMDBLiteCache) => Promise<T>,
-      oldPath: () => Promise<T>,
-    ): Promise<T> {
-      if (getFeatureFlag('cachePerformanceImprovements')) {
-        invariant(options.cache instanceof LMDBLiteCache);
-        const result = await newPath(options.cache);
-        return result;
-      } else {
-        const result = await oldPath();
-        return result;
-      }
-    }
-
     let cacheKey = getCacheKey(this.options);
-    let requestGraphKey = getFeatureFlag('cachePerformanceImprovements')
-      ? `${cacheKey}/RequestGraph`
-      : `requestGraph-${cacheKey}`;
-    let snapshotKey = getFeatureFlag('cachePerformanceImprovements')
-      ? `${cacheKey}/snapshot`
-      : `snapshot-${cacheKey}`;
+    let requestGraphKey = `requestGraph-${cacheKey}`;
+    let snapshotKey = `snapshot-${cacheKey}`;
 
     if (this.options.shouldDisableCache) {
       return;
     }
 
     let total = 0;
-    await runCacheImprovements(
-      async (cache) => {
-        await cache.getNativeRef().startWriteTransaction();
-      },
-      () => Promise.resolve(),
-    );
     try {
       report({
         type: 'cache',
@@ -1602,7 +1575,7 @@ export default class RequestTracker {
       });
 
       if (getFeatureFlag('environmentDeduplication')) {
-        await writeEnvironmentsToCache(options.cache);
+        await writeEnvironmentsToCache(this.options.cache);
       }
 
       let serialisedGraph = this.graph.serialize();
@@ -1618,27 +1591,14 @@ export default class RequestTracker {
           throw new Error('Serialization was aborted');
         }
 
-        await runCacheImprovements(
-          (cache) => {
-            instrument(
-              `RequestTracker::writeToCache::cache.put(${key})`,
-              () => {
-                cache.getNativeRef().putNoConfirm(key, serialize(contents));
-              },
-            );
-            return Promise.resolve();
-          },
-          async () => {
-            await this.options.cache.setLargeBlob(
-              key,
-              serialize(contents),
-              signal
-                ? {
-                    signal: signal,
-                  }
-                : undefined,
-            );
-          },
+        await this.options.cache.setLargeBlob(
+          key,
+          serialize(contents),
+          signal
+            ? {
+                signal: signal,
+              }
+            : undefined,
         );
 
         total += 1;
@@ -1720,18 +1680,6 @@ export default class RequestTracker {
         nodes: undefined,
       });
 
-      await runCacheImprovements(
-        () =>
-          serialiseAndSet(`${cacheKey}/cache_metadata`, {
-            version: ATLASPACK_VERSION,
-            entries: this.options.entries,
-            mode: this.options.mode,
-            shouldBuildLazily: this.options.shouldBuildLazily,
-            watchBackend: this.options.watchBackend,
-          }),
-        () => Promise.resolve(),
-      );
-
       let opts = getWatcherOptions(this.options);
       let snapshotPath = path.join(this.options.cacheDir, snapshotKey + '.txt');
 
@@ -1743,13 +1691,6 @@ export default class RequestTracker {
     } catch (err: any) {
       // If we have aborted, ignore the error and continue
       if (!signal?.aborted) throw err;
-    } finally {
-      await runCacheImprovements(
-        async (cache) => {
-          await cache.getNativeRef().commitWriteTransaction();
-        },
-        () => Promise.resolve(),
-      );
     }
 
     report({type: 'cache', phase: 'end', total, size: this.graph.nodes.length});
@@ -1783,18 +1724,6 @@ export function getWatcherOptions({
 }
 
 function getCacheKey(options: AtlaspackOptions) {
-  if (getFeatureFlag('cachePerformanceImprovements')) {
-    const hash = hashString(
-      `${ATLASPACK_VERSION}:${JSON.stringify(options.entries)}:${
-        options.mode
-      }:${options.shouldBuildLazily ? 'lazy' : 'eager'}:${
-        options.watchBackend ?? ''
-      }`,
-    );
-
-    return `RequestTracker/${ATLASPACK_VERSION}/${hash}`;
-  }
-
   return hashString(
     `${ATLASPACK_VERSION}:${JSON.stringify(options.entries)}:${options.mode}:${
       options.shouldBuildLazily ? 'lazy' : 'eager'
@@ -1803,10 +1732,6 @@ function getCacheKey(options: AtlaspackOptions) {
 }
 
 function getRequestGraphNodeKey(index: number, cacheKey: string) {
-  if (getFeatureFlag('cachePerformanceImprovements')) {
-    return `${cacheKey}/RequestGraph/nodes/${index}`;
-  }
-
   return `requestGraph-nodes-${index}-${cacheKey}`;
 }
 
@@ -1823,15 +1748,9 @@ export async function readAndDeserializeRequestGraph(
   let bufferLength = 0;
 
   const getAndDeserialize = async (key: string) => {
-    if (getFeatureFlag('cachePerformanceImprovements')) {
-      const buffer = await cache.getBlob(key);
-      bufferLength += Buffer.byteLength(buffer);
-      return deserialize(buffer);
-    } else {
-      const buffer = await cache.getLargeBlob(key);
-      bufferLength += Buffer.byteLength(buffer);
-      return deserialize(buffer);
-    }
+    const buffer = await cache.getLargeBlob(key);
+    bufferLength += Buffer.byteLength(buffer);
+    return deserialize(buffer);
   };
 
   let serializedRequestGraph = await getAndDeserialize(requestGraphKey);
@@ -1867,14 +1786,10 @@ async function loadRequestGraph(
   }
 
   let cacheKey = getCacheKey(options);
-  let requestGraphKey = getFeatureFlag('cachePerformanceImprovements')
-    ? `${cacheKey}/RequestGraph`
-    : `requestGraph-${cacheKey}`;
+  let requestGraphKey = `requestGraph-${cacheKey}`;
 
   let timeout;
-  const snapshotKey = getFeatureFlag('cachePerformanceImprovements')
-    ? `${cacheKey}/snapshot`
-    : `snapshot-${cacheKey}`;
+  const snapshotKey = `snapshot-${cacheKey}`;
   const snapshotPath = path.join(options.cacheDir, snapshotKey + '.txt');
 
   const commonMeta = {
@@ -1901,9 +1816,8 @@ async function loadRequestGraph(
     await loadEnvironmentsFromCache(options.cache);
   }
 
-  const hasRequestGraphInCache = getFeatureFlag('cachePerformanceImprovements')
-    ? await options.cache.has(requestGraphKey)
-    : await options.cache.hasLargeBlob(requestGraphKey);
+  const hasRequestGraphInCache =
+    await options.cache.hasLargeBlob(requestGraphKey);
 
   if (hasRequestGraphInCache) {
     try {

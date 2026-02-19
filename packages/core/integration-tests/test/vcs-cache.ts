@@ -3,7 +3,6 @@ import childProcess from 'child_process';
 import assert from 'assert';
 import path from 'path';
 import {NodeVCSAwareFS} from '@atlaspack/fs';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {
   bundle,
   describe,
@@ -236,43 +235,17 @@ __metadata:
 }
 
 function findSnapshotPath(): string {
-  if (!getFeatureFlag('cachePerformanceImprovements')) {
-    const filesInCache = fs.readdirSync(cacheDir);
-    const snapshotFileName = filesInCache.find(
-      (file) =>
-        file.startsWith('snapshot-') && !file.endsWith('.native-snapshot.txt'),
-    );
+  const filesInCache = fs.readdirSync(cacheDir);
+  const snapshotFileName = filesInCache.find(
+    (file) =>
+      file.startsWith('snapshot-') && !file.endsWith('.native-snapshot.txt'),
+  );
 
-    if (snapshotFileName == null) {
-      throw new Error('No snapshot file found in cache');
-    }
-
-    return path.join(cacheDir, snapshotFileName);
-  }
-
-  const requestTrackerKey = fs.readdirSync(
-    path.join(cacheDir, 'RequestTracker', ATLASPACK_VERSION),
-  )[0];
-  const snapshotFileName = fs
-    .readdirSync(
-      path.join(
-        cacheDir,
-        'RequestTracker',
-        ATLASPACK_VERSION,
-        requestTrackerKey,
-      ),
-    )
-    .find((file) => file.endsWith('snapshot.txt'));
   if (snapshotFileName == null) {
     throw new Error('No snapshot file found in cache');
   }
-  return path.join(
-    cacheDir,
-    'RequestTracker',
-    ATLASPACK_VERSION,
-    requestTrackerKey,
-    snapshotFileName,
-  );
+
+  return path.join(cacheDir, snapshotFileName);
 }
 
 describe.v2('vcs cache', () => {
