@@ -946,4 +946,136 @@ mod tests {
     assert!(resolved.is_some());
     assert_eq!(resolved.unwrap().id, "asset1");
   }
+
+  #[test]
+  fn test_deserialize_asset_nodes_from_json_multiple_assets() {
+    let asset1 = create_test_asset_node("asset1");
+    let mut asset2 = create_test_asset_node("asset2");
+    asset2.value.file_path = PathBuf::from("other.js");
+    let json = serde_json::to_string(&[asset1, asset2]).unwrap();
+    let environments = vec![Arc::new(Environment::default())];
+
+    let nodes = BundleGraphFromJs::deserialize_asset_nodes_from_json(&json, &environments).unwrap();
+
+    assert_eq!(nodes.len(), 2);
+    assert_eq!(nodes[0].id, "asset1");
+    assert_eq!(nodes[1].id, "asset2");
+    assert_eq!(nodes[1].value.file_path, PathBuf::from("other.js"));
+  }
+
+  #[test]
+  fn test_deserialize_asset_nodes_from_json_invalid_json() {
+    let environments: Vec<Arc<Environment>> = vec![];
+    let result =
+      BundleGraphFromJs::deserialize_asset_nodes_from_json("not valid json", &environments);
+    assert!(result.is_err());
+    let err_msg = result.unwrap_err().to_string();
+    assert!(err_msg.contains("Failed to parse asset nodes JSON"));
+  }
+
+  #[test]
+  fn test_deserialize_asset_nodes_from_json_non_asset_node_errors() {
+    let json = r#"[{"type": "root", "id": "root", "value": null}]"#;
+    let environments: Vec<Arc<Environment>> = vec![];
+
+    let result = BundleGraphFromJs::deserialize_asset_nodes_from_json(json, &environments);
+    assert!(result.is_err());
+    let err_msg = result.unwrap_err().to_string();
+    assert!(err_msg.contains("Expected asset node"));
+  }
+
+  #[test]
+  fn test_update_assets_multiple_assets() {
+    let asset1 = create_test_asset_node("asset1");
+    let mut asset2 = create_test_asset_node("asset2");
+    asset2.value.file_path = PathBuf::from("original2.js");
+    let nodes = vec![
+      BundleGraphNode::Root(create_test_root_node()),
+      BundleGraphNode::Bundle(create_test_bundle_node("bundle1", "main.js")),
+      BundleGraphNode::Asset(asset1),
+      BundleGraphNode::Asset(asset2),
+    ];
+    let edges = vec![
+      (0, 1, BundleGraphEdgeType::Null),
+      (1, 2, BundleGraphEdgeType::Contains),
+      (1, 3, BundleGraphEdgeType::Contains),
+    ];
+
+    let mut graph =
+      BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![Environment::default()]);
+
+    let mut updated1 = create_test_asset_node("asset1");
+    updated1.value.file_path = PathBuf::from("updated1.js");
+    let mut updated2 = create_test_asset_node("asset2");
+    updated2.value.file_path = PathBuf::from("updated2.js");
+    graph.update_assets(vec![updated1, updated2]).unwrap();
+
+    let bundle = graph.get_bundle_by_id("bundle1").unwrap();
+    let assets = graph.get_bundle_assets(bundle).unwrap();
+    assert_eq!(assets.len(), 2);
+    let paths: Vec<_> = assets.iter().map(|a| a.file_path.clone()).collect();
+    assert!(paths.contains(&PathBuf::from("updated1.js")));
+    assert!(paths.contains(&PathBuf::from("updated2.js")));
+  }
+
+  #[test]
+  fn test_update_assets_empty_nodes_no_op() {
+    let asset = create_test_asset_node("asset1");
+    let nodes = vec![
+      BundleGraphNode::Root(create_test_root_node()),
+      BundleGraphNode::Bundle(create_test_bundle_node("bundle1", "main.js")),
+      BundleGraphNode::Asset(asset),
+    ];
+    let edges = vec![
+      (0, 1, BundleGraphEdgeType::Null),
+      (1, 2, BundleGraphEdgeType::Contains),
+    ];
+
+    let mut graph =
+      BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![Environment::default()]);
+    graph.update_assets(vec![]).unwrap();
+
+    let bundle = graph.get_bundle_by_id("bundle1").unwrap();
+    let assets = graph.get_bundle_assets(bundle).unwrap();
+    assert_eq!(assets.len(), 1);
+    assert_eq!(assets[0].file_path, PathBuf::from("asset1.js"));
+  }
+
+  #[test]
+  fn test_update_assets_asset_not_in_graph_errors() {
+    let asset = create_test_asset_node("asset1");
+    let nodes = vec![
+      BundleGraphNode::Root(create_test_root_node()),
+      BundleGraphNode::Bundle(create_test_bundle_node("bundle1", "main.js")),
+    ];
+    let edges = vec![(0, 1, BundleGraphEdgeType::Null)];
+
+    let mut graph =
+      BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![Environment::default()]);
+
+    let result = graph.update_assets(vec![asset]);
+    assert!(result.is_err());
+    let err_msg = result.unwrap_err().to_string();
+    assert!(err_msg.contains("Asset not found in graph"));
+    assert!(err_msg.contains("asset1"));
+  }
+
+  #[test]
+  fn test_update_assets_node_not_asset_errors() {
+    let nodes = vec![
+      BundleGraphNode::Root(create_test_root_node()),
+      BundleGraphNode::Bundle(create_test_bundle_node("bundle1", "main.js")),
+    ];
+    let edges = vec![(0, 1, BundleGraphEdgeType::Null)];
+
+    let mut graph =
+      BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![Environment::default()]);
+
+    let asset_node_with_bundle_id = create_test_asset_node("bundle1");
+    let result = graph.update_assets(vec![asset_node_with_bundle_id]);
+    assert!(result.is_err());
+    let err_msg = result.unwrap_err().to_string();
+    assert!(err_msg.contains("is not an asset"));
+    assert!(err_msg.contains("bundle1"));
+  }
 }
