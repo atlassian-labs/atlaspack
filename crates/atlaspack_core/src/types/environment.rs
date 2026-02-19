@@ -242,6 +242,21 @@ pub struct TargetSourceMapOptions {
   source_root: Option<String>,
 }
 
+impl TargetSourceMapOptions {
+  /// Creates a new TargetSourceMapOptions with inline set to true
+  pub fn new_inline() -> Self {
+    Self {
+      inline: Some(true),
+      ..Default::default()
+    }
+  }
+
+  /// Returns true if the source map should be inlined as a data URL into the bundle
+  pub fn is_inline(&self) -> bool {
+    self.inline.unwrap_or(false)
+  }
+}
+
 #[cfg(test)]
 mod test {
   use std::str::FromStr;

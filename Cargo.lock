@@ -676,6 +676,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "atlaspack_core",
+ "atlaspack_sourcemap",
  "glob",
  "lmdb-js-lite",
  "oxc_allocator",
@@ -683,6 +684,7 @@ dependencies = [
  "oxc_ast_visit",
  "oxc_codegen",
  "oxc_parser",
+ "oxc_sourcemap",
  "oxc_span",
  "oxc_syntax",
  "parking_lot",

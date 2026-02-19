@@ -25,7 +25,8 @@
       "distDir": "dist",
       "outputFormat": "commonjs",
       "scopeHoist": false,
-      "__unstable_singleFileOutput": true
+      "__unstable_singleFileOutput": true,
+      "sourceMap": true
     }
   },
   "type": "commonjs"

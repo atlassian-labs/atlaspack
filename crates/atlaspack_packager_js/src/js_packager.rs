@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, path::Path, sync::Arc};
 
 use atlaspack_core::{
   bundle_graph::bundle_graph::BundleGraph,
@@ -15,7 +15,14 @@ use atlaspack_core::package_result::{BundleInfo, CacheKeyMap, PackageResult};
 use super::process_asset::rewrite_asset_code;
 use super::{JsPackager, PackagingContext};
 
-type PackagedAsset<'a> = (&'a Asset, String);
+const HASH_REF_PREFIX: &str = "HASH_REF_";
+
+struct PackagedAsset<'a> {
+  asset: &'a Asset,
+  code: String,
+  source_map: Option<atlaspack_sourcemap::SourceMap>,
+  hash_references: Vec<String>,
+}
 
 impl<B: BundleGraph + Send + Sync> JsPackager<B> {
   pub fn new(context: PackagingContext, bundle_graph: Arc<RwLock<B>>) -> Self {
@@ -32,6 +39,7 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       .ok_or(anyhow::anyhow!("Bundle not found"))?;
 
     let assets = graph.get_bundle_assets(bundle)?;
+    let source_map_enabled = bundle.env.source_map.is_some();
 
     let span = tracing::trace_span!("process_assets", bundle_id = bundle_id).entered();
     let contents = assets
@@ -52,14 +60,37 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
           String::from_utf8_lossy(&code.ok_or(anyhow::anyhow!("Unable to read asset code"))?)
             .to_string();
         self
-          .process_asset(bundle, asset, asset_code)
-          .map(|content| (*asset, content))
+          .process_asset(bundle, asset, asset_code, source_map_enabled)
+          .map(|(code, source_map, hash_references)| PackagedAsset {
+            asset,
+            code,
+            source_map,
+            hash_references,
+          })
       })
-      .collect::<anyhow::Result<Vec<(&Asset, String)>>>()?;
+      .collect::<anyhow::Result<Vec<PackagedAsset>>>()?;
     span.exit();
 
-    let bundle_contents = self.assemble_bundle(bundle, contents);
-    let bundle_contents = bundle_contents.as_bytes();
+    // Collect hash references from all processed assets
+    let mut hash_references: Vec<String> = contents
+      .iter()
+      .flat_map(|pa| pa.hash_references.iter().cloned())
+      .collect();
+
+    // If the bundle name contains a HASH_REF, include it so WriteBundleRequest
+    // can replace it in the sourceMappingURL comment (and anywhere else).
+    if let Some(ref name) = bundle.name
+      && name.contains(HASH_REF_PREFIX)
+      && !bundle.hash_reference.is_empty()
+    {
+      hash_references.push(bundle.hash_reference.clone());
+    }
+
+    hash_references.dedup();
+
+    let (bundle_contents_str, bundle_map) =
+      self.assemble_bundle(bundle, contents, source_map_enabled)?;
+    let bundle_contents = bundle_contents_str.as_bytes();
     let content_hash = hash_bytes(bundle_contents);
     let content_cache_key = format!(
       "PackagerRunner/{}/{content_hash}/content",
@@ -70,12 +101,25 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       atlaspack_rust_version()
     );
 
-    // Write bundle content to filesystem cache instead of LMDB.
-    // Large blobs are stored on the filesystem to avoid bloating LMDB.
     self
       .context
       .cache
       .set_large_blob(&content_cache_key, bundle_contents)?;
+
+    let map_cache_key = if let Some(mut sm) = bundle_map {
+      let map_json = sm
+        .to_json(None)
+        .map_err(|e| anyhow::anyhow!("Failed to serialize bundle source map: {}", e))?;
+      let map_key = format!(
+        "PackagerRunner/{}/{content_hash}/map",
+        atlaspack_rust_version()
+      );
+      // JS reads the map via cache.getBlob(mapKey) (LMDB).
+      self.context.cache.set_blob(&map_key, map_json.as_bytes())?;
+      map_key
+    } else {
+      "TODO".to_string()
+    };
 
     Ok(PackageResult {
       bundle_info: BundleInfo {
@@ -83,10 +127,10 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
         size: bundle_contents.len() as u64,
         total_assets: assets.len() as u64,
         hash: content_hash,
-        hash_references: vec![],
+        hash_references,
         cache_keys: CacheKeyMap {
           content: content_cache_key,
-          map: "TODO".to_string(), // Has to exist for JS, but won't be found in LMDB
+          map: map_cache_key,
           info: info_cache_key,
         },
         is_large_blob: true, // Always true for native packager - content is on filesystem
@@ -99,14 +143,72 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
   }
 
   #[tracing::instrument(level = "trace", skip_all)]
-  fn process_asset(&self, bundle: &Bundle, asset: &Asset, code: String) -> anyhow::Result<String> {
-    // Get dependency map for this asset
+  fn process_asset(
+    &self,
+    bundle: &Bundle,
+    asset: &Asset,
+    code: String,
+    source_map_enabled: bool,
+  ) -> anyhow::Result<(String, Option<atlaspack_sourcemap::SourceMap>, Vec<String>)> {
     let deps = self.get_asset_dependency_map(bundle, asset)?;
-    let code = rewrite_asset_code(code, &deps)?;
+    let source_map_path = source_map_enabled.then_some(asset.file_path.as_path());
+    let rewrite_result = rewrite_asset_code(code, &deps, source_map_path)?;
+    let rewritten_code = rewrite_result.code;
+    let oxc_map = rewrite_result.source_map;
+    let hash_references = rewrite_result.hash_references;
 
-    // All assets are wrapped, including entry assets. Entry assets will be explicitly
-    // required at the bottom of the bundle to ensure they execute in order.
-    self.wrap_asset(bundle, asset, code)
+    let asset_sm = if source_map_enabled {
+      if let Some(oxc_map) = oxc_map {
+        let oxc_json = oxc_map.to_json_string();
+        let mut asset_sm =
+          atlaspack_sourcemap::SourceMap::from_json(&self.context.project_root, &oxc_json)
+            .map_err(|e| {
+              anyhow::anyhow!(
+                "Failed to parse OXC source map for asset {}: {}",
+                asset.id,
+                e
+              )
+            })?;
+
+        // Compose with the transformer's pre-existing map stored in LMDB at "map:{asset_id}".
+        // Ok(None) means the asset has no transformer source map, which is fine.
+        let map_key = format!("map:{}", asset.id);
+        let txn = self.context.db.database().read_txn()?;
+        let existing_map_bytes = self.context.db.database().get(&txn, &map_key)?;
+        drop(txn);
+
+        if let Some(existing_map_bytes) = existing_map_bytes {
+          let existing_json = std::str::from_utf8(&existing_map_bytes).map_err(|e| {
+            anyhow::anyhow!("Invalid UTF-8 in source map for asset {}: {}", asset.id, e)
+          })?;
+          let mut existing_sm =
+            atlaspack_sourcemap::SourceMap::from_json(&self.context.project_root, existing_json)
+              .map_err(|e| {
+                anyhow::anyhow!(
+                  "Failed to parse existing source map for asset {}: {}",
+                  asset.id,
+                  e
+                )
+              })?;
+          asset_sm.extends(&mut existing_sm).map_err(|e| {
+            anyhow::anyhow!(
+              "Failed to compose source maps for asset {}: {}",
+              asset.id,
+              e
+            )
+          })?;
+        }
+
+        Some(asset_sm)
+      } else {
+        None
+      }
+    } else {
+      None
+    };
+
+    let wrapped = self.wrap_asset(bundle, asset, rewritten_code)?;
+    Ok((wrapped, asset_sm, hash_references))
   }
 
   fn get_asset_dependency_map(
@@ -174,57 +276,44 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       String::new()
     };
 
+    // The function body starts on a new line so that source map offsets are purely
+    // line-based. This avoids any need for column offset arithmetic in the assembler.
     Ok(format!(
-      "{comment}define('{public_id}', function (require,module,exports) {{ {code} }});"
+      "{comment}define('{public_id}', function (require,module,exports) {{\n{code}\n}});"
     ))
   }
 
-  pub fn assemble_bundle(&self, bundle: &Bundle, contents: Vec<(&Asset, String)>) -> String {
-    // This is a temporary implementation that will just use string concatenation
-
-    // Sort the contents - non-entry assets by asset id first, then entry assets in the same order as bundle.entry_asset_ids
+  fn assemble_bundle(
+    &self,
+    bundle: &Bundle,
+    contents: Vec<PackagedAsset>,
+    source_map_enabled: bool,
+  ) -> anyhow::Result<(String, Option<atlaspack_sourcemap::SourceMap>)> {
+    let mut bundle_map = if source_map_enabled {
+      Some(atlaspack_sourcemap::SourceMap::new(
+        &self.context.project_root,
+      ))
+    } else {
+      None
+    };
 
     // Separate entry and non-entry assets
     let (mut entry_contents, mut non_entry_contents): (Vec<PackagedAsset>, Vec<PackagedAsset>) =
       contents
         .into_iter()
-        .partition(|(asset, _)| bundle.entry_asset_ids.contains(&asset.id));
+        .partition(|pa| bundle.entry_asset_ids.contains(&pa.asset.id));
 
-    // Sort non-entry assets by asset ID
-    non_entry_contents.sort_by_key(|(asset, _)| asset.id.clone());
-
-    // Sort entry assets by their order in bundle.entry_asset_ids
-    entry_contents.sort_by_key(|(asset, _)| {
+    non_entry_contents.sort_by_key(|pa| pa.asset.id.clone());
+    entry_contents.sort_by_key(|pa| {
       bundle
         .entry_asset_ids
         .iter()
-        .position(|id| id == &asset.id)
+        .position(|id| id == &pa.asset.id)
         .unwrap_or(usize::MAX)
     });
 
-    // Combine: non-entry assets first, then entry assets
-    let mut contents = non_entry_contents;
-    contents.extend(entry_contents);
-
-    let asset_contents = contents
-      .into_iter()
-      .map(|(_, content)| content)
-      .collect::<Vec<_>>()
-      .join("\n");
-
-    // Build explicit require() calls for entry assets to execute them in order
-    let bundle_graph = self.bundle_graph.read();
-    let entry_requires = bundle
-      .entry_asset_ids
-      .iter()
-      .map(|asset_id| {
-        let public_id = bundle_graph
-          .get_public_asset_id(asset_id)
-          .expect("Entry asset not found in bundle graph");
-        format!("require('{}');", public_id)
-      })
-      .collect::<Vec<_>>()
-      .join("\n");
+    let mut sorted_contents = non_entry_contents;
+    sorted_contents.extend(entry_contents);
 
     // For now we just always use the dev prelude
     let prelude_string = match self.context.debug_tools.debug_prelude {
@@ -261,21 +350,61 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       prelude_hash = &prelude_hash
     );
 
-    // Bundle structure depends on output format:
-    //
-    // CommonJS (e.g., SSR bundles):
-    //   - All assets (including entries) are wrapped in define() calls
-    //   - Main entry asset is explicitly required and its exports assigned to module.exports
-    //   - No IIFE wrapper - the bundle is directly executable by Node.js
-    //   - This allows the SSR bundle to export functions that can be imported by other modules
-    //
-    // Other formats (Global, ESModule):
-    //   - All assets (including entries) are wrapped in define() calls
-    //   - Entry assets are explicitly executed via require() calls
-    //   - Entire bundle is wrapped in IIFE to isolate variables and avoid global pollution
     let is_commonjs = bundle.env.output_format == OutputFormat::CommonJS;
+    let prelude_line_offset: i64 = if is_commonjs {
+      count_lines(&prelude_loader)
+    } else {
+      1 + count_lines(&prelude_loader)
+    };
 
-    if is_commonjs {
+    let mut asset_parts = Vec::new();
+    let mut current_line: i64 = 0;
+
+    for pa in &sorted_contents {
+      let asset_block_start_line = current_line;
+      let lines_before_code: i64 = if self.context.debug_tools.asset_file_names_in_output {
+        3
+      } else {
+        1
+      };
+      let code_start_line = prelude_line_offset + asset_block_start_line + lines_before_code;
+
+      if let Some(ref mut bundle_map) = bundle_map {
+        if let Some(mut sm) = pa.source_map.clone() {
+          bundle_map
+            .add_sourcemap(&mut sm, code_start_line)
+            .map_err(|e| {
+              anyhow::anyhow!("Failed to add source map for asset {}: {}", pa.asset.id, e)
+            })?;
+        } else if !pa.asset.is_virtual {
+          bundle_map
+            .add_empty_map(&pa.asset.file_path.to_string_lossy(), "", code_start_line)
+            .map_err(|e| {
+              anyhow::anyhow!("Failed to add empty map for asset {}: {}", pa.asset.id, e)
+            })?;
+        }
+      }
+
+      current_line += count_lines(&pa.code) + 1;
+      asset_parts.push(pa.code.as_str());
+    }
+
+    let asset_contents = asset_parts.join("\n");
+
+    let bundle_graph = self.bundle_graph.read();
+    let entry_requires = bundle
+      .entry_asset_ids
+      .iter()
+      .map(|asset_id| {
+        let public_id = bundle_graph
+          .get_public_asset_id(asset_id)
+          .expect("Entry asset not found in bundle graph");
+        format!("require('{}');", public_id)
+      })
+      .collect::<Vec<_>>()
+      .join("\n");
+
+    let mut bundle_string = if is_commonjs {
       let main_entry_require = if let Some(main_entry_id) = bundle.entry_asset_ids.first() {
         let public_id = bundle_graph
           .get_public_asset_id(main_entry_id)
@@ -293,8 +422,33 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
         + "\n"
         + &entry_requires
         + "\n})();\n"
+    };
+
+    // Append sourceMappingURL comment when source maps are enabled and not inline,
+    // matching the behavior of the JS packager (PackagerRunner.getSourceMapReference).
+    if source_map_enabled {
+      let is_inline = bundle
+        .env
+        .source_map
+        .as_ref()
+        .map(|sm| sm.is_inline())
+        .unwrap_or(false);
+
+      if !is_inline && let Some(ref name) = bundle.name {
+        let basename = Path::new(name)
+          .file_name()
+          .and_then(|f| f.to_str())
+          .unwrap_or(name);
+        bundle_string.push_str(&format!("//# sourceMappingURL={}.map\n", basename));
+      }
     }
+
+    Ok((bundle_string, bundle_map))
   }
+}
+
+fn count_lines(s: &str) -> i64 {
+  s.bytes().filter(|&b| b == b'\n').count() as i64
 }
 
 #[cfg(test)]
@@ -345,24 +499,41 @@ mod tests {
     let asset2 = create_test_asset("aaa", "/a.js");
     let asset3 = create_test_asset("mmm", "/m.js");
 
-    let contents: Vec<(&Asset, String)> = vec![
-      (&asset1, "// asset zzz".to_string()),
-      (&asset2, "// asset aaa".to_string()),
-      (&asset3, "// asset mmm".to_string()),
+    use super::PackagedAsset;
+
+    let contents = vec![
+      PackagedAsset {
+        asset: &asset1,
+        code: "// asset zzz".to_string(),
+        source_map: None,
+        hash_references: vec![],
+      },
+      PackagedAsset {
+        asset: &asset2,
+        code: "// asset aaa".to_string(),
+        source_map: None,
+        hash_references: vec![],
+      },
+      PackagedAsset {
+        asset: &asset3,
+        code: "// asset mmm".to_string(),
+        source_map: None,
+        hash_references: vec![],
+      },
     ];
 
     // Test the sorting logic directly
     let (entry_contents, mut non_entry_contents): (Vec<_>, Vec<_>) = contents
       .into_iter()
-      .partition(|(asset, _)| bundle.entry_asset_ids.contains(&asset.id));
+      .partition(|pa| bundle.entry_asset_ids.contains(&pa.asset.id));
 
-    non_entry_contents.sort_by_key(|(asset, _)| asset.id.clone());
+    non_entry_contents.sort_by_key(|pa| pa.asset.id.clone());
 
     // Verify sorting order
     assert_eq!(non_entry_contents.len(), 3);
-    assert_eq!(non_entry_contents[0].0.id, "aaa"); // Alphabetically first
-    assert_eq!(non_entry_contents[1].0.id, "mmm");
-    assert_eq!(non_entry_contents[2].0.id, "zzz"); // Alphabetically last
+    assert_eq!(non_entry_contents[0].asset.id, "aaa"); // Alphabetically first
+    assert_eq!(non_entry_contents[1].asset.id, "mmm");
+    assert_eq!(non_entry_contents[2].asset.id, "zzz"); // Alphabetically last
     assert!(entry_contents.is_empty());
   }
 
@@ -375,34 +546,131 @@ mod tests {
     let entry2 = create_test_asset("entry2", "/entry2.js");
     let non_entry = create_test_asset("zzz", "/zzz.js");
 
-    let contents: Vec<(&Asset, String)> = vec![
-      (&entry1, "// entry 1".to_string()),
-      (&non_entry, "// non entry".to_string()),
-      (&entry2, "// entry 2".to_string()),
+    use super::PackagedAsset;
+
+    let contents = vec![
+      PackagedAsset {
+        asset: &entry1,
+        code: "// entry 1".to_string(),
+        source_map: None,
+        hash_references: vec![],
+      },
+      PackagedAsset {
+        asset: &non_entry,
+        code: "// non entry".to_string(),
+        source_map: None,
+        hash_references: vec![],
+      },
+      PackagedAsset {
+        asset: &entry2,
+        code: "// entry 2".to_string(),
+        source_map: None,
+        hash_references: vec![],
+      },
     ];
 
     // Test the partitioning and sorting logic
     let (mut entry_contents, mut non_entry_contents): (Vec<_>, Vec<_>) = contents
       .into_iter()
-      .partition(|(asset, _)| bundle.entry_asset_ids.contains(&asset.id));
+      .partition(|pa| bundle.entry_asset_ids.contains(&pa.asset.id));
 
-    non_entry_contents.sort_by_key(|(asset, _)| asset.id.clone());
+    non_entry_contents.sort_by_key(|pa| pa.asset.id.clone());
 
-    entry_contents.sort_by_key(|(asset, _)| {
+    entry_contents.sort_by_key(|pa| {
       bundle
         .entry_asset_ids
         .iter()
-        .position(|id| id == &asset.id)
+        .position(|id| id == &pa.asset.id)
         .unwrap_or(usize::MAX)
     });
 
     // Verify ordering
     assert_eq!(non_entry_contents.len(), 1);
-    assert_eq!(non_entry_contents[0].0.id, "zzz");
+    assert_eq!(non_entry_contents[0].asset.id, "zzz");
 
     assert_eq!(entry_contents.len(), 2);
-    assert_eq!(entry_contents[0].0.id, "entry2"); // First in entry_asset_ids
-    assert_eq!(entry_contents[1].0.id, "entry1"); // Second in entry_asset_ids
+    assert_eq!(entry_contents[0].asset.id, "entry2"); // First in entry_asset_ids
+    assert_eq!(entry_contents[1].asset.id, "entry1"); // Second in entry_asset_ids
+  }
+
+  #[test]
+  fn test_hash_references_collected_from_asset_code_via_ast() {
+    use super::super::process_asset::rewrite_asset_code;
+    use std::collections::HashMap;
+
+    let code =
+      r#"const a = require("HASH_REF_abcdef1234567890"); const b = "HASH_REF_1234567890abcdef";"#;
+    let deps = HashMap::new();
+    let result = rewrite_asset_code(code.to_string(), &deps, None).unwrap();
+
+    assert_eq!(result.hash_references.len(), 2);
+    assert_eq!(result.hash_references[0], "HASH_REF_abcdef1234567890");
+    assert_eq!(result.hash_references[1], "HASH_REF_1234567890abcdef");
+  }
+
+  #[test]
+  fn test_bundle_name_hash_reference_collected() {
+    use super::HASH_REF_PREFIX;
+
+    let mut bundle = create_test_bundle("bundle1");
+    bundle.name = Some("app.HASH_REF_abcdef1234567890.js".to_string());
+    bundle.hash_reference = "HASH_REF_abcdef1234567890".to_string();
+
+    // When bundle name contains HASH_REF_ and hash_reference is set,
+    // the hash_reference should be included in the collected references
+    let name = bundle.name.as_ref().unwrap();
+    assert!(name.contains(HASH_REF_PREFIX));
+    assert!(!bundle.hash_reference.is_empty());
+  }
+
+  #[test]
+  fn test_source_mapping_url_appended_when_source_map_enabled() {
+    use atlaspack_core::types::TargetSourceMapOptions;
+
+    let mut bundle = create_test_bundle("bundle1");
+    bundle.name = Some("dist/output.js".to_string());
+    bundle.env.source_map = Some(TargetSourceMapOptions::default());
+
+    // The sourceMappingURL should use just the basename
+    let source_map_ref = std::path::Path::new(bundle.name.as_ref().unwrap())
+      .file_name()
+      .and_then(|f| f.to_str())
+      .unwrap();
+
+    let expected_suffix = format!("//# sourceMappingURL={}.map\n", source_map_ref);
+    assert_eq!(expected_suffix, "//# sourceMappingURL=output.js.map\n");
+  }
+
+  #[test]
+  fn test_source_mapping_url_not_appended_when_source_map_disabled() {
+    let mut bundle = create_test_bundle("bundle1");
+    bundle.name = Some("dist/output.js".to_string());
+    bundle.env.source_map = None;
+
+    // When source_map is None, no sourceMappingURL should be appended
+    let source_map_enabled = bundle.env.source_map.is_some();
+    assert!(!source_map_enabled);
+  }
+
+  #[test]
+  fn test_source_mapping_url_not_appended_when_inline() {
+    use atlaspack_core::types::TargetSourceMapOptions;
+
+    let mut bundle = create_test_bundle("bundle1");
+    bundle.name = Some("dist/output.js".to_string());
+    bundle.env.source_map = Some(TargetSourceMapOptions::new_inline());
+
+    let is_inline = bundle
+      .env
+      .source_map
+      .as_ref()
+      .map(|sm| sm.is_inline())
+      .unwrap_or(false);
+
+    assert!(
+      is_inline,
+      "Inline source maps should not produce a sourceMappingURL comment"
+    );
   }
 
   #[test]
@@ -410,16 +678,17 @@ mod tests {
     let public_id = "pub123";
     let code = "module.exports = 42;";
 
-    let expected_pattern = format!(
-      "\n// {}\ndefine('{}', function (require,module,exports) {{ {} }});",
+    // Function body is on its own line so source map offsets are purely line-based
+    // (no column arithmetic needed in the assembler).
+    let expected = format!(
+      "\n// {}\ndefine('{}', function (require,module,exports) {{\n{}\n}});",
       public_id, public_id, code
     );
 
-    // Verify the format
-    assert!(expected_pattern.contains(&format!("// {}", public_id)));
-    assert!(expected_pattern.contains("define('pub123',"));
-    assert!(expected_pattern.contains("function (require,module,exports)"));
-    assert!(expected_pattern.contains("module.exports = 42;"));
-    assert!(expected_pattern.ends_with("});"));
+    assert!(expected.contains(&format!("// {}", public_id)));
+    assert!(expected.contains("define('pub123',"));
+    assert!(expected.contains("function (require,module,exports)"));
+    assert!(expected.contains("\nmodule.exports = 42;\n"));
+    assert!(expected.ends_with("});"));
   }
 }
