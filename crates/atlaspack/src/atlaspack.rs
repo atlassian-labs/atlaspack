@@ -234,6 +234,8 @@ impl Atlaspack {
         })
         .await?;
 
+      request_tracker.clear_invalid_nodes();
+
       let RequestResult::AssetGraph(asset_graph_request_output) = request_result.as_ref() else {
         panic!("Something went wrong with the request tracker")
       };
