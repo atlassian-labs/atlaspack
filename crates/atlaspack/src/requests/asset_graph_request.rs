@@ -13,7 +13,10 @@ use crate::request_tracker::{
   Request, RequestResultReceiver, RequestResultSender, ResultAndInvalidations, RunRequestContext,
   RunRequestError,
 };
-use atlaspack_core::asset_graph::{AssetGraph, DependencyState, propagate_requested_symbols};
+use atlaspack_core::asset_graph::{
+  AssetGraph, AssetGraphNode, DependencyState, FinalizedSymbolTracker, SymbolTracker,
+  propagate_requested_symbols,
+};
 use atlaspack_core::types::{AssetWithDependencies, Dependency};
 
 use super::RequestResult;
@@ -39,6 +42,7 @@ impl Hash for AssetGraphRequest {
 #[derive(Clone, Debug, PartialEq)]
 pub struct AssetGraphRequestOutput {
   pub graph: Arc<AssetGraph>,
+  pub symbol_tracker: Option<FinalizedSymbolTracker>,
 }
 
 #[async_trait]
@@ -186,6 +190,7 @@ impl AssetGraphRequest {
     Ok(ReusedAssetGraphResult::Reused(ResultAndInvalidations {
       result: RequestResult::AssetGraph(AssetGraphRequestOutput {
         graph: Arc::new(asset_graph),
+        symbol_tracker: None,
       }),
       invalidations: vec![],
     }))
@@ -206,6 +211,8 @@ pub(crate) struct AssetGraphBuilder {
   waiting_asset_requests: HashMap<u64, HashSet<NodeId>>,
   entry_dependencies: Vec<(String, NodeId)>,
   changed_requests: HashSet<u64>,
+  enable_symbol_tracker: bool,
+  symbol_tracker: SymbolTracker,
 }
 
 impl AssetGraphBuilder {
@@ -215,6 +222,11 @@ impl AssetGraphBuilder {
     changed_requests: HashSet<u64>,
   ) -> Self {
     let (sender, receiver) = channel();
+
+    let enable_symbol_tracker = request_context
+      .options
+      .feature_flags
+      .bool_enabled("rustSymbolTracker");
 
     AssetGraphBuilder {
       request_id_to_dependency_id: HashMap::new(),
@@ -228,6 +240,8 @@ impl AssetGraphBuilder {
       waiting_asset_requests: HashMap::new(),
       entry_dependencies: Vec::new(),
       changed_requests,
+      enable_symbol_tracker,
+      symbol_tracker: SymbolTracker::default(),
     }
   }
 
@@ -304,9 +318,16 @@ impl AssetGraphBuilder {
       self.graph.add_edge(&self.graph.root_node(), node_index);
     }
 
+    let finalized_symbol_tracker = if self.enable_symbol_tracker {
+      Some(self.symbol_tracker.finalize())
+    } else {
+      None
+    };
+
     Ok(ResultAndInvalidations {
       result: RequestResult::AssetGraph(AssetGraphRequestOutput {
         graph: Arc::new(self.graph),
+        symbol_tracker: finalized_symbol_tracker,
       }),
       invalidations: vec![],
     })
@@ -438,6 +459,15 @@ impl AssetGraphBuilder {
 
     // Connect the incoming DependencyNode to the new AssetNode
     let asset_id = self.graph.add_asset(asset.clone(), cached);
+    let new_asset = match self
+      .graph
+      .get_node(&asset_id)
+      .expect("Missing newly added asset node")
+    {
+      AssetGraphNode::Asset(a) => a,
+      _ => panic!("Expected asset node for newly added asset {}", asset_id),
+    }
+    .clone();
 
     self.graph.add_edge(&incoming_dependency_id, &asset_id);
 
@@ -452,6 +482,16 @@ impl AssetGraphBuilder {
         .graph
         .add_asset(Arc::new(discovered_asset.asset.clone()), cached);
 
+      let new_asset = match self
+        .graph
+        .get_node(&asset_id)
+        .expect("Missing newly added asset node")
+      {
+        AssetGraphNode::Asset(a) => a,
+        _ => panic!("Expected asset node for newly added asset {}", asset_id),
+      }
+      .clone();
+
       self.graph.add_edge(&incoming_dependency_id, &asset_id);
 
       self.add_asset_dependencies(
@@ -463,6 +503,22 @@ impl AssetGraphBuilder {
         asset_unique_key.as_ref(),
         cached,
       );
+
+      if self.enable_symbol_tracker
+        && let Err(err) =
+          self
+            .symbol_tracker
+            .track_symbols(&self.graph, &new_asset, &discovered_asset.dependencies)
+      {
+        panic!(
+          "Error tracking symbols for discovered asset {}: {}",
+          discovered_asset.asset.file_path.display(),
+          err
+        );
+      }
+
+      // TODO: Once track_symbols is set up properly, this will need to go in an
+      // else block of the feature flag
       self.propagate_requested_symbols(asset_id, incoming_dependency_id);
     }
 
@@ -475,6 +531,18 @@ impl AssetGraphBuilder {
       asset_unique_key.as_ref(),
       cached,
     );
+
+    if self.enable_symbol_tracker
+      && let Err(err) = self
+        .symbol_tracker
+        .track_symbols(&self.graph, &new_asset, dependencies)
+    {
+      panic!(
+        "Error tracking symbols for asset {}: {}",
+        new_asset.file_path.display(),
+        err
+      );
+    }
 
     self.propagate_requested_symbols(asset_id, incoming_dependency_id);
 
@@ -562,6 +630,16 @@ impl AssetGraphBuilder {
           // it and assign its dependencies by calling added_discovered_assets
           // recursively.
           let asset_id = self.graph.add_asset(Arc::new(asset.clone()), cached);
+          let new_asset = match self
+            .graph
+            .get_node(&asset_id)
+            .expect("Missing newly added asset node")
+          {
+            AssetGraphNode::Asset(a) => a,
+            _ => panic!("Expected asset node for newly added asset {}", asset_id),
+          }
+          .clone();
+
           self.graph.add_edge(&dependency_id, &asset_id);
           added_discovered_assets.insert(asset.id.clone(), asset_id);
 
@@ -574,6 +652,20 @@ impl AssetGraphBuilder {
             root_asset_unique_key,
             cached,
           );
+
+          if self.enable_symbol_tracker
+            && let Err(err) =
+              self
+                .symbol_tracker
+                .track_symbols(&self.graph, &new_asset, dependencies)
+          {
+            panic!(
+              "Error tracking symbols for asset {}: {}",
+              new_asset.file_path.display(),
+              err
+            );
+          }
+
           self.propagate_requested_symbols(asset_id, dependency_id);
         }
       }
@@ -712,6 +804,48 @@ mod tests {
 
   use crate::requests::{AssetGraphRequest, RequestResult};
   use crate::test_utils::{RequestTrackerTestOptions, request_tracker};
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn test_asset_graph_request_symbol_tracker_feature_flag_disabled_by_default() {
+    let options = RequestTrackerTestOptions::default();
+    let mut request_tracker = request_tracker(options);
+
+    let asset_graph_request = AssetGraphRequest {
+      prev_asset_graph: None,
+      incrementally_bundled_assets: None,
+    };
+    let result = request_tracker
+      .run_request(asset_graph_request)
+      .await
+      .unwrap();
+    let RequestResult::AssetGraph(asset_graph_request_result) = result.as_ref() else {
+      panic!("Got invalid result");
+    };
+
+    assert!(asset_graph_request_result.symbol_tracker.is_none());
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn test_asset_graph_request_symbol_tracker_feature_flag_enabled() {
+    let mut options = RequestTrackerTestOptions::default();
+    options.atlaspack_options.feature_flags =
+      atlaspack_core::types::FeatureFlags::with_bool_flag("rustSymbolTracker", true);
+    let mut request_tracker = request_tracker(options);
+
+    let asset_graph_request = AssetGraphRequest {
+      prev_asset_graph: None,
+      incrementally_bundled_assets: None,
+    };
+    let result = request_tracker
+      .run_request(asset_graph_request)
+      .await
+      .unwrap();
+    let RequestResult::AssetGraph(asset_graph_request_result) = result.as_ref() else {
+      panic!("Got invalid result");
+    };
+
+    assert!(asset_graph_request_result.symbol_tracker.is_some());
+  }
 
   #[tokio::test(flavor = "multi_thread")]
   async fn test_asset_graph_request_with_no_entries() {

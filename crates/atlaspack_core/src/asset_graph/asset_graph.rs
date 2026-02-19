@@ -238,6 +238,7 @@ impl AssetGraph {
     *dep_state = state;
   }
 
+  /// Returns all dependency nodes in the entire graph
   pub fn get_dependencies(&self) -> impl Iterator<Item = &Dependency> {
     self.nodes().filter_map(|node| {
       let AssetGraphNode::Dependency(dep) = node else {
@@ -252,6 +253,22 @@ impl AssetGraph {
       .graph
       .neighbors_directed(self.node_id_to_node_index[node_id], Direction::Outgoing)
       .filter_map(|node_index| self.graph.node_weight(node_index).copied())
+      .collect()
+  }
+
+  pub fn get_incoming_neighbor_node_ids(&self, node_id: &NodeId) -> Vec<NodeId> {
+    self
+      .graph
+      .neighbors_directed(self.node_id_to_node_index[node_id], Direction::Incoming)
+      .filter_map(|node_index| self.graph.node_weight(node_index).copied())
+      .collect()
+  }
+
+  pub fn get_incoming_neighbors(&self, node_id: &NodeId) -> Vec<&AssetGraphNode> {
+    self
+      .get_incoming_neighbor_node_ids(node_id)
+      .iter()
+      .filter_map(|nid| self.get_node(nid))
       .collect()
   }
 
