@@ -1,5 +1,19 @@
 # @atlaspack/test-utils
 
+## 2.14.57
+
+### Patch Changes
+
+- [#1017](https://github.com/atlassian-labs/atlaspack/pull/1017) [`3ad8e88`](https://github.com/atlassian-labs/atlaspack/commit/3ad8e880c4c2b9126cbfb6963a3862a75306a26f) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - reduce test lmdbcache mapsize and remove unused setup-cache
+
+- Updated dependencies [[`d8e984b`](https://github.com/atlassian-labs/atlaspack/commit/d8e984b7f6d04fa03707fa299bfd8b8bf9f58280), [`3ad8e88`](https://github.com/atlassian-labs/atlaspack/commit/3ad8e880c4c2b9126cbfb6963a3862a75306a26f), [`45a0dc5`](https://github.com/atlassian-labs/atlaspack/commit/45a0dc530fd9472dbfdebcbb05f1aad812ab3b23)]:
+  - @atlaspack/package-manager@2.14.54
+  - @atlaspack/utils@3.3.6
+  - @atlaspack/core@2.34.0
+  - @atlaspack/cache@3.2.49
+  - @atlaspack/fs@2.15.49
+  - @atlaspack/config-default@15.0.0
+
 ## 2.14.56
 
 ### Patch Changes

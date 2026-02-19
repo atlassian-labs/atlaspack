@@ -1,5 +1,14 @@
 # @atlaspack/runtime-webextension
 
+## 2.15.11
+
+### Patch Changes
+
+- Updated dependencies [[`d8e984b`](https://github.com/atlassian-labs/atlaspack/commit/d8e984b7f6d04fa03707fa299bfd8b8bf9f58280)]:
+  - @atlaspack/utils@3.3.6
+  - @atlaspack/plugin@2.14.54
+  - @atlaspack/types@2.15.44
+
 ## 2.15.10
 
 ### Patch Changes

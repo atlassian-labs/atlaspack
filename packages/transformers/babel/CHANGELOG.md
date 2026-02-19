@@ -1,5 +1,14 @@
 # @atlaspack/transformer-babel
 
+## 2.15.15
+
+### Patch Changes
+
+- Updated dependencies [[`d8e984b`](https://github.com/atlassian-labs/atlaspack/commit/d8e984b7f6d04fa03707fa299bfd8b8bf9f58280)]:
+  - @atlaspack/utils@3.3.6
+  - @atlaspack/source-map@3.2.9
+  - @atlaspack/plugin@2.14.54
+
 ## 2.15.14
 
 ### Patch Changes
