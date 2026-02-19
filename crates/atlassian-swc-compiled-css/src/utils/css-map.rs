@@ -42,6 +42,7 @@ pub enum ErrorMessages {
   NoObjectMethod,
   StaticVariantObject,
   StaticVariantObjectWithVariables,
+  StaticVariantObjectWithToken,
   StaticVariantObjectMultipleClasses,
   DuplicateAtRule,
   DuplicateSelector,
@@ -70,6 +71,9 @@ impl ErrorMessages {
       ErrorMessages::StaticVariantObject => "The variant object must be statically defined.",
       ErrorMessages::StaticVariantObjectWithVariables => {
         "The variant object must be statically defined. CSS variables are not allowed in cssMap variants."
+      }
+      ErrorMessages::StaticVariantObjectWithToken => {
+        "The variant object must be statically defined. Ensure `token()` is imported from `@atlaskit/tokens`."
       }
       ErrorMessages::StaticVariantObjectMultipleClasses => {
         "The variant object must be statically defined. Each variant should resolve to a single class name."
@@ -109,6 +113,10 @@ impl ErrorMessages {
       ErrorMessages::StaticVariantObjectWithVariables => Some(vec![
         "Remove CSS variable usage from the variant object.".to_string(),
         "For dynamic styles, use `css()` instead of `cssMap()`.".to_string(),
+      ]),
+      ErrorMessages::StaticVariantObjectWithToken => Some(vec![
+        "Ensure the `token()` function is imported from `@atlaskit/tokens`.".to_string(),
+        "Example: `import { token } from '@atlaskit/tokens';`".to_string(),
       ]),
       ErrorMessages::StaticVariantObjectMultipleClasses => Some(vec![
         "Simplify the variant to generate a single class.".to_string(),

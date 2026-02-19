@@ -1,7 +1,7 @@
 use swc_core::atoms::Atom;
 use swc_core::common::{DUMMY_SP, Span, Spanned};
 use swc_core::ecma::ast::{
-  CallExpr, Expr, Ident, KeyValueProp, Lit, ObjectLit, Prop, PropOrSpread, Str, TaggedTpl,
+  CallExpr, Callee, Expr, Ident, KeyValueProp, Lit, ObjectLit, Prop, PropOrSpread, Str, TaggedTpl,
 };
 
 use crate::css_map_process_selectors::merge_extended_selectors_into_properties;
@@ -95,11 +95,23 @@ where
         let css_output = build_css(&Expr::Object(processed_value.clone()), meta);
 
         if !css_output.variables.is_empty() {
-          report_css_map_error_with_hints(
-            meta,
-            key_value.value.span(),
-            ErrorMessages::StaticVariantObjectWithVariables,
-          );
+          let has_token_call = css_output.variables.iter().any(|v| {
+            matches!(
+              &v.expression,
+              Expr::Call(CallExpr {
+                callee: Callee::Expr(callee),
+                ..
+              }) if matches!(&**callee, Expr::Ident(id) if id.sym == "token")
+            )
+          });
+
+          let error_type = if has_token_call {
+            ErrorMessages::StaticVariantObjectWithToken
+          } else {
+            ErrorMessages::StaticVariantObjectWithVariables
+          };
+
+          report_css_map_error_with_hints(meta, key_value.value.span(), error_type);
           return empty_object(object_lit.span);
         }
 
@@ -1152,5 +1164,48 @@ mod tests {
         }
       }
     }
+  }
+
+  #[test]
+  fn reports_specific_error_when_token_function_is_used() {
+    let meta = create_metadata();
+    let argument = css_map_argument();
+    let call = css_map_call(Expr::Object(argument));
+
+    visit_css_map_path_with_builder(
+      CssMapUsage::Call(&call),
+      Some(&ident("styles")),
+      &meta,
+      |_, _| CssOutput {
+        css: vec![],
+        variables: vec![crate::utils_types::Variable {
+          name: "--test".into(),
+          expression: Expr::Call(CallExpr {
+            span: DUMMY_SP,
+            callee: Callee::Expr(Box::new(Expr::Ident(ident("token")))),
+            args: vec![],
+            type_args: None,
+            ctxt: SyntaxContext::empty(),
+          }),
+          prefix: None,
+          suffix: None,
+        }],
+      },
+    );
+
+    let diagnostics = meta.state().diagnostics.clone();
+    assert_eq!(diagnostics.len(), 1);
+    assert!(
+      diagnostics[0]
+        .message
+        .contains("Ensure `token()` is imported from `@atlaskit/tokens`")
+    );
+
+    // Also verify hints
+    let hints = diagnostics[0]
+      .hints
+      .as_ref()
+      .expect("hints should be present");
+    assert!(hints[0].contains("Ensure the `token()` function is imported"));
   }
 }
