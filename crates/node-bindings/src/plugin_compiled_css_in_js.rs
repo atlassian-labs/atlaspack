@@ -196,10 +196,10 @@ fn map_transform_errors_to_diagnostics(
       Diagnostic {
         message: error.message,
         code_highlights,
-        hints: None,
+        hints: error.hints,
         show_environment: false,
         severity: DiagnosticSeverity::Error,
-        documentation_url: None,
+        documentation_url: error.documentation_url,
       }
     })
     .collect()
@@ -355,8 +355,12 @@ fn process_compiled_css_in_js(
       atlassian_swc_compiled_css::transform_with_file(program, transform_file, options)
     });
 
-    let (mut transformed_program, mut style_rules) = match transform_output {
-      Ok(output) => (output.program, output.metadata.style_rules),
+    let (mut transformed_program, mut style_rules, metadata_diagnostics) = match transform_output {
+      Ok(output) => (
+        output.program,
+        output.metadata.style_rules,
+        output.metadata.diagnostics,
+      ),
       Err(errors) => {
         let diagnostics = convert_diagnostics(transform_errors_to_diagnostics(errors, &source_map));
         return Ok(CompiledCssInJsPluginResult {
@@ -459,11 +463,16 @@ fn process_compiled_css_in_js(
 
     let code = append_transformed_asset_marker(code);
 
+    let diagnostics = convert_diagnostics(map_transform_errors_to_diagnostics(
+      metadata_diagnostics,
+      &source_map,
+    ));
+
     Ok(CompiledCssInJsPluginResult {
       code,
       map: map_json,
       style_rules,
-      diagnostics: Vec::new(),
+      diagnostics,
       bail_out: false,
     })
   })

@@ -179,17 +179,19 @@ pub fn error_if_not_valid_object_property(property: &PropOrSpread, meta: &Metada
   false
 }
 
-pub fn report_css_map_error(_meta: &Metadata, span: Span, message: impl AsRef<str>) {
-  use crate::errors::set_transform_span;
+/// Reports a cssMap error as a diagnostic with proper error message formatting.
+/// The error message will include the documentation URL automatically.
+pub fn report_css_map_error(meta: &Metadata, span: Span, message: impl fmt::Display) {
+  let msg = create_error_message(message.to_string());
+  let error = crate::errors::TransformError::with_span(msg, span);
+  meta.add_diagnostic(error);
+}
 
-  // Set span context before panicking so the panic diagnostic includes source location
-  // We use set_transform_span directly instead of TransformSpanGuard to avoid the guard
-  // being dropped and clearing the span during unwinding. The span will persist in
-  // thread-local storage so it can be captured by from_panic() during exception handling.
-  set_transform_span(span);
-
-  let msg = create_error_message(message);
-  panic!("{}", msg);
+/// Helper to create a cssMap diagnostic without a span.
+/// Use this when the error doesn't have a specific source location.
+pub fn create_css_map_diagnostic(message: impl fmt::Display) -> crate::errors::TransformError {
+  let msg = create_error_message(message.to_string());
+  crate::errors::TransformError::new(msg)
 }
 
 #[cfg(test)]
@@ -315,7 +317,6 @@ mod tests {
   }
 
   #[test]
-  #[should_panic(expected = "Object method is not supported in CSS Map.")]
   fn error_if_not_valid_object_property_panics_on_methods() {
     use swc_core::ecma::ast::{BlockStmt, MethodProp};
 
@@ -341,11 +342,19 @@ mod tests {
     let property = PropOrSpread::Prop(Box::new(method));
     let meta = create_metadata();
 
-    error_if_not_valid_object_property(&property, &meta);
+    let has_error = error_if_not_valid_object_property(&property, &meta);
+
+    assert!(has_error);
+    let diagnostics = meta.state().diagnostics.clone();
+    assert_eq!(diagnostics.len(), 1);
+    assert!(
+      diagnostics[0]
+        .message
+        .contains("Object method is not supported in CSS Map.")
+    );
   }
 
   #[test]
-  #[should_panic(expected = "Spread element is not supported in CSS Map.")]
   fn error_if_not_valid_object_property_panics_on_spread() {
     let property = PropOrSpread::Spread(SpreadElement {
       dot3_token: DUMMY_SP,
@@ -358,6 +367,15 @@ mod tests {
 
     let meta = create_metadata();
 
-    error_if_not_valid_object_property(&property, &meta);
+    let has_error = error_if_not_valid_object_property(&property, &meta);
+
+    assert!(has_error);
+    let diagnostics = meta.state().diagnostics.clone();
+    assert_eq!(diagnostics.len(), 1);
+    assert!(
+      diagnostics[0]
+        .message
+        .contains("Spread element is not supported in CSS Map.")
+    );
   }
 }

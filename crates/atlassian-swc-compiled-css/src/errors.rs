@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use std::any::Any;
 use std::backtrace::Backtrace;
 use std::cell::RefCell;
@@ -81,10 +82,15 @@ pub fn init_panic_suppression() {
 ///
 /// When a panic occurs, `TransformError::from_panic()` will automatically capture
 /// the current span context and attach it to the error for precise diagnostics.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TransformError {
   pub message: String,
+  #[serde(skip)]
   pub span: Option<Span>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub hints: Option<Vec<String>>,
+  #[serde(skip_serializing_if = "Option::is_none", rename = "documentationUrl")]
+  pub documentation_url: Option<String>,
 }
 
 impl TransformError {
@@ -92,6 +98,8 @@ impl TransformError {
     Self {
       message: message.into(),
       span: None,
+      hints: None,
+      documentation_url: None,
     }
   }
 
@@ -99,7 +107,19 @@ impl TransformError {
     Self {
       message: message.into(),
       span: Some(span),
+      hints: None,
+      documentation_url: None,
     }
+  }
+
+  pub fn with_hints(mut self, hints: Vec<String>) -> Self {
+    self.hints = Some(hints);
+    self
+  }
+
+  pub fn with_documentation_url(mut self, url: impl Into<String>) -> Self {
+    self.documentation_url = Some(url.into());
+    self
   }
 
   /// Create a TransformError from a panic payload.
@@ -130,7 +150,12 @@ impl TransformError {
     };
     clear_transform_span();
 
-    Self { message, span }
+    Self {
+      message,
+      span,
+      hints: None,
+      documentation_url: None,
+    }
   }
 
   /// Attach a span to a panic error to indicate where it occurred in the source.

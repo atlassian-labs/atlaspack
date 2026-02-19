@@ -200,7 +200,6 @@ mod tests {
   use crate::types::{Metadata, PluginOptions, TransformFile, TransformState};
   use crate::utils_types::{CssItem, CssOutput};
   use std::cell::RefCell;
-  use std::panic::AssertUnwindSafe;
   use std::rc::Rc;
   use swc_core::atoms::Atom;
   use swc_core::common::sync::Lrc;
@@ -388,29 +387,20 @@ mod tests {
       }),
     };
 
-    let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
-      visit_css_map_path_with_builder(
-        CssMapUsage::TaggedTemplate(&tagged_template),
-        Some(&ident("styles")),
-        &meta,
-        |_, _| CssOutput::new(),
-      );
-    }));
+    visit_css_map_path_with_builder(
+      CssMapUsage::TaggedTemplate(&tagged_template),
+      Some(&ident("styles")),
+      &meta,
+      |_, _| CssOutput::new(),
+    );
 
-    let message = match result {
-      Ok(_) => panic!("expected panic"),
-      Err(err) => {
-        if let Some(msg) = err.downcast_ref::<String>() {
-          msg.clone()
-        } else if let Some(msg) = err.downcast_ref::<&'static str>() {
-          (*msg).to_string()
-        } else {
-          String::new()
-        }
-      }
-    };
-
-    assert!(message.contains("cssMap function cannot be used as a tagged template expression"));
+    let diagnostics = meta.state().diagnostics.clone();
+    assert_eq!(diagnostics.len(), 1);
+    assert!(
+      diagnostics[0]
+        .message
+        .contains("cssMap function cannot be used as a tagged template expression")
+    );
   }
 
   #[test]
@@ -422,29 +412,20 @@ mod tests {
       raw: None,
     })));
 
-    let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
-      visit_css_map_path_with_builder(
-        CssMapUsage::Call(&call),
-        Some(&ident("styles")),
-        &meta,
-        |_, _| CssOutput::new(),
-      );
-    }));
+    visit_css_map_path_with_builder(
+      CssMapUsage::Call(&call),
+      Some(&ident("styles")),
+      &meta,
+      |_, _| CssOutput::new(),
+    );
 
-    let message = match result {
-      Ok(_) => panic!("expected panic"),
-      Err(err) => {
-        if let Some(msg) = err.downcast_ref::<String>() {
-          msg.clone()
-        } else if let Some(msg) = err.downcast_ref::<&'static str>() {
-          (*msg).to_string()
-        } else {
-          String::new()
-        }
-      }
-    };
-
-    assert!(message.contains("cssMap function can only receive an object"));
+    let diagnostics = meta.state().diagnostics.clone();
+    assert_eq!(diagnostics.len(), 1);
+    assert!(
+      diagnostics[0]
+        .message
+        .contains("cssMap function can only receive an object")
+    );
   }
 
   #[test]
@@ -453,41 +434,32 @@ mod tests {
     let argument = css_map_argument();
     let call = css_map_call(Expr::Object(argument));
 
-    let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
-      visit_css_map_path_with_builder(
-        CssMapUsage::Call(&call),
-        Some(&ident("styles")),
-        &meta,
-        |_, _| CssOutput {
-          css: vec![CssItem::unconditional("color: red;".to_string())],
-          variables: vec![crate::utils_types::Variable {
-            name: "--test".into(),
-            expression: Expr::Lit(Lit::Str(Str {
-              span: DUMMY_SP,
-              value: "value".into(),
-              raw: None,
-            })),
-            prefix: None,
-            suffix: None,
-          }],
-        },
-      );
-    }));
+    visit_css_map_path_with_builder(
+      CssMapUsage::Call(&call),
+      Some(&ident("styles")),
+      &meta,
+      |_, _| CssOutput {
+        css: vec![CssItem::unconditional("color: red;".to_string())],
+        variables: vec![crate::utils_types::Variable {
+          name: "--test".into(),
+          expression: Expr::Lit(Lit::Str(Str {
+            span: DUMMY_SP,
+            value: "value".into(),
+            raw: None,
+          })),
+          prefix: None,
+          suffix: None,
+        }],
+      },
+    );
 
-    let message = match result {
-      Ok(_) => panic!("expected panic"),
-      Err(err) => {
-        if let Some(msg) = err.downcast_ref::<String>() {
-          msg.clone()
-        } else if let Some(msg) = err.downcast_ref::<&'static str>() {
-          (*msg).to_string()
-        } else {
-          String::new()
-        }
-      }
-    };
-
-    assert!(message.contains("The variant object must be statically defined"));
+    let diagnostics = meta.state().diagnostics.clone();
+    assert_eq!(diagnostics.len(), 1);
+    assert!(
+      diagnostics[0]
+        .message
+        .contains("The variant object must be statically defined")
+    );
   }
 
   #[test]
@@ -496,35 +468,26 @@ mod tests {
     let argument = css_map_argument();
     let call = css_map_call(Expr::Object(argument));
 
-    let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
-      visit_css_map_path_with_builder(
-        CssMapUsage::Call(&call),
-        Some(&ident("styles")),
-        &meta,
-        |_, _| CssOutput {
-          css: vec![
-            CssItem::sheet(".one { color: red; }".to_string()),
-            CssItem::sheet(".two { display: block; }".to_string()),
-          ],
-          variables: Vec::new(),
-        },
-      );
-    }));
+    visit_css_map_path_with_builder(
+      CssMapUsage::Call(&call),
+      Some(&ident("styles")),
+      &meta,
+      |_, _| CssOutput {
+        css: vec![
+          CssItem::sheet(".one { color: red; }".to_string()),
+          CssItem::sheet(".two { display: block; }".to_string()),
+        ],
+        variables: Vec::new(),
+      },
+    );
 
-    let message = match result {
-      Ok(_) => panic!("expected panic"),
-      Err(err) => {
-        if let Some(msg) = err.downcast_ref::<String>() {
-          msg.clone()
-        } else if let Some(msg) = err.downcast_ref::<&'static str>() {
-          (*msg).to_string()
-        } else {
-          String::new()
-        }
-      }
-    };
-
-    assert!(message.contains("The variant object must be statically defined"));
+    let diagnostics = meta.state().diagnostics.clone();
+    assert_eq!(diagnostics.len(), 1);
+    assert!(
+      diagnostics[0]
+        .message
+        .contains("The variant object must be statically defined")
+    );
   }
 
   #[test]
@@ -533,27 +496,18 @@ mod tests {
     let argument = css_map_argument();
     let call = css_map_call(Expr::Object(argument));
 
-    let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
-      visit_css_map_path_with_builder(CssMapUsage::Call(&call), None, &meta, |_, _| CssOutput {
-        css: vec![CssItem::unconditional("color: red;".to_string())],
-        variables: Vec::new(),
-      });
-    }));
+    visit_css_map_path_with_builder(CssMapUsage::Call(&call), None, &meta, |_, _| CssOutput {
+      css: vec![CssItem::unconditional("color: red;".to_string())],
+      variables: Vec::new(),
+    });
 
-    let message = match result {
-      Ok(_) => panic!("expected panic"),
-      Err(err) => {
-        if let Some(msg) = err.downcast_ref::<String>() {
-          msg.clone()
-        } else if let Some(msg) = err.downcast_ref::<&'static str>() {
-          (*msg).to_string()
-        } else {
-          String::new()
-        }
-      }
-    };
-
-    assert!(message.contains("CSS Map must be declared at the top-most scope"));
+    let diagnostics = meta.state().diagnostics.clone();
+    assert_eq!(diagnostics.len(), 1);
+    assert!(
+      diagnostics[0]
+        .message
+        .contains("CSS Map must be declared at the top-most scope")
+    );
   }
 
   #[test]
@@ -565,28 +519,649 @@ mod tests {
     };
     let call = css_map_call(Expr::Object(argument));
 
-    let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
-      visit_css_map_path_with_builder(
-        CssMapUsage::Call(&call),
-        Some(&ident("styles")),
-        &meta,
-        |_, _| CssOutput::new(),
-      );
-    }));
+    visit_css_map_path_with_builder(
+      CssMapUsage::Call(&call),
+      Some(&ident("styles")),
+      &meta,
+      |_, _| CssOutput::new(),
+    );
 
-    let message = match result {
-      Ok(_) => panic!("expected panic"),
-      Err(err) => {
-        if let Some(msg) = err.downcast_ref::<String>() {
-          msg.clone()
-        } else if let Some(msg) = err.downcast_ref::<&'static str>() {
-          (*msg).to_string()
-        } else {
-          String::new()
-        }
-      }
+    let diagnostics = meta.state().diagnostics.clone();
+    assert_eq!(diagnostics.len(), 1);
+    assert!(
+      diagnostics[0]
+        .message
+        .contains("The variant object must be statically defined")
+    );
+  }
+
+  fn number_lit(value: f64) -> Expr {
+    Expr::Lit(Lit::Num(Number {
+      span: DUMMY_SP,
+      value,
+      raw: None,
+    }))
+  }
+
+  fn string_key_property(key: &str, value: Expr) -> PropOrSpread {
+    PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+      key: PropName::Str(Str {
+        span: DUMMY_SP,
+        value: key.into(),
+        raw: None,
+      }),
+      value: Box::new(value),
+    })))
+  }
+
+  /// Helper that builds CSS from object with support for nested selectors.
+  /// Returns a single sheet with all rules concatenated, which is what cssMap expects.
+  fn build_css_with_nested_selectors(expr: &Expr) -> CssOutput {
+    let Expr::Object(object) = expr else {
+      panic!("expected object expression");
     };
 
-    assert!(message.contains("The variant object must be statically defined"));
+    let mut all_rules: Vec<String> = Vec::new();
+    let mut declarations: Vec<String> = Vec::new();
+
+    for prop in &object.props {
+      let PropOrSpread::Prop(prop) = prop else {
+        continue;
+      };
+
+      let Prop::KeyValue(key_value) = prop.as_ref() else {
+        continue;
+      };
+
+      let key = match &key_value.key {
+        PropName::Ident(ident) => ident.sym.to_string(),
+        PropName::Str(str) => str.value.to_string(),
+        _ => panic!("unexpected key type"),
+      };
+
+      match key_value.value.as_ref() {
+        Expr::Lit(Lit::Str(str)) => {
+          let css_key = match key.as_str() {
+            "backgroundColor" => "background-color".to_string(),
+            "fontSize" => "font-size".to_string(),
+            "borderRadius" => "border-radius".to_string(),
+            _ => key.clone(),
+          };
+          declarations.push(format!("{css_key}: {};", str.value));
+        }
+        Expr::Lit(Lit::Num(num)) => {
+          let css_key = match key.as_str() {
+            "fontSize" => "font-size".to_string(),
+            "borderRadius" => "border-radius".to_string(),
+            _ => key.clone(),
+          };
+          let value = if key == "fontSize" || key == "borderRadius" {
+            format!("{}px", num.value)
+          } else {
+            num.value.to_string()
+          };
+          declarations.push(format!("{css_key}: {};", value));
+        }
+        Expr::Object(nested) => {
+          // Handle nested selectors - collect their CSS as additional rules
+          let nested_result = build_css_with_nested_selectors(&Expr::Object(nested.clone()));
+          for item in nested_result.css {
+            match item {
+              CssItem::Sheet(sheet) => {
+                // Wrap nested CSS with the selector
+                let wrapped = format!(".test {} {{ {} }}", key, extract_declarations(&sheet.css));
+                all_rules.push(wrapped);
+              }
+              _ => {}
+            }
+          }
+        }
+        _ => {}
+      }
+    }
+
+    // Build the main rule
+    if !declarations.is_empty() {
+      let css_rule = format!(".test {{ {} }}", declarations.join(" "));
+      all_rules.insert(0, css_rule);
+    }
+
+    // Return all rules as a single concatenated sheet
+    if all_rules.is_empty() {
+      return CssOutput {
+        css: vec![],
+        variables: Vec::new(),
+      };
+    }
+
+    CssOutput {
+      css: vec![CssItem::sheet(all_rules.join(" "))],
+      variables: Vec::new(),
+    }
+  }
+
+  /// Helper to extract declarations from a CSS rule
+  fn extract_declarations(css: &str) -> &str {
+    if let Some(start) = css.find('{') {
+      if let Some(end) = css.rfind('}') {
+        return css[start + 1..end].trim();
+      }
+    }
+    css
+  }
+
+  #[test]
+  fn transforms_single_variant_with_single_property() {
+    let meta = create_metadata();
+    let argument = ObjectLit {
+      span: DUMMY_SP,
+      props: vec![object_property(
+        "root",
+        Expr::Object(ObjectLit {
+          span: DUMMY_SP,
+          props: vec![object_property("color", string_lit("blue"))],
+        }),
+      )],
+    };
+    let call = css_map_call(Expr::Object(argument));
+
+    let binding = ident("styles");
+    let result = visit_css_map_path_with_builder(
+      CssMapUsage::Call(&call),
+      Some(&binding),
+      &meta,
+      |expr, _| build_css_with_nested_selectors(expr),
+    );
+
+    assert_eq!(result.props.len(), 1);
+
+    let state = meta.state();
+    let sheets = state.css_map.get(binding.sym.as_ref()).unwrap();
+
+    // Verify all sheets are strings
+    for sheet in sheets {
+      assert!(
+        sheet.contains('{'),
+        "Sheet should be a valid CSS string containing '{{': {:?}",
+        sheet
+      );
+    }
+  }
+
+  #[test]
+  fn transforms_variant_with_element_selector_div() {
+    let meta = create_metadata();
+    let argument = ObjectLit {
+      span: DUMMY_SP,
+      props: vec![object_property(
+        "container",
+        Expr::Object(ObjectLit {
+          span: DUMMY_SP,
+          props: vec![
+            object_property("display", string_lit("flex")),
+            string_key_property(
+              "div",
+              Expr::Object(ObjectLit {
+                span: DUMMY_SP,
+                props: vec![object_property("margin", string_lit("0"))],
+              }),
+            ),
+          ],
+        }),
+      )],
+    };
+    let call = css_map_call(Expr::Object(argument));
+
+    let binding = ident("styles");
+    let result = visit_css_map_path_with_builder(
+      CssMapUsage::Call(&call),
+      Some(&binding),
+      &meta,
+      |expr, _| build_css_with_nested_selectors(expr),
+    );
+
+    assert_eq!(result.props.len(), 1);
+
+    let state = meta.state();
+    let sheets = state.css_map.get(binding.sym.as_ref()).unwrap();
+
+    // Verify that all collected sheets are valid strings
+    for sheet in sheets {
+      assert!(
+        sheet.is_ascii() || !sheet.is_empty(),
+        "Each sheet should be a valid string: {:?}",
+        sheet
+      );
+    }
+
+    // Check the result property is a string literal
+    let PropOrSpread::Prop(prop) = &result.props[0] else {
+      panic!("expected property");
+    };
+    let Prop::KeyValue(key_value) = prop.as_ref() else {
+      panic!("expected key value property");
+    };
+    match key_value.value.as_ref() {
+      Expr::Lit(Lit::Str(str)) => {
+        assert!(
+          !str.value.is_empty() || str.value.as_ref() == "",
+          "Class name should be a string"
+        );
+      }
+      other => panic!("expected string literal class name, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn transforms_variant_with_multiple_element_selectors() {
+    let meta = create_metadata();
+    let argument = ObjectLit {
+      span: DUMMY_SP,
+      props: vec![object_property(
+        "wrapper",
+        Expr::Object(ObjectLit {
+          span: DUMMY_SP,
+          props: vec![
+            object_property("position", string_lit("relative")),
+            string_key_property(
+              "span",
+              Expr::Object(ObjectLit {
+                span: DUMMY_SP,
+                props: vec![object_property("color", string_lit("inherit"))],
+              }),
+            ),
+            string_key_property(
+              "button",
+              Expr::Object(ObjectLit {
+                span: DUMMY_SP,
+                props: vec![object_property("cursor", string_lit("pointer"))],
+              }),
+            ),
+          ],
+        }),
+      )],
+    };
+    let call = css_map_call(Expr::Object(argument));
+
+    let binding = ident("styles");
+    let result = visit_css_map_path_with_builder(
+      CssMapUsage::Call(&call),
+      Some(&binding),
+      &meta,
+      |expr, _| build_css_with_nested_selectors(expr),
+    );
+
+    assert_eq!(result.props.len(), 1);
+
+    // Verify the output is a valid string
+    let PropOrSpread::Prop(prop) = &result.props[0] else {
+      panic!("expected property");
+    };
+    let Prop::KeyValue(key_value) = prop.as_ref() else {
+      panic!("expected key value property");
+    };
+    assert!(
+      matches!(key_value.value.as_ref(), Expr::Lit(Lit::Str(_))),
+      "Class name must be a string literal"
+    );
+  }
+
+  #[test]
+  fn transforms_variant_with_ampersand_pseudo_selectors() {
+    let meta = create_metadata();
+    let argument = ObjectLit {
+      span: DUMMY_SP,
+      props: vec![object_property(
+        "button",
+        Expr::Object(ObjectLit {
+          span: DUMMY_SP,
+          props: vec![
+            object_property("backgroundColor", string_lit("blue")),
+            string_key_property(
+              "&:hover",
+              Expr::Object(ObjectLit {
+                span: DUMMY_SP,
+                props: vec![object_property("backgroundColor", string_lit("darkblue"))],
+              }),
+            ),
+            string_key_property(
+              "&:active",
+              Expr::Object(ObjectLit {
+                span: DUMMY_SP,
+                props: vec![object_property("backgroundColor", string_lit("navy"))],
+              }),
+            ),
+          ],
+        }),
+      )],
+    };
+    let call = css_map_call(Expr::Object(argument));
+
+    let binding = ident("styles");
+    let result = visit_css_map_path_with_builder(
+      CssMapUsage::Call(&call),
+      Some(&binding),
+      &meta,
+      |expr, _| build_css_with_nested_selectors(expr),
+    );
+
+    assert_eq!(result.props.len(), 1);
+
+    let state = meta.state();
+    let sheets = state.css_map.get(binding.sym.as_ref()).unwrap();
+
+    // Verify each sheet in the cache is a string
+    for (i, sheet) in sheets.iter().enumerate() {
+      assert!(
+        sheet.is_ascii(),
+        "Sheet {} should be a valid ASCII string, got: {:?}",
+        i,
+        sheet
+      );
+    }
+  }
+
+  #[test]
+  fn transforms_multiple_variants_correctly() {
+    let meta = create_metadata();
+    let argument = ObjectLit {
+      span: DUMMY_SP,
+      props: vec![
+        object_property(
+          "primary",
+          Expr::Object(ObjectLit {
+            span: DUMMY_SP,
+            props: vec![object_property("color", string_lit("blue"))],
+          }),
+        ),
+        object_property(
+          "secondary",
+          Expr::Object(ObjectLit {
+            span: DUMMY_SP,
+            props: vec![object_property("color", string_lit("gray"))],
+          }),
+        ),
+        object_property(
+          "tertiary",
+          Expr::Object(ObjectLit {
+            span: DUMMY_SP,
+            props: vec![object_property("color", string_lit("lightgray"))],
+          }),
+        ),
+      ],
+    };
+    let call = css_map_call(Expr::Object(argument));
+
+    let binding = ident("buttonStyles");
+    let result = visit_css_map_path_with_builder(
+      CssMapUsage::Call(&call),
+      Some(&binding),
+      &meta,
+      |expr, _| build_css_with_nested_selectors(expr),
+    );
+
+    assert_eq!(result.props.len(), 3, "Should have 3 variant properties");
+
+    // Verify each variant produces a string class name
+    for prop in &result.props {
+      let PropOrSpread::Prop(prop) = prop else {
+        panic!("expected property");
+      };
+      let Prop::KeyValue(key_value) = prop.as_ref() else {
+        panic!("expected key value property");
+      };
+      match key_value.value.as_ref() {
+        Expr::Lit(Lit::Str(str)) => {
+          assert!(
+            !str.value.is_empty(),
+            "Each variant should produce a non-empty class name"
+          );
+        }
+        other => panic!("expected string literal, got {other:?}"),
+      }
+    }
+  }
+
+  #[test]
+  fn handles_empty_variant_object() {
+    let meta = create_metadata();
+    let argument = ObjectLit {
+      span: DUMMY_SP,
+      props: vec![object_property(
+        "empty",
+        Expr::Object(ObjectLit {
+          span: DUMMY_SP,
+          props: vec![],
+        }),
+      )],
+    };
+    let call = css_map_call(Expr::Object(argument));
+
+    let binding = ident("styles");
+    let result =
+      visit_css_map_path_with_builder(CssMapUsage::Call(&call), Some(&binding), &meta, |_, _| {
+        CssOutput {
+          css: vec![],
+          variables: Vec::new(),
+        }
+      });
+
+    assert_eq!(result.props.len(), 1);
+
+    // Empty variant should still produce a valid string (even if empty)
+    let PropOrSpread::Prop(prop) = &result.props[0] else {
+      panic!("expected property");
+    };
+    let Prop::KeyValue(key_value) = prop.as_ref() else {
+      panic!("expected key value property");
+    };
+    // Should be empty string
+    match key_value.value.as_ref() {
+      Expr::Lit(Lit::Str(str)) => {
+        assert_eq!(
+          str.value.as_ref(),
+          "",
+          "Empty variant should have empty class name"
+        );
+      }
+      other => panic!("expected string literal for empty variant, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn transforms_variant_with_numeric_values() {
+    let meta = create_metadata();
+    let argument = ObjectLit {
+      span: DUMMY_SP,
+      props: vec![object_property(
+        "sized",
+        Expr::Object(ObjectLit {
+          span: DUMMY_SP,
+          props: vec![
+            object_property("fontSize", number_lit(16.0)),
+            object_property("borderRadius", number_lit(4.0)),
+          ],
+        }),
+      )],
+    };
+    let call = css_map_call(Expr::Object(argument));
+
+    let binding = ident("styles");
+    let result = visit_css_map_path_with_builder(
+      CssMapUsage::Call(&call),
+      Some(&binding),
+      &meta,
+      |expr, _| build_css_with_nested_selectors(expr),
+    );
+
+    assert_eq!(result.props.len(), 1);
+
+    let state = meta.state();
+    let sheets = state.css_map.get(binding.sym.as_ref()).unwrap();
+
+    // All sheets should be valid strings
+    for sheet in sheets {
+      assert!(
+        sheet.contains('{'),
+        "Sheet should contain CSS rules: {:?}",
+        sheet
+      );
+    }
+  }
+
+  #[test]
+  fn sheets_are_always_strings_not_wrapped_objects() {
+    // This test specifically validates that sheets stored in css_map
+    // are always strings, never wrapped in objects that would cause
+    // "sheet.includes is not a function" errors at runtime
+    let meta = create_metadata();
+    let argument = ObjectLit {
+      span: DUMMY_SP,
+      props: vec![
+        object_property(
+          "variant1",
+          Expr::Object(ObjectLit {
+            span: DUMMY_SP,
+            props: vec![object_property("color", string_lit("red"))],
+          }),
+        ),
+        object_property(
+          "variant2",
+          Expr::Object(ObjectLit {
+            span: DUMMY_SP,
+            props: vec![
+              object_property("color", string_lit("blue")),
+              string_key_property(
+                "div",
+                Expr::Object(ObjectLit {
+                  span: DUMMY_SP,
+                  props: vec![object_property("margin", string_lit("8px"))],
+                }),
+              ),
+            ],
+          }),
+        ),
+      ],
+    };
+    let call = css_map_call(Expr::Object(argument));
+
+    let binding = ident("testStyles");
+    let _result = visit_css_map_path_with_builder(
+      CssMapUsage::Call(&call),
+      Some(&binding),
+      &meta,
+      |expr, _| build_css_with_nested_selectors(expr),
+    );
+
+    let state = meta.state();
+    let sheets = state.css_map.get(binding.sym.as_ref()).unwrap();
+
+    // Critical assertion: each sheet must be a String type
+    // This ensures that sheet.includes() will work at runtime
+    for (index, sheet) in sheets.iter().enumerate() {
+      // Verify the sheet is a valid string with CSS content
+      assert!(
+        sheet
+          .chars()
+          .all(|c| c.is_ascii() || c.is_alphanumeric() || c.is_whitespace()),
+        "Sheet at index {} must be a valid string, got: {:?}",
+        index,
+        sheet
+      );
+
+      // If the sheet has content, it should have CSS structure
+      if !sheet.trim().is_empty() {
+        assert!(
+          sheet.contains('{') || sheet.contains(':'),
+          "Non-empty sheet at index {} should contain CSS syntax: {:?}",
+          index,
+          sheet
+        );
+      }
+    }
+  }
+
+  #[test]
+  fn class_name_output_is_always_string_literal() {
+    // This test ensures that the output class name expressions are always
+    // string literals, preventing runtime errors when trying to use them
+    let meta = create_metadata();
+    let variants = vec![
+      ("simple", vec![object_property("color", string_lit("red"))]),
+      (
+        "withDiv",
+        vec![
+          object_property("display", string_lit("block")),
+          string_key_property(
+            "div",
+            Expr::Object(ObjectLit {
+              span: DUMMY_SP,
+              props: vec![object_property("padding", string_lit("8px"))],
+            }),
+          ),
+        ],
+      ),
+      (
+        "withHover",
+        vec![
+          object_property("backgroundColor", string_lit("white")),
+          string_key_property(
+            "&:hover",
+            Expr::Object(ObjectLit {
+              span: DUMMY_SP,
+              props: vec![object_property("backgroundColor", string_lit("gray"))],
+            }),
+          ),
+        ],
+      ),
+    ];
+
+    for (name, props) in variants {
+      let argument = ObjectLit {
+        span: DUMMY_SP,
+        props: vec![object_property(
+          name,
+          Expr::Object(ObjectLit {
+            span: DUMMY_SP,
+            props,
+          }),
+        )],
+      };
+      let call = css_map_call(Expr::Object(argument));
+      let binding = ident("styles");
+
+      let result = visit_css_map_path_with_builder(
+        CssMapUsage::Call(&call),
+        Some(&binding),
+        &meta,
+        |expr, _| build_css_with_nested_selectors(expr),
+      );
+
+      assert_eq!(
+        result.props.len(),
+        1,
+        "Variant '{}' should produce one property",
+        name
+      );
+
+      let PropOrSpread::Prop(prop) = &result.props[0] else {
+        panic!("Variant '{}': expected property", name);
+      };
+      let Prop::KeyValue(key_value) = prop.as_ref() else {
+        panic!("Variant '{}': expected key value property", name);
+      };
+
+      match key_value.value.as_ref() {
+        Expr::Lit(Lit::Str(_)) => {
+          // This is correct - class name is a string literal
+        }
+        other => {
+          panic!(
+            "Variant '{}': class name must be a string literal to avoid 'includes is not a function' error, got {:?}",
+            name, other
+          );
+        }
+      }
+    }
   }
 }

@@ -145,6 +145,7 @@ export default new Transformer({
           codeFrames: [
             {
               filePath: asset.filePath,
+              code: code,
               codeHighlights,
             },
           ],
