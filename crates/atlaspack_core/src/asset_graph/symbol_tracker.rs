@@ -21,9 +21,12 @@ pub struct SymbolRequirement {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FinalSymbolLocation {
+  /// The local name in the providing asset (used for scope hoisting)
   pub local_name: String,
+  /// The exported/imported name from the providing asset
   pub imported_name: String,
-  pub providing_asset: Arc<Asset>,
+  /// The ID of the asset that provides this symbol (cheaper than Arc<Asset>)
+  pub providing_asset_id: AssetId,
 }
 
 fn dep_has_symbol(dep: &Dependency, symbol: &Symbol) -> bool {
@@ -71,6 +74,24 @@ fn get_incoming_dependencies<'a>(
       }
     })
     .collect()
+}
+
+/// Given an asset and a mangled local symbol name from a dependency, find the
+/// exported name that corresponds to it in the asset's symbols.
+///
+/// For a re-export like `export {foo as renamedFoo} from './foo'`:
+/// - The dependency to foo.js has: local='$assetId$re_export$renamedFoo', exported='foo'
+/// - The barrel asset has: local='$assetId$re_export$renamedFoo', exported='renamedFoo'
+///
+/// So we match on the mangled local name to find the exported name.
+fn find_exported_name_for_local(asset: &Asset, mangled_local: &str) -> Option<String> {
+  let symbols = asset.symbols.as_ref()?;
+  for sym in symbols {
+    if sym.local == mangled_local {
+      return Some(sym.exported.clone());
+    }
+  }
+  None
 }
 
 impl SymbolTracker {
@@ -136,7 +157,7 @@ impl SymbolTracker {
           let final_location = FinalSymbolLocation {
             local_name: sym.local.clone(),
             imported_name: sym.exported.clone(),
-            providing_asset: asset.clone(),
+            providing_asset_id: asset.id.clone(),
           };
 
           self.handle_answer_propagation(asset_graph, final_location, incoming_dep)?;
@@ -153,38 +174,71 @@ impl SymbolTracker {
     located_symbol: FinalSymbolLocation,
     dep: &Dependency,
   ) -> anyhow::Result<()> {
-    let mut work_queue = vec![dep];
+    // Work queue contains (dependency, symbol_name_to_match)
+    // The symbol_name_to_match is the exported name we're looking for at this level
+    let mut work_queue = vec![(dep, located_symbol.imported_name.clone())];
 
-    while let Some(dep) = work_queue.pop() {
+    // Reusable buffer for matched requirements to avoid repeated allocations
+    let mut matched_locals: Vec<String> = Vec::new();
+
+    while let Some((dep, symbol_name_to_match)) = work_queue.pop() {
+      matched_locals.clear();
+
       // Process the requirements for this dependency
-      let Some(required_symbols) = self.requirements_by_dep.get_mut(&dep.id) else {
-        continue;
-      };
-
-      for required in required_symbols {
-        if required.symbol.exported != located_symbol.imported_name {
+      {
+        let Some(required_symbols) = self.requirements_by_dep.get_mut(&dep.id) else {
           continue;
-        }
+        };
 
-        // If the requirement is already satisfied, and we have a new location that
-        // matches, we have a conflict
-        if required.final_location.is_some() {
-          return Err(anyhow!(
-            "Required symbol {} for dep [{}] has already been located",
-            required.symbol.exported,
-            dep.id
-          ));
-        } else {
+        for required in required_symbols.iter_mut() {
+          if required.symbol.exported != symbol_name_to_match {
+            continue;
+          }
+
+          // If the requirement is already satisfied, and we have a new location that
+          // matches, we have a conflict
+          if required.final_location.is_some() {
+            return Err(anyhow!(
+              "Required symbol {} for dep [{}] has already been located",
+              required.symbol.exported,
+              dep.id
+            ));
+          }
+
           required.final_location = Some(located_symbol.clone());
+          // Store the local name for propagation lookup
+          matched_locals.push(required.symbol.local.clone());
         }
+      }
 
+      // Now propagate for matched requirements (outside the mutable borrow)
+      for symbol_local in &matched_locals {
         // If we satisfied this requirement, we need to propagate the location
         // up to the parent asset's dependencies as well
         let parent_asset_node_id = get_parent_asset_node_id(asset_graph, dep)?;
+
+        // Get the parent asset to check for re-export mappings (local -> exported name)
+        let parent_asset_node = asset_graph.get_node(&parent_asset_node_id);
+
+        // For each incoming dependency of the parent asset, we need to determine
+        // what symbol name to look for. If the parent asset has a symbol that
+        // maps the dependency's mangled local name to an exported name, use that.
         let parent_asset_dependencies =
           get_incoming_dependencies(asset_graph, &parent_asset_node_id);
 
-        work_queue.extend_from_slice(parent_asset_dependencies.as_slice());
+        for parent_dep in parent_asset_dependencies {
+          // Use the mangled local name from the requirement to find what the
+          // parent asset exports this symbol as. The mangled local is shared
+          // between the dependency symbol and the asset symbol.
+          let symbol_for_parent = if let Some(AssetGraphNode::Asset(asset)) = parent_asset_node {
+            find_exported_name_for_local(asset, symbol_local)
+              .unwrap_or_else(|| symbol_name_to_match.clone())
+          } else {
+            symbol_name_to_match.clone()
+          };
+
+          work_queue.push((parent_dep, symbol_for_parent));
+        }
       }
     }
 
@@ -223,7 +277,8 @@ impl SymbolTracker {
           requirement.symbol.clone(),
           UsedSymbol {
             symbol: requirement.symbol,
-            asset: final_location.providing_asset.id.clone(),
+            asset: final_location.providing_asset_id,
+            resolved_symbol: final_location.imported_name,
           },
         );
       }
@@ -239,8 +294,12 @@ impl SymbolTracker {
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct UsedSymbol {
+  /// The original requested symbol (from the dependency)
   pub symbol: Symbol,
+  /// The asset that provides this symbol
   pub asset: AssetId,
+  /// The resolved symbol name in the providing asset (may differ from symbol.exported due to renames)
+  pub resolved_symbol: String,
 }
 
 pub type DependencyUsedSymbols = HashMap<Symbol, UsedSymbol>;
@@ -346,7 +405,7 @@ mod tests {
 
     // Track symbols for entry_asset with its dependency
     tracker
-      .track_symbols(&graph, &entry_asset, &[dep_a.clone()])
+      .track_symbols(&graph, &entry_asset, std::slice::from_ref(&dep_a))
       .unwrap();
 
     // Verify the requirement was registered
@@ -366,7 +425,7 @@ mod tests {
 
     // First, register the requirement from the entry asset
     tracker
-      .track_symbols(&graph, &entry_asset, &[dep_a.clone()])
+      .track_symbols(&graph, &entry_asset, std::slice::from_ref(&dep_a))
       .unwrap();
 
     // Now track the providing asset - this should satisfy the requirement
@@ -380,7 +439,7 @@ mod tests {
       .final_location
       .as_ref()
       .expect("Symbol should be resolved");
-    assert_eq!(final_location.providing_asset.id, asset_a.id);
+    assert_eq!(final_location.providing_asset_id, asset_a.id);
     assert_eq!(final_location.local_name, "a");
     assert_eq!(final_location.imported_name, "a");
   }
@@ -412,7 +471,7 @@ mod tests {
 
     // Register requirement
     tracker
-      .track_symbols(&graph, &entry_asset, &[dep_a.clone()])
+      .track_symbols(&graph, &entry_asset, std::slice::from_ref(&dep_a))
       .unwrap();
 
     // Track the library asset with weak symbol - should NOT satisfy the requirement
@@ -462,10 +521,10 @@ mod tests {
 
     // Register requirements in traversal order
     tracker
-      .track_symbols(&graph, &entry_asset, &[lib_dep.clone()])
+      .track_symbols(&graph, &entry_asset, std::slice::from_ref(&lib_dep))
       .unwrap();
     tracker
-      .track_symbols(&graph, &lib_asset, &[a_dep.clone()])
+      .track_symbols(&graph, &lib_asset, std::slice::from_ref(&a_dep))
       .unwrap();
 
     // Now the providing asset satisfies the requirement
@@ -478,7 +537,7 @@ mod tests {
       .as_ref()
       .expect("lib_dep requirement should be satisfied");
     assert_eq!(
-      lib_final.providing_asset.id, a_asset.id,
+      lib_final.providing_asset_id, a_asset.id,
       "lib_dep should point to a.js as provider"
     );
 
@@ -488,7 +547,7 @@ mod tests {
       .as_ref()
       .expect("a_dep requirement should be satisfied");
     assert_eq!(
-      a_final.providing_asset.id, a_asset.id,
+      a_final.providing_asset_id, a_asset.id,
       "a_dep should point to a.js as provider"
     );
   }
@@ -499,7 +558,7 @@ mod tests {
     let mut tracker = SymbolTracker::default();
 
     tracker
-      .track_symbols(&graph, &entry_asset, &[dep_a.clone()])
+      .track_symbols(&graph, &entry_asset, std::slice::from_ref(&dep_a))
       .unwrap();
     tracker.track_symbols(&graph, &asset_a, &[]).unwrap();
 
@@ -557,6 +616,243 @@ mod tests {
         .unwrap_err()
         .to_string()
         .contains("has already been located")
+    );
+  }
+
+  #[test]
+  fn track_symbols_handles_chained_renames() {
+    // Test case: chained renames through multiple barrel files
+    // index.js imports "finalName" from barrel1
+    // barrel1 re-exports "middleName" as "finalName" from barrel2
+    // barrel2 re-exports "originalName" as "middleName" from source
+    // source exports "originalName"
+    //
+    // Graph: entry_dep -> index -> barrel1_dep -> barrel1 -> barrel2_dep -> barrel2 -> source_dep -> source
+
+    let mut graph = AssetGraph::new();
+
+    let entry_dep = make_entry_dependency();
+    let entry_dep_node = graph.add_entry_dependency(entry_dep, false);
+
+    // index.js - imports finalName from barrel1
+    let index_asset = make_asset("index.js", vec![]);
+    let index_asset_node = graph.add_asset(index_asset.clone(), false);
+    graph.add_edge(&entry_dep_node, &index_asset_node);
+
+    // Dependency from index.js to barrel1.js requesting "finalName"
+    let barrel1_dep = make_dependency(
+      &index_asset,
+      "./barrel1.js",
+      vec![("$index$import$finalName", "finalName", false)],
+    );
+    let barrel1_dep_node = graph.add_dependency(barrel1_dep.clone(), false);
+    graph.add_edge(&index_asset_node, &barrel1_dep_node);
+
+    // barrel1.js - re-exports middleName as finalName (weak symbol)
+    let mangled_reexport_1 = "$barrel1$re_export$finalName";
+    let barrel1_asset = make_asset("barrel1.js", vec![(mangled_reexport_1, "finalName", true)]);
+    let barrel1_asset_node = graph.add_asset(barrel1_asset.clone(), false);
+    graph.add_edge(&barrel1_dep_node, &barrel1_asset_node);
+
+    // Dependency from barrel1.js to barrel2.js requesting "middleName"
+    let barrel2_dep = make_dependency(
+      &barrel1_asset,
+      "./barrel2.js",
+      vec![(mangled_reexport_1, "middleName", true)],
+    );
+    let barrel2_dep_node = graph.add_dependency(barrel2_dep.clone(), false);
+    graph.add_edge(&barrel1_asset_node, &barrel2_dep_node);
+
+    // barrel2.js - re-exports originalName as middleName (weak symbol)
+    let mangled_reexport_2 = "$barrel2$re_export$middleName";
+    let barrel2_asset = make_asset("barrel2.js", vec![(mangled_reexport_2, "middleName", true)]);
+    let barrel2_asset_node = graph.add_asset(barrel2_asset.clone(), false);
+    graph.add_edge(&barrel2_dep_node, &barrel2_asset_node);
+
+    // Dependency from barrel2.js to source.js requesting "originalName"
+    let source_dep = make_dependency(
+      &barrel2_asset,
+      "./source.js",
+      vec![(mangled_reexport_2, "originalName", true)],
+    );
+    let source_dep_node = graph.add_dependency(source_dep.clone(), false);
+    graph.add_edge(&barrel2_asset_node, &source_dep_node);
+
+    // source.js - provides "originalName" (strong symbol)
+    let source_asset = make_asset("source.js", vec![("originalName", "originalName", false)]);
+    let source_asset_node = graph.add_asset(source_asset.clone(), false);
+    graph.add_edge(&source_dep_node, &source_asset_node);
+
+    let mut tracker = SymbolTracker::default();
+
+    // Process in traversal order
+    tracker
+      .track_symbols(&graph, &index_asset, std::slice::from_ref(&barrel1_dep))
+      .unwrap();
+    tracker
+      .track_symbols(&graph, &barrel1_asset, std::slice::from_ref(&barrel2_dep))
+      .unwrap();
+    tracker
+      .track_symbols(&graph, &barrel2_asset, std::slice::from_ref(&source_dep))
+      .unwrap();
+    tracker.track_symbols(&graph, &source_asset, &[]).unwrap();
+
+    // Verify all dependencies are satisfied pointing to source_asset
+    let barrel1_requirements = tracker.requirements_by_dep.get(&barrel1_dep.id).unwrap();
+    let barrel1_final = barrel1_requirements[0]
+      .final_location
+      .as_ref()
+      .expect("barrel1_dep requirement should be satisfied");
+    assert_eq!(
+      barrel1_final.providing_asset_id, source_asset.id,
+      "barrel1_dep should point to source.js as provider"
+    );
+    assert_eq!(
+      barrel1_final.imported_name, "originalName",
+      "barrel1_dep should resolve to originalName"
+    );
+
+    let barrel2_requirements = tracker.requirements_by_dep.get(&barrel2_dep.id).unwrap();
+    let barrel2_final = barrel2_requirements[0]
+      .final_location
+      .as_ref()
+      .expect("barrel2_dep requirement should be satisfied");
+    assert_eq!(
+      barrel2_final.providing_asset_id, source_asset.id,
+      "barrel2_dep should point to source.js as provider"
+    );
+
+    let source_requirements = tracker.requirements_by_dep.get(&source_dep.id).unwrap();
+    let source_final = source_requirements[0]
+      .final_location
+      .as_ref()
+      .expect("source_dep requirement should be satisfied");
+    assert_eq!(
+      source_final.providing_asset_id, source_asset.id,
+      "source_dep should point to source.js as provider"
+    );
+
+    // Finalize should succeed without panic
+    let finalized = tracker.finalize();
+
+    // All dependencies should have used symbols
+    assert!(
+      finalized
+        .get_used_symbols_for_dependency(&barrel1_dep.id)
+        .is_some(),
+      "barrel1_dep should have used symbols"
+    );
+
+    // Check that resolved_symbol is correct for barrel1_dep
+    let barrel1_used = finalized
+      .get_used_symbols_for_dependency(&barrel1_dep.id)
+      .unwrap();
+    let barrel1_symbol = barrel1_used.values().next().unwrap();
+    assert_eq!(
+      barrel1_symbol.resolved_symbol, "originalName",
+      "barrel1_dep used symbol should resolve to originalName"
+    );
+  }
+
+  #[test]
+  fn track_symbols_handles_renamed_exports() {
+    // Test case: export {foo as renamedFoo} from './foo'
+    // index.js imports "renamedFoo" from barrel.js
+    // barrel.js re-exports "foo" as "renamedFoo" from foo.js
+    // foo.js exports "foo"
+    //
+    // Graph: entry_dep -> index_asset -> barrel_dep -> barrel_asset -> foo_dep -> foo_asset
+
+    let mut graph = AssetGraph::new();
+
+    let entry_dep = make_entry_dependency();
+    let entry_dep_node = graph.add_entry_dependency(entry_dep, false);
+
+    // index.js - imports renamedFoo from barrel
+    let index_asset = make_asset("index.js", vec![]);
+    let index_asset_node = graph.add_asset(index_asset.clone(), false);
+    graph.add_edge(&entry_dep_node, &index_asset_node);
+
+    // Dependency from index.js to barrel.js requesting "renamedFoo"
+    // The local is the mangled import name
+    let barrel_dep = make_dependency(
+      &index_asset,
+      "./barrel.js",
+      vec![("$index$import$renamedFoo", "renamedFoo", false)],
+    );
+    let barrel_dep_node = graph.add_dependency(barrel_dep.clone(), false);
+    graph.add_edge(&index_asset_node, &barrel_dep_node);
+
+    // barrel.js - re-exports foo as renamedFoo (weak symbol)
+    // The local name here is a mangled re-export identifier that matches between
+    // the dependency symbol (barrel->foo) and the asset symbol (barrel)
+    let mangled_reexport = "$barrel$re_export$renamedFoo";
+    let barrel_asset = make_asset("barrel.js", vec![(mangled_reexport, "renamedFoo", true)]);
+    let barrel_asset_node = graph.add_asset(barrel_asset.clone(), false);
+    graph.add_edge(&barrel_dep_node, &barrel_asset_node);
+
+    // Dependency from barrel.js to foo.js requesting "foo"
+    // The local is the same mangled re-export name
+    let foo_dep = make_dependency(
+      &barrel_asset,
+      "./foo.js",
+      vec![(mangled_reexport, "foo", true)],
+    );
+    let foo_dep_node = graph.add_dependency(foo_dep.clone(), false);
+    graph.add_edge(&barrel_asset_node, &foo_dep_node);
+
+    // foo.js - provides "foo" (strong symbol)
+    let foo_asset = make_asset("foo.js", vec![("foo", "foo", false)]);
+    let foo_asset_node = graph.add_asset(foo_asset.clone(), false);
+    graph.add_edge(&foo_dep_node, &foo_asset_node);
+
+    let mut tracker = SymbolTracker::default();
+
+    // Process in traversal order
+    tracker
+      .track_symbols(&graph, &index_asset, std::slice::from_ref(&barrel_dep))
+      .unwrap();
+    tracker
+      .track_symbols(&graph, &barrel_asset, std::slice::from_ref(&foo_dep))
+      .unwrap();
+    tracker.track_symbols(&graph, &foo_asset, &[]).unwrap();
+
+    // Verify both dependencies are satisfied pointing to foo_asset
+    let barrel_requirements = tracker.requirements_by_dep.get(&barrel_dep.id).unwrap();
+    let barrel_final = barrel_requirements[0]
+      .final_location
+      .as_ref()
+      .expect("barrel_dep requirement should be satisfied");
+    assert_eq!(
+      barrel_final.providing_asset_id, foo_asset.id,
+      "barrel_dep should point to foo.js as provider"
+    );
+
+    let foo_requirements = tracker.requirements_by_dep.get(&foo_dep.id).unwrap();
+    let foo_final = foo_requirements[0]
+      .final_location
+      .as_ref()
+      .expect("foo_dep requirement should be satisfied");
+    assert_eq!(
+      foo_final.providing_asset_id, foo_asset.id,
+      "foo_dep should point to foo.js as provider"
+    );
+
+    // Finalize should succeed without panic
+    let finalized = tracker.finalize();
+
+    // Both dependencies should have used symbols
+    assert!(
+      finalized
+        .get_used_symbols_for_dependency(&barrel_dep.id)
+        .is_some(),
+      "barrel_dep should have used symbols"
+    );
+    assert!(
+      finalized
+        .get_used_symbols_for_dependency(&foo_dep.id)
+        .is_some(),
+      "foo_dep should have used symbols"
     );
   }
 }
