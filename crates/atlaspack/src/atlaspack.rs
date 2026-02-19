@@ -301,10 +301,16 @@ impl Atlaspack {
     // This possibly could be persistent between pacakges? But right now with SSR builds only we're talking about a few packages at most
     // so we can worry about that refactor later.
     let packager = JsPackager::new(
-      Arc::clone(&self.db),
+      atlaspack_packager_js::PackagingContext {
+        db: Arc::clone(&self.db),
+        cache: Arc::new(crate::cache::LmdbCache::new(
+          Arc::clone(&self.db),
+          Arc::new(OsFileSystem),
+        )),
+        project_root: self.project_root.clone(),
+        debug_tools: self.debug_tools.clone(),
+      },
       Arc::clone(&self.bundle_graph),
-      self.project_root.clone(),
-      self.debug_tools.clone(),
     );
     packager.package(&bundle_id)
   }
