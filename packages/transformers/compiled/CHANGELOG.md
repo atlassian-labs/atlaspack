@@ -1,5 +1,20 @@
 # @atlaspack/transformer-compiled
 
+## 0.4.0
+
+### Minor Changes
+
+- [#1016](https://github.com/atlassian-labs/atlaspack/pull/1016) [`47658d4`](https://github.com/atlassian-labs/atlaspack/commit/47658d4d250edfa8c45db8048778547025c673a3) Thanks [@matt-koko](https://github.com/matt-koko)! - read browserslist from project config only once during transformer setup() rather than reading package.json on every transform() call.
+
+### Patch Changes
+
+- [#1027](https://github.com/atlassian-labs/atlaspack/pull/1027) [`d8e984b`](https://github.com/atlassian-labs/atlaspack/commit/d8e984b7f6d04fa03707fa299bfd8b8bf9f58280) Thanks [@marcins](https://github.com/marcins)! - Improve source map quality through various accuracy fixes.
+
+- Updated dependencies [[`d8e984b`](https://github.com/atlassian-labs/atlaspack/commit/d8e984b7f6d04fa03707fa299bfd8b8bf9f58280)]:
+  - @atlaspack/utils@3.3.6
+  - @atlaspack/source-map@3.2.9
+  - @atlaspack/plugin@2.14.54
+
 ## 0.3.1
 
 ### Patch Changes

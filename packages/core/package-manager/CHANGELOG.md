@@ -1,5 +1,20 @@
 # @atlaspack/package-manager
 
+## 2.14.54
+
+### Patch Changes
+
+- [#1027](https://github.com/atlassian-labs/atlaspack/pull/1027) [`d8e984b`](https://github.com/atlassian-labs/atlaspack/commit/d8e984b7f6d04fa03707fa299bfd8b8bf9f58280) Thanks [@marcins](https://github.com/marcins)! - Improve source map quality through various accuracy fixes.
+
+- Updated dependencies [[`d8e984b`](https://github.com/atlassian-labs/atlaspack/commit/d8e984b7f6d04fa03707fa299bfd8b8bf9f58280)]:
+  - @atlaspack/utils@3.3.6
+  - @atlaspack/fs@2.15.49
+  - @atlaspack/logger@2.14.46
+  - @atlaspack/node-resolver-core@3.7.25
+  - @atlaspack/build-cache@2.13.12
+  - @atlaspack/workers@2.14.54
+  - @atlaspack/types@2.15.44
+
 ## 2.14.53
 
 ### Patch Changes
