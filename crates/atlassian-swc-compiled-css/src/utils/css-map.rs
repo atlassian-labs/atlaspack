@@ -86,12 +86,12 @@ impl ErrorMessages {
       ErrorMessages::StaticSelectorKey => {
         "Selector property keys must be static strings. Use a string literal like `'&:hover'` instead of a variable."
       }
-      ErrorMessages::SelectorBlockWrongPlace => "`selector` key was defined in the wrong place.",
+      ErrorMessages::SelectorBlockWrongPlace => "`selectors` key was defined in the wrong place.",
       ErrorMessages::UseSelectorsWithAmpersand => {
         "This selector is applied to the parent element, and so you need to specify the ampersand symbol (&) directly before it. For example, `:hover` should be written as `&:hover`."
       }
       ErrorMessages::UseVariantOfCssMap => {
-        "You must use the variant of a CSS Map object (eg. `styles.root`), not the root object itself, eg. `styles`."
+        "You must use the variant of a CSS Map object (e.g. `styles.root`), not the root object itself (e.g. `styles`)."
       }
     }
   }
@@ -100,48 +100,48 @@ impl ErrorMessages {
   pub fn hints(&self) -> Option<Vec<String>> {
     match self {
       ErrorMessages::StaticAtRuleKey => Some(vec![
-        "Replace dynamic keys like `[myVariable]` with static strings like `'screen and (min-width: 768px)'`".to_string(),
+        "Replace dynamic keys like `[myVariable]` with static strings like `'screen and (min-width: 768px)'`.".to_string(),
       ]),
       ErrorMessages::StaticSelectorKey => Some(vec![
-        "Change `[dynamicKey]: { ... }` to `'&:hover': { ... }`".to_string(),
-        "Selector keys must be string literals, not variables or computed properties".to_string(),
+        "Change `[dynamicKey]: { ... }` to `'&:hover': { ... }`.".to_string(),
+        "Selector keys must be string literals, not variables or computed properties.".to_string(),
       ]),
       ErrorMessages::StaticVariantObjectWithVariables => Some(vec![
-        "Remove CSS variable usage from the variant object".to_string(),
-        "For dynamic styles, use `css()` instead of `cssMap()`".to_string(),
+        "Remove CSS variable usage from the variant object.".to_string(),
+        "For dynamic styles, use `css()` instead of `cssMap()`.".to_string(),
       ]),
       ErrorMessages::StaticVariantObjectMultipleClasses => Some(vec![
-        "Simplify the variant to generate a single class".to_string(),
-        "Consider splitting complex styles into separate variants".to_string(),
+        "Simplify the variant to generate a single class.".to_string(),
+        "Consider splitting complex styles into separate variants.".to_string(),
       ]),
       ErrorMessages::NoSpreadElement => Some(vec![
-        "Replace `...otherStyles` with explicit property declarations".to_string(),
-        "cssMap requires all properties to be statically defined".to_string(),
+        "Replace `...otherStyles` with explicit property declarations.".to_string(),
+        "cssMap requires all properties to be statically defined.".to_string(),
       ]),
       ErrorMessages::NoObjectMethod => Some(vec![
-        "Replace object method syntax `color() { }` with a property `color: 'value'`".to_string(),
+        "Replace object method syntax `color() { }` with a property like `color: 'value'`.".to_string(),
       ]),
       ErrorMessages::UseSelectorsWithAmpersand => Some(vec![
-        "Change `:hover` to `'&:hover'`".to_string(),
-        "Change `:focus` to `'&:focus'`".to_string(),
-        "The `&` symbol represents the parent element".to_string(),
+        "Change `:hover` to `'&:hover'`.".to_string(),
+        "Change `:focus` to `'&:focus'`.".to_string(),
+        "The `&` symbol represents the parent element.".to_string(),
       ]),
       ErrorMessages::DuplicateSelector => Some(vec![
-        "Remove or merge the duplicate selector declaration".to_string(),
-        "Each selector can only be defined once per variant".to_string(),
+        "Remove or merge the duplicate selector declaration.".to_string(),
+        "Each selector can only be defined once per variant.".to_string(),
       ]),
       ErrorMessages::DuplicateAtRule => Some(vec![
-        "Remove or merge the duplicate at-rule declaration".to_string(),
-        "Each at-rule can only be defined once per variant".to_string(),
+        "Remove or merge the duplicate at-rule declaration.".to_string(),
+        "Each at-rule can only be defined once per variant.".to_string(),
       ]),
       ErrorMessages::NoTaggedTemplate => Some(vec![
-        "Change `cssMap`...`` to `cssMap({ ... })`".to_string(),
+        "Change `cssMap`text`` to `cssMap({ ... })`.".to_string(),
       ]),
       ErrorMessages::NumberOfArgument => Some(vec![
-        "cssMap expects exactly one argument: `cssMap({ variant: { ... } })`".to_string(),
+        "cssMap expects exactly one argument: `cssMap({ variant: { ... } })`.".to_string(),
       ]),
       ErrorMessages::ArgumentType => Some(vec![
-        "Pass an object literal: `cssMap({ variant: { color: 'red' } })`".to_string(),
+        "Pass an object literal: `cssMap({ variant: { color: 'red' } })`.".to_string(),
       ]),
       _ => None,
     }
@@ -253,17 +253,13 @@ pub fn error_if_not_valid_object_property(property: &PropOrSpread, meta: &Metada
   match property {
     PropOrSpread::Prop(prop) => match &**prop {
       Prop::Method(_) | Prop::Getter(_) | Prop::Setter(_) => {
-        report_css_map_error(meta, prop.span(), ErrorMessages::NoObjectMethod.message());
+        report_css_map_error_with_hints(meta, prop.span(), ErrorMessages::NoObjectMethod);
         return true;
       }
       _ => {}
     },
     PropOrSpread::Spread(spread) => {
-      report_css_map_error(
-        meta,
-        spread.expr.span(),
-        ErrorMessages::NoSpreadElement.message(),
-      );
+      report_css_map_error_with_hints(meta, spread.expr.span(), ErrorMessages::NoSpreadElement);
       return true;
     }
   }

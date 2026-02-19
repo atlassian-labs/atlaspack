@@ -34,11 +34,7 @@ where
 {
   match usage {
     CssMapUsage::TaggedTemplate(tagged_tpl) => {
-      report_css_map_error(
-        meta,
-        tagged_tpl.span,
-        ErrorMessages::NoTaggedTemplate.message(),
-      );
+      report_css_map_error_with_hints(meta, tagged_tpl.span, ErrorMessages::NoTaggedTemplate);
       return empty_object(tagged_tpl.span);
     }
     CssMapUsage::Call(call_expr) => {
@@ -48,26 +44,18 @@ where
       };
 
       if call_expr.args.len() != 1 {
-        report_css_map_error(
-          meta,
-          call_expr.span,
-          ErrorMessages::NumberOfArgument.message(),
-        );
+        report_css_map_error_with_hints(meta, call_expr.span, ErrorMessages::NumberOfArgument);
         return empty_object(call_expr.span);
       }
 
       let argument = &call_expr.args[0];
       if argument.spread.is_some() {
-        report_css_map_error(meta, argument.span(), ErrorMessages::ArgumentType.message());
+        report_css_map_error_with_hints(meta, argument.span(), ErrorMessages::ArgumentType);
         return empty_object(call_expr.span);
       }
 
       let Expr::Object(object_lit) = argument.expr.as_ref() else {
-        report_css_map_error(
-          meta,
-          argument.expr.span(),
-          ErrorMessages::ArgumentType.message(),
-        );
+        report_css_map_error_with_hints(meta, argument.expr.span(), ErrorMessages::ArgumentType);
         return empty_object(call_expr.span);
       };
 

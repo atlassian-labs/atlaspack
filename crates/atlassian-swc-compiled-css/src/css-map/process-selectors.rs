@@ -4,9 +4,9 @@ use swc_core::ecma::ast::{Expr, Ident, KeyValueProp, ObjectLit, Prop, PropName, 
 
 use crate::types::Metadata;
 use crate::utils_css_map::{
-  ErrorMessages, create_css_map_diagnostic, error_if_not_valid_object_property, get_key_value,
-  has_extended_selectors_key, is_at_rule_object, is_plain_selector, object_key_is_literal_value,
-  report_css_map_error, report_css_map_error_with_hints,
+  ErrorMessages, create_css_map_diagnostic, create_css_map_diagnostic_with_hints,
+  error_if_not_valid_object_property, get_key_value, has_extended_selectors_key, is_at_rule_object,
+  is_plain_selector, object_key_is_literal_value, report_css_map_error_with_hints,
 };
 
 fn collapse_at_rule(
@@ -15,12 +15,16 @@ fn collapse_at_rule(
   meta: &Metadata,
 ) -> Vec<(String, PropOrSpread)> {
   let PropOrSpread::Prop(prop) = at_rule_block else {
-    meta.add_diagnostic(create_css_map_diagnostic(ErrorMessages::NoSpreadElement));
+    meta.add_diagnostic(create_css_map_diagnostic_with_hints(
+      ErrorMessages::NoSpreadElement,
+    ));
     return Vec::new();
   };
 
   let Prop::KeyValue(key_value) = prop.as_ref() else {
-    meta.add_diagnostic(create_css_map_diagnostic(ErrorMessages::NoObjectMethod));
+    meta.add_diagnostic(create_css_map_diagnostic_with_hints(
+      ErrorMessages::NoObjectMethod,
+    ));
     return Vec::new();
   };
 
@@ -90,12 +94,16 @@ fn get_extended_selectors(variant_styles: &ObjectLit, meta: &Metadata) -> Vec<Pr
   error_if_not_valid_object_property(extended[0], meta);
 
   let PropOrSpread::Prop(prop) = extended[0] else {
-    meta.add_diagnostic(create_css_map_diagnostic(ErrorMessages::NoSpreadElement));
+    meta.add_diagnostic(create_css_map_diagnostic_with_hints(
+      ErrorMessages::NoSpreadElement,
+    ));
     return Vec::new();
   };
 
   let Prop::KeyValue(key_value) = prop.as_ref() else {
-    meta.add_diagnostic(create_css_map_diagnostic(ErrorMessages::NoObjectMethod));
+    meta.add_diagnostic(create_css_map_diagnostic_with_hints(
+      ErrorMessages::NoObjectMethod,
+    ));
     return Vec::new();
   };
 
@@ -142,7 +150,7 @@ pub fn merge_extended_selectors_into_properties(
     let key = get_key_value(&key_value.key);
 
     if is_plain_selector(&key) {
-      report_css_map_error(
+      report_css_map_error_with_hints(
         meta,
         key_value.key.span(),
         ErrorMessages::UseSelectorsWithAmpersand,
@@ -153,7 +161,11 @@ pub fn merge_extended_selectors_into_properties(
     if is_at_rule_object(&key_value.key) {
       for (at_rule_name, collapsed_prop) in collapse_at_rule(property, &key, meta) {
         if !added_selectors.insert(at_rule_name.clone()) {
-          report_css_map_error(meta, key_value.key.span(), ErrorMessages::DuplicateAtRule);
+          report_css_map_error_with_hints(
+            meta,
+            key_value.key.span(),
+            ErrorMessages::DuplicateAtRule,
+          );
           continue;
         }
 
@@ -167,7 +179,11 @@ pub fn merge_extended_selectors_into_properties(
 
     if is_selector {
       if !added_selectors.insert(key.clone()) {
-        report_css_map_error(meta, key_value.key.span(), ErrorMessages::DuplicateSelector);
+        report_css_map_error_with_hints(
+          meta,
+          key_value.key.span(),
+          ErrorMessages::DuplicateSelector,
+        );
         continue;
       }
     }
