@@ -1,5 +1,15 @@
 # @atlaspack/rust
 
+## 3.24.0
+
+### Minor Changes
+
+- [#1028](https://github.com/atlassian-labs/atlaspack/pull/1028) [`f216e22`](https://github.com/atlassian-labs/atlaspack/commit/f216e227e0aca8a3944f66267d3f75238c732802) Thanks [@marcins](https://github.com/marcins)! - In native packaging, write intermediate bundles to FS not LMDB.
+
+### Patch Changes
+
+- [#1036](https://github.com/atlassian-labs/atlaspack/pull/1036) [`e88b258`](https://github.com/atlassian-labs/atlaspack/commit/e88b25808a181fafbe98e5ca278b35bfc0197caf) Thanks [@benjervis](https://github.com/benjervis)! - Fix Rust symbol tracker to correctly handle renamed exports during symbol propagation through barrel files.
+
 ## 3.23.0
 
 ### Minor Changes

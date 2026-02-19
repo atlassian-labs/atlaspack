@@ -1,5 +1,13 @@
 # @atlaspack/reporter-sourcemap-visualiser
 
+## 2.14.55
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.3.7
+  - @atlaspack/plugin@2.14.55
+
 ## 2.14.54
 
 ### Patch Changes

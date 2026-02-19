@@ -1,5 +1,29 @@
 # @atlaspack/core
 
+## 2.34.1
+
+### Patch Changes
+
+- [#1036](https://github.com/atlassian-labs/atlaspack/pull/1036) [`e88b258`](https://github.com/atlassian-labs/atlaspack/commit/e88b25808a181fafbe98e5ca278b35bfc0197caf) Thanks [@benjervis](https://github.com/benjervis)! - Fix Rust symbol tracker to correctly handle renamed exports during symbol propagation through barrel files.
+
+- [#1035](https://github.com/atlassian-labs/atlaspack/pull/1035) [`936209f`](https://github.com/atlassian-labs/atlaspack/commit/936209f3c6c201288720dd62b61e1f538368268c) Thanks [@marcins](https://github.com/marcins)! - Remove `cachePerformanceImprovements` feature flag
+
+- Updated dependencies [[`f216e22`](https://github.com/atlassian-labs/atlaspack/commit/f216e227e0aca8a3944f66267d3f75238c732802), [`e88b258`](https://github.com/atlassian-labs/atlaspack/commit/e88b25808a181fafbe98e5ca278b35bfc0197caf), [`936209f`](https://github.com/atlassian-labs/atlaspack/commit/936209f3c6c201288720dd62b61e1f538368268c)]:
+  - @atlaspack/rust@3.24.0
+  - @atlaspack/feature-flags@2.30.1
+  - @atlaspack/cache@3.2.50
+  - @atlaspack/fs@2.15.50
+  - @atlaspack/logger@2.14.47
+  - @atlaspack/source-map@3.2.10
+  - @atlaspack/utils@3.3.7
+  - @atlaspack/build-cache@2.13.13
+  - @atlaspack/graph@3.6.17
+  - @atlaspack/package-manager@2.14.55
+  - @atlaspack/profiler@2.15.16
+  - @atlaspack/workers@2.14.55
+  - @atlaspack/plugin@2.14.55
+  - @atlaspack/types@2.15.45
+
 ## 2.34.0
 
 ### Minor Changes

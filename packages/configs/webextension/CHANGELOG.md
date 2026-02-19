@@ -1,5 +1,18 @@
 # @atlaspack/config-webextension
 
+## 15.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`e88b258`](https://github.com/atlassian-labs/atlaspack/commit/e88b25808a181fafbe98e5ca278b35bfc0197caf), [`936209f`](https://github.com/atlassian-labs/atlaspack/commit/936209f3c6c201288720dd62b61e1f538368268c)]:
+  - @atlaspack/core@2.34.1
+  - @atlaspack/config-default@15.0.1
+  - @atlaspack/packager-webextension@2.14.55
+  - @atlaspack/runtime-webextension@2.15.12
+  - @atlaspack/transformer-webextension@2.14.55
+  - @atlaspack/types@2.15.45
+  - @atlaspack/transformer-raw@2.14.55
+
 ## 15.0.0
 
 ### Patch Changes
