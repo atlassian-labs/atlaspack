@@ -316,6 +316,9 @@ pub struct IdealGraph {
   /// Dedup set for bundle edges (kept in sync with `bundle_edges`).
   pub bundle_edge_set: HashSet<(IdealBundleId, IdealBundleId, IdealEdgeType)>,
 
+  /// Bundles that were internalized. Maps internalized bundle ID -> set of parent bundle IDs.
+  pub internalized_bundles: HashMap<IdealBundleId, Vec<IdealBundleId>>,
+
   /// Asset -> Bundle mapping.
   ///
   /// Indexed by `AssetKey.0 as usize`.

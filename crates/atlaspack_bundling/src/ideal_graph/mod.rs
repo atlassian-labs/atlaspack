@@ -14,7 +14,10 @@ pub mod types;
 use anyhow::Context;
 use atlaspack_core::{
   asset_graph::AssetGraph,
-  bundle_graph::{NativeBundleGraph, native_bundle_graph::NativeBundleGraphEdgeType},
+  bundle_graph::{
+    NativeBundleGraph,
+    native_bundle_graph::{NativeBundleGraphEdgeType, NativeBundleGraphNode},
+  },
 };
 use tracing::instrument;
 
@@ -211,6 +214,15 @@ impl Bundler for IdealGraphBundler {
 
     for (ideal_bundle_id, ideal_bundle) in ideal_graph.bundles_iter() {
       if materialized_bundle_nodes.contains_key(ideal_bundle_id) {
+        continue;
+      }
+
+      // Skip internalized bundles — they should not be materialized into the
+      // bundle graph. InternalAsync edges from parent bundles handle resolution.
+      if ideal_graph
+        .internalized_bundles
+        .contains_key(ideal_bundle_id)
+      {
         continue;
       }
 
@@ -461,11 +473,18 @@ impl Bundler for IdealGraphBundler {
     // entry bundle rather than using zero-duplication placement.
     use std::collections::HashSet;
 
+    // Dedup `bundle -> bundle_group` edges we add while materializing Contains edges.
+    //
+    // This is needed for shared/async bundles because `ideal_graph.bundle_edges` only
+    // contains edges between ideal bundle roots. Shared bundles are not bundle roots,
+    // so we must still ensure lazy deps inside them wire up their target bundle groups.
+    let mut seen_bundle_to_bg_edges: HashSet<(usize, usize, NativeBundleGraphEdgeType)> =
+      HashSet::new();
+
     for (ideal_bundle_id, ideal_bundle) in ideal_graph.bundles_iter() {
       let Some(&bundle_node_id) = materialized_bundle_nodes.get(ideal_bundle_id) else {
         continue;
       };
-
       // Determine if this is an entry bundle (needs sync-dep traversal to duplicate
       // shared assets like esmodule-helpers.js) or a non-entry bundle (should only
       // contain assets from the ideal graph's zero-duplication placement).
@@ -594,13 +613,269 @@ impl Bundler for IdealGraphBundler {
           let asset_id = ideal_graph.assets.id_for(asset_key);
           if let Some(ag_node_id) = asset_graph.get_node_id_by_content_key(asset_id) {
             for dep_node_id in asset_graph.get_outgoing_neighbors(ag_node_id) {
-              if let Some(dep) = asset_graph.get_dependency(&dep_node_id)
-                && let Some(&dep_bg_node_id) = bundle_graph.get_node_id_by_content_key(&dep.id)
-              {
+              let Some(dep) = asset_graph.get_dependency(&dep_node_id) else {
+                continue;
+              };
+
+              // Add Contains edge for the dependency itself.
+              if let Some(&dep_bg_node_id) = bundle_graph.get_node_id_by_content_key(&dep.id) {
                 bundle_graph.add_edge(
                   &bundle_node_id,
                   &dep_bg_node_id,
                   NativeBundleGraphEdgeType::Contains,
+                );
+              }
+
+              // Shared bundles are not ideal bundle roots and therefore don't appear in
+              // `ideal_graph.bundle_edges`. If a shared/async bundle contains a lazy
+              // dependency, we must still add the parent `bundle -> bundle_group` edge
+              // so the target bundle group is reachable from the root.
+              if dep.priority == atlaspack_core::types::Priority::Lazy {
+                // Follow dep -> target asset (if resolved).
+                for target_node_id in asset_graph.get_outgoing_neighbors(&dep_node_id) {
+                  let Some(target_asset) = asset_graph.get_asset(&target_node_id) else {
+                    continue;
+                  };
+
+                  // Only async bundle roots have bundle groups.
+                  let target_bundle_id = ideal_graph
+                    .assets
+                    .key_for(&target_asset.id)
+                    .map(types::IdealBundleId::from_asset_key);
+                  let is_bundle_root = target_bundle_id
+                    .as_ref()
+                    .is_some_and(|id| ideal_graph.get_bundle(id).is_some());
+
+                  if !is_bundle_root {
+                    continue;
+                  }
+
+                  let bg_key = format!("bundle_group:{}{}", default_target.name, &target_asset.id);
+                  let Some(&to_bg_node_id) = bundle_graph.get_node_id_by_content_key(&bg_key)
+                  else {
+                    continue;
+                  };
+
+                  let native_edge_type = NativeBundleGraphEdgeType::Bundle;
+                  if seen_bundle_to_bg_edges.insert((
+                    bundle_node_id,
+                    to_bg_node_id,
+                    native_edge_type,
+                  )) {
+                    bundle_graph.add_edge(&bundle_node_id, &to_bg_node_id, native_edge_type);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Handle internalized bundles.
+    //
+    // Internalized async bundles are skipped during materialization (no bundle node and
+    // no bundle group). However, the base bundle graph copied from the asset graph still
+    // contains dependency -> asset `Null` edges for lazy deps that target the internalized
+    // async root.
+    //
+    // To prevent runtime resolution from trying to load a missing async bundle, we mirror
+    // the JS bundler's `internalizeAsyncDependency` behavior:
+    // 1) Change dep -> asset edge type from `Null` to `References`
+    // 2) Add an `InternalAsync` edge from each bundle that contains the dep -> dependency node
+    {
+      use std::collections::HashSet;
+
+      // Dedup edges we add to avoid ballooning the graph.
+      let mut seen: HashSet<(usize, usize, NativeBundleGraphEdgeType)> = HashSet::new();
+
+      for internalized_bundle_id in ideal_graph.internalized_bundles.keys() {
+        let root_key = internalized_bundle_id.as_asset_key();
+        let root_asset_id = ideal_graph.assets.id_for(root_key);
+
+        let Some(&root_asset_node_id) = bundle_graph.get_node_id_by_content_key(root_asset_id)
+        else {
+          continue;
+        };
+
+        let Some(deps) = non_sync_deps_by_target_asset_id.get(root_asset_id) else {
+          continue;
+        };
+
+        for dep in deps {
+          if dep.priority != atlaspack_core::types::Priority::Lazy {
+            continue;
+          }
+
+          let Some(&dep_bg_node_id) = bundle_graph.get_node_id_by_content_key(&dep.id) else {
+            continue;
+          };
+
+          // Swap dep -> asset edge: Null -> References.
+          bundle_graph.remove_edge(
+            &dep_bg_node_id,
+            &root_asset_node_id,
+            NativeBundleGraphEdgeType::Null,
+          );
+
+          if seen.insert((
+            dep_bg_node_id,
+            root_asset_node_id,
+            NativeBundleGraphEdgeType::References,
+          )) {
+            bundle_graph.add_edge(
+              &dep_bg_node_id,
+              &root_asset_node_id,
+              NativeBundleGraphEdgeType::References,
+            );
+          }
+
+          // Capture bundle groups reachable from this dependency via Null edges BEFORE we
+          // remove them. `_removeExternalDependency` needs this information to potentially
+          // remove `bundle -> bundle_group` edges for bundles that internalized this dep.
+          let mut reachable_bundle_group_node_ids: Vec<usize> = Vec::new();
+          {
+            let outgoing_neighbors = bundle_graph.get_outgoing_neighbors(&dep_bg_node_id);
+            for neighbor in outgoing_neighbors {
+              let is_bundle_group = matches!(
+                bundle_graph.get_node(&neighbor),
+                Some(NativeBundleGraphNode::BundleGroup { .. })
+              );
+              if !is_bundle_group {
+                continue;
+              }
+
+              // Only consider bundle groups connected via Null edges (mirrors JS traversal).
+              if bundle_graph.has_edge(&dep_bg_node_id, &neighbor, NativeBundleGraphEdgeType::Null)
+              {
+                reachable_bundle_group_node_ids.push(neighbor);
+              }
+            }
+          }
+
+          // If this dependency still points at any bundle groups via untyped/Null edges,
+          // `resolveAsyncDependency` on the JS side may incorrectly treat it as an external
+          // async boundary (bundle group) rather than an internalized async dependency.
+          //
+          // Mirror the JS bundler's `internalizeAsyncDependency` behavior by removing any
+          // `dependency -> bundle_group` Null edges.
+          // Note: NativeBundleGraph currently doesn't expose an "outgoing neighbors by edge type"
+          // helper, so we filter by node type and remove only the `Null`-typed edge.
+          for bundle_group_node_id in &reachable_bundle_group_node_ids {
+            bundle_graph.remove_edge(
+              &dep_bg_node_id,
+              bundle_group_node_id,
+              NativeBundleGraphEdgeType::Null,
+            );
+          }
+
+          // Add InternalAsync edges from each bundle that contains this dep -> dep.
+          //
+          // This matches JS's `internalizeAsyncDependency`, which is called for every bundle
+          // that contains the dependency, not just the ideal-graph's phase-8 parent bundles.
+          let parent_bundle_node_ids = bundle_graph.get_incoming_neighbors_by_edge_type(
+            &dep_bg_node_id,
+            NativeBundleGraphEdgeType::Contains,
+          );
+
+          for parent_bundle_node_id in &parent_bundle_node_ids {
+            let is_bundle = matches!(
+              bundle_graph.get_node(parent_bundle_node_id),
+              Some(NativeBundleGraphNode::Bundle(_))
+            );
+
+            if !is_bundle {
+              continue;
+            }
+
+            if seen.insert((
+              *parent_bundle_node_id,
+              dep_bg_node_id,
+              NativeBundleGraphEdgeType::InternalAsync,
+            )) {
+              bundle_graph.add_edge(
+                parent_bundle_node_id,
+                &dep_bg_node_id,
+                NativeBundleGraphEdgeType::InternalAsync,
+              );
+            }
+          }
+
+          // Remove external dependency edges (JS: `_removeExternalDependency`).
+          //
+          // Now that this dep is internalized, we may no longer need `Bundle` edges from
+          // containing bundles -> bundle groups reachable from this dependency.
+          for bundle_group_node_id in reachable_bundle_group_node_ids {
+            // Only remove edges for bundle groups that are connected from this dep.
+            let inbound_dep_node_ids = bundle_graph.get_incoming_neighbors_by_edge_type(
+              &bundle_group_node_id,
+              NativeBundleGraphEdgeType::Null,
+            );
+
+            // Only consider inbound dependency nodes.
+            let inbound_dep_node_ids: Vec<usize> = inbound_dep_node_ids
+              .into_iter()
+              .filter(|id| {
+                matches!(
+                  bundle_graph.get_node(id),
+                  Some(NativeBundleGraphNode::Dependency(_))
+                )
+              })
+              .collect();
+
+            for parent_bundle_node_id in &parent_bundle_node_ids {
+              // Skip non-bundles (defensive).
+              if !matches!(
+                bundle_graph.get_node(parent_bundle_node_id),
+                Some(NativeBundleGraphNode::Bundle(_))
+              ) {
+                continue;
+              }
+
+              if !bundle_graph.has_edge(
+                parent_bundle_node_id,
+                &bundle_group_node_id,
+                NativeBundleGraphEdgeType::Bundle,
+              ) {
+                continue;
+              }
+
+              let can_remove = inbound_dep_node_ids.iter().all(|inbound_dep_node_id| {
+                let Some(NativeBundleGraphNode::Dependency(inbound_dep)) =
+                  bundle_graph.get_node(inbound_dep_node_id)
+                else {
+                  return true;
+                };
+
+                // If there's a URL dependency inbound to the group, do not remove the edge.
+                if inbound_dep.specifier_type == atlaspack_core::types::SpecifierType::Url {
+                  return false;
+                }
+
+                let contained = bundle_graph.has_edge(
+                  parent_bundle_node_id,
+                  inbound_dep_node_id,
+                  NativeBundleGraphEdgeType::Contains,
+                );
+
+                if !contained {
+                  // Dependency isn't in this bundle; doesn't block removal.
+                  return true;
+                }
+
+                // If the dependency is in the bundle, it must be internalized.
+                bundle_graph.has_edge(
+                  parent_bundle_node_id,
+                  inbound_dep_node_id,
+                  NativeBundleGraphEdgeType::InternalAsync,
+                )
+              });
+
+              if can_remove {
+                bundle_graph.remove_edge(
+                  parent_bundle_node_id,
+                  &bundle_group_node_id,
+                  NativeBundleGraphEdgeType::Bundle,
                 );
               }
             }
@@ -1298,8 +1573,8 @@ mod tests {
     // Expected: comp-x and lib-z are reachable from BOTH route roots, so they should be
     // extracted into a shared bundle referenced by both route bundles.
     //
-    // Note: comp-y is an async bundle root (lazy boundary) but is internalized via
-    // delete-only internalization and therefore does not appear in the ideal graph.
+    // Note: comp-y is an async bundle root (lazy boundary) that is internalized.
+    // The internalized bundle still exists in the ideal graph, but can be empty.
     let asset_graph = fixture_graph(
       &["entry.js"],
       &[
@@ -1321,11 +1596,14 @@ mod tests {
         "entry.js"    => ["entry.js"],
         "route-1.js"  => ["route-1.js"],
         "route-2.js"  => ["route-2.js"],
+        "comp-y.js"   => [],
         shared(libz) => ["comp-x.js", "comp-y.js", "lib-z.js"],
       },
       edges: {
         "entry.js" lazy "route-1.js",
         "entry.js" lazy "route-2.js",
+        "route-1.js" lazy "comp-y.js",
+        "route-2.js" sync "comp-y.js",
         "route-1.js" sync shared(libz),
         "route-2.js" sync shared(libz),
       },
@@ -1765,6 +2043,90 @@ mod tests {
       "did not expect c bundle to be sibling in b bundle group; got edges: {:?}",
       edges
     );
+
+    // `entry -> lazy c` is internalized (c is sync-reachable from all async parent bundles),
+    // so it must not keep a dependency -> bundle_group Null edge.
+    let entry_lazy_c_dep_id = asset_graph
+      .get_dependencies()
+      .find(|dep| {
+        if dep.is_entry {
+          return false;
+        }
+        if dep.priority != Priority::Lazy {
+          return false;
+        }
+        if dep.source_asset_id.as_deref() != Some(entry) {
+          return false;
+        }
+
+        asset_graph
+          .get_node_id_by_content_key(&dep.id)
+          .map(|dep_node| {
+            asset_graph
+              .get_outgoing_neighbors(dep_node)
+              .iter()
+              .any(|n| asset_graph.get_asset(n).is_some_and(|asset| asset.id == c))
+          })
+          .unwrap_or(false)
+      })
+      .map(|dep| dep.id.clone())
+      .expect("expected a lazy dependency entry -> c");
+
+    let entry_lazy_c_dep_node = *bundle_graph
+      .get_node_id_by_content_key(&entry_lazy_c_dep_id)
+      .expect("expected lazy dependency node in bundle graph");
+
+    // Find c's bundle group node.
+    let c_bg_node = bundle_graph
+      .nodes()
+      .enumerate()
+      .find_map(|(id, n)| match n {
+        atlaspack_core::bundle_graph::native_bundle_graph::NativeBundleGraphNode::BundleGroup {
+          entry_asset_id,
+          ..
+        } if entry_asset_id == c => Some(id),
+        _ => None,
+      })
+      .expect("expected a bundle group for async root c");
+
+    let entry_bundle_id = bundles
+      .iter()
+      .find(|bundle| bundle.main_entry_id.as_deref() == Some(entry))
+      .unwrap()
+      .id
+      .clone();
+    let entry_bundle_node = *bundle_graph
+      .get_node_id_by_content_key(&entry_bundle_id)
+      .unwrap();
+
+    // Only assert internalization invariants if the dependency was actually internalized.
+    if edges.contains(&(
+      entry_bundle_node,
+      entry_lazy_c_dep_node,
+      NativeBundleGraphEdgeType::InternalAsync,
+    )) {
+      assert!(
+        !edges.contains(&(
+          entry_lazy_c_dep_node,
+          c_bg_node,
+          NativeBundleGraphEdgeType::Null
+        )),
+        "did not expect Null edge from internalized lazy dep -> c bundle group; got edges: {:?}",
+        edges
+      );
+
+      // `_removeExternalDependency` invariant: once the dep is internalized, the containing
+      // bundle should no longer have a `Bundle` edge to the async bundle group.
+      assert!(
+        !edges.contains(&(
+          entry_bundle_node,
+          c_bg_node,
+          NativeBundleGraphEdgeType::Bundle
+        )),
+        "did not expect Bundle edge from entry bundle -> c bundle group after internalization; got edges: {:?}",
+        edges
+      );
+    }
   }
 
   #[test]
@@ -2031,8 +2393,8 @@ mod tests {
     // entry -> sync b
     //
     // b.js is both sync-imported by entry and async-imported by a.
-    // With delete-only internalization, the async bundle for b.js is removed and
-    // b.js itself is not merged into any parent bundle.
+    // b.js's async bundle is internalized. The bundle root remains as a (now-empty) bundle,
+    // but b.js is placed into entry so it can be reprocessed by later phases.
     let asset_graph = fixture_graph(
       &["entry.js"],
       &[
@@ -2045,25 +2407,35 @@ mod tests {
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
     let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
-    // b.js should NOT exist as a bundle root after internalization.
-    // Parent bundles should NOT receive b.js's assets.
     assert_graph!(g, {
       bundles: {
         "entry.js" => ["entry.js", "a.js"],
+        "b.js" => [],
+      },
+      edges: {
+        "entry.js" sync "b.js",
+        "entry.js" lazy "b.js",
       },
     });
   }
 
   #[test]
   fn internalize_async_bundle_when_root_is_sync_reachable_through_parent_bundle() {
+    // This fixture internalizes b.js's async bundle, but leaves a lazy dependency in the
+    // asset graph pointing at b.js.
+    //
+    // Materialization must rewrite that lazy dep edge to `References` and add an
+    // `InternalAsync` edge from the parent bundle -> dep node so runtimes don't try
+    // to resolve b.js via a missing async bundle.
+
     // Mirrors integration fixture:
     // entry -> sync a
     // a -> lazy b
     // a -> sync b
     //
     // b.js is a bundle boundary (lazy), but also sync-imported by a which is in the entry.
-    // With delete-only internalization, the async bundle for b.js is removed and b.js is
-    // not merged into any parent bundle.
+    // b.js's async bundle is internalized. The bundle root remains as a (now-empty) bundle,
+    // but b.js is placed into entry so it can be reprocessed by later phases.
     let asset_graph = fixture_graph(
       &["entry.js"],
       &[
@@ -2106,6 +2478,11 @@ mod tests {
     assert_graph!(g, {
       bundles: {
         "entry.js" => ["entry.js", "a.js"],
+        "b.js" => [],
+      },
+      edges: {
+        "entry.js" sync "b.js",
+        "entry.js" lazy "b.js",
       },
     });
   }
@@ -2117,9 +2494,9 @@ mod tests {
     // comp-x -> sync comp-y (sync edge to a boundary)
     // comp-y -> sync lib-z
     //
-    // With delete-only internalization, async bundles may be removed even if a sync edge
-    // crosses the bundle boundary. The important invariant is that internalization does
-    // not merge comp-y's assets into parent bundles; it simply removes the comp-y bundle.
+    // With internalization, comp-y is no longer treated as a bundle root for placement.
+    // The internalized bundle remains as an empty bundle, and comp-y/lib-z are placed into
+    // the parent (route-1) bundle.
     let asset_graph = fixture_graph(
       &["entry.js"],
       &[
@@ -2137,10 +2514,13 @@ mod tests {
     assert_graph!(g, {
       bundles: {
         "entry.js" => ["entry.js"],
-        "route-1.js" => ["route-1.js", "comp-x.js", "comp-y.js", "lib-z.js"],
+        "route-1.js" => ["comp-x.js", "comp-y.js", "lib-z.js", "route-1.js"],
+        "comp-y.js" => [],
       },
       edges: {
         "entry.js" lazy "route-1.js",
+        "route-1.js" lazy "comp-y.js",
+        "route-1.js" sync "comp-y.js",
       }
     });
   }
@@ -2591,5 +2971,76 @@ mod tests {
         "d.js" sync shared(cd),
       },
     });
+  }
+
+  #[test]
+  fn lazy_dep_inside_shared_bundle_creates_bundle_group_edge() {
+    // Regression test: shared bundles contain lazy deps whose bundle groups must be
+    // reachable from the root. Without the fix in the non-entry Contains traversal,
+    // the `shared -> locale` bundle_group edge was missing, making locale's bundle
+    // unreachable via traverseBundles and causing a nullthrows crash during naming.
+
+    use atlaspack_core::bundle_graph::NativeBundleGraph;
+
+    // Use hex-like ids so NativeBundleGraph public id generation won't panic.
+    let entry = "0123456789abcdef.js";
+    let a = "1111111111111111.js";
+    let b = "2222222222222222.js";
+    let shared = "3333333333333333.js";
+    let locale = "4444444444444444.js";
+
+    let asset_graph = fixture_graph(
+      &[entry],
+      &[
+        EdgeSpec::new(entry, a, Priority::Lazy),
+        EdgeSpec::new(entry, b, Priority::Lazy),
+        EdgeSpec::new(a, shared, Priority::Sync),
+        EdgeSpec::new(b, shared, Priority::Sync),
+        EdgeSpec::new(shared, locale, Priority::Lazy),
+      ],
+    );
+
+    let mut bundle_graph = NativeBundleGraph::from_asset_graph(&asset_graph);
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    bundler.bundle(&asset_graph, &mut bundle_graph).unwrap();
+
+    // Find the shared bundle node (shared bundles have no main entry id).
+    let shared_bundle_id = bundle_graph
+      .get_bundles()
+      .into_iter()
+      .find(|bundle| bundle.main_entry_id.is_none())
+      .expect("expected a shared bundle")
+      .id
+      .clone();
+
+    let shared_bundle_node = *bundle_graph
+      .get_node_id_by_content_key(&shared_bundle_id)
+      .expect("expected shared bundle node id");
+
+    // Find the bundle group node for the async locale bundle.
+    let locale_bg_node = bundle_graph
+      .nodes()
+      .enumerate()
+      .find_map(|(id, n)| match n {
+        atlaspack_core::bundle_graph::native_bundle_graph::NativeBundleGraphNode::BundleGroup {
+          entry_asset_id,
+          ..
+        } if entry_asset_id == locale => Some(id),
+        _ => None,
+      })
+      .expect("expected a bundle group for async root locale");
+
+    let edges = edge_triples(&bundle_graph);
+
+    // Critical assertion: shared bundle must have a Bundle edge to locale's bundle group.
+    assert!(
+      edges.contains(&(
+        shared_bundle_node,
+        locale_bg_node,
+        NativeBundleGraphEdgeType::Bundle
+      )),
+      "expected Bundle edge from shared bundle -> locale bundle group; got edges: {:?}",
+      edges
+    );
   }
 }

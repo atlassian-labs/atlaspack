@@ -394,6 +394,7 @@ impl IdealGraphBuilder {
       bundles: Vec::new(),
       bundle_edges: Vec::new(),
       bundle_edge_set: HashSet::new(),
+      internalized_bundles: HashMap::new(),
       asset_to_bundle: Vec::new(),
       assets: self.assets.clone(),
       debug: None,
@@ -1749,10 +1750,25 @@ impl IdealGraphBuilder {
     // Also remove the root from `bundle_roots` so that Phase 9 (shared bundles) can
     // re-process the asset as a regular multi-root candidate — matching JS where
     // `deleteBundle` calls `bundleRoots.delete(bundleRoot)`.
-    for (bundle_id, _parents) in &internalized {
+    for (bundle_id, parents) in &internalized {
       let root_key = bundle_id.as_asset_key();
+
+      // Match JS bundler behavior: once internalized, the async root is no longer treated as
+      // its own bundle root, and should be re-processed by later phases as a regular asset.
       self.bundle_roots.remove(&root_key);
-      ideal.remove_bundle(bundle_id);
+
+      ideal
+        .internalized_bundles
+        .insert(*bundle_id, parents.clone());
+
+      // Clear the internalized bundle's assets and asset_to_bundle so Phase 9 can re-place the
+      // root as a shared bundle candidate.
+      if let Some(bundle) = ideal.get_bundle_mut(bundle_id) {
+        bundle.assets.clear();
+      }
+      if let Some(entry) = ideal.asset_to_bundle.get_mut(root_key.0 as usize) {
+        *entry = None;
+      }
     }
 
     if !internalized.is_empty() {

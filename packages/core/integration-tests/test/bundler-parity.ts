@@ -43,6 +43,16 @@ async function compareBundlers(fixtureName: string, entryFile: string) {
         if (/@swc[/\\]helpers/.test(a.filePath)) return;
         if (/runtime-[a-z0-9]{16}\.js/.test(a.filePath)) return;
 
+        // Skip JS runtime loader helpers that can be included differently depending on entry shape.
+        if (
+          name === 'bundle-url.js' ||
+          name === 'cacheLoader.js' ||
+          name === 'js-loader.js' ||
+          name === 'esmodule-helpers.js'
+        ) {
+          return;
+        }
+
         assets.push(name);
       });
       bundles.push({type: b.type, assets: assets.sort()});
@@ -350,6 +360,130 @@ describe.v3('bundler parity (js vs native)', function () {
     await compareBundlers(fixtureName, entryFile);
   });
 
+  it('Complex async graph with shared bundles should not crash during naming', async function () {
+    const fixtureName = 'bundler-parity-complex-async-shared';
+    const entryFile = 'index.js';
+
+    await fsFixture(overlayFS, __dirname)`
+      ${fixtureName}
+        ${entryFile}:
+          import('./page-a.js');
+          import('./page-b.js');
+          import('./page-c.js');
+
+        page-a.js:
+          import { helper } from './utils/helper.js';
+          import { format } from './utils/format.js';
+          export default helper() + format();
+
+        page-b.js:
+          import { helper } from './utils/helper.js';
+          import { validate } from './utils/validate.js';
+          export default helper() + validate();
+
+        page-c.js:
+          import { format } from './utils/format.js';
+          import { validate } from './utils/validate.js';
+          export default format() + validate();
+
+        utils/helper.js:
+          import { common } from './common.js';
+          export function helper() { return common() + 'helper'; }
+
+        utils/format.js:
+          import { common } from './common.js';
+          export function format() { return common() + 'format'; }
+
+        utils/validate.js:
+          import { common } from './common.js';
+          export function validate() { return common() + 'validate'; }
+
+        utils/common.js:
+          export function common() { return 'common'; }
+
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "minBundles": 1,
+              "minBundleSize": 0,
+              "maxParallelRequests": 99999
+            }
+          }
+        yarn.lock:
+    `;
+
+    await compareBundlers(fixtureName, entryFile);
+  });
+
+  it('Async graph with type-change siblings should not crash during naming', async function () {
+    const fixtureName = 'bundler-parity-async-type-change-siblings';
+    const entryFile = 'index.js';
+
+    await fsFixture(overlayFS, __dirname)`
+      ${fixtureName}
+        ${entryFile}:
+          import('./page-a.js');
+          import('./page-b.js');
+          import('./page-c.js');
+
+        page-a.js:
+          import './styles/page-a.css';
+          import './styles/shared.css';
+          import { helper } from './utils/helper.js';
+          import { format } from './utils/format.js';
+          export default helper() + format();
+
+        page-b.js:
+          import './styles/page-b.css';
+          import { helper } from './utils/helper.js';
+          import { validate } from './utils/validate.js';
+          export default helper() + validate();
+
+        page-c.js:
+          import { format } from './utils/format.js';
+          import { validate } from './utils/validate.js';
+          export default format() + validate();
+
+        utils/helper.js:
+          import { common } from './common.js';
+          export function helper() { return common() + 'helper'; }
+
+        utils/format.js:
+          import { common } from './common.js';
+          export function format() { return common() + 'format'; }
+
+        utils/validate.js:
+          import { common } from './common.js';
+          export function validate() { return common() + 'validate'; }
+
+        utils/common.js:
+          export function common() { return 'common'; }
+
+        styles/page-a.css:
+          @import './shared.css';
+          .page-a { color: red; }
+
+        styles/page-b.css:
+          @import './shared.css';
+          .page-b { color: blue; }
+
+        styles/shared.css:
+          .shared { margin: 0; }
+
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "minBundles": 1,
+              "minBundleSize": 0,
+              "maxParallelRequests": 99999
+            }
+          }
+        yarn.lock:
+    `;
+
+    await compareBundlers(fixtureName, entryFile);
+  });
+
   it('Generated app: ~150 assets with realistic structure', async function () {
     this.timeout(60000);
     const {fixtureName, entryFile} = await generateSyntheticApp(
@@ -358,6 +492,67 @@ describe.v3('bundler parity (js vs native)', function () {
       150,
       42,
     );
+    await compareBundlers(fixtureName, entryFile);
+  });
+
+  it('Generated app: ~1000 assets with realistic structure', async function () {
+    this.timeout(300000);
+    const {fixtureName, entryFile} = await generateSyntheticApp(
+      overlayFS,
+      __dirname,
+      1000,
+      123,
+    );
+    await compareBundlers(fixtureName, entryFile);
+  });
+
+  it('async import inside shared bundle should not crash during naming', async function () {
+    // Repro for: bundle exists in a bundle group but is unreachable via traverseBundles,
+    // so it never gets named by the Namer and crashes later in JSRuntime.getLoaderForBundle.
+    const fixtureName = 'bundler-parity-async-in-shared';
+    const entryFile = `${fixtureName}-index.js`;
+    const asyncAFile = `${fixtureName}-async-a.js`;
+    const asyncBFile = `${fixtureName}-async-b.js`;
+    const sharedFile = `${fixtureName}-shared.js`;
+    const localeFile = `${fixtureName}-locale.js`;
+
+    await fsFixture(overlayFS, __dirname)`
+      ${fixtureName}
+        ${entryFile}:
+          // Two async boundaries that both import the same shared module.
+          import('./${asyncAFile}');
+          import('./${asyncBFile}');
+
+        ${sharedFile}:
+          export const shared = 1;
+
+          // Async import from within a module that should end up in a shared bundle.
+          import('./${localeFile}');
+
+        ${asyncAFile}:
+          import {shared} from './${sharedFile}';
+
+          export default shared;
+
+        ${asyncBFile}:
+          import {shared} from './${sharedFile}';
+
+          export default shared;
+
+        ${localeFile}:
+          export const locale = 'hello';
+
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "minBundles": 1,
+              "minBundleSize": 0,
+              "maxParallelRequests": 99999
+            }
+          }
+        yarn.lock:
+    `;
+
     await compareBundlers(fixtureName, entryFile);
   });
 });
