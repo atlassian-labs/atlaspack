@@ -308,6 +308,14 @@ impl Bundler for IdealGraphBundler {
 
     // Wire shared bundles into the bundle groups of the async bundles that depend on them.
     // Shared bundles don't have their own bundle groups - they're siblings in existing groups.
+    //
+    // Two kinds of edges are created to match the JS bundler's `decorateLegacyGraph`:
+    // 1. bundle_group -> shared_bundle (Null + Bundle): makes the shared bundle a member of
+    //    the bundle group, equivalent to JS `addBundleToBundleGroup`.
+    // 2. from_bundle -> shared_bundle (References): creates a bundle-to-bundle reference,
+    //    equivalent to JS `createBundleReference`. This is critical for correct
+    //    `isAssetReachableFromBundle` calculations — without it, the reachability traversal
+    //    follows a different ancestry path and incorrectly skips runtime helper assets.
     for (ideal_bundle_id, ideal_bundle) in ideal_graph.bundles_iter() {
       if ideal_bundle.root_asset_id.is_some() {
         continue; // Not a shared bundle.
@@ -330,16 +338,28 @@ impl Bundler for IdealGraphBundler {
         {
           let bg_key = format!("bundle_group:{}{}", default_target.name, from_root_asset_id);
           if let Some(&bg_node_id) = bundle_graph.get_node_id_by_content_key(&bg_key) {
-            // Add the shared bundle as a sibling in this bundle group.
+            // Add the shared bundle to the bundle group for graph traversal only (Null edge).
+            //
+            // IMPORTANT: Do NOT add a Bundle edge here. The JS bundler never calls
+            // `addBundleToBundleGroup` for shared bundles — they are connected only via
+            // `createBundleReference` (References edges from parent bundles). Adding a
+            // Bundle edge would make the shared bundle a direct "member" of the bundle
+            // group, which changes `isAssetReachableFromBundle` ancestry traversal and
+            // causes runtime helper assets to be incorrectly skipped.
             bundle_graph.add_edge(
               &bg_node_id,
               &shared_bundle_node_id,
               NativeBundleGraphEdgeType::Null,
             );
+          }
+
+          // Add References edge from the parent bundle to the shared bundle.
+          // This matches the JS bundler's createBundleReference behavior.
+          if let Some(&from_bundle_node_id) = materialized_bundle_nodes.get(from_id) {
             bundle_graph.add_edge(
-              &bg_node_id,
+              &from_bundle_node_id,
               &shared_bundle_node_id,
-              NativeBundleGraphEdgeType::Bundle,
+              NativeBundleGraphEdgeType::References,
             );
           }
         }
@@ -921,16 +941,17 @@ fn materialize_ideal_bundle(
 
   // Determine is_splittable from the root asset's `is_bundle_splittable` property.
   // This matches the JS bundler's behavior where `isSplittable` is set from
-  // `entryAsset.isBundleSplittable`. Shared bundles (no root asset) default to true
-  // since they are always splittable.
-  let is_splittable = entry_asset_id
-    .as_ref()
-    .and_then(|id| {
-      let node_id = asset_graph.get_node_id_by_content_key(id)?;
-      let asset = asset_graph.get_asset(node_id)?;
-      Some(asset.is_bundle_splittable)
-    })
-    .unwrap_or(true);
+  // `entryAsset.isBundleSplittable`.
+  //
+  // IMPORTANT: Shared bundles (no root asset) have `bundle.isSplittable === undefined` in the JS
+  // bundle graph. `isAssetReachableFromBundle` treats a falsy `isSplittable` as "not reachable",
+  // which is required so runtime helper assets (js-loader.js, bundle-url.js, cacheLoader.js)
+  // are NOT considered reachable from the shared bundle and therefore are injected into it.
+  let is_splittable = entry_asset_id.as_ref().and_then(|id| {
+    let node_id = asset_graph.get_node_id_by_content_key(id)?;
+    let asset = asset_graph.get_asset(node_id)?;
+    Some(asset.is_bundle_splittable)
+  });
 
   let bundle = Bundle {
     id: bundle_id.clone(),
@@ -951,7 +972,7 @@ fn materialize_ideal_bundle(
       ideal_bundle.needs_stable_name
     }),
     bundle_behavior: ideal_bundle.behavior,
-    is_splittable: Some(is_splittable),
+    is_splittable,
     manual_shared_bundle: None,
     name: None,
     pipeline: None,

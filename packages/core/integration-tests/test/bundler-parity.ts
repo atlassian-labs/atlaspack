@@ -43,15 +43,9 @@ async function compareBundlers(fixtureName: string, entryFile: string) {
         if (/@swc[/\\]helpers/.test(a.filePath)) return;
         if (/runtime-[a-z0-9]{16}\.js/.test(a.filePath)) return;
 
-        // Skip JS runtime loader helpers that can be included differently depending on entry shape.
-        if (
-          name === 'bundle-url.js' ||
-          name === 'cacheLoader.js' ||
-          name === 'js-loader.js' ||
-          name === 'esmodule-helpers.js'
-        ) {
-          return;
-        }
+        // Runtime loader helpers (bundle-url.js, cacheLoader.js, js-loader.js,
+        // esmodule-helpers.js) are intentionally NOT skipped — they must match
+        // between bundlers to ensure correct runtime asset placement parity.
 
         assets.push(name);
       });
