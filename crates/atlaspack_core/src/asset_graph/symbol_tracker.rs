@@ -73,6 +73,24 @@ fn get_incoming_dependencies<'a>(
     .collect()
 }
 
+/// Given an asset and a mangled local symbol name from a dependency, find the
+/// exported name that corresponds to it in the asset's symbols.
+///
+/// For a re-export like `export {foo as renamedFoo} from './foo'`:
+/// - The dependency to foo.js has: local='$assetId$re_export$renamedFoo', exported='foo'
+/// - The barrel asset has: local='$assetId$re_export$renamedFoo', exported='renamedFoo'
+///
+/// So we match on the mangled local name to find the exported name.
+fn find_exported_name_for_local(asset: &Asset, mangled_local: &str) -> Option<String> {
+  let symbols = asset.symbols.as_ref()?;
+  for sym in symbols {
+    if sym.local == mangled_local {
+      return Some(sym.exported.clone());
+    }
+  }
+  None
+}
+
 impl SymbolTracker {
   /// Handles the tracking of symbols for a given asset.
   ///
@@ -153,16 +171,18 @@ impl SymbolTracker {
     located_symbol: FinalSymbolLocation,
     dep: &Dependency,
   ) -> anyhow::Result<()> {
-    let mut work_queue = vec![dep];
+    // Work queue contains (dependency, symbol_name_to_match)
+    // The symbol_name_to_match is the exported name we're looking for at this level
+    let mut work_queue = vec![(dep, located_symbol.imported_name.clone())];
 
-    while let Some(dep) = work_queue.pop() {
+    while let Some((dep, symbol_name_to_match)) = work_queue.pop() {
       // Process the requirements for this dependency
       let Some(required_symbols) = self.requirements_by_dep.get_mut(&dep.id) else {
         continue;
       };
 
       for required in required_symbols {
-        if required.symbol.exported != located_symbol.imported_name {
+        if required.symbol.exported != symbol_name_to_match {
           continue;
         }
 
@@ -181,10 +201,33 @@ impl SymbolTracker {
         // If we satisfied this requirement, we need to propagate the location
         // up to the parent asset's dependencies as well
         let parent_asset_node_id = get_parent_asset_node_id(asset_graph, dep)?;
+
+        // Get the parent asset to check for re-export mappings (local -> exported name)
+        let parent_asset_node = asset_graph.get_node(&parent_asset_node_id);
+        let parent_asset = match parent_asset_node {
+          Some(AssetGraphNode::Asset(asset)) => Some(asset.clone()),
+          _ => None,
+        };
+
+        // For each incoming dependency of the parent asset, we need to determine
+        // what symbol name to look for. If the parent asset has a symbol that
+        // maps the dependency's mangled local name to an exported name, use that.
         let parent_asset_dependencies =
           get_incoming_dependencies(asset_graph, &parent_asset_node_id);
 
-        work_queue.extend_from_slice(parent_asset_dependencies.as_slice());
+        for parent_dep in parent_asset_dependencies {
+          // Use the mangled local name from the requirement to find what the
+          // parent asset exports this symbol as. The mangled local is shared
+          // between the dependency symbol and the asset symbol.
+          let symbol_for_parent = if let Some(ref asset) = parent_asset {
+            find_exported_name_for_local(asset, &required.symbol.local)
+              .unwrap_or_else(|| symbol_name_to_match.clone())
+          } else {
+            symbol_name_to_match.clone()
+          };
+
+          work_queue.push((parent_dep, symbol_for_parent));
+        }
       }
     }
 
@@ -224,6 +267,7 @@ impl SymbolTracker {
           UsedSymbol {
             symbol: requirement.symbol,
             asset: final_location.providing_asset.id.clone(),
+            resolved_symbol: final_location.imported_name.clone(),
           },
         );
       }
@@ -239,8 +283,12 @@ impl SymbolTracker {
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct UsedSymbol {
+  /// The original requested symbol (from the dependency)
   pub symbol: Symbol,
+  /// The asset that provides this symbol
   pub asset: AssetId,
+  /// The resolved symbol name in the providing asset (may differ from symbol.exported due to renames)
+  pub resolved_symbol: String,
 }
 
 pub type DependencyUsedSymbols = HashMap<Symbol, UsedSymbol>;
@@ -346,7 +394,7 @@ mod tests {
 
     // Track symbols for entry_asset with its dependency
     tracker
-      .track_symbols(&graph, &entry_asset, &[dep_a.clone()])
+      .track_symbols(&graph, &entry_asset, std::slice::from_ref(&dep_a))
       .unwrap();
 
     // Verify the requirement was registered
@@ -366,7 +414,7 @@ mod tests {
 
     // First, register the requirement from the entry asset
     tracker
-      .track_symbols(&graph, &entry_asset, &[dep_a.clone()])
+      .track_symbols(&graph, &entry_asset, std::slice::from_ref(&dep_a))
       .unwrap();
 
     // Now track the providing asset - this should satisfy the requirement
@@ -412,7 +460,7 @@ mod tests {
 
     // Register requirement
     tracker
-      .track_symbols(&graph, &entry_asset, &[dep_a.clone()])
+      .track_symbols(&graph, &entry_asset, std::slice::from_ref(&dep_a))
       .unwrap();
 
     // Track the library asset with weak symbol - should NOT satisfy the requirement
@@ -462,10 +510,10 @@ mod tests {
 
     // Register requirements in traversal order
     tracker
-      .track_symbols(&graph, &entry_asset, &[lib_dep.clone()])
+      .track_symbols(&graph, &entry_asset, std::slice::from_ref(&lib_dep))
       .unwrap();
     tracker
-      .track_symbols(&graph, &lib_asset, &[a_dep.clone()])
+      .track_symbols(&graph, &lib_asset, std::slice::from_ref(&a_dep))
       .unwrap();
 
     // Now the providing asset satisfies the requirement
@@ -499,7 +547,7 @@ mod tests {
     let mut tracker = SymbolTracker::default();
 
     tracker
-      .track_symbols(&graph, &entry_asset, &[dep_a.clone()])
+      .track_symbols(&graph, &entry_asset, std::slice::from_ref(&dep_a))
       .unwrap();
     tracker.track_symbols(&graph, &asset_a, &[]).unwrap();
 
@@ -557,6 +605,108 @@ mod tests {
         .unwrap_err()
         .to_string()
         .contains("has already been located")
+    );
+  }
+
+  #[test]
+  fn track_symbols_handles_renamed_exports() {
+    // Test case: export {foo as renamedFoo} from './foo'
+    // index.js imports "renamedFoo" from barrel.js
+    // barrel.js re-exports "foo" as "renamedFoo" from foo.js
+    // foo.js exports "foo"
+    //
+    // Graph: entry_dep -> index_asset -> barrel_dep -> barrel_asset -> foo_dep -> foo_asset
+
+    let mut graph = AssetGraph::new();
+
+    let entry_dep = make_entry_dependency();
+    let entry_dep_node = graph.add_entry_dependency(entry_dep, false);
+
+    // index.js - imports renamedFoo from barrel
+    let index_asset = make_asset("index.js", vec![]);
+    let index_asset_node = graph.add_asset(index_asset.clone(), false);
+    graph.add_edge(&entry_dep_node, &index_asset_node);
+
+    // Dependency from index.js to barrel.js requesting "renamedFoo"
+    // The local is the mangled import name
+    let barrel_dep = make_dependency(
+      &index_asset,
+      "./barrel.js",
+      vec![("$index$import$renamedFoo", "renamedFoo", false)],
+    );
+    let barrel_dep_node = graph.add_dependency(barrel_dep.clone(), false);
+    graph.add_edge(&index_asset_node, &barrel_dep_node);
+
+    // barrel.js - re-exports foo as renamedFoo (weak symbol)
+    // The local name here is a mangled re-export identifier that matches between
+    // the dependency symbol (barrel->foo) and the asset symbol (barrel)
+    let mangled_reexport = "$barrel$re_export$renamedFoo";
+    let barrel_asset = make_asset("barrel.js", vec![(mangled_reexport, "renamedFoo", true)]);
+    let barrel_asset_node = graph.add_asset(barrel_asset.clone(), false);
+    graph.add_edge(&barrel_dep_node, &barrel_asset_node);
+
+    // Dependency from barrel.js to foo.js requesting "foo"
+    // The local is the same mangled re-export name
+    let foo_dep = make_dependency(
+      &barrel_asset,
+      "./foo.js",
+      vec![(mangled_reexport, "foo", true)],
+    );
+    let foo_dep_node = graph.add_dependency(foo_dep.clone(), false);
+    graph.add_edge(&barrel_asset_node, &foo_dep_node);
+
+    // foo.js - provides "foo" (strong symbol)
+    let foo_asset = make_asset("foo.js", vec![("foo", "foo", false)]);
+    let foo_asset_node = graph.add_asset(foo_asset.clone(), false);
+    graph.add_edge(&foo_dep_node, &foo_asset_node);
+
+    let mut tracker = SymbolTracker::default();
+
+    // Process in traversal order
+    tracker
+      .track_symbols(&graph, &index_asset, std::slice::from_ref(&barrel_dep))
+      .unwrap();
+    tracker
+      .track_symbols(&graph, &barrel_asset, std::slice::from_ref(&foo_dep))
+      .unwrap();
+    tracker.track_symbols(&graph, &foo_asset, &[]).unwrap();
+
+    // Verify both dependencies are satisfied pointing to foo_asset
+    let barrel_requirements = tracker.requirements_by_dep.get(&barrel_dep.id).unwrap();
+    let barrel_final = barrel_requirements[0]
+      .final_location
+      .as_ref()
+      .expect("barrel_dep requirement should be satisfied");
+    assert_eq!(
+      barrel_final.providing_asset.id, foo_asset.id,
+      "barrel_dep should point to foo.js as provider"
+    );
+
+    let foo_requirements = tracker.requirements_by_dep.get(&foo_dep.id).unwrap();
+    let foo_final = foo_requirements[0]
+      .final_location
+      .as_ref()
+      .expect("foo_dep requirement should be satisfied");
+    assert_eq!(
+      foo_final.providing_asset.id, foo_asset.id,
+      "foo_dep should point to foo.js as provider"
+    );
+
+    // Finalize should succeed without panic
+    let finalized = tracker.finalize();
+
+    // Both dependencies should have used symbols
+    assert!(
+      finalized
+        .get_used_symbols_for_dependency(&barrel_dep.id)
+        .is_some(),
+      "barrel_dep should have used symbols"
+    );
+    assert!(
+      finalized
+        .get_used_symbols_for_dependency(&foo_dep.id)
+        .is_some(),
+      "foo_dep should have used symbols"
     );
   }
 }
