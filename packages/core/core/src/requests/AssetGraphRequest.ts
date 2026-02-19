@@ -32,6 +32,7 @@ import {ProjectPath, fromProjectPathRelative} from '../projectPath';
 import dumpGraphToGraphViz from '../dumpGraphToGraphViz';
 import {propagateSymbols} from '../SymbolPropagation';
 import {requestTypes} from '../RequestTracker';
+import {report} from '../ReporterRunner';
 
 export type AssetGraphRequestInput = {
   entries?: Array<ProjectPath>;
@@ -94,6 +95,11 @@ export default function createAssetGraphRequest(
         input.options.mode === 'production'
       ) {
         assetGraphRequest.assetGraph.safeToIncrementallyBundle = false;
+        report({
+          type: 'log',
+          level: 'progress',
+          message: `[AssetGraphRequest] safeToIncrementallyBundle = false (production mode or shouldBundleIncrementally off)`,
+        });
       }
 
       return assetGraphRequest;
@@ -146,6 +152,12 @@ export class AssetGraphBuilder {
     } = input;
     let assetGraph = prevResult?.assetGraph ?? new AssetGraph();
     assetGraph.safeToIncrementallyBundle = true;
+    report({
+      type: 'log',
+      level: 'progress',
+      message:
+        '[AssetGraphRequest] safeToIncrementallyBundle = true (builder init)',
+    });
     assetGraph.setRootConnections({
       entries,
       assetGroups,
@@ -525,6 +537,12 @@ export class AssetGraphBuilder {
 
       if (didEntriesChange) {
         this.assetGraph.safeToIncrementallyBundle = false;
+        report({
+          type: 'log',
+          level: 'progress',
+          message:
+            '[AssetGraphRequest] safeToIncrementallyBundle = false (entries changed)',
+        });
         this.assetGraph.setNeedsBundling();
       }
     }
@@ -580,11 +598,21 @@ export class AssetGraphBuilder {
             invariant(otherAsset.type === 'asset');
             if (!this._areDependenciesEqualForAssets(asset, otherAsset.value)) {
               this.assetGraph.safeToIncrementallyBundle = false;
+              report({
+                type: 'log',
+                level: 'progress',
+                message: `[AssetGraphRequest] safeToIncrementallyBundle = false (dependencies changed for asset ${asset.id})`,
+              });
               this.assetGraph.setNeedsBundling();
             }
           } else {
             // adding a new entry or dependency
             this.assetGraph.safeToIncrementallyBundle = false;
+            report({
+              type: 'log',
+              level: 'progress',
+              message: `[AssetGraphRequest] safeToIncrementallyBundle = false (new asset/entry ${asset.id})`,
+            });
             this.assetGraph.setNeedsBundling();
           }
         }
@@ -594,6 +622,12 @@ export class AssetGraphBuilder {
       this.assetGraph.resolveAssetGroup(input, assets, request.id);
     } else {
       this.assetGraph.safeToIncrementallyBundle = false;
+      report({
+        type: 'log',
+        level: 'progress',
+        message:
+          '[AssetGraphRequest] safeToIncrementallyBundle = false (resolveAssetGroup returned null)',
+      });
       this.assetGraph.setNeedsBundling();
     }
 
