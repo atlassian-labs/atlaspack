@@ -46,7 +46,7 @@ fn collapse_at_rule(
       report_css_map_error(
         meta,
         entry_key_value.key.span(),
-        ErrorMessages::StaticPropertyKey,
+        ErrorMessages::StaticAtRuleKey,
       );
       continue;
     }
@@ -135,7 +135,7 @@ pub fn merge_extended_selectors_into_properties(
     };
 
     if !object_key_is_literal_value(&key_value.key) {
-      report_css_map_error(meta, key_value.key.span(), ErrorMessages::StaticPropertyKey);
+      report_css_map_error(meta, key_value.key.span(), ErrorMessages::StaticSelectorKey);
       continue;
     }
 

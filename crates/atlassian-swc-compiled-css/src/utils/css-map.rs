@@ -41,10 +41,14 @@ pub enum ErrorMessages {
   NoSpreadElement,
   NoObjectMethod,
   StaticVariantObject,
+  StaticVariantObjectWithVariables,
+  StaticVariantObjectMultipleClasses,
   DuplicateAtRule,
   DuplicateSelector,
   DuplicateSelectorsBlock,
   StaticPropertyKey,
+  StaticAtRuleKey,
+  StaticSelectorKey,
   SelectorBlockWrongPlace,
   UseSelectorsWithAmpersand,
   UseVariantOfCssMap,
@@ -64,12 +68,24 @@ impl ErrorMessages {
       ErrorMessages::NoSpreadElement => "Spread element is not supported in CSS Map.",
       ErrorMessages::NoObjectMethod => "Object method is not supported in CSS Map.",
       ErrorMessages::StaticVariantObject => "The variant object must be statically defined.",
+      ErrorMessages::StaticVariantObjectWithVariables => {
+        "The variant object must be statically defined. CSS variables are not allowed in cssMap variants."
+      }
+      ErrorMessages::StaticVariantObjectMultipleClasses => {
+        "The variant object must be statically defined. Each variant should resolve to a single class name."
+      }
       ErrorMessages::DuplicateAtRule => "Cannot declare an at-rule more than once in CSS Map.",
       ErrorMessages::DuplicateSelector => "Cannot declare a selector more than once in CSS Map.",
       ErrorMessages::DuplicateSelectorsBlock => {
         "Duplicate `selectors` key found in cssMap; expected either zero `selectors` keys or one."
       }
       ErrorMessages::StaticPropertyKey => "Property key may only be a static string.",
+      ErrorMessages::StaticAtRuleKey => {
+        "At-rule property keys must be static strings. Dynamic keys are not supported inside at-rules."
+      }
+      ErrorMessages::StaticSelectorKey => {
+        "Selector property keys must be static strings. Use a string literal like `'&:hover'` instead of a variable."
+      }
       ErrorMessages::SelectorBlockWrongPlace => "`selector` key was defined in the wrong place.",
       ErrorMessages::UseSelectorsWithAmpersand => {
         "This selector is applied to the parent element, and so you need to specify the ampersand symbol (&) directly before it. For example, `:hover` should be written as `&:hover`."

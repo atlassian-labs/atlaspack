@@ -109,7 +109,7 @@ where
           report_css_map_error(
             meta,
             key_value.value.span(),
-            ErrorMessages::StaticVariantObject.message(),
+            ErrorMessages::StaticVariantObjectWithVariables.message(),
           );
           return empty_object(object_lit.span);
         }
@@ -127,7 +127,7 @@ where
           report_css_map_error(
             meta,
             key_value.value.span(),
-            ErrorMessages::StaticVariantObject.message(),
+            ErrorMessages::StaticVariantObjectMultipleClasses.message(),
           );
           return empty_object(object_lit.span);
         }
