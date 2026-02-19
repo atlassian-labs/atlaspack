@@ -9,11 +9,20 @@ use oxc_codegen::{Codegen, CodegenOptions};
 use oxc_parser::Parser;
 use oxc_span::{SPAN, SourceType};
 
+/// Result of rewriting asset code, including the transformed code, optional source map,
+/// and any `HASH_REF_*` strings found in require() call arguments during AST visiting.
+pub struct RewriteResult {
+  pub code: String,
+  pub source_map: Option<oxc_sourcemap::SourceMap>,
+  pub hash_references: Vec<String>,
+}
+
 /// Rewrites asset code by replacing require() calls with resolved public IDs.
 ///
 /// This function:
 /// 1. Parses the JavaScript code to an AST
 /// 2. Traverses the AST, replacing require() specifiers with resolved public IDs
+///    while collecting any `HASH_REF_*` patterns found in string literal arguments
 /// 3. Generates JavaScript code back from the modified AST
 ///
 /// # Arguments
@@ -22,12 +31,12 @@ use oxc_span::{SPAN, SourceType};
 /// * `source_map_path` - If Some, enables source map generation; the path sets the `sources` field
 ///
 /// # Returns
-/// A tuple of (transformed code, optional OXC source map when source_map_path is Some)
+/// A `RewriteResult` containing the transformed code, optional source map, and collected hash references
 pub fn rewrite_asset_code(
   code: String,
   deps: &HashMap<String, Option<String>>,
   source_map_path: Option<&Path>,
-) -> anyhow::Result<(String, Option<oxc_sourcemap::SourceMap>)> {
+) -> anyhow::Result<RewriteResult> {
   let allocator = Allocator::default();
   let source_type = SourceType::default().with_module(true);
 
@@ -48,6 +57,8 @@ pub fn rewrite_asset_code(
   let mut visitor = AssetCodeVisitor::new(&ast_builder, deps);
   visitor.visit_program(&mut program);
 
+  let hash_references = visitor.hash_references;
+
   let generated = if let Some(path) = source_map_path {
     let options = CodegenOptions {
       source_map_path: Some(path.to_path_buf()),
@@ -61,22 +72,70 @@ pub fn rewrite_asset_code(
     Codegen::new().build(&program)
   };
 
-  Ok((generated.code, generated.map))
+  Ok(RewriteResult {
+    code: generated.code,
+    source_map: generated.map,
+    hash_references,
+  })
 }
 
+const HASH_REF_PREFIX: &str = "HASH_REF_";
+
 /// Visitor that replaces require() call specifiers with resolved public IDs
+/// and collects any `HASH_REF_*` patterns found in string literals.
 struct AssetCodeVisitor<'a, 'alloc> {
   ast: &'a AstBuilder<'alloc>,
   deps: &'a HashMap<String, Option<String>>,
+  /// Hash references collected from string literals during AST traversal
+  pub hash_references: Vec<String>,
 }
 
 impl<'a, 'alloc> AssetCodeVisitor<'a, 'alloc> {
   fn new(ast: &'a AstBuilder<'alloc>, deps: &'a HashMap<String, Option<String>>) -> Self {
-    Self { ast, deps }
+    Self {
+      ast,
+      deps,
+      hash_references: Vec::new(),
+    }
+  }
+
+  /// Extracts all `HASH_REF_` + 16-char references from a string value,
+  /// matching the JS-side `HASH_REF_REGEX` pattern (`HASH_REF_\w{16}`).
+  ///
+  /// Hand-written rather than using a pre-compiled regex because the pattern is
+  /// trivial (fixed prefix + fixed length + simple char class), the input strings
+  /// are small (individual AST string literals, not the whole bundle), and callers
+  /// pre-filter with `contains(HASH_REF_PREFIX)`. This avoids a regex crate
+  /// dependency for what amounts to a prefix search + char check.
+  fn collect_hash_refs_from_str(&mut self, value: &str) {
+    let mut start = 0;
+    while let Some(pos) = value[start..].find(HASH_REF_PREFIX) {
+      let abs_pos = start + pos;
+      let ref_end = abs_pos + HASH_REF_PREFIX.len() + 16;
+      if ref_end <= value.len()
+        && value[abs_pos + HASH_REF_PREFIX.len()..ref_end]
+          .chars()
+          .all(|c| c.is_ascii_alphanumeric() || c == '_')
+      {
+        self
+          .hash_references
+          .push(value[abs_pos..ref_end].to_string());
+        start = ref_end;
+      } else {
+        start = abs_pos + HASH_REF_PREFIX.len();
+      }
+    }
   }
 }
 
 impl<'a: 'alloc, 'alloc> VisitMut<'alloc> for AssetCodeVisitor<'a, 'alloc> {
+  fn visit_string_literal(&mut self, lit: &mut StringLiteral<'alloc>) {
+    let value = lit.value.as_str();
+    if value.contains(HASH_REF_PREFIX) {
+      self.collect_hash_refs_from_str(value);
+    }
+  }
+
   fn visit_expression(&mut self, expr: &mut Expression<'alloc>) {
     // First recurse into children
     walk_mut::walk_expression(self, expr);
@@ -132,7 +191,9 @@ mod tests {
 
   /// Helper: run rewrite_asset_code and return just the code (for tests that don't need source map)
   fn rewrite(code: &str, deps: &HashMap<String, Option<String>>) -> String {
-    rewrite_asset_code(code.to_string(), deps, None).unwrap().0
+    rewrite_asset_code(code.to_string(), deps, None)
+      .unwrap()
+      .code
   }
 
   #[test]
@@ -440,9 +501,9 @@ mod tests {
   #[test]
   fn test_rewrite_asset_code_source_map_none_when_path_none() {
     let deps = HashMap::new();
-    let (code, map) = rewrite_asset_code("const x = 1;".to_string(), &deps, None).unwrap();
-    assert!(map.is_none());
-    assert!(code.contains("const x = 1"));
+    let result = rewrite_asset_code("const x = 1;".to_string(), &deps, None).unwrap();
+    assert!(result.source_map.is_none());
+    assert!(result.code.contains("const x = 1"));
   }
 
   #[test]
@@ -450,10 +511,13 @@ mod tests {
     use std::path::Path;
     let deps = HashMap::new();
     let path = Path::new("/fake/path/foo.js");
-    let (code, map) = rewrite_asset_code("const x = 1;".to_string(), &deps, Some(path)).unwrap();
-    assert!(map.is_some(), "expected source map when path is provided");
-    assert!(code.contains("const x = 1"));
-    let oxc_map = map.unwrap();
+    let result = rewrite_asset_code("const x = 1;".to_string(), &deps, Some(path)).unwrap();
+    assert!(
+      result.source_map.is_some(),
+      "expected source map when path is provided"
+    );
+    assert!(result.code.contains("const x = 1"));
+    let oxc_map = result.source_map.unwrap();
     let json = oxc_map.to_json_string();
     assert!(!json.is_empty());
     assert!(json.contains("mappings"));
