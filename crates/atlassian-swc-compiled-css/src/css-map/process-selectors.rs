@@ -6,7 +6,7 @@ use crate::types::Metadata;
 use crate::utils_css_map::{
   ErrorMessages, create_css_map_diagnostic, error_if_not_valid_object_property, get_key_value,
   has_extended_selectors_key, is_at_rule_object, is_plain_selector, object_key_is_literal_value,
-  report_css_map_error,
+  report_css_map_error, report_css_map_error_with_hints,
 };
 
 fn collapse_at_rule(
@@ -43,7 +43,7 @@ fn collapse_at_rule(
     };
 
     if !object_key_is_literal_value(&entry_key_value.key) {
-      report_css_map_error(
+      report_css_map_error_with_hints(
         meta,
         entry_key_value.key.span(),
         ErrorMessages::StaticAtRuleKey,
@@ -135,7 +135,7 @@ pub fn merge_extended_selectors_into_properties(
     };
 
     if !object_key_is_literal_value(&key_value.key) {
-      report_css_map_error(meta, key_value.key.span(), ErrorMessages::StaticSelectorKey);
+      report_css_map_error_with_hints(meta, key_value.key.span(), ErrorMessages::StaticSelectorKey);
       continue;
     }
 

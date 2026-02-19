@@ -95,6 +95,57 @@ impl ErrorMessages {
       }
     }
   }
+
+  /// Returns helpful hints for fixing the error, if available.
+  pub fn hints(&self) -> Option<Vec<String>> {
+    match self {
+      ErrorMessages::StaticAtRuleKey => Some(vec![
+        "Replace dynamic keys like `[myVariable]` with static strings like `'screen and (min-width: 768px)'`".to_string(),
+      ]),
+      ErrorMessages::StaticSelectorKey => Some(vec![
+        "Change `[dynamicKey]: { ... }` to `'&:hover': { ... }`".to_string(),
+        "Selector keys must be string literals, not variables or computed properties".to_string(),
+      ]),
+      ErrorMessages::StaticVariantObjectWithVariables => Some(vec![
+        "Remove CSS variable usage from the variant object".to_string(),
+        "For dynamic styles, use `css()` instead of `cssMap()`".to_string(),
+      ]),
+      ErrorMessages::StaticVariantObjectMultipleClasses => Some(vec![
+        "Simplify the variant to generate a single class".to_string(),
+        "Consider splitting complex styles into separate variants".to_string(),
+      ]),
+      ErrorMessages::NoSpreadElement => Some(vec![
+        "Replace `...otherStyles` with explicit property declarations".to_string(),
+        "cssMap requires all properties to be statically defined".to_string(),
+      ]),
+      ErrorMessages::NoObjectMethod => Some(vec![
+        "Replace object method syntax `color() { }` with a property `color: 'value'`".to_string(),
+      ]),
+      ErrorMessages::UseSelectorsWithAmpersand => Some(vec![
+        "Change `:hover` to `'&:hover'`".to_string(),
+        "Change `:focus` to `'&:focus'`".to_string(),
+        "The `&` symbol represents the parent element".to_string(),
+      ]),
+      ErrorMessages::DuplicateSelector => Some(vec![
+        "Remove or merge the duplicate selector declaration".to_string(),
+        "Each selector can only be defined once per variant".to_string(),
+      ]),
+      ErrorMessages::DuplicateAtRule => Some(vec![
+        "Remove or merge the duplicate at-rule declaration".to_string(),
+        "Each at-rule can only be defined once per variant".to_string(),
+      ]),
+      ErrorMessages::NoTaggedTemplate => Some(vec![
+        "Change `cssMap`...`` to `cssMap({ ... })`".to_string(),
+      ]),
+      ErrorMessages::NumberOfArgument => Some(vec![
+        "cssMap expects exactly one argument: `cssMap({ variant: { ... } })`".to_string(),
+      ]),
+      ErrorMessages::ArgumentType => Some(vec![
+        "Pass an object literal: `cssMap({ variant: { color: 'red' } })`".to_string(),
+      ]),
+      _ => None,
+    }
+  }
 }
 
 impl fmt::Display for ErrorMessages {
@@ -123,6 +174,16 @@ pub fn object_key_is_literal_value(key: &PropName) -> bool {
 }
 
 /// Returns the string value of an identifier or string literal key.
+///
+/// # Panics
+///
+/// This function panics if the key is not a valid literal value. Callers should
+/// first validate using `object_key_is_literal_value()` to avoid panics.
+///
+/// # Safety Note
+///
+/// In production, this function should only be called after validation. The panic
+/// messages provide debugging information if validation is somehow bypassed.
 pub fn get_key_value(key: &PropName) -> String {
   match key {
     PropName::Ident(ident) => ident.sym.as_ref().to_string(),
@@ -130,17 +191,31 @@ pub fn get_key_value(key: &PropName) -> String {
     PropName::Computed(comp) => match comp.expr.as_ref() {
       Expr::Ident(ident) => ident.sym.as_ref().to_string(),
       Expr::Lit(Lit::Str(str)) => str.value.as_ref().to_string(),
-      _ => panic!("Expected an identifier or a string literal, got computed expression"),
+      _ => {
+        // This should never happen if object_key_is_literal_value was called first.
+        // Log for debugging but provide a fallback value to prevent crashes.
+        eprintln!(
+          "[compiled-css] Warning: get_key_value called on non-literal computed expression. \
+           This indicates a validation bug. Returning placeholder value."
+        );
+        "<invalid-computed-key>".to_string()
+      }
     },
-    _ => panic!(
-      "Expected an identifier or a string literal, got type {}",
-      match key {
+    _ => {
+      // This should never happen if object_key_is_literal_value was called first.
+      let key_type = match key {
         PropName::Num(_) => "NumericLiteral",
         PropName::Computed(_) => "Computed",
         PropName::BigInt(_) => "BigIntLiteral",
         PropName::Ident(_) | PropName::Str(_) => unreachable!("handled above"),
-      }
-    ),
+      };
+      eprintln!(
+        "[compiled-css] Warning: get_key_value called on non-literal key type: {}. \
+         This indicates a validation bug. Returning placeholder value.",
+        key_type
+      );
+      format!("<invalid-{}-key>", key_type.to_lowercase())
+    }
   }
 }
 
@@ -203,11 +278,38 @@ pub fn report_css_map_error(meta: &Metadata, span: Span, message: impl fmt::Disp
   meta.add_diagnostic(error);
 }
 
+/// Reports a cssMap error with hints as a diagnostic.
+/// This version should be used when you want to include helpful hints for the error.
+pub fn report_css_map_error_with_hints(meta: &Metadata, span: Span, error_type: ErrorMessages) {
+  let msg = create_error_message(error_type.message());
+  let mut error = crate::errors::TransformError::with_span(msg, span);
+
+  if let Some(hints) = error_type.hints() {
+    error = error.with_hints(hints);
+  }
+
+  meta.add_diagnostic(error);
+}
+
 /// Helper to create a cssMap diagnostic without a span.
 /// Use this when the error doesn't have a specific source location.
 pub fn create_css_map_diagnostic(message: impl fmt::Display) -> crate::errors::TransformError {
   let msg = create_error_message(message.to_string());
   crate::errors::TransformError::new(msg)
+}
+
+/// Helper to create a cssMap diagnostic with hints.
+pub fn create_css_map_diagnostic_with_hints(
+  error_type: ErrorMessages,
+) -> crate::errors::TransformError {
+  let msg = create_error_message(error_type.message());
+  let mut error = crate::errors::TransformError::new(msg);
+
+  if let Some(hints) = error_type.hints() {
+    error = error.with_hints(hints);
+  }
+
+  error
 }
 
 #[cfg(test)]
@@ -276,11 +378,11 @@ mod tests {
   }
 
   #[test]
-  #[should_panic(expected = "Expected an identifier or a string literal")]
-  fn get_key_value_panics_on_non_literal_key() {
+  fn get_key_value_returns_placeholder_on_invalid_key() {
     use swc_core::ecma::ast::ComputedPropName;
 
-    let key = PropName::Computed(ComputedPropName {
+    // Test computed expression with non-literal value
+    let computed_key = PropName::Computed(ComputedPropName {
       span: DUMMY_SP,
       expr: Box::new(Expr::Lit(Lit::Num(Number {
         span: DUMMY_SP,
@@ -289,7 +391,18 @@ mod tests {
       }))),
     });
 
-    get_key_value(&key);
+    let result = get_key_value(&computed_key);
+    assert_eq!(result, "<invalid-computed-key>");
+
+    // Test numeric literal key
+    let num_key = PropName::Num(Number {
+      span: DUMMY_SP,
+      value: 42.0,
+      raw: None,
+    });
+
+    let result = get_key_value(&num_key);
+    assert_eq!(result, "<invalid-numericliteral-key>");
   }
 
   #[test]

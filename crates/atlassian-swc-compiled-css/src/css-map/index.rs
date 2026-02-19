@@ -9,6 +9,7 @@ use crate::types::Metadata;
 use crate::utils_css_builders::build_css as build_css_from_expr;
 use crate::utils_css_map::{
   ErrorMessages, error_if_not_valid_object_property, report_css_map_error,
+  report_css_map_error_with_hints,
 };
 use crate::utils_transform_css_items::transform_css_items;
 use crate::utils_types::CssOutput;
@@ -106,10 +107,10 @@ where
         let css_output = build_css(&Expr::Object(processed_value.clone()), meta);
 
         if !css_output.variables.is_empty() {
-          report_css_map_error(
+          report_css_map_error_with_hints(
             meta,
             key_value.value.span(),
-            ErrorMessages::StaticVariantObjectWithVariables.message(),
+            ErrorMessages::StaticVariantObjectWithVariables,
           );
           return empty_object(object_lit.span);
         }
@@ -124,10 +125,10 @@ where
         );
 
         if transform_result.class_names.len() > 1 {
-          report_css_map_error(
+          report_css_map_error_with_hints(
             meta,
             key_value.value.span(),
-            ErrorMessages::StaticVariantObjectMultipleClasses.message(),
+            ErrorMessages::StaticVariantObjectMultipleClasses,
           );
           return empty_object(object_lit.span);
         }
