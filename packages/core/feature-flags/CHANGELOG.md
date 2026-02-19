@@ -1,5 +1,15 @@
 # @atlaspack/feature-flags
 
+## 2.30.0
+
+### Minor Changes
+
+- [#1010](https://github.com/atlassian-labs/atlaspack/pull/1010) [`45a0dc5`](https://github.com/atlassian-labs/atlaspack/commit/45a0dc530fd9472dbfdebcbb05f1aad812ab3b23) Thanks [@benjervis](https://github.com/benjervis)! - Add initial implementation of native symbol propagation
+
+### Patch Changes
+
+- [#1027](https://github.com/atlassian-labs/atlaspack/pull/1027) [`d8e984b`](https://github.com/atlassian-labs/atlaspack/commit/d8e984b7f6d04fa03707fa299bfd8b8bf9f58280) Thanks [@marcins](https://github.com/marcins)! - Improve source map quality through various accuracy fixes.
+
 ## 2.29.1
 
 ### Patch Changes

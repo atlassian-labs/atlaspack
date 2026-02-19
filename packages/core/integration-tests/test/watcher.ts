@@ -1,11 +1,12 @@
 import assert from 'assert';
 import childProcess from 'child_process';
 import nodeFS from 'fs';
-import path from 'path';
+import path, {join} from 'path';
 import {
   assertBundles,
   bundler,
   describe,
+  fsFixture,
   getNextBuild,
   it,
   run,
@@ -17,6 +18,7 @@ import {
   symlinkPrivilegeWarning,
   outputFS,
   overlayFS,
+  inputFS,
 } from '@atlaspack/test-utils';
 import {symlinkSync} from 'fs';
 import tempy from 'tempy';
@@ -578,5 +580,125 @@ describe('watcher', function () {
         ]);
       });
     }
+  });
+
+  describe('incremental rebuild loop', function () {
+    const dir = join(__dirname, 'tmp');
+
+    beforeEach(async function () {
+      await inputFS.rimraf(dir);
+    });
+
+    afterEach(async function () {
+      await inputFS.rimraf(dir);
+    });
+
+    // Regression test for the infinite rebuild loop caused by side_effects mismatch.
+    // When package.json declares "sideEffects": false but a transformer overrides
+    // asset.sideEffects = true, the incremental rebuild creates an AssetRequest
+    // with a different ID than the original. The original invalidated node becomes
+    // orphaned in invalid_nodes, causing respond_to_fs_events to permanently
+    // return true and triggering an infinite rebuild loop.
+    it('should not enter infinite rebuild loop when invalidated node is orphaned', async function () {
+      this.timeout(30000);
+
+      let outDir = path.join(dir, 'dist');
+
+      // package.json declares "sideEffects": false, but the custom transformer
+      // overrides asset.sideEffects = true. This mismatch causes the
+      // incremental AssetRequest to have a different ID than the original,
+      // orphaning the original invalidated node.
+      await fsFixture(inputFS, dir)`
+          watcher-side-effects-rebuild-loop
+            package.json:
+              {
+                "name": "watcher-side-effects-test",
+                "sideEffects": false
+              }
+
+            .parcelrc:
+              {
+                "extends": "@atlaspack/config-default",
+                "transformers": {
+                  "*.js": ["atlaspack-transformer-set-side-effects", "..."]
+                }
+              }
+
+            index.js:
+              export const value = "hello";
+
+            node_modules/atlaspack-transformer-set-side-effects/package.json:
+              {
+                "name": "atlaspack-transformer-set-side-effects",
+                "version": "1.0.0",
+                "main": "index.js"
+              }
+
+            node_modules/atlaspack-transformer-set-side-effects/index.js:
+              const Transformer = require('@atlaspack/plugin').Transformer;
+              module.exports = new Transformer({
+                transform({asset}) {
+                  asset.sideEffects = true;
+                  return [asset];
+                },
+              });
+        `;
+
+      let b = bundler(
+        path.join(dir, 'watcher-side-effects-rebuild-loop/index.js'),
+        {
+          inputFS: inputFS,
+          outputFS: inputFS,
+          config: path.join(dir, 'watcher-side-effects-rebuild-loop/.parcelrc'),
+          targets: {
+            main: {
+              distDir: outDir,
+            },
+          },
+        },
+      );
+
+      // Track build count to detect infinite loop
+      let buildCount = 0;
+      subscription = await b.watch((_err, event) => {
+        buildCount++;
+      });
+
+      // Wait for initial build
+      let buildEvent = await getNextBuild(b);
+      assert.equal(
+        buildEvent.type,
+        'buildSuccess',
+        buildEvent.type === 'buildFailure'
+          ? `Initial build failed: ${(buildEvent as any).diagnostics?.map((d: any) => d.message).join('; ')}`
+          : 'Initial build should succeed',
+      );
+
+      // Edit the entry file to trigger a rebuild.
+      await inputFS.writeFile(
+        path.join(dir, 'watcher-side-effects-rebuild-loop/index.js'),
+        'export const value = "world";',
+      );
+
+      // Wait for rebuild
+      buildEvent = await getNextBuild(b);
+      assert.equal(buildEvent.type, 'buildSuccess', 'Rebuild should succeed');
+
+      // Give time for any extra rebuilds to occur.
+      // If the bug is present, the orphaned invalid node causes
+      // respond_to_fs_events to return true even when no events match
+      // invalidation entries, triggering rebuilds.
+      let buildCountAfterRebuild = buildCount;
+      await sleep(3000);
+
+      assert.equal(
+        buildCount,
+        buildCountAfterRebuild,
+        `Expected no additional builds after the rebuild, ` +
+          `but ${buildCount - buildCountAfterRebuild} extra build(s) occurred. ` +
+          `The orphaned invalid node causes respond_to_fs_events ` +
+          `to permanently return true, triggering rebuilds.`,
+      );
+    });
   });
 });

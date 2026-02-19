@@ -1,5 +1,31 @@
 # @atlaspack/core
 
+## 2.34.0
+
+### Minor Changes
+
+- [#1010](https://github.com/atlassian-labs/atlaspack/pull/1010) [`45a0dc5`](https://github.com/atlassian-labs/atlaspack/commit/45a0dc530fd9472dbfdebcbb05f1aad812ab3b23) Thanks [@benjervis](https://github.com/benjervis)! - Add initial implementation of native symbol propagation
+
+### Patch Changes
+
+- [#1027](https://github.com/atlassian-labs/atlaspack/pull/1027) [`d8e984b`](https://github.com/atlassian-labs/atlaspack/commit/d8e984b7f6d04fa03707fa299bfd8b8bf9f58280) Thanks [@marcins](https://github.com/marcins)! - Improve source map quality through various accuracy fixes.
+
+- Updated dependencies [[`c4082ba`](https://github.com/atlassian-labs/atlaspack/commit/c4082ba3fc1a9328a2e5f23195d5972fbc5d10c8), [`d8e984b`](https://github.com/atlassian-labs/atlaspack/commit/d8e984b7f6d04fa03707fa299bfd8b8bf9f58280), [`ca78e1d`](https://github.com/atlassian-labs/atlaspack/commit/ca78e1d2007bfecd267b283d66a73f3695da4234), [`94e1a58`](https://github.com/atlassian-labs/atlaspack/commit/94e1a58a1a8ed5a4e329745d8a7e6a9530b5cb11), [`3ad8e88`](https://github.com/atlassian-labs/atlaspack/commit/3ad8e880c4c2b9126cbfb6963a3862a75306a26f), [`4c1f39a`](https://github.com/atlassian-labs/atlaspack/commit/4c1f39a911acaefd630d877af1ae5a039931662f), [`fcf7ec5`](https://github.com/atlassian-labs/atlaspack/commit/fcf7ec56fea644e21f7a67d649e6efd1f03c4a6e), [`45a0dc5`](https://github.com/atlassian-labs/atlaspack/commit/45a0dc530fd9472dbfdebcbb05f1aad812ab3b23)]:
+  - @atlaspack/rust@3.23.0
+  - @atlaspack/package-manager@2.14.54
+  - @atlaspack/feature-flags@2.30.0
+  - @atlaspack/utils@3.3.6
+  - @atlaspack/cache@3.2.49
+  - @atlaspack/fs@2.15.49
+  - @atlaspack/logger@2.14.46
+  - @atlaspack/source-map@3.2.9
+  - @atlaspack/build-cache@2.13.12
+  - @atlaspack/graph@3.6.16
+  - @atlaspack/profiler@2.15.15
+  - @atlaspack/workers@2.14.54
+  - @atlaspack/plugin@2.14.54
+  - @atlaspack/types@2.15.44
+
 ## 2.33.1
 
 ### Patch Changes

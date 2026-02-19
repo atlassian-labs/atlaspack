@@ -1,5 +1,25 @@
 # @atlaspack/rust
 
+## 3.23.0
+
+### Minor Changes
+
+- [#1032](https://github.com/atlassian-labs/atlaspack/pull/1032) [`94e1a58`](https://github.com/atlassian-labs/atlaspack/commit/94e1a58a1a8ed5a4e329745d8a7e6a9530b5cb11) Thanks [@matt-koko](https://github.com/matt-koko)! - Bugfix. Fix scenario where a invalidates nodes are orphaned in `invalid_nodes` array, leading to infinite incremental rebuilds.
+
+- [#1010](https://github.com/atlassian-labs/atlaspack/pull/1010) [`45a0dc5`](https://github.com/atlassian-labs/atlaspack/commit/45a0dc530fd9472dbfdebcbb05f1aad812ab3b23) Thanks [@benjervis](https://github.com/benjervis)! - Add initial implementation of native symbol propagation
+
+### Patch Changes
+
+- [#1031](https://github.com/atlassian-labs/atlaspack/pull/1031) [`c4082ba`](https://github.com/atlassian-labs/atlaspack/commit/c4082ba3fc1a9328a2e5f23195d5972fbc5d10c8) Thanks [@marcins](https://github.com/marcins)! - Fix error handling for parse errors in tokens transformer
+
+- [#1027](https://github.com/atlassian-labs/atlaspack/pull/1027) [`d8e984b`](https://github.com/atlassian-labs/atlaspack/commit/d8e984b7f6d04fa03707fa299bfd8b8bf9f58280) Thanks [@marcins](https://github.com/marcins)! - Improve source map quality through various accuracy fixes.
+
+- [#1006](https://github.com/atlassian-labs/atlaspack/pull/1006) [`ca78e1d`](https://github.com/atlassian-labs/atlaspack/commit/ca78e1d2007bfecd267b283d66a73f3695da4234) Thanks [@marcins](https://github.com/marcins)! - Switch to AST (OXC) based asset packaging in native packager
+
+- [#1026](https://github.com/atlassian-labs/atlaspack/pull/1026) [`4c1f39a`](https://github.com/atlassian-labs/atlaspack/commit/4c1f39a911acaefd630d877af1ae5a039931662f) Thanks [@marcins](https://github.com/marcins)! - Support logging levels for js_span traces
+
+- [#1023](https://github.com/atlassian-labs/atlaspack/pull/1023) [`fcf7ec5`](https://github.com/atlassian-labs/atlaspack/commit/fcf7ec56fea644e21f7a67d649e6efd1f03c4a6e) Thanks [@marcins](https://github.com/marcins)! - Debug prelude and asset filename debug output fixes
+
 ## 3.22.1
 
 ### Patch Changes

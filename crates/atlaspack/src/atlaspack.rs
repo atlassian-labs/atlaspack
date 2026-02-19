@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use atlaspack_config::atlaspack_rc_config_loader::{AtlaspackRcConfigLoader, LoadConfigOptions};
-use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode};
+use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode, FinalizedSymbolTracker};
 use atlaspack_core::bundle_graph::bundle_graph_from_js::{
   BundleGraphEdgeType, BundleGraphFromJs, BundleGraphNode,
 };
@@ -187,7 +187,9 @@ impl Atlaspack {
 }
 
 impl Atlaspack {
-  pub fn build_asset_graph(&self) -> anyhow::Result<(Arc<AssetGraph>, bool)> {
+  pub fn build_asset_graph(
+    &self,
+  ) -> anyhow::Result<(Option<FinalizedSymbolTracker>, Arc<AssetGraph>, bool)> {
     self.runtime.block_on(async move {
       // Notify all resolver plugins that a new build is starting
       for resolver in self.plugins.resolvers()? {
@@ -232,13 +234,16 @@ impl Atlaspack {
         })
         .await?;
 
+      request_tracker.clear_invalid_nodes();
+
       let RequestResult::AssetGraph(asset_graph_request_output) = request_result.as_ref() else {
         panic!("Something went wrong with the request tracker")
       };
 
       let asset_graph = asset_graph_request_output.graph.clone();
+      let symbol_tracker = asset_graph_request_output.symbol_tracker.clone();
 
-      Ok((asset_graph, had_previous_graph))
+      Ok((symbol_tracker, asset_graph, had_previous_graph))
     })
   }
 
@@ -264,7 +269,9 @@ impl Atlaspack {
     &self,
   ) -> anyhow::Result<(Arc<AssetGraph>, BundleGraphRequestOutput, bool)> {
     // First, build the asset graph
-    let (asset_graph, had_previous_graph) = self.build_asset_graph()?;
+    // Eventually we will pass the symbol tracker into bundling to acces
+    // directly, but for now it is ignored
+    let (_symbol_tracker, asset_graph, had_previous_graph) = self.build_asset_graph()?;
 
     // Then run the bundle graph request
     let asset_graph_for_request = asset_graph.clone();

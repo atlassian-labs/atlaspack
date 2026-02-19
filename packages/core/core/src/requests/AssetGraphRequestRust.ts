@@ -2,7 +2,7 @@ import invariant from 'assert';
 
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import type {Async} from '@atlaspack/types';
-import {instrument} from '@atlaspack/logger';
+import logger, {instrument} from '@atlaspack/logger';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 import AssetGraph from '../AssetGraph';
@@ -51,8 +51,8 @@ export function createAssetGraphRequestRust(
   return (input: AssetGraphRequestInput) => ({
     type: requestTypes.asset_graph_request,
     id: input.name,
-    run: async (input) => {
-      let options = input.options;
+    run: async (runInput) => {
+      let options = runInput.options;
       let {assetGraphPromise, commitPromise} =
         await rustAtlaspack.buildAssetGraph();
 
@@ -69,7 +69,7 @@ export function createAssetGraphRequestRust(
       let prevResult = null;
       if (serializedAssetGraph.hadPreviousGraph) {
         prevResult =
-          await input.api.getPreviousResult<AssetGraphRequestResult>();
+          await runInput.api.getPreviousResult<AssetGraphRequestResult>();
       }
 
       let {assetGraph, changedAssets} = instrument(
@@ -78,20 +78,28 @@ export function createAssetGraphRequestRust(
       );
 
       let changedAssetsPropagation = new Set(changedAssets.keys());
-      let errors = propagateSymbols({
-        options,
-        assetGraph,
-        changedAssetsPropagation,
-        assetGroupsWithRemovedParents: new Set(),
-        previousErrors: new Map(), //this.previousSymbolPropagationErrors,
-      });
-
-      if (errors.size > 0) {
-        // Just throw the first error. Since errors can bubble (e.g. reexporting a reexported symbol also fails),
-        // determining which failing export is the root cause is nontrivial (because of circular dependencies).
-        throw new ThrowableDiagnostic({
-          diagnostic: [...errors.values()][0],
+      // Skip symbol propagation for runtime assets - they have pre-computed symbol data
+      if (input.skipSymbolProp) {
+        logger.verbose({
+          origin: '@atlaspack/core',
+          message: 'Skipping symbol propagation for runtime asset graph',
         });
+      } else {
+        let errors = propagateSymbols({
+          options,
+          assetGraph,
+          changedAssetsPropagation,
+          assetGroupsWithRemovedParents: new Set(),
+          previousErrors: new Map(), //this.previousSymbolPropagationErrors,
+        });
+
+        if (errors.size > 0) {
+          // Just throw the first error. Since errors can bubble (e.g. reexporting a reexported symbol also fails),
+          // determining which failing export is the root cause is nontrivial (because of circular dependencies).
+          throw new ThrowableDiagnostic({
+            diagnostic: [...errors.values()][0],
+          });
+        }
       }
 
       await dumpGraphToGraphViz(assetGraph, 'AssetGraphV3');
@@ -116,8 +124,8 @@ export function createAssetGraphRequestRust(
         });
       }
 
-      await input.api.storeResult(result);
-      input.api.invalidateOnBuild();
+      await runInput.api.storeResult(result);
+      runInput.api.invalidateOnBuild();
 
       return result;
     },
@@ -314,6 +322,19 @@ export function getAssetGraph(
 
       let usedSymbolsDown = new Set();
       let usedSymbolsUp = new Map();
+
+      if (node.used_symbols_up) {
+        for (let usedSymbol of node.used_symbols_up) {
+          // Transform Rust UsedSymbol { symbol: Symbol, asset: string }
+          // to JS format { symbol: string, asset: string } where symbol is the exported name
+          const exportedName = usedSymbol.symbol.exported;
+          usedSymbolsUp.set(exportedName, {
+            asset: usedSymbol.asset,
+            symbol: exportedName,
+          });
+        }
+      }
+
       if (dependency.isEntry && dependency.isLibrary) {
         usedSymbolsDown.add('*');
         usedSymbolsUp.set('*', undefined);
