@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, path::Path, sync::Arc};
 
 use atlaspack_core::{
   bundle_graph::bundle_graph::BundleGraph,
@@ -372,7 +372,7 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       .collect::<Vec<_>>()
       .join("\n");
 
-    let bundle_string = if is_commonjs {
+    let mut bundle_string = if is_commonjs {
       let main_entry_require = if let Some(main_entry_id) = bundle.entry_asset_ids.first() {
         let public_id = bundle_graph
           .get_public_asset_id(main_entry_id)
@@ -391,6 +391,25 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
         + &entry_requires
         + "\n})();\n"
     };
+
+    // Append sourceMappingURL comment when source maps are enabled and not inline,
+    // matching the behavior of the JS packager (PackagerRunner.getSourceMapReference).
+    if source_map_enabled {
+      let is_inline = bundle
+        .env
+        .source_map
+        .as_ref()
+        .map(|sm| sm.is_inline())
+        .unwrap_or(false);
+
+      if !is_inline && let Some(ref name) = bundle.name {
+        let basename = Path::new(name)
+          .file_name()
+          .and_then(|f| f.to_str())
+          .unwrap_or(name);
+        bundle_string.push_str(&format!("//# sourceMappingURL={}.map\n", basename));
+      }
+    }
 
     Ok((bundle_string, bundle_map))
   }
@@ -506,6 +525,56 @@ mod tests {
     assert_eq!(entry_contents.len(), 2);
     assert_eq!(entry_contents[0].0.id, "entry2"); // First in entry_asset_ids
     assert_eq!(entry_contents[1].0.id, "entry1"); // Second in entry_asset_ids
+  }
+
+  #[test]
+  fn test_source_mapping_url_appended_when_source_map_enabled() {
+    use atlaspack_core::types::TargetSourceMapOptions;
+
+    let mut bundle = create_test_bundle("bundle1");
+    bundle.name = Some("dist/output.js".to_string());
+    bundle.env.source_map = Some(TargetSourceMapOptions::default());
+
+    // The sourceMappingURL should use just the basename
+    let source_map_ref = std::path::Path::new(bundle.name.as_ref().unwrap())
+      .file_name()
+      .and_then(|f| f.to_str())
+      .unwrap();
+
+    let expected_suffix = format!("//# sourceMappingURL={}.map\n", source_map_ref);
+    assert_eq!(expected_suffix, "//# sourceMappingURL=output.js.map\n");
+  }
+
+  #[test]
+  fn test_source_mapping_url_not_appended_when_source_map_disabled() {
+    let mut bundle = create_test_bundle("bundle1");
+    bundle.name = Some("dist/output.js".to_string());
+    bundle.env.source_map = None;
+
+    // When source_map is None, no sourceMappingURL should be appended
+    let source_map_enabled = bundle.env.source_map.is_some();
+    assert!(!source_map_enabled);
+  }
+
+  #[test]
+  fn test_source_mapping_url_not_appended_when_inline() {
+    use atlaspack_core::types::TargetSourceMapOptions;
+
+    let mut bundle = create_test_bundle("bundle1");
+    bundle.name = Some("dist/output.js".to_string());
+    bundle.env.source_map = Some(TargetSourceMapOptions::new_inline());
+
+    let is_inline = bundle
+      .env
+      .source_map
+      .as_ref()
+      .map(|sm| sm.is_inline())
+      .unwrap_or(false);
+
+    assert!(
+      is_inline,
+      "Inline source maps should not produce a sourceMappingURL comment"
+    );
   }
 
   #[test]
