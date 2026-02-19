@@ -26,8 +26,8 @@ pub struct BundleGraphFromJs {
   nodes_by_key: HashMap<BundleGraphNodeId, NodeIndex>,
   /// Maps full asset IDs (16-character hex strings) to shortened public IDs (base62-encoded).
   public_id_by_asset_id: HashMap<String, String>,
-  /// Maps environment IDs to Environment objects for lookup
-  _environments_by_id: HashMap<String, Arc<Environment>>,
+  /// Maps environment IDs to Environment objects for lookup.
+  environments_by_id: HashMap<String, Arc<Environment>>,
   /// Cache of (bundle_node, asset_node) pairs with Contains edges for fast lookup
   bundle_contains_cache: HashMap<NodeIndex, HashSet<NodeIndex>>,
 }
@@ -79,7 +79,7 @@ impl BundleGraphFromJs {
       graph,
       nodes_by_key,
       public_id_by_asset_id,
-      _environments_by_id: environments_by_id,
+      environments_by_id,
       bundle_contains_cache,
     }
   }
@@ -107,6 +107,32 @@ impl BundleGraphFromJs {
     self.nodes_by_key.get(key)
   }
 
+  /// Build environment lookup map from a slice of Arc<Environment> (shared by both deserializers).
+  fn build_environments_by_id(
+    environments: &[Arc<Environment>],
+  ) -> HashMap<String, Arc<Environment>> {
+    environments.iter().map(|e| (e.id(), e.clone())).collect()
+  }
+
+  /// Parse JSON and deserialize to BundleGraphNodes with env lookup. Shared by
+  /// deserialize_from_json and deserialize_asset_nodes_from_json.
+  fn deserialize_nodes_with_env_lookup(
+    nodes_json: &str,
+    environments_by_id: &HashMap<String, Arc<Environment>>,
+    parse_error_context: &str,
+  ) -> anyhow::Result<Vec<BundleGraphNode>> {
+    let json_values: Vec<serde_json::Value> = serde_json::from_str(nodes_json)
+      .map_err(|e| anyhow!("Failed to parse {}: {}", parse_error_context, e))?;
+
+    json_values
+      .into_par_iter()
+      .map(|value| {
+        Self::deserialize_node_with_env_lookup(value, environments_by_id)
+          .map_err(|e| anyhow!("Failed to deserialize node: {}", e))
+      })
+      .collect::<anyhow::Result<Vec<_>>>()
+  }
+
   #[tracing::instrument(
     level = "info",
     skip_all,
@@ -116,27 +142,17 @@ impl BundleGraphFromJs {
     nodes_json: String,
     environments: &[Environment],
   ) -> anyhow::Result<Vec<BundleGraphNode>> {
-    // Build environment lookup map
-    let environments_by_id: HashMap<String, Arc<Environment>> = environments
+    let environments_arc: Vec<Arc<Environment>> = environments
       .iter()
-      .map(|env| {
-        let id = env.id();
-        (id, Arc::new(env.clone()))
-      })
+      .map(|env| Arc::new(env.clone()))
       .collect();
+    let environments_by_id = Self::build_environments_by_id(&environments_arc);
 
-    // Parse JSON to Vec<Value> first (fast), then parallelize node deserialization
-    let json_values: Vec<serde_json::Value> = serde_json::from_str(&nodes_json)
-      .map_err(|e| anyhow!("Failed to parse bundle graph JSON: {}", e))?;
-
-    // Parallelize the deserialization of individual nodes using rayon
-    let nodes: Vec<BundleGraphNode> = json_values
-      .into_par_iter()
-      .map(|value| {
-        Self::deserialize_node_with_env_lookup(value, &environments_by_id)
-          .map_err(|e| anyhow!("Failed to deserialize node: {}", e))
-      })
-      .collect::<anyhow::Result<Vec<_>>>()?;
+    let nodes = Self::deserialize_nodes_with_env_lookup(
+      &nodes_json,
+      &environments_by_id,
+      "bundle graph JSON",
+    )?;
 
     // Count node types for debugging
     let mut counts = std::collections::HashMap::new();
@@ -168,30 +184,35 @@ impl BundleGraphFromJs {
     Ok(nodes)
   }
 
-  /// Updates existing asset nodes by id. Expects `nodes_json` to be a JSON array of
-  /// asset nodes in the same shape as in the full serialization (id, type, value, usedSymbols, etc.).
-  /// Uses the graph's existing environment map for env resolution.
-  pub fn update_assets_from_json(&mut self, nodes_json: &str) -> anyhow::Result<()> {
-    let json_values: Vec<serde_json::Value> =
-      serde_json::from_str(nodes_json).map_err(|e| anyhow!("Invalid nodes JSON: {}", e))?;
+  /// Returns the graph's environment map (from initial load_bundle_graph)
+  pub fn get_environments(&self) -> Vec<Arc<Environment>> {
+    self.environments_by_id.values().cloned().collect()
+  }
 
-    let environments_by_id = self._environments_by_id.clone();
+  /// Deserialize a JSON array of asset nodes using the given environment map (e.g. from `get_environments`)
+  pub fn deserialize_asset_nodes_from_json(
+    nodes_json: &str,
+    environments: &[Arc<Environment>],
+  ) -> anyhow::Result<Vec<AssetNode>> {
+    let environments_by_id = Self::build_environments_by_id(environments);
+    let nodes =
+      Self::deserialize_nodes_with_env_lookup(nodes_json, &environments_by_id, "asset nodes JSON")?;
 
-    // Parallelize deserialization of asset nodes
-    let assets: Vec<(String, AssetNode)> = json_values
-      .into_par_iter()
-      .map(|value| {
-        let node = Self::deserialize_node_with_env_lookup(value, &environments_by_id)
-          .map_err(|e| anyhow!("Failed to deserialize node: {}", e))?;
+    nodes
+      .into_iter()
+      .map(|node| {
         let BundleGraphNode::Asset(asset_node) = node else {
           return Err(anyhow!("Expected asset node"));
         };
-        Ok((asset_node.id.clone(), asset_node))
+        Ok(asset_node)
       })
-      .collect::<anyhow::Result<Vec<_>>>()?;
+      .collect::<anyhow::Result<Vec<_>>>()
+  }
 
-    // Apply updates
-    for (id, asset_node) in assets {
+  /// Applies deserialized asset nodes to the graph.
+  pub fn update_assets(&mut self, nodes: Vec<AssetNode>) -> anyhow::Result<()> {
+    for asset_node in nodes {
+      let id = asset_node.id.clone();
       let node_idx = self
         .nodes_by_key
         .get(&id)

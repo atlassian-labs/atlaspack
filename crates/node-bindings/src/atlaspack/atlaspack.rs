@@ -320,8 +320,16 @@ pub fn atlaspack_napi_update_bundle_graph(
   thread::spawn({
     let atlaspack = atlaspack_napi.clone();
     move || {
-      let atlaspack = atlaspack.write();
-      let result = atlaspack.update_bundle_graph(nodes_json);
+      let result: anyhow::Result<()> = (|| {
+        let environments = {
+          let atlaspack = atlaspack.read();
+          atlaspack.get_bundle_graph_environments()
+        };
+        let nodes =
+          BundleGraphFromJs::deserialize_asset_nodes_from_json(&nodes_json, &environments)?;
+        let atlaspack = atlaspack.write();
+        atlaspack.update_bundle_graph(nodes)
+      })();
       deferred.resolve(move |env| match result {
         Ok(()) => NapiAtlaspackResult::ok(&env, ()),
         Err(error) => {

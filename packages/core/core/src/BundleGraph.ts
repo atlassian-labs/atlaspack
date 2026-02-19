@@ -659,18 +659,12 @@ export default class BundleGraph {
    * Same node shape and env/omit logic as serializeForNative.
    */
   serializeAssetNodesForNative(assetIds: Array<string>): string {
+    const start = performance.now();
+
     if (assetIds.length === 0) {
       return '[]';
     }
-    const environmentMap = new Map<string, Environment>();
-    const extractEnvironment = (envRef: EnvironmentRef): string => {
-      const env = fromEnvironmentId(envRef);
-      const envId = env.id;
-      if (!environmentMap.has(envId)) {
-        environmentMap.set(envId, env);
-      }
-      return envId;
-    };
+
     const nodes: Array<BundleGraphNode> = [];
     for (const assetId of assetIds) {
       const node = this._graph.getNodeByContentKey(assetId);
@@ -681,13 +675,22 @@ export default class BundleGraph {
       if (node.value?.env) {
         processedNode.value = {
           ...node.value,
-          env: extractEnvironment(node.value.env),
+          env: fromEnvironmentId(node.value.env).id,
         };
       }
       nodes.push(processedNode);
     }
     const optimizedNodes = nodes.map((node) => this._omitNulls(node));
-    return JSON.stringify(optimizedNodes);
+    const nodesJson = JSON.stringify(optimizedNodes);
+
+    const duration = performance.now() - start;
+    const nodesSizeMB = (nodesJson.length / (1024 * 1024)).toFixed(2);
+
+    logger.verbose({
+      origin: '@atlaspack/core',
+      message: `serializeAssetNodesForNative: ${duration.toFixed(1)}ms, ${nodesSizeMB}MB nodes, ${nodes.length} nodes`,
+    });
+    return nodesJson;
   }
 
   /**
