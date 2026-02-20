@@ -27,6 +27,28 @@ function normalizeSymbolsMap(
   return out;
 }
 
+type NormalizedUsedSymbol = {
+  asset: string;
+  symbol: string | null;
+};
+
+function normalizeUsedSymbolsUp(
+  usedSymbolsUp: Map<string, any> | null | undefined,
+): Record<string, NormalizedUsedSymbol> | null {
+  if (usedSymbolsUp == null) return null;
+
+  let out: Record<string, NormalizedUsedSymbol> = {};
+  for (let [exported, resolved] of usedSymbolsUp) {
+    // Skip '*' symbol as it's a namespace marker
+    if (exported === '*') continue;
+    out[exported] = {
+      asset: String(resolved?.asset ?? ''),
+      symbol: resolved?.symbol ?? null,
+    };
+  }
+  return out;
+}
+
 // NOTE: When comparing via BundleGraph we generally only have access to the *final used symbol set*,
 // not the full per-symbol resolution map. We normalize this set for parity checks.
 
@@ -72,8 +94,14 @@ export function extractSymbolTrackerSnapshot(
         dep.specifier,
       )}`;
 
+      // Use usedSymbolsUp for comparison - this is what the symbol tracker produces
+      // The node here is the internal DependencyNode which has usedSymbolsUp
+      let usedSymbolsUp = (node as any).usedSymbolsUp as
+        | Map<string, any>
+        | undefined;
+
       dependencies[depKey] = {
-        symbols: normalizeSymbolsMap((dep as any).symbols),
+        symbols: usedSymbolsUp ? normalizeUsedSymbolsUp(usedSymbolsUp) : null,
       };
     }
   });
