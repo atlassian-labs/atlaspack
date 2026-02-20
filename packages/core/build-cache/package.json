@@ -1,7 +1,7 @@
 {
   "name": "@atlaspack/build-cache",
   "description": "Serialize and deserialize data structures to a build cache",
-  "version": "2.13.12",
+  "version": "2.13.13",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
   "publishConfig": {
@@ -21,6 +21,6 @@
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
-    "@atlaspack/feature-flags": "2.30.0"
+    "@atlaspack/feature-flags": "2.30.1"
   }
 }

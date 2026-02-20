@@ -1,5 +1,18 @@
 # @atlaspack/package-manager
 
+## 2.14.55
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/fs@2.15.50
+  - @atlaspack/logger@2.14.47
+  - @atlaspack/utils@3.3.7
+  - @atlaspack/node-resolver-core@3.7.26
+  - @atlaspack/build-cache@2.13.13
+  - @atlaspack/workers@2.14.55
+  - @atlaspack/types@2.15.45
+
 ## 2.14.54
 
 ### Patch Changes

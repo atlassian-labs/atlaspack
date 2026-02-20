@@ -1,5 +1,16 @@
 # @atlaspack/inspector-frontend
 
+## 0.1.22
+
+### Patch Changes
+
+- [#1035](https://github.com/atlassian-labs/atlaspack/pull/1035) [`936209f`](https://github.com/atlassian-labs/atlaspack/commit/936209f3c6c201288720dd62b61e1f538368268c) Thanks [@marcins](https://github.com/marcins)! - Remove `cachePerformanceImprovements` feature flag
+
+- Updated dependencies [[`e88b258`](https://github.com/atlassian-labs/atlaspack/commit/e88b25808a181fafbe98e5ca278b35bfc0197caf), [`936209f`](https://github.com/atlassian-labs/atlaspack/commit/936209f3c6c201288720dd62b61e1f538368268c)]:
+  - @atlaspack/core@2.34.1
+  - @atlaspack/cli@2.15.16
+  - @atlaspack/graph@3.6.17
+
 ## 0.1.21
 
 ### Patch Changes
