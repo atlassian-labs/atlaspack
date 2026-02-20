@@ -11,7 +11,10 @@ import {
 
 type BundleStructure = Array<{type: string; assets: string[]}>;
 
-async function compareBundlers(fixtureName: string, entryFile: string) {
+async function compareBundlers(
+  fixtureName: string,
+  entryFile: string,
+): Promise<{jsBundles: BundleStructure; rustBundles: BundleStructure}> {
   const entryPath = path.join(__dirname, fixtureName, entryFile);
   const commonOpts = {
     mode: 'development' as const,
@@ -89,6 +92,8 @@ async function compareBundlers(fixtureName: string, entryFile: string) {
     jsBundles,
     `Bundle structure mismatch for ${fixtureName}.${diffMsg}`,
   );
+
+  return {jsBundles, rustBundles};
 }
 
 describe.v3('bundler parity (js vs native)', function () {
@@ -548,5 +553,221 @@ describe.v3('bundler parity (js vs native)', function () {
     `;
 
     await compareBundlers(fixtureName, entryFile);
+  });
+
+  it('CSS sibling merging: async import with multiple CSS dependencies', async function () {
+    const fixtureName = 'bundler-parity-css-sibling-merge-async-multi';
+    const entryFile = 'index.js';
+
+    await fsFixture(overlayFS, __dirname)`
+      ${fixtureName}
+        ${entryFile}:
+          import('./page-a.js');
+
+        page-a.js:
+          import './style-a.css';
+          import './style-b.css';
+          export default 'page-a';
+
+        style-a.css:
+          .a { color: red; }
+
+        style-b.css:
+          .b { color: blue; }
+
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "minBundles": 1,
+              "minBundleSize": 0,
+              "maxParallelRequests": 99999
+            }
+          }
+        yarn.lock:
+    `;
+
+    let {jsBundles} = await compareBundlers(fixtureName, entryFile);
+
+    let cssBundles = jsBundles.filter((b) => b.type === 'css');
+    assert.equal(cssBundles.length, 1);
+    assert.deepEqual(cssBundles[0].assets, ['style-a.css', 'style-b.css']);
+
+    // Total: JS entry + async JS + merged CSS sibling.
+    assert.equal(jsBundles.length, 3);
+  });
+
+  it('SVG assets remain as separate isolated bundles', async function () {
+    const fixtureName = 'bundler-parity-svg-isolated-url';
+    const entryFile = 'index.js';
+
+    await fsFixture(overlayFS, __dirname)`
+      ${fixtureName}
+        ${entryFile}:
+          const url1 = new URL('./icon-a.svg', import.meta.url);
+          const url2 = new URL('./icon-b.svg', import.meta.url);
+          export { url1, url2 };
+
+        icon-a.svg:
+          <svg><circle r="10"/></svg>
+
+        icon-b.svg:
+          <svg><rect width="10" height="10"/></svg>
+
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "minBundles": 1,
+              "minBundleSize": 0,
+              "maxParallelRequests": 99999
+            }
+          }
+        yarn.lock:
+    `;
+
+    let {jsBundles} = await compareBundlers(fixtureName, entryFile);
+
+    let svgBundles = jsBundles.filter((b) => b.type === 'svg');
+    assert.equal(svgBundles.length, 2);
+
+    let svgAssetSets = svgBundles.map((b) => b.assets.join(','));
+    assert(svgAssetSets.includes('icon-a.svg'));
+    assert(svgAssetSets.includes('icon-b.svg'));
+
+    // Total: JS entry + 2 isolated SVG bundles.
+    assert.equal(jsBundles.length, 3);
+  });
+
+  it('CSS shared across async entries: same CSS imported by two async JS entries', async function () {
+    this.timeout(30000);
+    const fixtureName = 'bundler-parity-css-shared-across-async-entries';
+    const entryFile = 'index.js';
+
+    await fsFixture(overlayFS, __dirname)`
+      ${fixtureName}
+        ${entryFile}:
+          import('./page-a.js');
+          import('./page-b.js');
+
+        page-a.js:
+          import './shared-styles.css';
+          export default 'a';
+
+        page-b.js:
+          import './shared-styles.css';
+          export default 'b';
+
+        shared-styles.css:
+          .shared { color: red; }
+
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "minBundles": 1,
+              "minBundleSize": 0,
+              "maxParallelRequests": 99999
+            }
+          }
+        yarn.lock:
+    `;
+
+    let {jsBundles} = await compareBundlers(fixtureName, entryFile);
+
+    let cssBundles = jsBundles.filter((b) => b.type === 'css');
+    assert.equal(cssBundles.length, 1);
+    assert.deepEqual(cssBundles[0].assets, ['shared-styles.css']);
+  });
+
+  it('CSS @import chains: CSS that imports other CSS from same JS entry', async function () {
+    this.timeout(30000);
+    const fixtureName = 'bundler-parity-css-import-chains';
+    const entryFile = 'index.js';
+
+    await fsFixture(overlayFS, __dirname)`
+      ${fixtureName}
+        ${entryFile}:
+          import('./page.js');
+
+        page.js:
+          import './main.css';
+          export default 'page';
+
+        main.css:
+          @import './base.css';
+          .main { color: blue; }
+
+        base.css:
+          .base { font-size: 16px; }
+
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "minBundles": 1,
+              "minBundleSize": 0,
+              "maxParallelRequests": 99999
+            }
+          }
+        yarn.lock:
+    `;
+
+    let {jsBundles} = await compareBundlers(fixtureName, entryFile);
+
+    let cssBundles = jsBundles.filter((b) => b.type === 'css');
+    assert.equal(cssBundles.length, 1);
+    assert.deepEqual(cssBundles[0].assets, ['base.css', 'main.css']);
+
+    // Total: JS entry + async JS + merged CSS.
+    assert.equal(jsBundles.length, 3);
+  });
+
+  it('CSS mixed sharing: entry-specific CSS stays separate from shared CSS', async function () {
+    this.timeout(30000);
+    const fixtureName = 'bundler-parity-css-mixed-sharing';
+    const entryFile = 'index.js';
+
+    await fsFixture(overlayFS, __dirname)`
+      ${fixtureName}
+        ${entryFile}:
+          import('./page-a.js');
+          import('./page-b.js');
+
+        page-a.js:
+          import './page-a.css';
+          import './shared.css';
+          export default 'a';
+
+        page-b.js:
+          import './page-b.css';
+          import './shared.css';
+          export default 'b';
+
+        page-a.css:
+          .page-a { color: red; }
+
+        page-b.css:
+          .page-b { color: blue; }
+
+        shared.css:
+          .shared { color: green; }
+
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "minBundles": 1,
+              "minBundleSize": 0,
+              "maxParallelRequests": 99999
+            }
+          }
+        yarn.lock:
+    `;
+
+    let {jsBundles} = await compareBundlers(fixtureName, entryFile);
+
+    let cssBundles = jsBundles.filter((b) => b.type === 'css');
+    assert.equal(cssBundles.length, 3);
+
+    let cssAssetSets = cssBundles.map((b) => b.assets.join(','));
+    assert(cssAssetSets.includes('shared.css'));
+    assert(cssAssetSets.includes('page-a.css'));
+    assert(cssAssetSets.includes('page-b.css'));
   });
 });

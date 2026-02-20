@@ -320,6 +320,15 @@ impl Bundler for IdealGraphBundler {
       if ideal_bundle.root_asset_id.is_some() {
         continue; // Not a shared bundle.
       }
+      // Type-change sibling bundles (@@typechange:...) also have root_asset_id == None,
+      // but they are NOT shared bundles. They are wired via bundle_edges instead.
+      if ideal_graph
+        .assets
+        .id_for(ideal_bundle_id.as_asset_key())
+        .starts_with("@@typechange:")
+      {
+        continue;
+      }
 
       let Some(&shared_bundle_node_id) = materialized_bundle_nodes.get(ideal_bundle_id) else {
         continue;
@@ -392,14 +401,13 @@ impl Bundler for IdealGraphBundler {
           continue;
         };
 
-        let Some(to_root_asset_id) = &to_bundle.root_asset_id else {
-          continue; // Shared bundles don't have a bundle group.
-        };
-
         let is_sync_type_change = *edge_type == types::IdealEdgeType::Sync
           && from_bundle.bundle_type != to_bundle.bundle_type;
 
         if is_sync_type_change {
+          // Sync type-change edges include type-change sibling bundles (@@typechange:*), which
+          // have `root_asset_id == None`. They are siblings in the parent's bundle group.
+
           // Ensure bundle-to-bundle References edge exists.
           let Some(&to_bundle_node_id) = materialized_bundle_nodes.get(to_id) else {
             continue;
@@ -445,6 +453,10 @@ impl Bundler for IdealGraphBundler {
 
           continue;
         }
+
+        let Some(to_root_asset_id) = &to_bundle.root_asset_id else {
+          continue; // Shared bundles don't have a bundle group.
+        };
 
         // Non-type-change edges: connect to the child's bundle group (if it exists).
         let bg_key = format!("bundle_group:{}{}", default_target.name, to_root_asset_id);
@@ -582,6 +594,17 @@ impl Bundler for IdealGraphBundler {
             // Follow deps to target assets.
             for target_node_id in asset_graph.get_outgoing_neighbors(&dep_node_id) {
               if let Some(target_asset) = asset_graph.get_asset(&target_node_id) {
+                // Don't traverse across sync type-changes when building entry bundle contents.
+                //
+                // Entry bundles compute their asset set by walking the sync subgraph in the asset graph.
+                // However, sync type-change assets (e.g. JS -> CSS via `import './style.css'`) are
+                // separated into type-change sibling bundles during ideal-graph placement.
+                // If we traverse into them here, we incorrectly add the CSS asset into the JS bundle
+                // as well, causing the asset to end up in both bundles.
+                if target_asset.file_type != ideal_bundle.bundle_type {
+                  continue;
+                }
+
                 // Don't cross into other bundle roots.
                 let target_key = ideal_graph.assets.key_for(&target_asset.id);
                 let is_other_bundle_root = target_key.is_some_and(|k| {
@@ -606,9 +629,17 @@ impl Bundler for IdealGraphBundler {
         // `IdealBundle.assets` may still include assets that also appear in ancestor bundles
         // (e.g. due to conservative placement). `ancestor_assets` is the canonical source of
         // availability, so we skip any assets that are already available.
+        let is_type_change_bundle = ideal_graph
+          .assets
+          .id_for(ideal_bundle_id.as_asset_key())
+          .starts_with("@@typechange:");
+
         for key_idx in ideal_bundle.assets.ones() {
           let asset_key = types::AssetKey(key_idx as u32);
-          if ideal_bundle.ancestor_assets.contains(key_idx) {
+          // Type-change sibling bundles are loaded as siblings of their parent bundle,
+          // so they must still contain their own assets even if those assets are also
+          // considered "available" via availability propagation.
+          if !is_type_change_bundle && ideal_bundle.ancestor_assets.contains(key_idx) {
             continue;
           }
 
@@ -1659,9 +1690,16 @@ mod tests {
 
   #[test]
   fn boundary_created_for_type_change() {
+    // Sync type-change deps (e.g. JS -> CSS) are NOT bundle boundaries.
+    // They are placed into a type-change sibling bundle during Phase 6 placement.
+    //
+    // Isolated deps still create boundaries (e.g. URL/SVG-style assets).
     let asset_graph = fixture_graph(
       &["entry.js"],
-      &[EdgeSpec::new("entry.js", "styles.css", Priority::Sync)],
+      &[
+        EdgeSpec::new("entry.js", "styles.css", Priority::Sync),
+        EdgeSpec::new("entry.js", "icon.svg", Priority::Sync).isolated(),
+      ],
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
@@ -1669,11 +1707,13 @@ mod tests {
 
     assert_graph!(g, {
       bundles: {
-        "entry.js"   => ["entry.js"],
-        "styles.css" => ["styles.css"],
+        "entry.js" => ["entry.js"],
+        "icon.svg" => ["icon.svg"],
+        "@@typechange:entry.js:Css" => ["styles.css"],
       },
       edges: {
-        "entry.js" sync "styles.css",
+        "entry.js" sync "icon.svg",
+        "entry.js" sync "@@typechange:entry.js:Css",
       },
     });
   }
@@ -1681,9 +1721,12 @@ mod tests {
   #[test]
   fn test_sync_type_change_from_non_root_asset() {
     // entry.js -> sync utils.js (same type, not a bundle root)
-    // utils.js -> sync icon.svg (type change, icon.svg is a bundle root)
+    // utils.js -> sync icon.svg (type change)
     //
-    // The bundle edge should be from the containing entry.js bundle -> icon.svg bundle,
+    // Sync type-change deps are NOT boundaries. The SVG asset is placed into a
+    // type-change sibling bundle rooted at the nearest containing bundle root.
+    //
+    // The bundle edge should be from the containing entry.js bundle -> type-change sibling,
     // even though the dependency originates from an unplaced non-root asset at Phase 4.
     let asset_graph = fixture_graph(
       &["entry.js"],
@@ -1699,10 +1742,10 @@ mod tests {
     assert_graph!(g, {
       bundles: {
         "entry.js" => ["entry.js", "utils.js"],
-        "icon.svg" => ["icon.svg"],
+        "@@typechange:entry.js:Other(\"svg\")" => ["icon.svg"],
       },
       edges: {
-        "entry.js" sync "icon.svg",
+        "entry.js" sync "@@typechange:entry.js:Other(\"svg\")",
       },
     });
   }
@@ -1710,7 +1753,9 @@ mod tests {
   #[test]
   fn test_sync_type_change_from_deep_non_root_asset() {
     // entry.js -> a.js -> b.js -> styles.css (all sync)
-    // b.js is 2 levels deep, styles.css is a type change and therefore a bundle root.
+    //
+    // Sync type-change deps are NOT boundaries. styles.css is placed into a
+    // type-change sibling bundle rooted at the containing entry bundle.
     let asset_graph = fixture_graph(
       &["entry.js"],
       &[
@@ -1726,10 +1771,10 @@ mod tests {
     assert_graph!(g, {
       bundles: {
         "entry.js" => ["entry.js", "a.js", "b.js"],
-        "styles.css" => ["styles.css"],
+        "@@typechange:entry.js:Css" => ["styles.css"],
       },
       edges: {
-        "entry.js" sync "styles.css",
+        "entry.js" sync "@@typechange:entry.js:Css",
       },
     });
   }
@@ -1737,7 +1782,7 @@ mod tests {
   #[test]
   fn materialization_materializes_sync_type_change_boundary_as_sibling_bundle() {
     use atlaspack_core::bundle_graph::NativeBundleGraph;
-    use atlaspack_core::types::Priority;
+    use atlaspack_core::types::{FileType, Priority};
 
     // Use hex-like ids so NativeBundleGraph public id generation won't panic.
     let entry = "0123456789abcdef.js";
@@ -1749,10 +1794,11 @@ mod tests {
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
     bundler.bundle(&asset_graph, &mut bundle_graph).unwrap();
 
-    // Find the bundle node for entry.js and the bundle node for styles.css.
-    let entry_bundle_id = bundle_graph
-      .get_bundles()
-      .into_iter()
+    // Find the bundle node for entry.js and the CSS type-change sibling bundle.
+    let bundles = bundle_graph.get_bundles();
+
+    let entry_bundle_id = bundles
+      .iter()
       .find(|b| b.main_entry_id.as_deref() == Some(entry))
       .unwrap()
       .id
@@ -1761,15 +1807,16 @@ mod tests {
       .get_node_id_by_content_key(&entry_bundle_id)
       .unwrap();
 
-    let styles_bundle_id = bundle_graph
-      .get_bundles()
-      .into_iter()
-      .find(|b| b.main_entry_id.as_deref() == Some(styles))
-      .unwrap()
-      .id
-      .clone();
+    let styles_bundle = bundles
+      .iter()
+      .find(|b| b.bundle_type == FileType::Css)
+      .expect("expected a CSS type-change bundle");
+
+    // Sync type-change sibling bundles have no main entry id.
+    assert_eq!(styles_bundle.main_entry_id.as_deref(), None);
+
     let styles_bundle_node = *bundle_graph
-      .get_node_id_by_content_key(&styles_bundle_id)
+      .get_node_id_by_content_key(&styles_bundle.id)
       .unwrap();
 
     let entry_bg_key = format!("bundle_group:{}{}", Target::default().name, entry);
@@ -1779,6 +1826,7 @@ mod tests {
 
     let edges = edge_triples(&bundle_graph);
 
+    // Entry bundle should reference the CSS sibling bundle.
     assert!(
       edges.contains(&(
         entry_bundle_node,
@@ -1789,7 +1837,7 @@ mod tests {
       edges
     );
 
-    // styles bundle should be in the same bundle group as entry (sibling bundle).
+    // CSS bundle should be in the same bundle group as entry (sibling bundle).
     assert!(
       edges.contains(&(
         entry_bg_node,
@@ -1797,6 +1845,21 @@ mod tests {
         NativeBundleGraphEdgeType::Bundle
       )),
       "expected Bundle edge from entry bundle group -> styles bundle; got edges: {:?}",
+      edges
+    );
+
+    // And the CSS bundle should contain the styles asset.
+    let styles_asset_node = *bundle_graph
+      .get_node_id_by_content_key(styles)
+      .expect("expected styles asset node in bundle graph");
+
+    assert!(
+      edges.contains(&(
+        styles_bundle_node,
+        styles_asset_node,
+        NativeBundleGraphEdgeType::Contains
+      )),
+      "expected Contains edge from styles bundle -> styles asset; got edges: {:?}",
       edges
     );
 

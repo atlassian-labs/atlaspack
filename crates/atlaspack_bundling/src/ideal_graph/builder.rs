@@ -65,6 +65,10 @@ pub struct IdealGraphBuilder {
   // Bundle roots that should be treated like entries (assets duplicated into them).
   // Includes entries, non-splittable, isolated, and stable-name bundle roots.
   entry_like_roots: HashSet<super::types::AssetKey>,
+
+  // Type-change sibling bundles: keyed by (parent_bundle_root, file_type_str).
+  // When placing a CSS asset into a JS bundle, redirect into a sibling bundle.
+  type_change_siblings: HashMap<(AssetKey, String), IdealBundleId>,
 }
 
 impl IdealGraphBuilder {
@@ -76,6 +80,7 @@ impl IdealGraphBuilder {
     Self {
       options,
       decisions: super::types::DecisionLog::default(),
+      type_change_siblings: HashMap::new(),
       ..Self::default()
     }
   }
@@ -231,7 +236,18 @@ impl IdealGraphBuilder {
             || target_asset.bundle_behavior == Some(BundleBehavior::Isolated)
             || target_asset.bundle_behavior == Some(BundleBehavior::InlineIsolated);
 
-          if dep_is_boundary || type_change || isolated {
+          // Sync type-change deps (e.g. `import './style.css'` from JS) should NOT create
+          // bundle boundaries. They are regular sync-reachable assets that get separated
+          // into type-change sibling bundles during Phase 6 placement.
+          //
+          // Non-sync type-change (e.g. lazy CSS, which doesn't exist in practice) and
+          // isolated type-change (SVG via `new URL()`) ARE boundaries.
+          //
+          // This matches the JS bundler's `idealGraph.ts` where CSS assets from sync
+          // imports are NOT bundle roots — they flow through the normal placement/sharing
+          // phases and get separated by type in `addAssetToBundleRoot`.
+          let is_sync_type_change = type_change && !dep_is_boundary && !isolated;
+          if (dep_is_boundary || type_change || isolated) && !is_sync_type_change {
             let Some(target_key) = self.assets.key_for(&target_asset.id) else {
               continue;
             };
@@ -341,16 +357,10 @@ impl IdealGraphBuilder {
             continue;
           };
 
-          // Skip sync edges to type-change boundaries (e.g. JS → CSS).
-          // These belong in separate bundles and should not be sync-reachable.
-          // Same-type boundaries (e.g. lazy JS imports) ARE traversed, matching
-          // the JS bundler's reachability behavior.
-          if self.bundle_boundaries.contains(&target_key)
-            && from_asset.file_type != target_asset.file_type
-          {
-            continue;
-          }
-
+          // Note: sync type-change edges (e.g. JS → CSS) are NOT skipped here.
+          // CSS assets from sync imports are regular sync-reachable assets (not
+          // boundaries), so they naturally participate in the sync graph. They
+          // will be separated into type-change sibling bundles during Phase 6.
           let Some(&to_idx) = self.asset_to_sync_node.get(&target_key) else {
             continue;
           };
@@ -1042,6 +1052,12 @@ impl IdealGraphBuilder {
       .map(|&key| (key, IdealBundleId::from_asset_key(key)))
       .collect();
 
+    // Type-change sibling bundles: keyed by (parent_bundle_root, file_type_str).
+    // When placing a CSS asset into a JS bundle, redirect into a sibling bundle.
+    // This matches the JS bundler's `addAssetToBundleRoot` which uses
+    // `bundleGroup.mainEntryAsset.id + '.' + asset.type` as a coalescing key.
+    self.type_change_siblings.clear();
+
     let sync_nodes: Vec<(AssetKey, NodeIndex)> = self
       .asset_to_sync_node
       .iter()
@@ -1076,11 +1092,17 @@ impl IdealGraphBuilder {
       // Duplicate asset into ALL reaching entry-like bundles (matching JS algorithm).
       // Each entry-like bundle must independently contain every sync-reachable asset
       // because they can be loaded in isolation.
+      //
+      // If the asset's file type differs from the bundle's type (e.g. CSS asset in JS bundle),
+      // redirect it into a type-change sibling bundle keyed by (root, file_type).
       for &root in &reaching_entry_like {
         let bundle_id = &root_bundle_ids[&root];
+        let target_bundle_id =
+          self.resolve_type_change_target(asset_key, root, bundle_id, ideal)?;
+
         let bundle = ideal
-          .get_bundle_mut(bundle_id)
-          .context("entry-like bundle missing for duplication")?;
+          .get_bundle_mut(&target_bundle_id)
+          .context("bundle missing for entry-like duplication")?;
         bundle.assets.insert(asset_key.0 as usize);
 
         self.decision(
@@ -1096,10 +1118,12 @@ impl IdealGraphBuilder {
       // Track canonical bundle assignment (smallest entry-like for determinism).
       if !reaching_entry_like.is_empty() {
         let canonical = reaching_entry_like.iter().copied().min().unwrap();
-        let bundle_id = root_bundle_ids[&canonical];
+        let parent_bundle_id = root_bundle_ids[&canonical];
+        let canonical_bundle_id =
+          self.resolve_type_change_target(asset_key, canonical, &parent_bundle_id, ideal)?;
         // Only record canonical placement here (asset may have been duplicated into multiple bundles).
         // `move_asset_to_bundle` would remove it from the other entry-like bundles, which we don't want.
-        ideal.set_asset_bundle(asset_key, Some(bundle_id));
+        ideal.set_asset_bundle(asset_key, Some(canonical_bundle_id));
       }
 
       // If this asset is reachable from an entry root, do not place it into splittable
@@ -1121,10 +1145,14 @@ impl IdealGraphBuilder {
         continue;
       } else if splittable_roots.len() == 1 {
         // Single splittable root -> place directly.
+        // If file types differ, redirect to a type-change sibling bundle.
         let root = splittable_roots[0];
         let bundle_id = &root_bundle_ids[&root];
+        let target_bundle_id =
+          self.resolve_type_change_target(asset_key, root, bundle_id, ideal)?;
+
         let bundle = ideal
-          .get_bundle_mut(bundle_id)
+          .get_bundle_mut(&target_bundle_id)
           .context("bundle missing for single-root placement")?;
         bundle.assets.insert(asset_key.0 as usize);
 
@@ -1132,7 +1160,7 @@ impl IdealGraphBuilder {
         // "move" it here (which would remove it from the canonical entry-like bundle).
         // Keep the canonical `asset_to_bundle` mapping stable in that case.
         if reaching_entry_like.is_empty() {
-          ideal.move_asset_to_bundle(asset_key, bundle_id)?;
+          ideal.move_asset_to_bundle(asset_key, &target_bundle_id)?;
         }
 
         self.decision(
@@ -1151,6 +1179,75 @@ impl IdealGraphBuilder {
       "ideal graph: placed single-root assets"
     );
     Ok(())
+  }
+
+  // ----------------------------
+  // Phase 6 helper: type-change sibling bundle resolution
+  // ----------------------------
+
+  /// If the asset's file type differs from the target bundle's type, resolve to a
+  /// type-change sibling bundle keyed by `(parent_root, file_type)`.
+  ///
+  /// This matches the JS bundler's `addAssetToBundleRoot` which uses
+  /// `bundleGroup.mainEntryAsset.id + '.' + asset.type` to coalesce all CSS assets
+  /// from the same parent bundle group into a single CSS sibling bundle.
+  ///
+  /// Returns the original `parent_bundle_id` if no type change, or the sibling bundle id.
+  fn resolve_type_change_target(
+    &mut self,
+    asset_key: AssetKey,
+    parent_root: AssetKey,
+    parent_bundle_id: &IdealBundleId,
+    ideal: &mut IdealGraph,
+  ) -> anyhow::Result<IdealBundleId> {
+    let asset_file_type = self.asset_file_types.get(&asset_key);
+    let parent_bundle = ideal
+      .get_bundle(parent_bundle_id)
+      .context("parent bundle missing in resolve_type_change_target")?;
+    let parent_type = &parent_bundle.bundle_type;
+
+    // No type change -> place directly in parent bundle.
+    if asset_file_type.is_none() || asset_file_type == Some(parent_type) {
+      return Ok(*parent_bundle_id);
+    }
+
+    let file_type = asset_file_type.unwrap().clone();
+    let file_type_str = format!("{file_type:?}");
+    let sibling_key = (parent_root, file_type_str.clone());
+
+    if let Some(&existing_id) = self.type_change_siblings.get(&sibling_key) {
+      return Ok(existing_id);
+    }
+
+    // Create a new type-change sibling bundle.
+    let sibling_id_str = format!(
+      "@@typechange:{}:{}",
+      self.assets.id_for(parent_root),
+      file_type_str
+    );
+
+    // Insert synthetic id into the asset interner so IdealBundleId works.
+    let sibling_asset_key = ideal.assets.insert_synthetic(sibling_id_str);
+    let sibling_bundle_id = IdealBundleId::from_asset_key(sibling_asset_key);
+
+    ideal.create_bundle(IdealBundle {
+      id: sibling_bundle_id,
+      root_asset_id: None, // Type-change sibling bundles have no root asset.
+      assets: FixedBitSet::with_capacity(self.assets.len()),
+      bundle_type: file_type,
+      needs_stable_name: false,
+      behavior: None,
+      ancestor_assets: FixedBitSet::with_capacity(self.assets.len()),
+    })?;
+
+    // Add a sync edge from the parent bundle to the sibling.
+    ideal.add_bundle_edge(*parent_bundle_id, sibling_bundle_id, IdealEdgeType::Sync);
+
+    self
+      .type_change_siblings
+      .insert(sibling_key, sibling_bundle_id);
+
+    Ok(sibling_bundle_id)
   }
 
   // ----------------------------
@@ -1360,13 +1457,16 @@ impl IdealGraphBuilder {
         eligible_roots_by_asset.insert(asset_key, eligible);
       } else if eligible.len() == 1 {
         // Availability reduced to single root -> place directly.
+        // If file types differ, redirect to a type-change sibling bundle.
         let root = eligible[0];
         let bundle_id = &root_bundle_ids[&root];
+        let target_bundle_id =
+          self.resolve_type_change_target(asset_key, root, bundle_id, ideal)?;
         let bundle = ideal
-          .get_bundle_mut(bundle_id)
+          .get_bundle_mut(&target_bundle_id)
           .context("bundle missing for single-eligible placement")?;
         bundle.assets.insert(asset_key.0 as usize);
-        ideal.move_asset_to_bundle(asset_key, bundle_id)?;
+        ideal.move_asset_to_bundle(asset_key, &target_bundle_id)?;
         self.decision(
           "placement",
           super::types::DecisionKind::AssetAssignedToBundle {
@@ -1386,21 +1486,33 @@ impl IdealGraphBuilder {
     }
 
     // Group assets by eligible root set (so we create fewer shared bundles).
-    let mut assets_by_root_set: HashMap<Vec<AssetKey>, Vec<AssetKey>> = HashMap::new();
-    for (asset, roots) in eligible_roots_by_asset {
-      assets_by_root_set.entry(roots).or_default().push(asset);
+    //
+    // IMPORTANT: also group by file type to avoid mixing JS and CSS (or other types)
+    // in the same shared bundle.
+    let mut assets_by_root_set_and_type: HashMap<(Vec<AssetKey>, String), Vec<AssetKey>> =
+      HashMap::new();
+    for (asset_key, roots) in eligible_roots_by_asset {
+      let file_type = self
+        .asset_file_types
+        .get(&asset_key)
+        .map(|ft| format!("{ft:?}"))
+        .unwrap_or_default();
+      assets_by_root_set_and_type
+        .entry((roots, file_type))
+        .or_default()
+        .push(asset_key);
     }
     tracing::debug!(
-      unique_root_sets = assets_by_root_set.len(),
+      unique_root_sets = assets_by_root_set_and_type.len(),
       "create_shared_bundles: grouped assets by root set"
     );
 
-    for (mut roots, assets) in assets_by_root_set {
+    for ((mut roots, file_type), assets) in assets_by_root_set_and_type {
       roots.sort();
       roots.dedup();
 
       let shared_name = format!(
-        "@@shared:{}",
+        "@@shared:{file_type}:{}",
         roots
           .iter()
           .map(|r| self.assets.id_for(*r))
