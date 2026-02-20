@@ -199,12 +199,18 @@ pub(crate) fn convert_result(
     // Add * symbol if there are CJS exports, no imports/exports at all
     // (and the asset has side effects), or the asset is wrapped.
     // This allows accessing symbols that don't exist without errors in symbol propagation.
-    if hoist_result.has_cjs_exports
-      || (!hoist_result.is_esm
-        && asset.side_effects
-        && dependency_by_specifier.is_empty()
-        && hoist_result.exported_symbols.is_empty())
-      || (hoist_result.should_wrap && !asset_symbols.as_slice().iter().any(|s| s.exported == "*"))
+    // Only add if there isn't already a * symbol with the same local name (from hoist_result.exported_symbols).
+    let exports_local = format_local_star_symbol(&asset.id);
+    let has_exports_star_symbol = asset_symbols
+      .iter()
+      .any(|s| s.exported == "*" && s.local == exports_local);
+    if !has_exports_star_symbol
+      && (hoist_result.has_cjs_exports
+        || (!hoist_result.is_esm
+          && asset.side_effects
+          && dependency_by_specifier.is_empty()
+          && hoist_result.exported_symbols.is_empty())
+        || hoist_result.should_wrap)
     {
       if result.is_empty_or_empty_export {
         asset.empty_file_star_reexport = Some(true);
@@ -466,13 +472,17 @@ pub(crate) fn convert_dependencies(
   Ok((dependency_by_specifier, invalidate_on_file_change))
 }
 
+fn format_local_star_symbol(asset_id: &str) -> String {
+  format!("${asset_id}$exports")
+}
+
 /// "Export star" symbol is added as a placeholder for assets that may have symbols that aren't
 /// explicitly listed. This is used to avoid errors if a symbol that hasn't been statically
 /// analyzed is accessed.
 fn make_export_star_symbol(asset_id: &str) -> Symbol {
   Symbol {
     exported: "*".into(),
-    local: format!("${asset_id}$exports"),
+    local: format_local_star_symbol(asset_id),
     loc: None,
     ..Default::default()
   }
