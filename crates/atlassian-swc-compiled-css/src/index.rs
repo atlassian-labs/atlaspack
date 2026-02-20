@@ -193,5 +193,13 @@ mod tests {
     let diagnostic = diagnostic_from_panic(payload);
 
     assert!(diagnostic.message.contains("test panic message"));
+    assert_eq!(
+      diagnostic.kind,
+      atlaspack_core::types::ErrorKind::ParseError
+    );
+    assert_eq!(diagnostic.origin, Some("compiled-css".to_string()));
+    // Verify backtrace is included in hints
+    assert!(!diagnostic.hints.is_empty());
+    assert!(diagnostic.hints[0].contains("Stack trace:"));
   }
 }

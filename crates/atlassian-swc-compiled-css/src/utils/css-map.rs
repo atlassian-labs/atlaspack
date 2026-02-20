@@ -276,21 +276,20 @@ pub fn error_if_not_valid_object_property(property: &PropOrSpread, meta: &Metada
 
 /// Reports a cssMap error as a diagnostic with proper error message formatting.
 /// The error message will include the documentation URL automatically.
-/// Note: Span information is not included in the diagnostic at this level.
-/// It should be added at the node-bindings layer where SourceMap is available.
-pub fn report_css_map_error(meta: &Metadata, _span: Span, message: impl fmt::Display) {
+pub fn report_css_map_error(meta: &Metadata, span: Span, message: impl fmt::Display) {
   let msg = create_error_message(message.to_string());
-  let diagnostic = crate::errors::create_diagnostic(msg, module_path!());
+  let source_map = meta.state.borrow().file.source_map.clone();
+  let diagnostic =
+    crate::errors::create_diagnostic(msg, module_path!(), Some(span), Some(&source_map));
   meta.add_diagnostic(diagnostic);
 }
 
-/// Reports a cssMap error with hints as a diagnostic.
-/// This version should be used when you want to include helpful hints for the error.
-/// Note: Span information is not included in the diagnostic at this level.
-/// It should be added at the node-bindings layer where SourceMap is available.
-pub fn report_css_map_error_with_hints(meta: &Metadata, _span: Span, error_type: ErrorMessages) {
+/// Reports a cssMap error with hints and source location as a diagnostic.
+pub fn report_css_map_error_with_hints(meta: &Metadata, span: Span, error_type: ErrorMessages) {
   let msg = create_error_message(error_type.message());
-  let mut diagnostic = crate::errors::create_diagnostic(msg, module_path!());
+  let source_map = meta.state.borrow().file.source_map.clone();
+  let mut diagnostic =
+    crate::errors::create_diagnostic(msg, module_path!(), Some(span), Some(&source_map));
 
   if let Some(hints) = error_type.hints() {
     diagnostic.hints = hints;
@@ -303,7 +302,7 @@ pub fn report_css_map_error_with_hints(meta: &Metadata, _span: Span, error_type:
 /// Use this when the error doesn't have a specific source location.
 pub fn create_css_map_diagnostic(message: impl fmt::Display) -> atlaspack_core::types::Diagnostic {
   let msg = create_error_message(message.to_string());
-  crate::errors::create_diagnostic(msg, module_path!())
+  crate::errors::create_diagnostic(msg, module_path!(), None, None)
 }
 
 /// Helper to create a cssMap diagnostic with hints.
@@ -311,7 +310,7 @@ pub fn create_css_map_diagnostic_with_hints(
   error_type: ErrorMessages,
 ) -> atlaspack_core::types::Diagnostic {
   let msg = create_error_message(error_type.message());
-  let mut diagnostic = crate::errors::create_diagnostic(msg, module_path!());
+  let mut diagnostic = crate::errors::create_diagnostic(msg, module_path!(), None, None);
 
   if let Some(hints) = error_type.hints() {
     diagnostic.hints = hints;

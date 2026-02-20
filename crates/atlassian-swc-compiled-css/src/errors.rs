@@ -2,8 +2,15 @@ pub use atlaspack_core::types::Diagnostic;
 use atlaspack_core::types::{CodeHighlight, DiagnosticBuilder, ErrorKind, Location};
 use std::any::Any;
 use std::backtrace::Backtrace;
+use std::cell::RefCell;
 use std::sync::Once;
 use swc_core::common::{SourceMap, Span};
+
+thread_local! {
+  /// Thread-local storage for the most recent panic backtrace.
+  /// This is set by the panic hook and retrieved when converting panics to diagnostics.
+  static LAST_PANIC_BACKTRACE: RefCell<Option<String>> = RefCell::new(None);
+}
 
 /// Install a custom panic hook that suppresses panic output.
 static PANIC_HOOK_INIT: Once = Once::new();
@@ -14,6 +21,15 @@ pub fn init_panic_suppression() {
   PANIC_HOOK_INIT.call_once(|| {
     let debug_panics = std::env::var("COMPILED_CSS_DEBUG_PANIC").is_ok();
     std::panic::set_hook(Box::new(move |info| {
+      // Capture backtrace at the panic site (before catch_unwind discards it)
+      let backtrace = Backtrace::force_capture();
+      let backtrace_str = format!("{:?}", backtrace);
+
+      // Store it in thread-local storage for diagnostic_from_panic to retrieve
+      LAST_PANIC_BACKTRACE.with(|bt| {
+        *bt.borrow_mut() = Some(backtrace_str.clone());
+      });
+
       if debug_panics {
         eprintln!(
           "[compiled-css] panic: {info}{}",
@@ -22,23 +38,47 @@ pub fn init_panic_suppression() {
             .map(|loc| format!(" at {}:{}", loc.file(), loc.line()))
             .unwrap_or_default()
         );
-        eprintln!("{:?}", Backtrace::force_capture());
+        eprintln!("{}", backtrace_str);
       }
     }));
   });
 }
 
 /// Create a diagnostic with a message and origin set to the given module path.
-pub fn create_diagnostic(message: impl Into<String>, origin: &str) -> Diagnostic {
+/// Optionally accepts a span and source_map to include source code location.
+pub fn create_diagnostic(
+  message: impl Into<String>,
+  origin: &str,
+  span: Option<Span>,
+  source_map: Option<&SourceMap>,
+) -> Diagnostic {
+  use atlaspack_core::types::CodeFrame;
+
+  let code_frames = match (span, source_map) {
+    (Some(span), Some(sm)) => span_to_code_highlight(span, sm)
+      .map(|highlight| {
+        vec![CodeFrame {
+          code_highlights: vec![highlight],
+          code: None,
+          language: None,
+          file_path: None,
+        }]
+      })
+      .unwrap_or_default(),
+    _ => vec![],
+  };
+
   DiagnosticBuilder::default()
     .message(message.into())
-    .kind(ErrorKind::Unknown)
+    .kind(ErrorKind::ParseError)
     .origin(Some(origin.to_string()))
+    .code_frames(code_frames)
     .build()
     .expect("Failed to build diagnostic")
 }
 
 /// Convert a panic payload to an Atlaspack Diagnostic.
+/// Includes backtrace information as a hint for debugging.
 pub fn diagnostic_from_panic(panic_payload: Box<dyn Any + Send>) -> Diagnostic {
   let message = if let Some(s) = panic_payload.downcast_ref::<String>() {
     s.clone()
@@ -48,12 +88,26 @@ pub fn diagnostic_from_panic(panic_payload: Box<dyn Any + Send>) -> Diagnostic {
     "Unknown panic".to_string()
   };
 
-  create_diagnostic(message, "compiled-css")
+  // Retrieve the backtrace captured at the panic site (from the panic hook)
+  let backtrace_str = LAST_PANIC_BACKTRACE.with(|bt| {
+    bt.borrow_mut().take().unwrap_or_else(|| {
+      // Fallback: capture backtrace here if panic hook didn't run
+      let bt = Backtrace::force_capture();
+      format!("{:?}", bt)
+    })
+  });
+
+  DiagnosticBuilder::default()
+    .message(message)
+    .kind(ErrorKind::ParseError)
+    .origin(Some("compiled-css".to_string()))
+    .hints(vec![format!("Stack trace:\n{}", backtrace_str)])
+    .build()
+    .expect("Failed to build diagnostic")
 }
 
 /// Convert an SWC span to a CodeHighlight with source locations.
 /// Returns None if the span is unusable (dummy span).
-#[allow(dead_code)]
 fn span_to_code_highlight(span: Span, source_map: &SourceMap) -> Option<CodeHighlight> {
   if span.lo().is_dummy() || span.hi().is_dummy() {
     return None;
