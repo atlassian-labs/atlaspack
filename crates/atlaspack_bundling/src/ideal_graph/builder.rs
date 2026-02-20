@@ -1,4 +1,5 @@
 use fixedbitset::FixedBitSet;
+use roaring::RoaringBitmap;
 use std::collections::{HashMap, HashSet, VecDeque};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -19,20 +20,20 @@ struct Reachability {
 use anyhow::Context;
 use atlaspack_core::{
   asset_graph::{AssetGraph, NodeId},
-  types::{BundleBehavior, Priority},
+  types::{BundleBehavior, EnvironmentContext, Priority},
 };
 use petgraph::{
   Direction,
   algo::kosaraju_scc,
-  graph::NodeIndex,
+  graph::{DiGraph, NodeIndex},
   stable_graph::StableDiGraph,
   visit::{EdgeRef, IntoEdgeReferences, NodeIndexable},
 };
 use tracing::{debug, instrument};
 
 use super::types::{
-  AssetKey, IdealBundle, IdealBundleId, IdealEdgeType, IdealGraph, IdealGraphBuildOptions,
-  IdealGraphBuildStats,
+  AssetKey, BundleRootEdgeType, IdealBundle, IdealBundleId, IdealEdgeType, IdealGraph,
+  IdealGraphBuildOptions, IdealGraphBuildStats,
 };
 
 /// Intermediate state for building an [`IdealGraph`].
@@ -52,6 +53,12 @@ pub struct IdealGraphBuilder {
   sync_graph: StableDiGraph<SyncNode, ()>,
   virtual_root: Option<NodeIndex>,
   asset_to_sync_node: HashMap<super::types::AssetKey, NodeIndex>,
+
+  // Graph of bundle root assets with Lazy/Parallel edges.
+  // Includes a virtual root connected to all entry bundle roots.
+  bundle_root_graph: DiGraph<AssetKey, BundleRootEdgeType>,
+  bundle_root_graph_nodes: HashMap<AssetKey, NodeIndex>,
+  bundle_root_graph_virtual_root: Option<NodeIndex>,
 
   // Entry roots.
   entry_roots: HashSet<super::types::AssetKey>,
@@ -132,11 +139,17 @@ impl IdealGraphBuilder {
     // Phase 5: derive reachability via topological bitset propagation.
     let reachability = self.compute_reachability_topological()?;
 
-    // Phase 6: place single-root assets into their dominating bundle.
-    self.place_single_root_assets(&reachability, &mut ideal)?;
+    // Phase 5b: build bundle-root graph (lazy/parallel edges) for availability computation.
+    self.build_bundle_root_graph(asset_graph)?;
 
-    // Phase 7: availability propagation (now includes placed single-root assets).
+    // Phase 6: availability propagation (ancestor_assets).
+    //
+    // Note: Phase 6 placement needs `ancestor_assets` to avoid placing assets that are already
+    // available from an ancestor bundle (matches JS Insert Or Share filtering).
     self.compute_availability(&reachability, &mut ideal)?;
+
+    // Phase 7: place single-root assets into their dominating bundle.
+    self.place_single_root_assets(&reachability, &mut ideal)?;
 
     // Phase 8: internalize async bundles whose root is already available from all parents.
     self.internalize_async_bundles(asset_graph, &reachability, &mut ideal)?;
@@ -473,7 +486,7 @@ impl IdealGraphBuilder {
         bundle_type: asset.file_type.clone(),
         needs_stable_name,
         behavior: asset.bundle_behavior,
-        ancestor_assets: FixedBitSet::with_capacity(self.assets.len()),
+        ancestor_assets: RoaringBitmap::new(),
       })?;
 
       ideal.move_asset_to_bundle(root_key, &bundle_id)?;
@@ -614,74 +627,378 @@ impl IdealGraphBuilder {
   }
 
   // ----------------------------
+  // Phase 5b: Bundle-root graph (lazy/parallel edges)
+  // ----------------------------
+
+  #[instrument(level = "debug", skip_all)]
+  fn build_bundle_root_graph(&mut self, asset_graph: &AssetGraph) -> anyhow::Result<()> {
+    self.bundle_root_graph = DiGraph::new();
+    self.bundle_root_graph_nodes.clear();
+
+    // NOTE: The node weight type is `AssetKey`, so we represent the virtual root as a sentinel
+    // that should never be used for indexing into `assets`-indexed vectors/bitsets.
+    let virtual_root_key = AssetKey(u32::MAX);
+    let virtual_root = self.bundle_root_graph.add_node(virtual_root_key);
+    self.bundle_root_graph_virtual_root = Some(virtual_root);
+
+    // Add a node for each bundle root asset.
+    let mut roots: Vec<AssetKey> = self.bundle_roots.iter().copied().collect();
+    roots.sort();
+    for root in &roots {
+      let idx = self.bundle_root_graph.add_node(*root);
+      self.bundle_root_graph_nodes.insert(*root, idx);
+    }
+
+    // Virtual root -> entry roots.
+    let mut entry_roots: Vec<AssetKey> = self.entry_roots.iter().copied().collect();
+    entry_roots.sort();
+    for entry in entry_roots {
+      if let Some(&to_idx) = self.bundle_root_graph_nodes.get(&entry) {
+        // Virtual root edges have no semantic edge type in JS (untyped edges).
+        // We store them as `Lazy` for now since consumers will treat the virtual root specially.
+        self
+          .bundle_root_graph
+          .add_edge(virtual_root, to_idx, BundleRootEdgeType::Lazy);
+      }
+    }
+
+    // Precompute `AssetKey -> asset graph NodeId` lookup.
+    let mut asset_node_by_key: HashMap<AssetKey, NodeId> = HashMap::new();
+    for asset_node_id in self.asset_node_ids(asset_graph) {
+      if let Some(asset) = asset_graph.get_asset(&asset_node_id)
+        && let Some(key) = self.assets.key_for(&asset.id)
+      {
+        asset_node_by_key.insert(key, asset_node_id);
+      }
+    }
+
+    // Precompute env context and bundle behavior for all assets.
+    // We need this to:
+    // - avoid traversing past isolated assets during per-root sync traversal
+    // - match JS edge filtering (`bundle.bundleBehavior == null` and env context checks)
+    let mut asset_info: HashMap<AssetKey, (EnvironmentContext, Option<BundleBehavior>)> =
+      HashMap::new();
+    for asset in asset_graph.get_assets() {
+      let Some(key) = self.assets.key_for(&asset.id) else {
+        continue;
+      };
+      asset_info.insert(key, (asset.env.context, asset.bundle_behavior));
+    }
+
+    let env_is_isolated = |ctx: EnvironmentContext| -> bool {
+      matches!(
+        ctx,
+        EnvironmentContext::ServiceWorker
+          | EnvironmentContext::WebWorker
+          | EnvironmentContext::Worklet
+          | EnvironmentContext::Tesseract
+      )
+    };
+
+    // For each root, walk its sync-reachable asset subgraph (using the sync-only graph).
+    for root in roots {
+      let Some(&from_node) = self.bundle_root_graph_nodes.get(&root) else {
+        continue;
+      };
+      let Some(&root_sync_node) = self.asset_to_sync_node.get(&root) else {
+        continue;
+      };
+      let Some((root_ctx, _root_behavior)) = asset_info.get(&root).copied() else {
+        continue;
+      };
+
+      let mut queue: VecDeque<NodeIndex> = VecDeque::new();
+      let mut visited: HashSet<NodeIndex> = HashSet::new();
+      queue.push_back(root_sync_node);
+
+      while let Some(n) = queue.pop_front() {
+        if !visited.insert(n) {
+          continue;
+        }
+
+        let Some(SyncNode::Asset(asset_key)) = self.sync_graph.node_weight(n).copied() else {
+          continue;
+        };
+
+        // Skip traversing children past isolated assets (matches JS `asset.bundleBehavior != null`).
+        if let Some((_ctx, Some(beh))) = asset_info.get(&asset_key) {
+          if beh == &BundleBehavior::Isolated || beh == &BundleBehavior::InlineIsolated {
+            continue;
+          }
+        }
+
+        // Scan outgoing dependencies in the asset graph for non-sync edges that point to bundle roots.
+        if let Some(asset_node_id) = asset_node_by_key.get(&asset_key) {
+          for dep_node_id in asset_graph.get_outgoing_neighbors(asset_node_id) {
+            let Some(dep) = asset_graph.get_dependency(&dep_node_id) else {
+              continue;
+            };
+
+            // Only model lazy/parallel edges (conditional is not yet handled here).
+            let edge_ty = match dep.priority {
+              Priority::Lazy => Some(BundleRootEdgeType::Lazy),
+              Priority::Parallel => Some(BundleRootEdgeType::Parallel),
+              _ => None,
+            };
+
+            let Some(edge_ty) = edge_ty else {
+              continue;
+            };
+
+            // Target assets of this dependency.
+            for target_asset_node_id in asset_graph.get_outgoing_neighbors(&dep_node_id) {
+              let Some(target_asset) = asset_graph.get_asset(&target_asset_node_id) else {
+                continue;
+              };
+              let Some(target_key) = self.assets.key_for(&target_asset.id) else {
+                continue;
+              };
+
+              if !self.bundle_roots.contains(&target_key) {
+                continue;
+              }
+
+              // Filter: match JS `bundle.bundleBehavior == null` and `!bundle.env.isIsolated()`.
+              //
+              // In JS, `bundle.bundleBehavior` is derived from the dependency or the target asset
+              // and is `null` for normal splittable bundles. For our purposes, treat any explicit
+              // bundle behavior on the dep or target asset as ineligible.
+              if dep.bundle_behavior.is_some() || target_asset.bundle_behavior.is_some() {
+                continue;
+              }
+
+              if env_is_isolated(target_asset.env.context) {
+                continue;
+              }
+
+              if target_asset.env.context != root_ctx {
+                continue;
+              }
+
+              let Some(&to_node) = self.bundle_root_graph_nodes.get(&target_key) else {
+                continue;
+              };
+
+              self.bundle_root_graph.add_edge(from_node, to_node, edge_ty);
+            }
+          }
+        }
+
+        // Traverse to sync successors.
+        for succ in self.sync_graph.neighbors_directed(n, Direction::Outgoing) {
+          queue.push_back(succ);
+        }
+      }
+    }
+
+    debug!(
+      bundle_root_nodes = self.bundle_root_graph.node_count(),
+      bundle_root_edges = self.bundle_root_graph.edge_count(),
+      "ideal graph: built bundle root graph"
+    );
+
+    Ok(())
+  }
+
+  // ----------------------------
   // Phase 6: Availability propagation
   // ----------------------------
 
-  /// Computes `ancestor_assets` per bundle using the *intersection* rule described in the doc.
+  /// Computes `ancestor_assets` for each bundle root using the JS bundler semantics.
   ///
-  /// Real-world apps nearly always produce cycles in the bundle graph, so we always run the
-  /// SCC-based algorithm.
+  /// This propagates availability down the `bundle_root_graph` (lazy/parallel edges) in
+  /// topological order, intersecting availability through all parent paths.
+  ///
+  /// If the bundle-root graph is cyclic, we fall back to SCC condensation order.
   #[instrument(level = "debug", skip_all)]
   fn compute_availability(
     &mut self,
     reachability: &Reachability,
     ideal: &mut IdealGraph,
   ) -> anyhow::Result<()> {
-    // Default: root bundles start with empty availability.
+    // Reset: start with empty availability for all bundles.
     for slot in ideal.bundles.iter_mut() {
       if let Some(bundle) = slot.as_mut() {
         bundle.ancestor_assets.clear();
       }
     }
 
-    let mut g: StableDiGraph<IdealBundleId, IdealEdgeType> = StableDiGraph::new();
-    let mut idx_by_bundle: HashMap<IdealBundleId, NodeIndex> = HashMap::new();
+    let Some(virtual_root) = self.bundle_root_graph_virtual_root else {
+      return Ok(());
+    };
 
-    for (bundle_id, _bundle) in ideal.bundles_iter() {
-      idx_by_bundle.insert(*bundle_id, g.add_node(*bundle_id));
+    // NodeIndex -> computed ancestor assets for that bundle root.
+    // Only populated for nodes we actually process.
+    let mut ancestor_by_node: HashMap<NodeIndex, RoaringBitmap> = HashMap::new();
+
+    // Initialize entries to empty ancestor set (matches JS `ancestorAssets[entry] = empty`).
+    for entry in self.entry_roots.iter().copied() {
+      if let Some(&idx) = self.bundle_root_graph_nodes.get(&entry) {
+        ancestor_by_node.insert(idx, RoaringBitmap::new());
+      }
     }
 
-    for (from, to, ty) in ideal.bundle_edges.iter().cloned() {
-      let Some(&from_idx) = idx_by_bundle.get(&from) else {
+    // Determine processing order.
+    let order: Vec<NodeIndex> = match petgraph::algo::toposort(&self.bundle_root_graph, None) {
+      Ok(o) => o,
+      Err(_) => {
+        debug!(
+          "ideal graph: bundle root graph has cycles; computing availability via SCC condensation"
+        );
+        self
+          .bundle_root_graph_scc_order()
+          .context("failed to compute SCC order for bundle root graph")?
+      }
+    };
+
+    for node in order {
+      if node == virtual_root {
+        continue;
+      }
+
+      let Some(&root_key) = self.bundle_root_graph.node_weight(node) else {
         continue;
       };
-      let Some(&to_idx) = idx_by_bundle.get(&to) else {
+
+      let bundle_id = IdealBundleId::from_asset_key(root_key);
+      let Some(bundle) = ideal.get_bundle(&bundle_id) else {
         continue;
       };
-      g.add_edge(from_idx, to_idx, ty);
+
+      // Compute `available` for this node.
+      // NOTE: we intentionally skip the bundle-group co-load step for now.
+      let mut available = if bundle.behavior == Some(BundleBehavior::Isolated)
+        || bundle.behavior == Some(BundleBehavior::InlineIsolated)
+      {
+        RoaringBitmap::new()
+      } else {
+        ancestor_by_node
+          .get(&node)
+          .cloned()
+          .unwrap_or_else(RoaringBitmap::new)
+      };
+
+      // Union in this root's own reachable assets.
+      //
+      // JS uses `reachableAssets[root]` which is the full sync-reachable set from the bundle root.
+      // In Rust we approximate this using the already-computed sync reachability bitsets: an asset
+      // is reachable from this root if the asset's reachability set contains the root's bit.
+      if let Some(&root_bit) = reachability.root_to_bit.get(&root_key) {
+        for (&asset_key, &sync_idx) in &self.asset_to_sync_node {
+          if reachability.reach_bits[sync_idx.index()].contains(root_bit) {
+            available.insert(asset_key.0);
+          }
+        }
+      }
+
+      // Persist computed ancestor assets back onto the IdealBundle.
+      if let Some(b) = ideal.get_bundle_mut(&bundle_id) {
+        b.ancestor_assets = ancestor_by_node
+          .get(&node)
+          .cloned()
+          .unwrap_or_else(RoaringBitmap::new);
+
+        self.decision(
+          "availability",
+          super::types::DecisionKind::AvailabilityComputed {
+            bundle_root: bundle_id.as_asset_key(),
+            ancestor_assets_len: b.ancestor_assets.len() as usize,
+          },
+        );
+      }
+
+      // Propagate to children.
+      // Maintain per-parent parallel sibling availability: later parallel siblings see earlier siblings.
+      let mut parallel_availability = RoaringBitmap::new();
+
+      // Deterministic order for children to match JS behavior.
+      let mut children: Vec<(NodeIndex, BundleRootEdgeType)> = self
+        .bundle_root_graph
+        .edges_directed(node, Direction::Outgoing)
+        .map(|e| (e.target(), *e.weight()))
+        .collect();
+      children.sort_by_key(|(child, ty)| {
+        let w = self
+          .bundle_root_graph
+          .node_weight(*child)
+          .copied()
+          .unwrap_or(AssetKey(0));
+        (
+          w,
+          match ty {
+            BundleRootEdgeType::Parallel => 0u8,
+            BundleRootEdgeType::Lazy => 1u8,
+          },
+        )
+      });
+
+      for (child, edge_ty) in children {
+        if child == virtual_root {
+          continue;
+        }
+
+        let Some(&child_key) = self.bundle_root_graph.node_weight(child) else {
+          continue;
+        };
+
+        let child_bundle_id = IdealBundleId::from_asset_key(child_key);
+        let Some(child_bundle) = ideal.get_bundle(&child_bundle_id) else {
+          continue;
+        };
+
+        // Isolated bundles start fresh.
+        if child_bundle.behavior == Some(BundleBehavior::Isolated)
+          || child_bundle.behavior == Some(BundleBehavior::InlineIsolated)
+        {
+          ancestor_by_node.insert(child, RoaringBitmap::new());
+          continue;
+        }
+
+        let current_child_available = if edge_ty == BundleRootEdgeType::Parallel {
+          let mut tmp = available.clone();
+          tmp |= &parallel_availability;
+          tmp
+        } else {
+          available.clone()
+        };
+
+        // Intersect across all parents.
+        if let Some(existing) = ancestor_by_node.get_mut(&child) {
+          *existing &= &current_child_available;
+        } else {
+          ancestor_by_node.insert(child, current_child_available.clone());
+        }
+
+        // Update parallel availability for later siblings.
+        if edge_ty == BundleRootEdgeType::Parallel {
+          // Later siblings should see earlier sibling's reachable assets.
+          // Use the child's full sync-reachable set (JS `reachableAssets[child]`).
+          if let Some(&child_bit) = reachability.root_to_bit.get(&child_key) {
+            for (&asset_key, &sync_idx) in &self.asset_to_sync_node {
+              if reachability.reach_bits[sync_idx.index()].contains(child_bit) {
+                parallel_availability.insert(asset_key.0);
+              }
+            }
+          }
+          parallel_availability.insert(child_key.0);
+        }
+      }
     }
 
-    self.compute_availability_scc(&g, reachability, ideal)?;
     debug!(
       bundles = ideal.bundle_count(),
-      "ideal graph: computed availability (scc)"
+      "ideal graph: computed availability (bundle_root_graph)"
     );
+
     Ok(())
   }
 
-  /// Compute a FixedBitSet representing all assets available when a bundle loads
-  /// (its own assets + ancestor_assets).
-  fn bundle_available_bitset(&self, bundle: &IdealBundle) -> FixedBitSet {
-    bundle.all_assets_available_from_here()
-  }
+  /// Compute an ordering of `bundle_root_graph` nodes by SCC condensation (a DAG).
+  ///
+  /// This is a fallback for cycle handling when `petgraph::algo::toposort` fails.
+  fn bundle_root_graph_scc_order(&self) -> anyhow::Result<Vec<NodeIndex>> {
+    let sccs: Vec<Vec<NodeIndex>> = kosaraju_scc(&self.bundle_root_graph);
 
-  fn compute_availability_scc(
-    &mut self,
-    g: &StableDiGraph<IdealBundleId, IdealEdgeType>,
-    reachability: &Reachability,
-    ideal: &mut IdealGraph,
-  ) -> anyhow::Result<()> {
-    // `kosaraju_scc` returns SCCs as lists of nodes.
-    let sccs: Vec<Vec<NodeIndex>> = kosaraju_scc(g);
-
-    // Precompute sync-reachable assets per SCC (from the SCC's bundle roots), without allocating
-    // a full asset bitset per root. We instead build a Vec of asset indices per SCC in one pass
-    // over all assets, then insert those indices when computing `scc_available`.
-    //
-    // This avoids the previous `HashMap<root, FixedBitSet>` precompute which allocated one
-    // `FixedBitSet` per root (e.g. 7k roots × 60k assets).
-
-    // Map node -> scc index.
     let mut scc_of: HashMap<NodeIndex, usize> = HashMap::new();
     for (i, scc) in sccs.iter().enumerate() {
       for &n in scc {
@@ -689,62 +1006,11 @@ impl IdealGraphBuilder {
       }
     }
 
-    // Map each root bit (bundle root asset key) to the SCC index that contains that bundle.
-    // Note: isolated bundles are excluded from this availability union.
-    let mut root_bit_to_scc: Vec<Option<usize>> = vec![None; reachability.roots.len()];
-    for (scc_idx, scc) in sccs.iter().enumerate() {
-      for &bundle_node in scc {
-        let Some(bundle_id) = g.node_weight(bundle_node) else {
-          continue;
-        };
-        let Some(bundle) = ideal.get_bundle(bundle_id) else {
-          continue;
-        };
-        if bundle.behavior == Some(BundleBehavior::Isolated)
-          || bundle.behavior == Some(BundleBehavior::InlineIsolated)
-        {
-          continue;
-        }
-        let Some(root_asset_id) = &bundle.root_asset_id else {
-          continue;
-        };
-        let Some(root_key) = ideal.assets.key_for(root_asset_id) else {
-          continue;
-        };
-        let Some(&root_bit) = reachability.root_to_bit.get(&root_key) else {
-          continue;
-        };
-        root_bit_to_scc[root_bit] = Some(scc_idx);
-      }
-    }
-
-    // Precompute, for each SCC, which assets are sync-reachable from *any* bundle root in that SCC.
-    // Stored as a Vec of asset indices to avoid allocating large per-root bitsets.
-    let mut sync_reachable_assets_by_scc: Vec<Vec<usize>> = vec![Vec::new(); sccs.len()];
-    for (&asset_key, &sync_idx) in &self.asset_to_sync_node {
-      let bits = &reachability.reach_bits[sync_idx.index()];
-      if bits.is_empty() {
-        continue;
-      }
-
-      // Ensure each asset is only pushed once per SCC even if multiple roots in that SCC reach it.
-      // Most assets are reached by only a few roots, so a small temporary bitset is fine here.
-      let mut seen_sccs = FixedBitSet::with_capacity(sccs.len());
-      for root_bit in bits.ones() {
-        if let Some(scc_idx) = root_bit_to_scc.get(root_bit).and_then(|x| *x) {
-          if !seen_sccs.contains(scc_idx) {
-            sync_reachable_assets_by_scc[scc_idx].push(asset_key.0 as usize);
-            seen_sccs.insert(scc_idx);
-          }
-        }
-      }
-    }
-
-    // Build SCC DAG: nodes are SCC indices.
+    // Build SCC DAG.
     let mut scc_graph: StableDiGraph<usize, ()> = StableDiGraph::new();
     let scc_nodes: Vec<NodeIndex> = (0..sccs.len()).map(|i| scc_graph.add_node(i)).collect();
 
-    for e in g.edge_references() {
+    for e in self.bundle_root_graph.edge_references() {
       let a = e.source();
       let b = e.target();
       let sa = scc_of[&a];
@@ -754,94 +1020,32 @@ impl IdealGraphBuilder {
       }
     }
 
-    // Condensation graph is a DAG.
-    let scc_order = match petgraph::algo::toposort(&scc_graph, None) {
-      Ok(o) => o,
-      Err(_) => {
-        // Condensation graph should always be acyclic.
-        anyhow::bail!("SCC condensation graph unexpectedly cyclic");
-      }
-    };
+    let scc_order = petgraph::algo::toposort(&scc_graph, None).map_err(|cycle| {
+      anyhow::anyhow!(
+        "bundle_root_graph SCC condensation graph unexpectedly cyclic (cycle at {:?})",
+        cycle.node_id()
+      )
+    })?;
 
-    let capacity = self.assets.len();
-
-    // Compute an "available set" per SCC as FixedBitSet.
-    let mut available_for_scc: Vec<FixedBitSet> =
-      vec![FixedBitSet::with_capacity(capacity); sccs.len()];
-
+    // Flatten SCCs in topo order, with deterministic ordering within SCC.
+    let mut out: Vec<NodeIndex> = Vec::new();
     for scc_node in scc_order {
       let scc_idx = *scc_graph
         .node_weight(scc_node)
         .context("SCC node missing")?;
 
-      // Parents are other SCCs.
-      let parents: Vec<usize> = scc_graph
-        .neighbors_directed(scc_node, Direction::Incoming)
-        .filter_map(|p| scc_graph.node_weight(p).copied())
-        .collect();
-
-      let mut availability: Option<FixedBitSet> = None;
-      for p in parents {
-        let parent_bits = available_for_scc[p].clone();
-        availability = Some(match availability {
-          None => parent_bits,
-          Some(mut prev) => {
-            prev.intersect_with(&parent_bits);
-            prev
-          }
-        });
-      }
-      let availability_bs = availability.unwrap_or_else(|| FixedBitSet::with_capacity(capacity));
-
-      // Assign availability to each bundle in the SCC.
-      for &bundle_node in &sccs[scc_idx] {
-        let bundle_id = g
-          .node_weight(bundle_node)
-          .cloned()
-          .context("bundle node missing")?;
-
-        let bundle = ideal.get_bundle_mut(&bundle_id).context("bundle missing")?;
-
-        if bundle.behavior == Some(BundleBehavior::Isolated)
-          || bundle.behavior == Some(BundleBehavior::InlineIsolated)
-        {
-          bundle.ancestor_assets.clear();
-        } else {
-          bundle.ancestor_assets = availability_bs.clone();
-        }
-
-        self.decision(
-          "availability",
-          super::types::DecisionKind::AvailabilityComputed {
-            bundle_root: bundle_id.as_asset_key(),
-            ancestor_assets_len: bundle.ancestor_assets.count_ones(..),
-          },
-        );
-      }
-
-      // After we assign ancestor assets for SCC, compute what becomes available to children SCCs.
-      // We conservatively use the union of all assets available from bundles in this SCC.
-      let mut scc_available = FixedBitSet::with_capacity(capacity);
-
-      for &bundle_node in &sccs[scc_idx] {
-        let bundle_id = g
-          .node_weight(bundle_node)
-          .cloned()
-          .context("bundle node missing")?;
-        if let Some(b) = ideal.get_bundle(&bundle_id) {
-          scc_available.union_with(&self.bundle_available_bitset(b));
-        }
-      }
-
-      // Also include sync-reachable assets from each bundle root in the SCC.
-      for idx in &sync_reachable_assets_by_scc[scc_idx] {
-        scc_available.insert(*idx);
-      }
-
-      available_for_scc[scc_idx] = scc_available;
+      let mut members = sccs[scc_idx].clone();
+      members.sort_by_key(|n| {
+        self
+          .bundle_root_graph
+          .node_weight(*n)
+          .copied()
+          .unwrap_or(AssetKey(0))
+      });
+      out.extend(members);
     }
 
-    Ok(())
+    Ok(out)
   }
 
   // ----------------------------
@@ -1089,6 +1293,25 @@ impl IdealGraphBuilder {
         .filter(|r| !self.entry_like_roots.contains(r))
         .collect();
 
+      // Availability filtering (JS Insert Or Share semantics):
+      // If this asset is already available from *all* reaching roots (via ancestor bundles),
+      // it doesn't need to be placed anywhere.
+      let available_roots: HashSet<AssetKey> = reaching_entry_like
+        .iter()
+        .copied()
+        .chain(splittable_roots.iter().copied())
+        .filter(|root| {
+          root_bundle_ids
+            .get(root)
+            .and_then(|id| ideal.get_bundle(id))
+            .is_some_and(|b| b.ancestor_assets.contains(asset_key.0))
+        })
+        .collect();
+
+      if available_roots.len() == reaching_entry_like.len() + splittable_roots.len() {
+        continue;
+      }
+
       // Duplicate asset into ALL reaching entry-like bundles (matching JS algorithm).
       // Each entry-like bundle must independently contain every sync-reachable asset
       // because they can be loaded in isolation.
@@ -1096,6 +1319,11 @@ impl IdealGraphBuilder {
       // If the asset's file type differs from the bundle's type (e.g. CSS asset in JS bundle),
       // redirect it into a type-change sibling bundle keyed by (root, file_type).
       for &root in &reaching_entry_like {
+        // Skip if already available from an ancestor of this root.
+        if available_roots.contains(&root) {
+          continue;
+        }
+
         let bundle_id = &root_bundle_ids[&root];
         let target_bundle_id =
           self.resolve_type_change_target(asset_key, root, bundle_id, ideal)?;
@@ -1115,9 +1343,14 @@ impl IdealGraphBuilder {
         );
       }
 
-      // Track canonical bundle assignment (smallest entry-like for determinism).
-      if !reaching_entry_like.is_empty() {
-        let canonical = reaching_entry_like.iter().copied().min().unwrap();
+      // Track canonical bundle assignment (smallest *placed* entry-like for determinism).
+      // If all entry-like roots already have the asset available, we skip canonical assignment here.
+      if let Some(canonical) = reaching_entry_like
+        .iter()
+        .copied()
+        .filter(|r| !available_roots.contains(r))
+        .min()
+      {
         let parent_bundle_id = root_bundle_ids[&canonical];
         let canonical_bundle_id =
           self.resolve_type_change_target(asset_key, canonical, &parent_bundle_id, ideal)?;
@@ -1140,13 +1373,24 @@ impl IdealGraphBuilder {
         continue;
       }
 
-      if splittable_roots.len() > 1 {
-        // Multi-root asset with no entry-like roots -> deferred to Phase 8.
+      // After availability filtering, some roots may be removed because the asset is already
+      // available via ancestor bundles. If that reduces the eligible splittable roots to 1,
+      // JS will insert the asset into that single remaining root rather than creating a
+      // shared bundle.
+      let eligible_splittable_roots: Vec<AssetKey> = splittable_roots
+        .iter()
+        .copied()
+        .filter(|r| !available_roots.contains(r))
+        .collect();
+
+      if eligible_splittable_roots.len() > 1 {
+        // Multi-root asset with no entry-like roots -> deferred to Phase 8/9 (shared bundles).
         continue;
-      } else if splittable_roots.len() == 1 {
-        // Single splittable root -> place directly.
+      } else if eligible_splittable_roots.len() == 1 {
+        // Single eligible splittable root after availability filtering -> place directly.
         // If file types differ, redirect to a type-change sibling bundle.
-        let root = splittable_roots[0];
+        let root = eligible_splittable_roots[0];
+
         let bundle_id = &root_bundle_ids[&root];
         let target_bundle_id =
           self.resolve_type_change_target(asset_key, root, bundle_id, ideal)?;
@@ -1237,7 +1481,7 @@ impl IdealGraphBuilder {
       bundle_type: file_type,
       needs_stable_name: false,
       behavior: None,
-      ancestor_assets: FixedBitSet::with_capacity(self.assets.len()),
+      ancestor_assets: RoaringBitmap::new(),
     })?;
 
     // Add a sync edge from the parent bundle to the sibling.
@@ -1266,9 +1510,11 @@ impl IdealGraphBuilder {
     reachability: &Reachability,
     ideal: &mut IdealGraph,
   ) -> anyhow::Result<()> {
+    // Match JS bundler default: only create a shared bundle if an asset is reachable
+    // from more than 1 eligible root.
+
     // Precompute bundle ids for all known bundle roots once.
     //
-    // This avoids repeated `self.assets.id_for(root).to_string()` allocations in hot loops.
     // Include reachability roots because some may have been removed from `bundle_roots`
     // during internalization but still appear in the reachability data.
     let root_bundle_ids: HashMap<AssetKey, IdealBundleId> = self
@@ -1280,29 +1526,6 @@ impl IdealGraphBuilder {
       .collect();
 
     let mut eligible_roots_by_asset: HashMap<AssetKey, Vec<AssetKey>> = HashMap::new();
-
-    // Precompute bundle-edge lookups for Check 2 (subgraph reuse).
-    // Map: from_bundle -> {to_bundle} (excluding parallel edges)
-    let mut edge_targets: HashMap<IdealBundleId, HashSet<IdealBundleId>> = HashMap::new();
-
-    // Precompute parallel-edge lookups for Check 3 (parallel sibling availability).
-    // Map: parent_bundle -> {parallel_child_bundle}
-    let mut parallel_children: HashMap<IdealBundleId, HashSet<IdealBundleId>> = HashMap::new();
-    // Map: parallel_child_bundle -> [parent_bundle]
-    let mut parallel_parents_by_child: HashMap<IdealBundleId, Vec<IdealBundleId>> = HashMap::new();
-
-    for (from, to, ty) in &ideal.bundle_edges {
-      if *ty != IdealEdgeType::Parallel {
-        edge_targets.entry(*from).or_default().insert(*to);
-      }
-      if *ty == IdealEdgeType::Parallel {
-        parallel_children.entry(*from).or_default().insert(*to);
-        parallel_parents_by_child
-          .entry(*to)
-          .or_default()
-          .push(*from);
-      }
-    }
 
     let sync_nodes: Vec<(AssetKey, NodeIndex)> = self
       .asset_to_sync_node
@@ -1316,168 +1539,47 @@ impl IdealGraphBuilder {
         continue;
       }
 
+      // Bundle roots are already handled as bundles (unless they were internalized and removed
+      // from `bundle_roots`, in which case they'll be treated as regular assets here).
       if self.bundle_roots.contains(&asset_key) {
         continue;
       }
 
-      // If this asset is reachable from any entry root, Phase 7 already duplicated it into
-      // the entry bundle(s) and intentionally avoided placing it into splittable roots.
-      // In that case, no shared bundle extraction is needed.
-      if bs
+      // Compute reachable splittable roots.
+      let mut reachable: Vec<AssetKey> = bs
         .ones()
         .map(|i| reachability.roots[i])
-        .any(|r| self.entry_roots.contains(&r))
-      {
+        .filter(|r| !self.entry_like_roots.contains(r))
+        .collect();
+
+      reachable.sort();
+      reachable.dedup();
+
+      // Availability filtering (JS Insert Or Share semantics):
+      // roots where the asset is already available via `ancestor_assets[root]` are removed.
+      let mut eligible: Vec<AssetKey> = reachable
+        .into_iter()
+        .filter(|root| {
+          root_bundle_ids
+            .get(root)
+            .and_then(|id| ideal.get_bundle(id))
+            .is_none_or(|b| !b.ancestor_assets.contains(asset_key.0))
+        })
+        .collect();
+
+      eligible.sort();
+      eligible.dedup();
+
+      if eligible.len() <= 1 {
+        // JS: if reachableArray.length <= 1, no shared bundle is created.
+        // - eligible == 0: available everywhere
+        // - eligible == 1: the asset is unique to a single root after filtering; no sharing needed
+        // Placement into a single root should already have happened in Phase 7.
         continue;
       }
 
-      // Only process multi-root assets (those skipped in Phase 7).
-      // Avoid allocating a Vec unless the asset is truly multi-root.
-      let mut first: Option<AssetKey> = None;
-      let mut second: Option<AssetKey> = None;
-      let mut extra: Vec<AssetKey> = Vec::new();
-
-      for r in bs.ones().map(|i| reachability.roots[i]) {
-        if self.entry_like_roots.contains(&r) {
-          continue;
-        }
-
-        match (first, second) {
-          (None, _) => first = Some(r),
-          (Some(_), None) => second = Some(r),
-          (Some(_), Some(_)) => extra.push(r),
-        }
-      }
-
-      let (Some(first), Some(second)) = (first, second) else {
-        continue; // Not multi-root.
-      };
-      let mut splittable_roots: Vec<AssetKey> = Vec::with_capacity(2 + extra.len());
-      splittable_roots.push(first);
-      splittable_roots.push(second);
-      splittable_roots.extend(extra);
-
-      // Deterministic ordering is relied upon by the parallel sibling availability rule.
-      splittable_roots.sort();
-      splittable_roots.dedup();
-
-      // Lookup bundle ids for roots once per asset.
-      let splittable_root_ids: Vec<(AssetKey, &IdealBundleId)> = splittable_roots
-        .iter()
-        .copied()
-        .map(|root| (root, &root_bundle_ids[&root]))
-        .collect();
-
-      // Filter by availability: only keep roots where asset is NOT already available.
-      // An asset is considered available from root R if:
-      // 1. It's in R's ancestor_assets (already in an ancestor bundle), OR
-      // 2. Another root in the reachable set is an ancestor of R (the asset will
-      //    be placed in that ancestor's bundle, making it available via bundle reuse).
-      //
-      // Performance notes:
-      // - Check 2 (bundle reuse) is optimized from O(roots^2) to O(roots) by precomputing a
-      //   set of all splittable root bundle ids and doing set membership checks.
-      // - Check 3 (parallel sibling) is optimized similarly by incrementally tracking bundle
-      //   ids for earlier roots (roots are deterministically sorted).
-      let mut earlier_sibling_bundle_ids: HashSet<&IdealBundleId> = HashSet::new();
-
-      let mut eligible: Vec<AssetKey> = Vec::new();
-      for (root, bundle_id) in &splittable_root_ids {
-        let Some(bundle) = ideal.get_bundle(bundle_id) else {
-          // Still treat this root as an "earlier sibling" for subsequent roots.
-          earlier_sibling_bundle_ids.insert(*bundle_id);
-          continue;
-        };
-
-        // Check 1: standard availability.
-        if bundle.ancestor_assets.contains(asset_key.0 as usize) {
-          earlier_sibling_bundle_ids.insert(*bundle_id);
-          continue;
-        }
-
-        // Check 2: bundle reuse / subgraph detection.
-        //
-        // If this root has a (non-parallel) bundle edge to an *earlier* reachable root, it can
-        // reuse that earlier bundle rather than extracting a shared bundle. Using "earlier" is
-        // important: it prevents incorrectly eliminating an ancestor root that points to a
-        // lazy child (e.g. page -> lazy dialog) where the asset should remain placed in the
-        // ancestor bundle.
-        let available_via_reuse = edge_targets.get(*bundle_id).is_some_and(|targets| {
-          targets.iter().any(|t| {
-            if t == *bundle_id || !earlier_sibling_bundle_ids.contains(t) {
-              return false;
-            }
-
-            // If the target bundle already has the asset available via its ancestors,
-            // it likely won't need the asset placed within it. In that case, do not
-            // treat this as a reusable path for the asset.
-            if let Some(target_bundle) = ideal.get_bundle(t)
-              && target_bundle.ancestor_assets.contains(asset_key.0 as usize)
-            {
-              return false;
-            }
-
-            true
-          })
-        });
-
-        if available_via_reuse {
-          earlier_sibling_bundle_ids.insert(*bundle_id);
-          continue;
-        }
-
-        // Check 3: parallel sibling availability.
-        // If this root has a parallel sibling that also reaches the asset and
-        // comes before it in deterministic ordering, the asset will be placed
-        // in the earlier sibling's bundle and available via parallel loading.
-        let available_via_parallel = parallel_parents_by_child
-          .get(*bundle_id)
-          .into_iter()
-          .flatten()
-          .any(|parent| {
-            parallel_children.get(parent).is_some_and(|children| {
-              children
-                .iter()
-                .any(|child| earlier_sibling_bundle_ids.contains(child))
-            })
-          });
-
-        if available_via_parallel {
-          earlier_sibling_bundle_ids.insert(*bundle_id);
-          continue;
-        }
-
-        eligible.push(*root);
-        earlier_sibling_bundle_ids.insert(*bundle_id);
-      }
-
-      if eligible.len() > 1 {
-        eligible.sort();
-        eligible.dedup();
-        eligible_roots_by_asset.insert(asset_key, eligible);
-      } else if eligible.len() == 1 {
-        // Availability reduced to single root -> place directly.
-        // If file types differ, redirect to a type-change sibling bundle.
-        let root = eligible[0];
-        let bundle_id = &root_bundle_ids[&root];
-        let target_bundle_id =
-          self.resolve_type_change_target(asset_key, root, bundle_id, ideal)?;
-        let bundle = ideal
-          .get_bundle_mut(&target_bundle_id)
-          .context("bundle missing for single-eligible placement")?;
-        bundle.assets.insert(asset_key.0 as usize);
-        ideal.move_asset_to_bundle(asset_key, &target_bundle_id)?;
-        self.decision(
-          "placement",
-          super::types::DecisionKind::AssetAssignedToBundle {
-            asset: asset_key,
-            bundle_root: root,
-            reason: super::types::AssetAssignmentReason::SingleEligibleRoot,
-          },
-        );
-      } else {
-        // available from all roots -> no placement needed.
-      }
+      // Eligible roots set becomes the grouping key.
+      eligible_roots_by_asset.insert(asset_key, eligible);
     }
 
     if eligible_roots_by_asset.is_empty() {
@@ -1537,7 +1639,7 @@ impl IdealGraphBuilder {
         bundle_type,
         needs_stable_name: false,
         behavior: None,
-        ancestor_assets: FixedBitSet::with_capacity(self.assets.len()),
+        ancestor_assets: RoaringBitmap::new(),
       })?;
 
       self.decision(
@@ -1814,7 +1916,7 @@ impl IdealGraphBuilder {
         };
 
         let in_bundle = parent_bundle.assets.contains(root_key.0 as usize);
-        let in_ancestors = parent_bundle.ancestor_assets.contains(root_key.0 as usize);
+        let in_ancestors = parent_bundle.ancestor_assets.contains(root_key.0);
 
         let reachable_from_parent = if !in_bundle && !in_ancestors {
           // The JS algorithm considers an async bundle redundant if the async root is already
@@ -1924,7 +2026,7 @@ impl IdealGraphBuilder {
 
       if let Some(bundle) = ideal.get_bundle(&id)
         && (bundle.assets.contains(asset_key.0 as usize)
-          || bundle.ancestor_assets.contains(asset_key.0 as usize))
+          || bundle.ancestor_assets.contains(asset_key.0))
       {
         return true;
       }

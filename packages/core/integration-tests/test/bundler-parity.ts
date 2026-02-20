@@ -132,6 +132,46 @@ describe.v3('bundler parity (js vs native)', function () {
     await compareBundlers(fixtureName, entryFile);
   });
 
+  it('Entry-reachable asset shared by async roots', async function () {
+    const fixtureName = 'bundler-parity-entry-reachable-shared-async-roots';
+    const entryFile = 'index.js';
+
+    await fsFixture(overlayFS, __dirname)`
+      ${fixtureName}
+        ${entryFile}:
+          import shared from './shared-util.js';
+          import('./page-a.js');
+          import('./page-b.js');
+          export default shared;
+
+        shared-util.js:
+          export default 'shared';
+
+        page-a.js:
+          import shared from './shared-util.js';
+          export default shared + '-a';
+
+        page-b.js:
+          import shared from './shared-util.js';
+          export default shared + '-b';
+
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "minBundles": 1,
+              "minBundleSize": 0,
+              "maxParallelRequests": 99999
+            }
+          }
+        yarn.lock:
+    `;
+
+    // Parity check: expected to FAIL today (AFB-1794): JS bundler will consider sharing
+    // `shared-util.js` across async roots even though it's sync-reachable from the entry,
+    // while the native bundler currently skips it due to an entry-reachable shortcut.
+    await compareBundlers(fixtureName, entryFile);
+  });
+
   it('Diamond dependency: Entry → async A, async B → both import shared C and D', async function () {
     const fixtureName = 'bundler-parity-diamond';
     const entryFile = `${fixtureName}-index.js`;

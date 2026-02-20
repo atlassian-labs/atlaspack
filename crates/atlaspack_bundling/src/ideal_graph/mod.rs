@@ -639,7 +639,7 @@ impl Bundler for IdealGraphBundler {
           // Type-change sibling bundles are loaded as siblings of their parent bundle,
           // so they must still contain their own assets even if those assets are also
           // considered "available" via availability propagation.
-          if !is_type_change_bundle && ideal_bundle.ancestor_assets.contains(key_idx) {
+          if !is_type_change_bundle && ideal_bundle.ancestor_assets.contains(key_idx as u32) {
             continue;
           }
 
@@ -1579,8 +1579,51 @@ mod tests {
   }
 
   #[test]
-  fn creates_shared_bundle_for_asset_needed_by_multiple_async_roots() {
+  fn creates_shared_bundle_for_asset_needed_by_more_than_two_async_roots() {
+    // entry -> lazy a, lazy b, lazy c; all three sync-import react.
+    //
+    // Shared bundles should only be created when an asset is reachable from > 2 eligible roots
+    // (matching JS default `minBundles = 2`).
+    let asset_graph = fixture_graph(
+      &["entry.js"],
+      &[
+        EdgeSpec::new("entry.js", "a.js", Priority::Lazy),
+        EdgeSpec::new("entry.js", "b.js", Priority::Lazy),
+        EdgeSpec::new("entry.js", "c.js", Priority::Lazy),
+        EdgeSpec::new("a.js", "react.js", Priority::Sync),
+        EdgeSpec::new("b.js", "react.js", Priority::Sync),
+        EdgeSpec::new("c.js", "react.js", Priority::Sync),
+      ],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js"],
+        "a.js"     => ["a.js"],
+        "b.js"     => ["b.js"],
+        "c.js"     => ["c.js"],
+        shared(react) => ["react.js"],
+      },
+      edges: {
+        "entry.js" lazy "a.js",
+        "entry.js" lazy "b.js",
+        "entry.js" lazy "c.js",
+        "a.js" sync shared(react),
+        "b.js" sync shared(react),
+        "c.js" sync shared(react),
+      },
+    });
+  }
+
+  #[test]
+  fn creates_shared_bundle_for_asset_needed_by_exactly_two_async_roots() {
     // entry -> lazy a, lazy b; both a and b sync-import react
+    //
+    // With JS default `minBundles = 1`, this SHOULD create a shared bundle.
+    // `react.js` is extracted into a shared bundle referenced by both async bundles.
     let asset_graph = fixture_graph(
       &["entry.js"],
       &[
@@ -1622,8 +1665,8 @@ mod tests {
     // comp-x  -> sync comp-y   (sync edge to a boundary!)
     // comp-y  -> sync lib-z
     //
-    // Expected: comp-x and lib-z are reachable from BOTH route roots, so they should be
-    // extracted into a shared bundle referenced by both route bundles.
+    // With JS default `minBundles = 1`, assets reachable from exactly two eligible roots are
+    // extracted into a shared bundle.
     //
     // Note: comp-y is an async bundle root (lazy boundary) that is internalized.
     // The internalized bundle still exists in the ideal graph, but can be empty.
@@ -1649,15 +1692,15 @@ mod tests {
         "route-1.js"  => ["route-1.js"],
         "route-2.js"  => ["route-2.js"],
         "comp-y.js"   => [],
-        shared(libz) => ["comp-x.js", "comp-y.js", "lib-z.js"],
+        shared(shared) => ["comp-x.js", "comp-y.js", "lib-z.js"],
       },
       edges: {
         "entry.js" lazy "route-1.js",
         "entry.js" lazy "route-2.js",
         "route-1.js" lazy "comp-y.js",
         "route-2.js" sync "comp-y.js",
-        "route-1.js" sync shared(libz),
-        "route-2.js" sync shared(libz),
+        "route-1.js" sync shared(shared),
+        "route-2.js" sync shared(shared),
       },
     });
   }
@@ -2236,7 +2279,8 @@ mod tests {
 
   #[test]
   fn shared_bundle_groups_multiple_assets_for_same_root_set() {
-    // Both a and b import react + react-dom -> single shared bundle
+    // Both a and b import react + react-dom.
+    // With JS default `minBundles = 1`, this should extract a shared bundle for both assets.
     let asset_graph = fixture_graph(
       &["entry.js"],
       &[
@@ -2257,7 +2301,13 @@ mod tests {
         "entry.js" => ["entry.js"],
         "a.js"     => ["a.js"],
         "b.js"     => ["b.js"],
-        shared(vendor) => ["react.js", "react-dom.js"],
+        shared(vendor) => ["react-dom.js", "react.js"],
+      },
+      edges: {
+        "entry.js" lazy "a.js",
+        "entry.js" lazy "b.js",
+        "a.js" sync shared(vendor),
+        "b.js" sync shared(vendor),
       },
     });
   }
@@ -2309,7 +2359,10 @@ mod tests {
   #[test]
   fn two_different_root_sets_create_two_shared_bundles() {
     // entry -> lazy a,b,c
-    // a,b share x ; b,c share y — two separate shared bundles
+    // a,b share x ; b,c share y
+    //
+    // With JS default `minBundles = 1`, both x and y should be extracted into shared bundles
+    // (one per root set).
     let asset_graph = fixture_graph(
       &["entry.js"],
       &[
@@ -2332,22 +2385,34 @@ mod tests {
         "a.js"     => ["a.js"],
         "b.js"     => ["b.js"],
         "c.js"     => ["c.js"],
-        shared(x) => ["x.js"],
-        shared(y) => ["y.js"],
+        shared(x)  => ["x.js"],
+        shared(y)  => ["y.js"],
+      },
+      edges: {
+        "entry.js" lazy "a.js",
+        "entry.js" lazy "b.js",
+        "entry.js" lazy "c.js",
+        "a.js" sync shared(x),
+        "b.js" sync shared(x),
+        "b.js" sync shared(y),
+        "c.js" sync shared(y),
       },
     });
   }
 
   #[test]
   fn shared_bundle_edges_are_deduped() {
-    // Same as shared bundle test — verify only one edge from entry to shared
+    // Verify bundle edges are deduped when creating a shared bundle.
+    // Use 3 roots so a shared bundle is actually created under `minBundles = 2`.
     let asset_graph = fixture_graph(
       &["entry.js"],
       &[
         EdgeSpec::new("entry.js", "a.js", Priority::Lazy),
         EdgeSpec::new("entry.js", "b.js", Priority::Lazy),
+        EdgeSpec::new("entry.js", "c.js", Priority::Lazy),
         EdgeSpec::new("a.js", "react.js", Priority::Sync),
         EdgeSpec::new("b.js", "react.js", Priority::Sync),
+        EdgeSpec::new("c.js", "react.js", Priority::Sync),
       ],
     );
 
@@ -2359,13 +2424,16 @@ mod tests {
         "entry.js" => ["entry.js"],
         "a.js"     => ["a.js"],
         "b.js"     => ["b.js"],
+        "c.js"     => ["c.js"],
         shared(react) => ["react.js"],
       },
       edges: {
         "entry.js" lazy "a.js",
         "entry.js" lazy "b.js",
+        "entry.js" lazy "c.js",
         "a.js" sync shared(react),
         "b.js" sync shared(react),
+        "c.js" sync shared(react),
       },
     });
   }
@@ -2598,7 +2666,7 @@ mod tests {
     assert_graph!(g, {
       bundles: {
         "entry.js" => ["entry.js"],
-        "route-1.js" => ["comp-x.js", "comp-y.js", "lib-z.js", "route-1.js"],
+        "route-1.js" => ["comp-x.js", "lib-z.js", "route-1.js"],
         "comp-y.js" => [],
       },
       edges: {
@@ -2617,6 +2685,8 @@ mod tests {
     //
     // c.js is an async boundary from both a and b, but it's NOT available
     // from the entry bundle. The async bundle for c should NOT be internalized.
+    //
+    // With JS default `minBundles = 1`, c.js should be extracted into a shared bundle referenced by both a and b.
     let asset_graph = fixture_graph(
       &["entry.js"],
       &[
@@ -2630,13 +2700,18 @@ mod tests {
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
     let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
-    // c.js should be in a shared bundle, not internalized.
     assert_graph!(g, {
       bundles: {
         "entry.js" => ["entry.js"],
         "a.js" => ["a.js"],
         "b.js" => ["b.js"],
         shared(c) => ["c.js"],
+      },
+      edges: {
+        "entry.js" lazy "a.js",
+        "entry.js" lazy "b.js",
+        "a.js" sync shared(c),
+        "b.js" sync shared(c),
       },
     });
   }
@@ -2666,13 +2741,16 @@ mod tests {
     assert_graph!(g, {
       bundles: {
         "entry.js" => ["entry.js"],
-        "a.js"     => ["a.js", "x.js"],
+        "a.js"     => ["a.js"],
         "b.js"     => ["b.js"],
+        shared(x)  => ["x.js"],
       },
       edges: {
         "entry.js" lazy "a.js",
         "entry.js" lazy "b.js",
         "b.js" lazy "a.js",
+        "a.js" sync shared(x),
+        "b.js" sync shared(x),
       },
     });
   }
@@ -2785,6 +2863,10 @@ mod tests {
         "entry.js" => ["entry.js"],
         "a.js"     => ["a.js", "shared.js"],
         "b.js"     => ["b.js"],
+      },
+      edges: {
+        "entry.js" parallel "b.js",
+        "entry.js" parallel "a.js",
       },
     });
   }
@@ -3006,7 +3088,9 @@ mod tests {
 
   #[test]
   fn many_async_roots_with_overlapping_shared_subsets() {
-    // 4 async roots with pairwise-shared modules creating 4 distinct shared bundles
+    // 4 async roots with pairwise-shared modules.
+    // With JS default `minBundles = 1`, each pairwise-shared module should be extracted into a
+    // shared bundle (one per root set).
     let asset_graph = fixture_graph(
       &["entry.js"],
       &[
@@ -3078,8 +3162,10 @@ mod tests {
       &[
         EdgeSpec::new(entry, a, Priority::Lazy),
         EdgeSpec::new(entry, b, Priority::Lazy),
+        EdgeSpec::new(entry, "5555555555555555.js", Priority::Lazy),
         EdgeSpec::new(a, shared, Priority::Sync),
         EdgeSpec::new(b, shared, Priority::Sync),
+        EdgeSpec::new("5555555555555555.js", shared, Priority::Sync),
         EdgeSpec::new(shared, locale, Priority::Lazy),
       ],
     );

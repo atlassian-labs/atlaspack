@@ -19,6 +19,7 @@ use atlaspack_core::{
   types::{MaybeBundleBehavior, Priority},
 };
 use fixedbitset::FixedBitSet;
+use roaring::RoaringBitmap;
 
 /// Configuration knobs for the ideal graph build/analysis.
 ///
@@ -238,6 +239,15 @@ pub enum IdealEdgeType {
   Conditional,
 }
 
+/// Edge classification between bundle *root assets*.
+///
+/// This matches the JS bundler's `bundleRootGraph` edge types.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum BundleRootEdgeType {
+  Lazy,
+  Parallel,
+}
+
 /// Stable bundle identifier used within the ideal graph.
 ///
 /// This is the compact numeric key backing the bundle id string.
@@ -284,16 +294,18 @@ pub struct IdealBundle {
   /// In the doc, this is computed using the *intersection* rule across parent paths.
   ///
   /// Indexed by `AssetKey.0 as usize`.
-  pub ancestor_assets: FixedBitSet,
+  pub ancestor_assets: RoaringBitmap,
 }
 
 impl IdealBundle {
   /// Convenience: assets available at runtime when this bundle loads.
   ///
   /// In the doc this can include additional sets (e.g. bundle-group/parallel bundles).
-  pub fn all_assets_available_from_here(&self) -> FixedBitSet {
+  pub fn all_assets_available_from_here(&self) -> RoaringBitmap {
     let mut result = self.ancestor_assets.clone();
-    result.union_with(&self.assets);
+    for idx in self.assets.ones() {
+      result.insert(idx as u32);
+    }
     result
   }
 }
