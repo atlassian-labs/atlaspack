@@ -140,7 +140,8 @@ mod utils_traversers_types;
 #[path = "utils/types.rs"]
 mod utils_types;
 
-pub use errors::{TransformError, TransformResult};
+pub use atlaspack_core::types::Diagnostic;
+pub use errors::{TransformResult, create_diagnostic, diagnostic_from_panic};
 pub use index_module::*;
 pub use postcss::{SortOptions, sort_atomic_style_sheet};
 pub use types::*;

@@ -5,11 +5,12 @@ use swc_core::{common::comments::SingleThreadedComments, ecma::ast::Program};
 
 use crate::DEFAULT_IMPORT_SOURCES;
 pub use crate::babel_plugin::CompiledCssInJsTransform;
-pub use crate::errors::{TransformError, init_panic_suppression};
+use crate::errors::{diagnostic_from_panic, init_panic_suppression};
 #[allow(unused_imports)]
 pub use crate::types::{
   CacheBehavior, PluginOptions, ResolverOption, TransformFile, TransformMetadata, TransformOutput,
 };
+use atlaspack_core::types::Diagnostic;
 
 /// Entry point mirroring `packages/babel-plugin/src/index.ts`.
 ///
@@ -19,7 +20,7 @@ pub use crate::types::{
 pub fn transform(
   program: Program,
   options: PluginOptions,
-) -> Result<TransformOutput, Vec<TransformError>> {
+) -> Result<TransformOutput, Vec<Diagnostic>> {
   // Suppress panic output so errors are only reported as diagnostics
   init_panic_suppression();
 
@@ -32,7 +33,7 @@ pub fn transform(
 
     TransformOutput { program, metadata }
   }))
-  .map_err(|panic_payload| vec![TransformError::from_panic(panic_payload)])
+  .map_err(|panic_payload| vec![diagnostic_from_panic(panic_payload)])
 }
 
 /// Entry point that allows callers to provide file metadata before running the transform.
@@ -44,7 +45,7 @@ pub fn transform_with_file(
   program: Program,
   file: TransformFile,
   options: PluginOptions,
-) -> Result<TransformOutput, Vec<TransformError>> {
+) -> Result<TransformOutput, Vec<Diagnostic>> {
   // Suppress panic output so errors are only reported as diagnostics
   init_panic_suppression();
 
@@ -64,7 +65,7 @@ pub fn transform_with_file(
 
     TransformOutput { program, metadata }
   }))
-  .map_err(|panic_payload| vec![TransformError::from_panic(panic_payload)])
+  .map_err(|panic_payload| vec![diagnostic_from_panic(panic_payload)])
 }
 
 pub fn should_run_compiled_css_in_js_transform(code: &str, options: PluginOptions) -> bool {
@@ -184,13 +185,13 @@ mod tests {
 
   #[test]
   fn test_panic_payload_conversion_to_error() {
-    // This test verifies that panic payloads are properly converted to TransformError
+    // This test verifies that panic payloads are properly converted to Diagnostic
 
     // Test with a String panic payload
     let panic_str = "test panic message".to_string();
     let payload: Box<dyn std::any::Any + Send> = Box::new(panic_str);
-    let error = TransformError::from_panic(payload);
+    let diagnostic = diagnostic_from_panic(payload);
 
-    assert!(error.message.contains("test panic message"));
+    assert!(diagnostic.message.contains("test panic message"));
   }
 }

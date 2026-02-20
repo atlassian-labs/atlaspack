@@ -5,7 +5,7 @@ use swc_core::ecma::ast::{
 };
 
 use crate::types::{Metadata, Tag, TagType};
-use crate::utils_ast::build_code_frame_error;
+
 use crate::utils_build_display_name::build_display_name;
 use crate::utils_build_styled_component::build_styled_component;
 use crate::utils_css_builders::build_css as build_css_from_expr;
@@ -237,10 +237,9 @@ fn has_invalid_expression(node: &TaggedTpl) -> bool {
   false
 }
 
-fn panic_invalid_expression(span: Span, meta: &Metadata) -> ! {
+fn panic_invalid_expression(_span: Span, _meta: &Metadata) -> ! {
   let message = "A logical expression contains an invalid CSS declaration.\n      Compiled doesn't support CSS properties that are defined with a conditional rule that doesn't specify a default value.\n      Eg. font-weight: ${(props) => (props.isPrimary && props.isMaybe) && 'bold'}; is invalid.\n      Use ${(props) => props.isPrimary && props.isMaybe && ({ 'font-weight': 'bold' })}; instead";
-  let error = build_code_frame_error(message, Some(span), meta);
-  panic!("{error}");
+  panic!("{message}.");
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]

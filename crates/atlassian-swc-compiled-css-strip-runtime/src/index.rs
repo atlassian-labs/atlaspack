@@ -2,7 +2,7 @@ use std::panic;
 use swc_core::ecma::ast::Program;
 use swc_core::ecma::visit::VisitMutWith;
 
-use atlassian_swc_compiled_css::{TransformError, TransformResult};
+use atlassian_swc_compiled_css::{TransformResult, diagnostic_from_panic};
 
 use crate::strip_runtime::StripRuntimeTransform;
 
@@ -33,7 +33,7 @@ pub fn transform(
 ///
 /// # Error Handling
 ///
-/// Returns `Err(Vec<TransformError>)` if:
+/// Returns `Err(Vec<Diagnostic>)` if:
 /// - A panic occurs during transformation (caught via `catch_unwind`)
 /// - The transform emits recoverable errors during processing
 pub fn try_transform(
@@ -53,7 +53,7 @@ pub fn try_transform(
       Err(errors)
     }
   }))
-  .map_err(|panic_payload| vec![TransformError::from_panic(panic_payload)])
+  .map_err(|panic_payload| vec![diagnostic_from_panic(panic_payload)])
   .and_then(|result| result)
 }
 
@@ -122,13 +122,13 @@ mod tests {
 
   #[test]
   fn test_try_transform_error_handling_with_panic_payload() {
-    // This test verifies that panic payloads are properly converted to TransformError
+    // This test verifies that panic payloads are properly converted to Diagnostic
 
     // Test with a String panic payload
     let panic_str = "strip_runtime panic message".to_string();
     let payload: Box<dyn std::any::Any + Send> = Box::new(panic_str);
-    let error = TransformError::from_panic(payload);
+    let diagnostic = diagnostic_from_panic(payload);
 
-    assert!(error.message.contains("strip_runtime panic message"));
+    assert!(diagnostic.message.contains("strip_runtime panic message"));
   }
 }

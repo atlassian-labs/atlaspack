@@ -28,7 +28,7 @@ use crate::types::{
   SharedTransformState, TransformFile, TransformMetadata, TransformState,
 };
 use crate::utils_append_runtime_imports::append_runtime_imports;
-use crate::utils_ast::build_code_frame_error;
+
 use crate::utils_is_compiled::{
   is_compiled_css_call_expression, is_compiled_css_tagged_template_expression,
   is_compiled_keyframes_call_expression, is_compiled_keyframes_tagged_template_expression,
@@ -2642,12 +2642,7 @@ impl VisitMut for CssPropVisitor {
   fn visit_mut_expr(&mut self, expr: &mut Expr) {
     // Check recursion depth to prevent stack overflow from infinite loops
     if self.recursion_depth > self.max_recursion_depth {
-      let error = build_code_frame_error(
-        "AST traversal depth exceeded 500 levels - possible infinite recursion in visitor",
-        Some(expr.span()),
-        &self.meta,
-      );
-      panic!("{error}");
+      panic!("AST traversal depth exceeded 500 levels - possible infinite recursion in visitor.");
     }
 
     if std::env::var("DEBUG_VISITOR_TRACE").is_ok() {
@@ -2694,12 +2689,9 @@ impl VisitMut for CssPropVisitor {
   fn visit_mut_jsx_element(&mut self, element: &mut swc_core::ecma::ast::JSXElement) {
     // Check recursion depth to prevent stack overflow from infinite loops
     if self.recursion_depth > self.max_recursion_depth {
-      let error = build_code_frame_error(
-        "JSX element nesting depth exceeded 500 levels - possible infinite recursion in visitor",
-        Some(element.opening.span),
-        &self.meta,
+      panic!(
+        "JSX element nesting depth exceeded 500 levels - possible infinite recursion in visitor."
       );
-      panic!("{error}");
     }
 
     if std::env::var("DEBUG_VISITOR_TRACE").is_ok() {
@@ -2759,9 +2751,7 @@ impl JsxFunctionGuard {
     let message = format!(
       "Found a `jsx` function call in the Babel output where one should not have been generated. Was Compiled not set up correctly?\n\nReasons this might happen:\n\n[Likely] Importing `jsx` from a library other than Compiled CSS-in-JS - please only import from `{COMPILED_IMPORT}`.\n\n[Less likely] If you are using `@babel/preset-react` (or `@babel/plugin-transform-react-jsx`) in your Babel configuration, and you are using `runtime: classic`, make sure you do not use the `pragma` option. Please use the /** @jsx jsx */ syntax instead, or switch to `runtime: automatic`"
     );
-    let meta_with_span = meta.with_own_span(Some(expr.span()));
-    let error = build_code_frame_error(&message, Some(expr.span()), &meta_with_span);
-    panic!("{error}");
+    panic!("{message}.");
   }
 }
 

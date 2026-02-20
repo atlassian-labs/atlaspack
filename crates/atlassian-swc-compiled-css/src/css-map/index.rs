@@ -1202,10 +1202,8 @@ mod tests {
     );
 
     // Also verify hints
-    let hints = diagnostics[0]
-      .hints
-      .as_ref()
-      .expect("hints should be present");
+    let hints = &diagnostics[0].hints;
+    assert!(!hints.is_empty(), "hints should be present");
     assert!(hints[0].contains("Ensure the `token()` function is imported"));
   }
 }

@@ -276,44 +276,48 @@ pub fn error_if_not_valid_object_property(property: &PropOrSpread, meta: &Metada
 
 /// Reports a cssMap error as a diagnostic with proper error message formatting.
 /// The error message will include the documentation URL automatically.
-pub fn report_css_map_error(meta: &Metadata, span: Span, message: impl fmt::Display) {
+/// Note: Span information is not included in the diagnostic at this level.
+/// It should be added at the node-bindings layer where SourceMap is available.
+pub fn report_css_map_error(meta: &Metadata, _span: Span, message: impl fmt::Display) {
   let msg = create_error_message(message.to_string());
-  let error = crate::errors::TransformError::with_span(msg, span);
-  meta.add_diagnostic(error);
+  let diagnostic = crate::errors::create_diagnostic(msg, module_path!());
+  meta.add_diagnostic(diagnostic);
 }
 
 /// Reports a cssMap error with hints as a diagnostic.
 /// This version should be used when you want to include helpful hints for the error.
-pub fn report_css_map_error_with_hints(meta: &Metadata, span: Span, error_type: ErrorMessages) {
+/// Note: Span information is not included in the diagnostic at this level.
+/// It should be added at the node-bindings layer where SourceMap is available.
+pub fn report_css_map_error_with_hints(meta: &Metadata, _span: Span, error_type: ErrorMessages) {
   let msg = create_error_message(error_type.message());
-  let mut error = crate::errors::TransformError::with_span(msg, span);
+  let mut diagnostic = crate::errors::create_diagnostic(msg, module_path!());
 
   if let Some(hints) = error_type.hints() {
-    error = error.with_hints(hints);
+    diagnostic.hints = hints;
   }
 
-  meta.add_diagnostic(error);
+  meta.add_diagnostic(diagnostic);
 }
 
 /// Helper to create a cssMap diagnostic without a span.
 /// Use this when the error doesn't have a specific source location.
-pub fn create_css_map_diagnostic(message: impl fmt::Display) -> crate::errors::TransformError {
+pub fn create_css_map_diagnostic(message: impl fmt::Display) -> atlaspack_core::types::Diagnostic {
   let msg = create_error_message(message.to_string());
-  crate::errors::TransformError::new(msg)
+  crate::errors::create_diagnostic(msg, module_path!())
 }
 
 /// Helper to create a cssMap diagnostic with hints.
 pub fn create_css_map_diagnostic_with_hints(
   error_type: ErrorMessages,
-) -> crate::errors::TransformError {
+) -> atlaspack_core::types::Diagnostic {
   let msg = create_error_message(error_type.message());
-  let mut error = crate::errors::TransformError::new(msg);
+  let mut diagnostic = crate::errors::create_diagnostic(msg, module_path!());
 
   if let Some(hints) = error_type.hints() {
-    error = error.with_hints(hints);
+    diagnostic.hints = hints;
   }
 
-  error
+  diagnostic
 }
 
 #[cfg(test)]

@@ -1,12 +1,12 @@
 use anyhow::{Context, Result, anyhow};
+use atlaspack_core::types::Diagnostic as AtlaspackDiagnostic;
 use atlaspack_js_swc_core::{
   Config, SourceType, emit, parse,
   utils::{
     CodeHighlight, Diagnostic, DiagnosticSeverity, ErrorBuffer, SourceLocation,
-    error_buffer_to_diagnostics, transform_errors_to_diagnostics,
+    error_buffer_to_diagnostics,
   },
 };
-use atlassian_swc_compiled_css::TransformError;
 use atlassian_swc_compiled_css_strip_runtime as strip_runtime;
 use napi::{Env, Error as NapiError, JsObject, bindgen_prelude::Buffer};
 use napi_derive::napi;
@@ -175,31 +175,48 @@ fn strip_jsx_pragma_comment_from_source(source: &str) -> String {
   result
 }
 
-fn map_transform_errors_to_diagnostics(
-  errors: Vec<TransformError>,
-  source_map: &SourceMap,
+fn map_atlaspack_diagnostics_to_js_diagnostics(
+  diagnostics: Vec<AtlaspackDiagnostic>,
 ) -> Vec<Diagnostic> {
-  errors
+  diagnostics
     .into_iter()
-    .map(|error| {
-      let code_highlights = error.span.and_then(|span| {
-        if span.lo().is_dummy() || span.hi().is_dummy() {
+    .map(|diagnostic| {
+      // Convert atlaspack_core::CodeFrame to JS transformer's CodeHighlight format
+      let code_highlights = if diagnostic.code_frames.is_empty() {
+        None
+      } else {
+        let highlights: Vec<CodeHighlight> = diagnostic
+          .code_frames
+          .iter()
+          .flat_map(|frame| &frame.code_highlights)
+          .map(|highlight| CodeHighlight {
+            message: highlight.message.clone(),
+            loc: SourceLocation {
+              start_line: highlight.start.line,
+              start_col: highlight.start.column,
+              end_line: highlight.end.line,
+              end_col: highlight.end.column,
+            },
+          })
+          .collect();
+        if highlights.is_empty() {
           None
         } else {
-          Some(vec![CodeHighlight {
-            message: None,
-            loc: SourceLocation::from(source_map, span),
-          }])
+          Some(highlights)
         }
-      });
+      };
 
       Diagnostic {
-        message: error.message,
+        message: diagnostic.message,
         code_highlights,
-        hints: error.hints,
+        hints: if diagnostic.hints.is_empty() {
+          None
+        } else {
+          Some(diagnostic.hints)
+        },
         show_environment: false,
         severity: DiagnosticSeverity::Error,
-        documentation_url: error.documentation_url,
+        documentation_url: diagnostic.documentation_url,
       }
     })
     .collect()
@@ -362,7 +379,7 @@ fn process_compiled_css_in_js(
         output.metadata.diagnostics,
       ),
       Err(errors) => {
-        let diagnostics = convert_diagnostics(transform_errors_to_diagnostics(errors, &source_map));
+        let diagnostics = convert_diagnostics(map_atlaspack_diagnostics_to_js_diagnostics(errors));
         return Ok(CompiledCssInJsPluginResult {
           code: code.to_string(),
           map: None,
@@ -399,7 +416,7 @@ fn process_compiled_css_in_js(
         }
         Err(errors) => {
           let diagnostics =
-            convert_diagnostics(transform_errors_to_diagnostics(errors, &source_map));
+            convert_diagnostics(map_atlaspack_diagnostics_to_js_diagnostics(errors));
           return Ok(CompiledCssInJsPluginResult {
             code: code.to_string(),
             map: None,
@@ -463,9 +480,8 @@ fn process_compiled_css_in_js(
 
     let code = append_transformed_asset_marker(code);
 
-    let diagnostics = convert_diagnostics(map_transform_errors_to_diagnostics(
+    let diagnostics = convert_diagnostics(map_atlaspack_diagnostics_to_js_diagnostics(
       metadata_diagnostics,
-      &source_map,
     ));
 
     Ok(CompiledCssInJsPluginResult {

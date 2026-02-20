@@ -990,6 +990,7 @@ name = "atlassian_swc_compiled_css"
 version = "0.0.1"
 dependencies = [
  "anyhow",
+ "atlaspack_core",
  "atlassian-swc-compiled-css-postcss",
  "caniuse-serde",
  "csscolorparser",
@@ -1018,6 +1019,7 @@ dependencies = [
 name = "atlassian_swc_compiled_css_strip_runtime"
 version = "0.0.1"
 dependencies = [
+ "atlaspack_core",
  "atlassian_swc_compiled_css",
  "insta",
  "oxc_resolver",

@@ -2,7 +2,9 @@ use std::collections::{HashMap, HashSet};
 use std::fs::{create_dir_all, write};
 use std::path::{Path, PathBuf};
 
-use atlassian_swc_compiled_css::{SortOptions, TransformError, sort_atomic_style_sheet};
+use atlassian_swc_compiled_css::{
+  Diagnostic, SortOptions, create_diagnostic, sort_atomic_style_sheet,
+};
 use swc_core::atoms::Atom;
 use swc_core::common::{DUMMY_SP, SyntaxContext};
 use swc_core::ecma::ast::{
@@ -35,7 +37,7 @@ pub struct StripRuntimeTransform {
   style_rules: Vec<String>,
   bindings: HashMap<IdentId, StyleBinding>,
   bindings_to_remove: HashSet<IdentId>,
-  errors: Vec<TransformError>,
+  errors: Vec<Diagnostic>,
 }
 
 impl StripRuntimeTransform {
@@ -50,7 +52,7 @@ impl StripRuntimeTransform {
     }
   }
 
-  pub fn finish(self) -> (TransformMetadata, Vec<TransformError>) {
+  pub fn finish(self) -> (TransformMetadata, Vec<Diagnostic>) {
     (self.metadata, self.errors)
   }
 
@@ -58,10 +60,10 @@ impl StripRuntimeTransform {
     &self.config.options
   }
 
-  fn push_error(&mut self, message: impl Into<String>) -> TransformError {
-    let error = TransformError::new(message);
-    self.errors.push(error.clone());
-    error
+  fn push_error(&mut self, message: impl Into<String>) -> Diagnostic {
+    let diagnostic = atlassian_swc_compiled_css::create_diagnostic(message, module_path!());
+    self.errors.push(diagnostic.clone());
+    diagnostic
   }
 
   fn ident_id(&self, ident: &swc_core::ecma::ast::Ident) -> IdentId {
@@ -356,17 +358,20 @@ impl StripRuntimeTransform {
     &mut self,
     program: &mut Program,
     extract: crate::types::ExtractStylesToDirectory,
-  ) -> Result<(), TransformError> {
+  ) -> Result<(), Diagnostic> {
     let filename = self
       .config
       .filename
       .as_ref()
       .and_then(|name| if name.is_empty() { None } else { Some(name) })
       .ok_or_else(|| {
-        TransformError::new(format!(
-          "@compiled/babel-plugin-strip-runtime expected the filename not to be empty, but actually got '{}'",
-          self.config.filename.as_deref().unwrap_or("undefined")
-        ))
+        create_diagnostic(
+          format!(
+            "@compiled/babel-plugin-strip-runtime expected the filename not to be empty, but actually got '{}'",
+            self.config.filename.as_deref().unwrap_or("undefined")
+          ),
+          module_path!()
+        )
       })?;
 
     let source_file_name = self
@@ -374,13 +379,16 @@ impl StripRuntimeTransform {
       .source_file_name
       .as_ref()
       .filter(|name| !name.is_empty())
-      .ok_or_else(|| TransformError::new("Source filename was not defined"))?;
+      .ok_or_else(|| create_diagnostic("Source filename was not defined", module_path!()))?;
 
     let Some(relative_start) = source_file_name.find(&extract.source) else {
-      return Err(TransformError::new(format!(
-        "Source directory '{}' was not found relative to source file ('{}')",
-        extract.source, source_file_name
-      )));
+      return Err(create_diagnostic(
+        format!(
+          "Source directory '{}' was not found relative to source file ('{}')",
+          extract.source, source_file_name
+        ),
+        module_path!(),
+      ));
     };
 
     let css_filename = Path::new(filename)
@@ -397,7 +405,12 @@ impl StripRuntimeTransform {
       .map(PathBuf::from)
       .map(Ok)
       .unwrap_or_else(std::env::current_dir)
-      .map_err(|err| TransformError::new(format!("Failed to resolve current directory: {err}")))?;
+      .map_err(|err| {
+        create_diagnostic(
+          format!("Failed to resolve current directory: {err}"),
+          module_path!(),
+        )
+      })?;
 
     let css_path = cwd
       .join(&extract.dest)
@@ -409,11 +422,14 @@ impl StripRuntimeTransform {
       .join(&css_filename);
 
     if let Some(parent) = css_path.parent() {
-      create_dir_all(parent).map_err(|err| {
-        TransformError::new(format!(
-          "Failed to create CSS output directory '{}': {err}",
-          parent.display()
-        ))
+      create_dir_all::<&Path>(parent).map_err(|err| {
+        create_diagnostic(
+          format!(
+            "Failed to create CSS output directory '{}': {err}",
+            parent.display()
+          ),
+          module_path!(),
+        )
       })?;
     }
 
@@ -429,10 +445,13 @@ impl StripRuntimeTransform {
     );
 
     write(&css_path, sorted).map_err(|err| {
-      TransformError::new(format!(
-        "Failed to write extracted stylesheet '{}': {err}",
-        css_path.display()
-      ))
+      create_diagnostic(
+        format!(
+          "Failed to write extracted stylesheet '{}': {err}",
+          css_path.display()
+        ),
+        module_path!(),
+      )
     })?;
 
     let import = ModuleDecl::Import(ImportDecl {
