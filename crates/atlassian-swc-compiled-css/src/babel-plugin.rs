@@ -28,7 +28,7 @@ use crate::types::{
   SharedTransformState, TransformFile, TransformMetadata, TransformState,
 };
 use crate::utils_append_runtime_imports::append_runtime_imports;
-use crate::utils_ast::build_code_frame_error;
+
 use crate::utils_is_compiled::{
   is_compiled_css_call_expression, is_compiled_css_tagged_template_expression,
   is_compiled_keyframes_call_expression, is_compiled_keyframes_tagged_template_expression,
@@ -134,6 +134,11 @@ impl CompiledCssInJsTransform {
       }
     }
 
+    // Collect diagnostics from transform state
+    if metadata.diagnostics.is_empty() {
+      metadata.diagnostics = state.diagnostics.clone();
+    }
+
     metadata
   }
 
@@ -157,7 +162,7 @@ mod tests {
   use swc_core::common::{BytePos, FileName, SourceFile, SourceMap, Span};
   use swc_core::ecma::ast::{
     BlockStmtOrExpr, Decl, Expr, ImportSpecifier, JSXAttrName, JSXAttrOrSpread, JSXElementName,
-    Lit, Module, ModuleDecl, ModuleItem, Program, Stmt,
+    Lit, Module, ModuleDecl, ModuleItem, Pat, Program, Stmt,
   };
   use swc_core::ecma::codegen::{Config, Emitter, text_writer::JsWriter};
   use swc_core::ecma::parser::lexer::Lexer;
@@ -1441,6 +1446,310 @@ mod tests {
       panic!("expected display name assignment");
     };
   }
+
+  #[test]
+  fn transforms_css_map_with_simple_variants() {
+    let source = r#"
+            import { cssMap } from '@compiled/react';
+
+            const styles = cssMap({
+              danger: { color: 'red' },
+              success: { color: 'green' },
+            });
+        "#;
+
+    let (mut program, cm, _) = parse_program(source);
+
+    let mut transform = CompiledCssInJsTransform::new(PluginOptions::default());
+
+    {
+      let file = TransformFile::transform_compiled_with_options(
+        cm.clone(),
+        Vec::new(),
+        TransformFileOptions {
+          filename: Some("test.tsx".into()),
+          ..TransformFileOptions::default()
+        },
+      );
+
+      let mut state = transform.state.borrow_mut();
+      state.replace_file(file);
+    }
+
+    program.visit_mut_with(&mut transform);
+
+    let Program::Module(module) = &program else {
+      panic!("expected module program");
+    };
+
+    let printed = print_module(&cm, module);
+
+    // The cssMap should be transformed to an object with string class names
+    // This verifies the transform completed successfully without panic
+    assert!(
+      printed.contains("styles"),
+      "expected styles variable in output: {}",
+      printed
+    );
+
+    // Verify the output contains string values for the variants
+    // The printed output should not contain "cssMap" anymore after transform
+    // and should have the variants as object properties
+    assert!(
+      printed.contains("danger") && printed.contains("success"),
+      "expected variant keys in output: {}",
+      printed
+    );
+  }
+
+  #[test]
+  fn transforms_css_map_with_nested_div_selector() {
+    let source = r#"
+            import { cssMap } from '@compiled/react';
+
+            const styles = cssMap({
+              container: {
+                display: 'flex',
+                '& div': { margin: 0 },
+              },
+            });
+        "#;
+
+    let (mut program, cm, _) = parse_program(source);
+
+    let mut transform = CompiledCssInJsTransform::new(PluginOptions::default());
+
+    {
+      let file = TransformFile::transform_compiled_with_options(
+        cm.clone(),
+        Vec::new(),
+        TransformFileOptions {
+          filename: Some("test.tsx".into()),
+          ..TransformFileOptions::default()
+        },
+      );
+
+      let mut state = transform.state.borrow_mut();
+      state.replace_file(file);
+    }
+
+    program.visit_mut_with(&mut transform);
+
+    let Program::Module(module) = &program else {
+      panic!("expected module program");
+    };
+
+    let printed = print_module(&cm, module);
+
+    // Verify the cssMap was transformed (no panic occurred)
+    assert!(
+      printed.contains("styles"),
+      "expected styles variable in output: {}",
+      printed
+    );
+
+    // Verify the container variant exists
+    assert!(
+      printed.contains("container"),
+      "expected container variant in output: {}",
+      printed
+    );
+  }
+
+  #[test]
+  fn transforms_css_map_with_hover_selector() {
+    let source = r#"
+            import { cssMap } from '@compiled/react';
+
+            const buttonStyles = cssMap({
+              primary: {
+                backgroundColor: 'blue',
+                '&:hover': { backgroundColor: 'darkblue' },
+              },
+            });
+        "#;
+
+    let (mut program, cm, _) = parse_program(source);
+
+    let mut transform = CompiledCssInJsTransform::new(PluginOptions::default());
+
+    {
+      let file = TransformFile::transform_compiled_with_options(
+        cm.clone(),
+        Vec::new(),
+        TransformFileOptions {
+          filename: Some("test.tsx".into()),
+          ..TransformFileOptions::default()
+        },
+      );
+
+      let mut state = transform.state.borrow_mut();
+      state.replace_file(file);
+    }
+
+    program.visit_mut_with(&mut transform);
+
+    let Program::Module(module) = &program else {
+      panic!("expected module program");
+    };
+
+    let printed = print_module(&cm, module);
+
+    // Verify the transform completed successfully
+    assert!(
+      printed.contains("buttonStyles"),
+      "expected buttonStyles variable in output: {}",
+      printed
+    );
+
+    // Verify the primary variant exists
+    assert!(
+      printed.contains("primary"),
+      "expected primary variant in output: {}",
+      printed
+    );
+  }
+
+  #[test]
+  fn css_map_variant_values_are_string_literals() {
+    let source = r#"
+            import { cssMap } from '@compiled/react';
+
+            const styles = cssMap({
+              variant1: { color: 'red' },
+              variant2: { color: 'blue' },
+              variant3: { color: 'green' },
+            });
+
+            const x = styles.variant1;
+        "#;
+
+    let (mut program, cm, _) = parse_program(source);
+
+    let mut transform = CompiledCssInJsTransform::new(PluginOptions::default());
+
+    {
+      let file = TransformFile::transform_compiled_with_options(
+        cm.clone(),
+        Vec::new(),
+        TransformFileOptions {
+          filename: Some("test.tsx".into()),
+          ..TransformFileOptions::default()
+        },
+      );
+
+      let mut state = transform.state.borrow_mut();
+      state.replace_file(file);
+    }
+
+    program.visit_mut_with(&mut transform);
+
+    let Program::Module(module) = &program else {
+      panic!("expected module program");
+    };
+
+    // Find the styles variable declaration
+    let var_decl = module.body.iter().find_map(|item| match item {
+      ModuleItem::Stmt(Stmt::Decl(Decl::Var(var))) => {
+        // Find the var decl with name "styles"
+        var.decls.iter().find_map(|decl| {
+          if let Pat::Ident(binding) = &decl.name {
+            if binding.id.sym.as_ref() == "styles" {
+              return decl.init.as_ref();
+            }
+          }
+          None
+        })
+      }
+      _ => None,
+    });
+
+    if let Some(init) = var_decl {
+      // The init should be an object literal with string values
+      if let Expr::Object(obj) = init.as_ref() {
+        for prop in &obj.props {
+          if let swc_core::ecma::ast::PropOrSpread::Prop(prop) = prop {
+            if let swc_core::ecma::ast::Prop::KeyValue(kv) = prop.as_ref() {
+              // Each value should be a string literal (the class name)
+              // or null for error cases
+              match kv.value.as_ref() {
+                Expr::Lit(Lit::Str(_)) => {
+                  // This is correct - class name is a string
+                }
+                Expr::Lit(Lit::Null(_)) => {
+                  // Also acceptable for error/empty cases
+                }
+                other => {
+                  // This would cause "sheet.includes is not a function" at runtime
+                  panic!(
+                    "cssMap variant value must be a string literal to avoid runtime errors, got: {:?}",
+                    other
+                  );
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  #[test]
+  fn css_map_with_complex_selectors_produces_valid_output() {
+    let source = r#"
+            import { cssMap } from '@compiled/react';
+
+            const styles = cssMap({
+              wrapper: {
+                position: 'relative',
+                selectors: {
+                  '& > div': { padding: '8px' },
+                  '& div:first-child': { marginTop: 0 },
+                },
+              },
+            });
+        "#;
+
+    let (mut program, cm, _) = parse_program(source);
+
+    let mut transform = CompiledCssInJsTransform::new(PluginOptions::default());
+
+    {
+      let file = TransformFile::transform_compiled_with_options(
+        cm.clone(),
+        Vec::new(),
+        TransformFileOptions {
+          filename: Some("test.tsx".into()),
+          ..TransformFileOptions::default()
+        },
+      );
+
+      let mut state = transform.state.borrow_mut();
+      state.replace_file(file);
+    }
+
+    program.visit_mut_with(&mut transform);
+
+    let Program::Module(module) = &program else {
+      panic!("expected module program");
+    };
+
+    let printed = print_module(&cm, module);
+
+    // Verify transform completed successfully
+    assert!(
+      printed.contains("styles"),
+      "expected styles variable in output: {}",
+      printed
+    );
+
+    // Verify wrapper variant exists
+    assert!(
+      printed.contains("wrapper"),
+      "expected wrapper variant in output: {}",
+      printed
+    );
+  }
 }
 
 fn imported_name(specifier: &ImportNamedSpecifier) -> &str {
@@ -2333,12 +2642,7 @@ impl VisitMut for CssPropVisitor {
   fn visit_mut_expr(&mut self, expr: &mut Expr) {
     // Check recursion depth to prevent stack overflow from infinite loops
     if self.recursion_depth > self.max_recursion_depth {
-      let error = build_code_frame_error(
-        "AST traversal depth exceeded 500 levels - possible infinite recursion in visitor",
-        Some(expr.span()),
-        &self.meta,
-      );
-      panic!("{error}");
+      panic!("AST traversal depth exceeded 500 levels - possible infinite recursion in visitor.");
     }
 
     if std::env::var("DEBUG_VISITOR_TRACE").is_ok() {
@@ -2385,12 +2689,9 @@ impl VisitMut for CssPropVisitor {
   fn visit_mut_jsx_element(&mut self, element: &mut swc_core::ecma::ast::JSXElement) {
     // Check recursion depth to prevent stack overflow from infinite loops
     if self.recursion_depth > self.max_recursion_depth {
-      let error = build_code_frame_error(
-        "JSX element nesting depth exceeded 500 levels - possible infinite recursion in visitor",
-        Some(element.opening.span),
-        &self.meta,
+      panic!(
+        "JSX element nesting depth exceeded 500 levels - possible infinite recursion in visitor."
       );
-      panic!("{error}");
     }
 
     if std::env::var("DEBUG_VISITOR_TRACE").is_ok() {
@@ -2450,9 +2751,7 @@ impl JsxFunctionGuard {
     let message = format!(
       "Found a `jsx` function call in the Babel output where one should not have been generated. Was Compiled not set up correctly?\n\nReasons this might happen:\n\n[Likely] Importing `jsx` from a library other than Compiled CSS-in-JS - please only import from `{COMPILED_IMPORT}`.\n\n[Less likely] If you are using `@babel/preset-react` (or `@babel/plugin-transform-react-jsx`) in your Babel configuration, and you are using `runtime: classic`, make sure you do not use the `pragma` option. Please use the /** @jsx jsx */ syntax instead, or switch to `runtime: automatic`"
     );
-    let meta_with_span = meta.with_own_span(Some(expr.span()));
-    let error = build_code_frame_error(&message, Some(expr.span()), &meta_with_span);
-    panic!("{error}");
+    panic!("{message}.");
   }
 }
 

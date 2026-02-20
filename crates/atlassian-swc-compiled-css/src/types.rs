@@ -214,6 +214,8 @@ impl From<&crate::config::CompiledCssInJsConfig> for PluginOptions {
 pub struct TransformMetadata {
   pub included_files: Vec<String>,
   pub style_rules: Vec<String>,
+  #[serde(skip_serializing_if = "Vec::is_empty", default)]
+  pub diagnostics: Vec<atlaspack_core::types::Diagnostic>,
 }
 
 /// Result of a transform run containing the mutated program and collected metadata.
@@ -409,6 +411,7 @@ pub struct TransformState {
   pub cwd: PathBuf,
   pub root: PathBuf,
   pub handler: Lrc<Handler>,
+  pub diagnostics: Vec<atlaspack_core::types::Diagnostic>,
 }
 
 impl fmt::Debug for TransformState {
@@ -496,6 +499,7 @@ impl TransformState {
       cwd,
       root,
       handler,
+      diagnostics: Vec::new(),
     }
   }
 
@@ -671,6 +675,10 @@ impl Metadata {
 
   pub fn insert_parent_binding(&self, name: impl Into<String>, binding: PartialBindingWithMeta) {
     self.parent_scope.borrow_mut().insert(name.into(), binding);
+  }
+
+  pub fn add_diagnostic(&self, diagnostic: atlaspack_core::types::Diagnostic) {
+    self.state.borrow_mut().diagnostics.push(diagnostic);
   }
 
   pub fn insert_own_binding(&self, name: impl Into<String>, binding: PartialBindingWithMeta) {

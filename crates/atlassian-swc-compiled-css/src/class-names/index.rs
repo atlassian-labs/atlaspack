@@ -9,7 +9,7 @@ use swc_core::ecma::ast::{
 use swc_core::ecma::visit::{VisitMut, VisitMutWith};
 
 use crate::types::Metadata;
-use crate::utils_ast::{build_code_frame_error, pick_function_body};
+use crate::utils_ast::pick_function_body;
 use crate::utils_build_compiled_component::compiled_template;
 use crate::utils_build_css_variables::build_css_variables;
 use crate::utils_css_builders::build_css as build_css_from_expr;
@@ -288,7 +288,7 @@ impl<'a> VisitMut for StylePropRewriter<'a> {
   }
 }
 
-fn ensure_children_function<'a>(element: &'a mut JSXElement, meta: &Metadata) -> &'a mut Expr {
+fn ensure_children_function<'a>(element: &'a mut JSXElement, _meta: &Metadata) -> &'a mut Expr {
   for child in &mut element.children {
     if let JSXElementChild::JSXExprContainer(container) = child {
       if let JSXExpr::Expr(expr) = &mut container.expr {
@@ -301,8 +301,7 @@ fn ensure_children_function<'a>(element: &'a mut JSXElement, meta: &Metadata) ->
 
   let message =
     "ClassNames children should be a function\nE.g: <ClassNames>{props => <div />}</ClassNames>";
-  let error = build_code_frame_error(message, Some(element.span), meta);
-  panic!("{error}");
+  panic!("{message}.");
 }
 
 /// Mirrors the Babel `visitClassNamesPath` helper by converting `<ClassNames>` JSX elements

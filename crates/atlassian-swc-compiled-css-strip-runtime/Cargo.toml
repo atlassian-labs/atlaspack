@@ -9,6 +9,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 atlassian_swc_compiled_css = { workspace = true }
+atlaspack_core = { path = "../atlaspack_core" }
 oxc_resolver = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }

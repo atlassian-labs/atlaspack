@@ -127,7 +127,7 @@ use utils::DiagnosticSeverity;
 use utils::ErrorBuffer;
 pub use utils::SourceLocation;
 pub use utils::SourceType;
-use utils::{error_buffer_to_diagnostics, transform_errors_to_diagnostics};
+use utils::{atlaspack_diagnostic_to_utils_diagnostic, error_buffer_to_diagnostics};
 
 use crate::esm_export_classifier::EsmExportClassifier;
 use crate::esm_export_classifier::SymbolsInfo;
@@ -422,7 +422,12 @@ pub fn transform(
                         strip_output.program
                       }
                       Err(errors) => {
-                        diagnostics.extend(transform_errors_to_diagnostics(errors, &source_map));
+                        // Convert atlaspack_core::types::Diagnostic to utils::Diagnostic
+                        diagnostics.extend(
+                          errors
+                            .into_iter()
+                            .map(atlaspack_diagnostic_to_utils_diagnostic),
+                        );
                         result.diagnostics = Some(diagnostics);
                         return Ok(result);
                       }

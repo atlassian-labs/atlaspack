@@ -18,7 +18,7 @@ use crate::postcss::plugins::sort_shorthand_declarations::{
   parent_shorthand_for, shorthand_bucket,
 };
 use crate::types::{Metadata, MetadataContext};
-use crate::utils_ast::build_code_frame_error;
+
 use crate::utils_create_result_pair::create_result_pair;
 use crate::utils_css::{CssValue, add_unit_if_needed, css_affix_interpolation, kebab_case};
 use crate::utils_css_map::{ErrorMessages, create_error_message};
@@ -852,18 +852,13 @@ fn callback_if_file_included(meta: &Metadata, next: &Metadata) {
 }
 
 fn assert_no_imported_css_variables(
-  reference: &Expr,
-  meta: &Metadata,
+  _reference: &Expr,
+  _meta: &Metadata,
   binding: &PartialBindingWithMeta,
   result: &CssOutput,
 ) {
   if binding.source == BindingSource::Import && !result.variables.is_empty() {
-    let error = build_code_frame_error(
-      "Identifier contains values that can't be statically evaluated",
-      Some(reference.span()),
-      meta,
-    );
-    panic!("{error}");
+    panic!("Identifier contains values that can't be statically evaluated.");
   }
 }
 
@@ -1696,12 +1691,7 @@ where
       let merged = merge_subsequent_unconditional_css_items(output.css);
 
       if merged.len() > 1 {
-        let error = build_code_frame_error(
-          "Conditional branch contains unexpected expression",
-          Some(expr.span()),
-          meta,
-        );
-        panic!("{error}");
+        panic!("Conditional branch contains unexpected expression.");
       }
 
       return merged.into_iter().next();
@@ -1846,12 +1836,7 @@ where
     .iter()
     .any(|item| !matches!(item, CssItem::Unconditional(_)))
   {
-    let error = build_code_frame_error(
-      "Keyframes contains unexpected CSS",
-      Some(expression.span()),
-      meta,
-    );
-    panic!("{error}");
+    panic!("Keyframes contains unexpected CSS.");
   }
 
   let sheet_css = wrapped
@@ -1904,18 +1889,11 @@ where
 
   for element in &array.elems {
     let Some(element) = element else {
-      let message = "undefined isn't a supported CSS type - try using an object or string";
-      let error = build_code_frame_error(message, Some(array.span), meta);
-      panic!("{error}");
+      panic!("undefined isn't a supported CSS type - try using an object or string.");
     };
 
     if element.spread.is_some() {
-      let error = build_code_frame_error(
-        "SpreadElement isn't a supported CSS type - try using an object or string",
-        Some(element.expr.span()),
-        meta,
-      );
-      panic!("{error}");
+      panic!("SpreadElement isn't a supported CSS type - try using an object or string.");
     }
 
     let expr = element.expr.as_ref();
@@ -2581,9 +2559,7 @@ where
         let binding = if let Expr::Ident(identifier) = expr.as_ref() {
           resolve_binding(identifier.sym.as_ref(), meta.clone(), evaluate_expression).or_else(
             || {
-              let error =
-                build_code_frame_error("Variable could not be found", Some(identifier.span), meta);
-              panic!("{error}");
+              panic!("Variable could not be found.");
             },
           )
         } else {
@@ -2886,23 +2862,18 @@ fn build_css_internal(node: &Expr, meta: &Metadata) -> CssOutput {
 
     let binding = resolve_binding(identifier.sym.as_ref(), meta.clone(), evaluate_expression)
       .unwrap_or_else(|| {
-        let error =
-          build_code_frame_error("Variable could not be found", Some(identifier.span), meta);
-        panic!("{error}");
+        panic!("Variable could not be found.");
       });
 
     let binding_node = binding.node.clone().unwrap_or_else(|| {
-      let error =
-        build_code_frame_error("Variable could not be found", Some(identifier.span), meta);
-      panic!("{error}");
+      panic!("Variable could not be found.");
     });
 
     {
       let state = meta.state();
       if state.css_map.contains_key(identifier.sym.as_ref()) {
         let message = create_error_message(ErrorMessages::UseVariantOfCssMap.to_string());
-        let error = build_code_frame_error(&message, Some(identifier.span), meta);
-        panic!("{error}");
+        panic!("{message}.");
       }
     }
 
@@ -3013,8 +2984,7 @@ fn build_css_internal(node: &Expr, meta: &Metadata) -> CssOutput {
     expression_type(node),
     error_message
   );
-  let error = build_code_frame_error(&message, Some(node.span()), meta);
-  panic!("{error}");
+  panic!("{message}.");
 }
 
 static INVALID_DYNAMIC_INDIRECT_SELECTOR_REGEX: Lazy<Regex> = Lazy::new(|| {
@@ -3030,12 +3000,9 @@ pub fn build_css(node: &Expr, meta: &Metadata) -> CssOutput {
   });
 
   if has_invalid_selector {
-    let error = build_code_frame_error(
-      "Found a mix of an indirect selector and a dynamic variable which is unsupported with Compiled.  See: https://compiledcssinjs.com/docs/limitations#mixing-dynamic-styles-and-indirect-selectors",
-      None,
-      meta,
+    panic!(
+      "Found a mix of an indirect selector and a dynamic variable which is unsupported with Compiled.  See: https://compiledcssinjs.com/docs/limitations#mixing-dynamic-styles-and-indirect-selectors."
     );
-    panic!("{error}");
   }
 
   output
