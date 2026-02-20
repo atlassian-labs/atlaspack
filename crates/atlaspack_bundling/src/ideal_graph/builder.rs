@@ -880,6 +880,76 @@ impl IdealGraphBuilder {
       }
     };
 
+    // Precompute bundle group membership.
+    //
+    // JS idealGraph semantics: a bundle group's bundles are always loaded together.
+    // When computing availability for a given bundle root, the JS bundler unions in
+    // sync-reachable assets from *all* bundles in the same bundle group.
+    //
+    // In Rust, the `bundle_root_graph` encodes this via Lazy/Parallel edges:
+    // - A node with an incoming Parallel edge is in the same bundle group as its parent.
+    // - Otherwise, the node starts its own bundle group.
+    let mut bundle_group_of: HashMap<NodeIndex, NodeIndex> = HashMap::new();
+    let mut bundle_group_members: HashMap<NodeIndex, Vec<NodeIndex>> = HashMap::new();
+
+    for &node in &order {
+      if node == virtual_root {
+        continue;
+      }
+
+      // If there are multiple incoming Parallel edges, choose a deterministic parent.
+      let mut parallel_parents: Vec<NodeIndex> = self
+        .bundle_root_graph
+        .edges_directed(node, Direction::Incoming)
+        .filter(|e| *e.weight() == BundleRootEdgeType::Parallel)
+        .map(|e| e.source())
+        .collect();
+
+      parallel_parents.sort_by_key(|parent| {
+        self
+          .bundle_root_graph
+          .node_weight(*parent)
+          .copied()
+          .unwrap_or(AssetKey(0))
+      });
+
+      let group_root = if let Some(parent) = parallel_parents.first().copied() {
+        bundle_group_of.get(&parent).copied().unwrap_or(parent)
+      } else {
+        node
+      };
+
+      bundle_group_of.insert(node, group_root);
+      bundle_group_members
+        .entry(group_root)
+        .or_default()
+        .push(node);
+    }
+
+    // De-dup members per group for stability.
+    for (group_root, members) in bundle_group_members.iter_mut() {
+      members.sort_by_key(|n| {
+        self
+          .bundle_root_graph
+          .node_weight(*n)
+          .copied()
+          .unwrap_or(AssetKey(0))
+      });
+      members.dedup();
+
+      // Ensure the group root itself is always included.
+      if !members.contains(group_root) {
+        members.push(*group_root);
+        members.sort_by_key(|n| {
+          self
+            .bundle_root_graph
+            .node_weight(*n)
+            .copied()
+            .unwrap_or(AssetKey(0))
+        });
+      }
+    }
+
     for node in order {
       if node == virtual_root {
         continue;
@@ -895,7 +965,6 @@ impl IdealGraphBuilder {
       };
 
       // Compute `available` for this node.
-      // NOTE: we intentionally skip the bundle-group co-load step for now.
       let mut available = if bundle.behavior == Some(BundleBehavior::Isolated)
         || bundle.behavior == Some(BundleBehavior::InlineIsolated)
       {
@@ -907,15 +976,40 @@ impl IdealGraphBuilder {
           .unwrap_or_else(RoaringBitmap::new)
       };
 
-      // Union in this root's own reachable assets.
+      // Bundle-group co-load: union in reachable assets from ALL bundles in this node's bundle group.
       //
-      // JS uses `reachableAssets[root]` which is the full sync-reachable set from the bundle root.
-      // In Rust we approximate this using the already-computed sync reachability bitsets: an asset
-      // is reachable from this root if the asset's reachability set contains the root's bit.
-      if let Some(&root_bit) = reachability.root_to_bit.get(&root_key)
-        && let Some(reachable) = reachable_assets_per_root.get(root_bit)
+      // Matches JS `idealGraph.ts`:
+      //   for bundleIdInGroup of [bundleGroupId, ...bundleGraph.getNodeIdsConnectedFrom(bundleGroupId)]
+      //     reachableAssets[bundleIdInGroup.root] are all available.
+      if bundle.behavior != Some(BundleBehavior::Isolated)
+        && bundle.behavior != Some(BundleBehavior::InlineIsolated)
       {
-        available |= reachable;
+        let group_root = bundle_group_of.get(&node).copied().unwrap_or(node);
+        if let Some(members) = bundle_group_members.get(&group_root) {
+          for &member in members {
+            let Some(&member_key) = self.bundle_root_graph.node_weight(member) else {
+              continue;
+            };
+
+            // Skip bundles with an explicit behavior (matches JS `bundleBehavior != null`).
+            let member_bundle_id = IdealBundleId::from_asset_key(member_key);
+            if let Some(member_bundle) = ideal.get_bundle(&member_bundle_id)
+              && member_bundle.behavior.is_some()
+            {
+              continue;
+            }
+
+            // Union in member's full sync-reachable set.
+            if let Some(&member_bit) = reachability.root_to_bit.get(&member_key)
+              && let Some(reachable) = reachable_assets_per_root.get(member_bit)
+            {
+              available |= reachable;
+            }
+
+            // The member root itself is always available.
+            available.insert(member_key.0);
+          }
+        }
       }
 
       // Persist computed ancestor assets back onto the IdealBundle.
@@ -1333,7 +1427,11 @@ impl IdealGraphBuilder {
         })
         .collect();
 
-      if available_roots.len() == reaching_entry_like.len() + splittable_roots.len() {
+      if available_roots.len() == reaching_entry_like.len() + splittable_roots.len()
+        && !reaching_entry_like.is_empty()
+      {
+        // All reaching roots have this asset available via ancestors.
+        // Since there is at least one entry-like root, the asset is truly placed upstream.
         continue;
       }
 
@@ -1411,6 +1509,35 @@ impl IdealGraphBuilder {
       if eligible_splittable_roots.len() > 1 {
         // Multi-root asset with no entry-like roots -> deferred to Phase 8/9 (shared bundles).
         continue;
+      } else if eligible_splittable_roots.is_empty() && !splittable_roots.is_empty() {
+        // All splittable roots filtered by availability (co-load).
+        // The asset is available because of bundle-group co-load semantics:
+        // parallel siblings make their reachable assets available to each other.
+        // JS places assets during Phase 3 DFS before availability is computed, so
+        // they remain in the first root's bundle. We must replicate that placement.
+        let root = splittable_roots[0];
+
+        let bundle_id = &root_bundle_ids[&root];
+        let target_bundle_id =
+          self.resolve_type_change_target(asset_key, root, bundle_id, ideal)?;
+
+        let bundle = ideal
+          .get_bundle_mut(&target_bundle_id)
+          .context("bundle missing for co-load available placement")?;
+        bundle.assets.insert(asset_key.0 as usize);
+
+        if reaching_entry_like.is_empty() {
+          ideal.move_asset_to_bundle(asset_key, &target_bundle_id)?;
+        }
+
+        self.decision(
+          "placement",
+          super::types::DecisionKind::AssetAssignedToBundle {
+            asset: asset_key,
+            bundle_root: root,
+            reason: super::types::AssetAssignmentReason::DominatorSubtree,
+          },
+        );
       } else if eligible_splittable_roots.len() == 1 {
         // Single eligible splittable root after availability filtering -> place directly.
         // If file types differ, redirect to a type-change sibling bundle.

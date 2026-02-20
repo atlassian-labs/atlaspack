@@ -3254,4 +3254,53 @@ mod tests {
       edges
     );
   }
+
+  #[test]
+  fn bundle_group_coload_propagates_availability_to_lazy_children() {
+    // entry -> lazy page.js -> parallel page.css -> sync shared.js
+    //                page.js -> lazy dialog.js -> sync shared.js
+    //
+    // page.js and page.css are in the same bundle group (parallel edge).
+    // page.css sync-reaches shared.js.
+    // dialog.js is a lazy child of page.js and also sync-reaches shared.js.
+    //
+    // With bundle group co-load: when computing availability for page.js,
+    // we union in page.css's reachable assets (since page.css is in the same
+    // bundle group). shared.js becomes part of page.js's `available`, which
+    // propagates to dialog.js as ancestor_assets. dialog.js then sees shared.js
+    // as available and doesn't need a shared bundle.
+    //
+    // shared.js should be placed in page.css's bundle (first splittable root
+    // via Phase 7 co-load placement).
+    let asset_graph = fixture_graph(
+      &["entry.js"],
+      &[
+        EdgeSpec::new("entry.js", "page.js", Priority::Lazy),
+        EdgeSpec::new("page.js", "page.css", Priority::Parallel),
+        EdgeSpec::new("page.js", "dialog.js", Priority::Lazy),
+        EdgeSpec::new("page.css", "shared.js", Priority::Sync),
+        EdgeSpec::new("dialog.js", "shared.js", Priority::Sync),
+      ],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    // The key assertion: no shared bundle is created for shared.js.
+    // shared.js ends up in dialog.js's bundle (first splittable root after
+    // availability filtering removes page.css).
+    assert_graph!(g, {
+      bundles: {
+        "entry.js"  => ["entry.js"],
+        "page.js"   => ["page.js"],
+        "page.css"  => ["page.css"],
+        "dialog.js" => ["dialog.js", "shared.js"],
+      },
+      edges: {
+        "entry.js" lazy "page.js",
+        "page.js" parallel "page.css",
+        "page.js" lazy "dialog.js",
+      },
+    });
+  }
 }
