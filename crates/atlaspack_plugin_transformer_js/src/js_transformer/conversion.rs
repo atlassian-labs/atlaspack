@@ -473,7 +473,7 @@ pub(crate) fn convert_dependencies(
 }
 
 fn format_local_star_symbol(asset_id: &str) -> String {
-  format!("${asset_id}$star")
+  format!("${asset_id}$exports")
 }
 
 /// "Export star" symbol is added as a placeholder for assets that may have symbols that aren't
