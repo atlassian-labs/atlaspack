@@ -141,7 +141,9 @@ mod utils_traversers_types;
 mod utils_types;
 
 pub use atlaspack_core::types::Diagnostic;
-pub use errors::{TransformResult, create_diagnostic, diagnostic_from_panic};
+pub use errors::{
+  TransformResult, create_diagnostic, diagnostic_from_panic, init_panic_suppression,
+};
 pub use index_module::*;
 pub use postcss::{SortOptions, sort_atomic_style_sheet};
 pub use types::*;

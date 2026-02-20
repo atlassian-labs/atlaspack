@@ -508,3 +508,53 @@ pub fn error_buffer_to_diagnostics(
     })
     .collect()
 }
+
+/// Convert atlaspack_core::types::Diagnostic to utils::Diagnostic
+///
+/// Note: This conversion loses some fidelity as atlaspack_core diagnostics support
+/// multiple code frames, while utils diagnostics only support a single list of highlights.
+/// We flatten all code frames into a single list of highlights.
+pub fn atlaspack_diagnostic_to_utils_diagnostic(
+  diagnostic: atlaspack_core::types::Diagnostic,
+) -> Diagnostic {
+  // Flatten all code_frames into a single list of code_highlights
+  let code_highlights = if !diagnostic.code_frames.is_empty() {
+    let highlights: Vec<CodeHighlight> = diagnostic
+      .code_frames
+      .iter()
+      .flat_map(|frame| &frame.code_highlights)
+      .map(|highlight| CodeHighlight {
+        message: highlight.message.clone(),
+        loc: SourceLocation {
+          start_line: highlight.start.line,
+          start_col: highlight.start.column,
+          end_line: highlight.end.line,
+          end_col: highlight.end.column,
+        },
+      })
+      .collect();
+
+    if highlights.is_empty() {
+      None
+    } else {
+      Some(highlights)
+    }
+  } else {
+    None
+  };
+
+  let hints = if diagnostic.hints.is_empty() {
+    None
+  } else {
+    Some(diagnostic.hints)
+  };
+
+  Diagnostic {
+    message: diagnostic.message,
+    code_highlights,
+    hints,
+    show_environment: false,
+    severity: DiagnosticSeverity::Error,
+    documentation_url: diagnostic.documentation_url,
+  }
+}
