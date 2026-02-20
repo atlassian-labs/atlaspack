@@ -195,6 +195,7 @@ pub struct Config {
   pub enable_dead_returns_removal: bool,
   pub enable_unused_bindings_removal: bool,
   pub sync_dynamic_import_config: Option<SyncDynamicImportConfig>,
+  pub sync_dynamic_import_reject_with_error: bool,
   pub enable_tokens_and_compiled_css_in_js_transform: bool,
   pub tokens_config: Option<TokensConfig>,
   pub compiled_css_in_js_config: Option<atlassian_swc_compiled_css::config::CompiledCssInJsConfig>,
@@ -576,6 +577,7 @@ pub fn transform(
                   &mut SyncDynamicImport::new(Path::new(&config.filename),
                     unresolved_mark,
                     &config.sync_dynamic_import_config,
+                    config.sync_dynamic_import_reject_with_error,
                   ));
                 }
 
