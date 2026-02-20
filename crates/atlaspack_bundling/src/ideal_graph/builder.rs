@@ -137,7 +137,7 @@ impl IdealGraphBuilder {
     self.build_bundle_edges(asset_graph, &mut ideal)?;
 
     // Phase 5: derive reachability via topological bitset propagation.
-    let reachability = self.compute_reachability_topological()?;
+    let mut reachability = self.compute_reachability_topological()?;
 
     // Phase 5b: build bundle-root graph (lazy/parallel edges) for availability computation.
     self.build_bundle_root_graph(asset_graph)?;
@@ -148,11 +148,13 @@ impl IdealGraphBuilder {
     // available from an ancestor bundle (matches JS Insert Or Share filtering).
     self.compute_availability(&reachability, &mut ideal)?;
 
-    // Phase 7: place single-root assets into their dominating bundle.
-    self.place_single_root_assets(&reachability, &mut ideal)?;
+    // Phase 7: internalize async bundles whose root is already available from all parents.
+    // Must run before placement so internalized roots are removed from reachability
+    // (matching JS where internalization runs before Insert Or Share).
+    self.internalize_async_bundles(asset_graph, &mut reachability, &mut ideal)?;
 
-    // Phase 8: internalize async bundles whose root is already available from all parents.
-    self.internalize_async_bundles(asset_graph, &reachability, &mut ideal)?;
+    // Phase 8: place single-root assets into their dominating bundle.
+    self.place_single_root_assets(&reachability, &mut ideal)?;
 
     // Phase 9: extract shared bundles for multi-root assets.
     self.create_shared_bundles(&reachability, &mut ideal)?;
@@ -1949,7 +1951,7 @@ impl IdealGraphBuilder {
   fn internalize_async_bundles(
     &mut self,
     _asset_graph: &AssetGraph,
-    reachability: &Reachability,
+    reachability: &mut Reachability,
     ideal: &mut IdealGraph,
   ) -> anyhow::Result<()> {
     let Some(virtual_root) = self.bundle_root_graph_virtual_root else {
@@ -1960,7 +1962,7 @@ impl IdealGraphBuilder {
     // For each non-entry bundleRootGraph node, check if ALL parents have the
     // child root available (sync-reachable or in ancestor_assets). If yes,
     // the bundle can be deleted (internalized).
-    let mut to_internalize: Vec<(IdealBundleId, Vec<IdealBundleId>)> = Vec::new();
+    let mut to_internalize: Vec<(IdealBundleId, Vec<IdealBundleId>, AssetKey)> = Vec::new();
 
     for node in self.bundle_root_graph.node_indices().collect::<Vec<_>>() {
       if node == virtual_root {
@@ -2039,7 +2041,7 @@ impl IdealGraphBuilder {
       if can_delete {
         parent_bundle_ids.sort();
         parent_bundle_ids.dedup();
-        to_internalize.push((bundle_id, parent_bundle_ids));
+        to_internalize.push((bundle_id, parent_bundle_ids, root_key));
 
         self.decision(
           "internalization",
@@ -2051,23 +2053,33 @@ impl IdealGraphBuilder {
     }
 
     // Apply internalization: match JS deleteBundle behavior.
-    for (bundle_id, parents) in &to_internalize {
-      let root_key = bundle_id.as_asset_key();
-
+    for (bundle_id, parents, root_key) in &to_internalize {
       // Remove from bundle_roots so shared bundles can re-process
-      self.bundle_roots.remove(&root_key);
+      self.bundle_roots.remove(root_key);
 
       // Track as internalized
       ideal
         .internalized_bundles
         .insert(*bundle_id, parents.clone());
 
-      // Clear assets and asset_to_bundle
+      // Clear assets and asset_to_bundle (internalized bundles remain as empty shells).
       if let Some(bundle) = ideal.get_bundle_mut(bundle_id) {
         bundle.assets.clear();
       }
       if let Some(entry) = ideal.asset_to_bundle.get_mut(root_key.0 as usize) {
         *entry = None;
+      }
+    }
+
+    // Clear internalized root bits from reachability bitsets.
+    // This matches JS behavior where deleted bundleRootGraph nodes are
+    // skipped in Insert Or Share, preventing assets only reachable from
+    // internalized roots from being placed.
+    for (_bundle_id, _parents, root_key) in &to_internalize {
+      if let Some(&bit) = reachability.root_to_bit.get(root_key) {
+        for bs in reachability.reach_bits.iter_mut() {
+          bs.set(bit, false);
+        }
       }
     }
 

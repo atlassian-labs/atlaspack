@@ -2562,7 +2562,7 @@ mod tests {
 
     assert_graph!(g, {
       bundles: {
-        "entry.js" => ["entry.js", "a.js"],
+        "entry.js" => ["entry.js", "a.js", "b.js"],
         "b.js" => [],
       },
       edges: {
@@ -2630,7 +2630,7 @@ mod tests {
 
     assert_graph!(g, {
       bundles: {
-        "entry.js" => ["entry.js", "a.js"],
+        "entry.js" => ["entry.js", "a.js", "b.js"],
         "b.js" => [],
       },
       edges: {
@@ -2667,7 +2667,7 @@ mod tests {
     assert_graph!(g, {
       bundles: {
         "entry.js" => ["entry.js"],
-        "route-1.js" => ["comp-x.js", "lib-z.js", "route-1.js"],
+        "route-1.js" => ["comp-x.js", "comp-y.js", "lib-z.js", "route-1.js"],
         "comp-y.js" => [],
       },
       edges: {
