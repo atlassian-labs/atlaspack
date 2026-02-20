@@ -150,29 +150,31 @@ impl SymbolTracker {
       // For star re-export dependencies, propagate all symbols requested from
       // this asset down to the star dependency. This is how `export * from './dep'`
       // forwards symbol requests to the target module.
-      if is_star_dep {
-        for requested_symbol in &incoming_requested_symbols {
-          // Don't add duplicate requirements
-          if symbols.iter().any(|s| s.exported == *requested_symbol) {
-            continue;
-          }
-          // Create a forwarded requirement for this symbol
-          // Mark as speculative since this star dep might not provide this symbol
-          // (another star dep sibling might provide it instead)
-          self.add_required_symbol(
-            &dep.id,
-            SymbolRequirement {
-              symbol: Symbol {
-                exported: requested_symbol.clone(),
-                local: "*".to_string(), // Mark as coming from star re-export
-                is_weak: true,
-                ..Default::default()
-              },
-              final_location: None,
-              is_speculative: true,
-            },
-          );
+      if !is_star_dep {
+        continue;
+      }
+
+      for requested_symbol in &incoming_requested_symbols {
+        // Don't add duplicate requirements
+        if symbols.iter().any(|s| s.exported == *requested_symbol) {
+          continue;
         }
+        // Create a forwarded requirement for this symbol
+        // Mark as speculative since this star dep might not provide this symbol
+        // (another star dep sibling might provide it instead)
+        self.add_required_symbol(
+          &dep.id,
+          SymbolRequirement {
+            symbol: Symbol {
+              exported: requested_symbol.clone(),
+              local: "*".to_string(), // Mark as coming from star re-export
+              is_weak: true,
+              ..Default::default()
+            },
+            final_location: None,
+            is_speculative: true,
+          },
+        );
       }
     }
 
