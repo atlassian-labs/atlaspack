@@ -200,7 +200,7 @@ pub(crate) fn convert_result(
     // (and the asset has side effects), or the asset is wrapped.
     // This allows accessing symbols that don't exist without errors in symbol propagation.
     // Only add if there isn't already a * symbol with the same local name (from hoist_result.exported_symbols).
-    let exports_local = format!("${}$exports", asset.id);
+    let exports_local = format_local_star_symbol(&asset.id);
     let has_exports_star_symbol = asset_symbols
       .iter()
       .any(|s| s.exported == "*" && s.local == exports_local);
@@ -472,13 +472,17 @@ pub(crate) fn convert_dependencies(
   Ok((dependency_by_specifier, invalidate_on_file_change))
 }
 
+fn format_local_star_symbol(asset_id: &str) -> String {
+  format!("${asset_id}$star")
+}
+
 /// "Export star" symbol is added as a placeholder for assets that may have symbols that aren't
 /// explicitly listed. This is used to avoid errors if a symbol that hasn't been statically
 /// analyzed is accessed.
 fn make_export_star_symbol(asset_id: &str) -> Symbol {
   Symbol {
     exported: "*".into(),
-    local: format!("${asset_id}$exports"),
+    local: format_local_star_symbol(asset_id),
     loc: None,
     ..Default::default()
   }
