@@ -550,11 +550,11 @@ impl IdealGraphBuilder {
           if !visited.insert(node) {
             continue;
           }
-          if let Some(SyncNode::Asset(key)) = self.sync_graph.node_weight(node) {
-            if let Some(&bundle_id) = map.get(key) {
-              map.insert(asset_key, bundle_id);
-              break;
-            }
+          if let Some(SyncNode::Asset(key)) = self.sync_graph.node_weight(node)
+            && let Some(&bundle_id) = map.get(key)
+          {
+            map.insert(asset_key, bundle_id);
+            break;
           }
           for pred in self
             .sync_graph
@@ -695,6 +695,13 @@ impl IdealGraphBuilder {
       )
     };
 
+    // Track (from, to, edge type) to avoid inserting duplicate edges.
+    //
+    // `petgraph::DiGraph::add_edge` always creates a new edge even if an identical one already exists.
+    // The JS bundler deduplicates these edges, and without it we can end up with huge duplicate edge
+    // counts which then slow down availability computation.
+    let mut seen_edges: HashSet<(NodeIndex, NodeIndex, BundleRootEdgeType)> = HashSet::new();
+
     // For each root, walk its sync-reachable asset subgraph (using the sync-only graph).
     for root in roots {
       let Some(&from_node) = self.bundle_root_graph_nodes.get(&root) else {
@@ -721,10 +728,10 @@ impl IdealGraphBuilder {
         };
 
         // Skip traversing children past isolated assets (matches JS `asset.bundleBehavior != null`).
-        if let Some((_ctx, Some(beh))) = asset_info.get(&asset_key) {
-          if beh == &BundleBehavior::Isolated || beh == &BundleBehavior::InlineIsolated {
-            continue;
-          }
+        if let Some((_ctx, Some(beh))) = asset_info.get(&asset_key)
+          && (beh == &BundleBehavior::Isolated || beh == &BundleBehavior::InlineIsolated)
+        {
+          continue;
         }
 
         // Scan outgoing dependencies in the asset graph for non-sync edges that point to bundle roots.
@@ -779,7 +786,10 @@ impl IdealGraphBuilder {
                 continue;
               };
 
-              self.bundle_root_graph.add_edge(from_node, to_node, edge_ty);
+              // Deduplicate edges (see `seen_edges` above).
+              if seen_edges.insert((from_node, to_node, edge_ty)) {
+                self.bundle_root_graph.add_edge(from_node, to_node, edge_ty);
+              }
             }
           }
         }
@@ -832,11 +842,30 @@ impl IdealGraphBuilder {
     let mut ancestor_by_node: HashMap<NodeIndex, RoaringBitmap> = HashMap::new();
 
     // Initialize entries to empty ancestor set (matches JS `ancestorAssets[entry] = empty`).
-    for entry in self.entry_roots.iter().copied() {
-      if let Some(&idx) = self.bundle_root_graph_nodes.get(&entry) {
+    for entry in self.entry_roots.iter() {
+      if let Some(&idx) = self.bundle_root_graph_nodes.get(entry) {
         ancestor_by_node.insert(idx, RoaringBitmap::new());
       }
     }
+
+    // Precompute reachable assets per root bit so we don't scan all assets for every root.
+    //
+    // `reachable_assets_per_root[bit]` contains all assets sync-reachable from `reachability.roots[bit]`.
+    let reachable_assets_per_root: Vec<RoaringBitmap> = {
+      let num_roots = reachability.roots.len();
+      let mut per_root: Vec<RoaringBitmap> = (0..num_roots).map(|_| RoaringBitmap::new()).collect();
+
+      for (&asset_key, &sync_idx) in &self.asset_to_sync_node {
+        let bs = &reachability.reach_bits[sync_idx.index()];
+        for bit in bs.ones() {
+          if let Some(slot) = per_root.get_mut(bit) {
+            slot.insert(asset_key.0);
+          }
+        }
+      }
+
+      per_root
+    };
 
     // Determine processing order.
     let order: Vec<NodeIndex> = match petgraph::algo::toposort(&self.bundle_root_graph, None) {
@@ -883,12 +912,10 @@ impl IdealGraphBuilder {
       // JS uses `reachableAssets[root]` which is the full sync-reachable set from the bundle root.
       // In Rust we approximate this using the already-computed sync reachability bitsets: an asset
       // is reachable from this root if the asset's reachability set contains the root's bit.
-      if let Some(&root_bit) = reachability.root_to_bit.get(&root_key) {
-        for (&asset_key, &sync_idx) in &self.asset_to_sync_node {
-          if reachability.reach_bits[sync_idx.index()].contains(root_bit) {
-            available.insert(asset_key.0);
-          }
-        }
+      if let Some(&root_bit) = reachability.root_to_bit.get(&root_key)
+        && let Some(reachable) = reachable_assets_per_root.get(root_bit)
+      {
+        available |= reachable;
       }
 
       // Persist computed ancestor assets back onto the IdealBundle.
@@ -973,12 +1000,10 @@ impl IdealGraphBuilder {
         if edge_ty == BundleRootEdgeType::Parallel {
           // Later siblings should see earlier sibling's reachable assets.
           // Use the child's full sync-reachable set (JS `reachableAssets[child]`).
-          if let Some(&child_bit) = reachability.root_to_bit.get(&child_key) {
-            for (&asset_key, &sync_idx) in &self.asset_to_sync_node {
-              if reachability.reach_bits[sync_idx.index()].contains(child_bit) {
-                parallel_availability.insert(asset_key.0);
-              }
-            }
+          if let Some(&child_bit) = reachability.root_to_bit.get(&child_key)
+            && let Some(reachable) = reachable_assets_per_root.get(child_bit)
+          {
+            parallel_availability |= reachable;
           }
           parallel_availability.insert(child_key.0);
         }
@@ -1545,6 +1570,15 @@ impl IdealGraphBuilder {
         continue;
       }
 
+      // Track whether this asset is also reachable from any entry-like root.
+      // If so, we must avoid `move_asset_to_bundle` later because that would remove it
+      // from the entry-like bundle (duplication semantics).
+      let reaching_entry_like: Vec<AssetKey> = bs
+        .ones()
+        .map(|i| reachability.roots[i])
+        .filter(|r| self.entry_like_roots.contains(r))
+        .collect();
+
       // Compute reachable splittable roots.
       let mut reachable: Vec<AssetKey> = bs
         .ones()
@@ -1570,12 +1604,102 @@ impl IdealGraphBuilder {
       eligible.sort();
       eligible.dedup();
 
-      if eligible.len() <= 1 {
-        // JS: if reachableArray.length <= 1, no shared bundle is created.
-        // - eligible == 0: available everywhere
-        // - eligible == 1: the asset is unique to a single root after filtering; no sharing needed
-        // Placement into a single root should already have happened in Phase 7.
-        continue;
+      // Subgraph reuse filtering (matches JS Insert Or Share "subgraph absorption"):
+      // If an eligible root A can sync-reach another eligible root B, then A doesn't
+      // need to participate in a shared bundle for this asset. A can instead reach the
+      // asset via B's bundle, so we remove A from the eligible set and add a bundle
+      // edge from A -> B.
+      {
+        let mut to_remove: HashSet<AssetKey> = HashSet::new();
+
+        for &candidate in &eligible {
+          if to_remove.contains(&candidate) {
+            continue;
+          }
+
+          let Some(&candidate_bit) = reachability.root_to_bit.get(&candidate) else {
+            continue;
+          };
+
+          for &other in &eligible {
+            if other == candidate {
+              continue;
+            }
+
+            let Some(&other_sync_idx) = self.asset_to_sync_node.get(&other) else {
+              continue;
+            };
+
+            // `reach_bits[node]` contains bits for all roots that can reach `node`.
+            // If `candidate`'s bit is set on `other`'s sync node, then `candidate`
+            // can sync-reach `other` (i.e. `other` appears in `reachableAssets[candidate]` in JS).
+            if reachability.reach_bits[other_sync_idx.index()].contains(candidate_bit) {
+              to_remove.insert(candidate);
+              ideal.add_bundle_edge(
+                IdealBundleId::from_asset_key(candidate),
+                IdealBundleId::from_asset_key(other),
+                IdealEdgeType::Sync,
+              );
+              break;
+            }
+          }
+        }
+
+        if !to_remove.is_empty() {
+          eligible.retain(|r| !to_remove.contains(r));
+        }
+      }
+
+      match eligible.len() {
+        0 => {
+          // JS: if reachableArray.length == 0, the asset is available everywhere; no shared bundle.
+          continue;
+        }
+        1 => {
+          // JS: if filtering reduces to a single eligible root, insert into that root.
+          //
+          // Direct reuse (matches JS Insert Or Share): if the current asset is itself a bundle
+          // root (it has its own bundle), don't move it. Instead, connect the eligible root's
+          // bundle to this existing bundle.
+          let asset_bundle_id = IdealBundleId::from_asset_key(asset_key);
+          if ideal.get_bundle(&asset_bundle_id).is_some() {
+            let from_root = eligible[0];
+            let from_id = root_bundle_ids[&from_root];
+            if from_id != asset_bundle_id {
+              ideal.add_bundle_edge(from_id, asset_bundle_id, IdealEdgeType::Sync);
+            }
+            continue;
+          }
+
+          let root = eligible[0];
+
+          let bundle_id = &root_bundle_ids[&root];
+          let target_bundle_id =
+            self.resolve_type_change_target(asset_key, root, bundle_id, ideal)?;
+
+          let bundle = ideal
+            .get_bundle_mut(&target_bundle_id)
+            .context("bundle missing for single-root placement in create_shared_bundles")?;
+          bundle.assets.insert(asset_key.0 as usize);
+
+          // If this asset was duplicated into one or more entry-like bundles, we must not
+          // "move" it here (which would remove it from the canonical entry-like bundle).
+          if reaching_entry_like.is_empty() {
+            ideal.move_asset_to_bundle(asset_key, &target_bundle_id)?;
+          }
+
+          self.decision(
+            "placement",
+            super::types::DecisionKind::AssetAssignedToBundle {
+              asset: asset_key,
+              bundle_root: root,
+              reason: super::types::AssetAssignmentReason::SingleEligibleRoot,
+            },
+          );
+
+          continue;
+        }
+        _ => {}
       }
 
       // Eligible roots set becomes the grouping key.
@@ -2037,14 +2161,14 @@ impl IdealGraphBuilder {
       // we must NOT treat "sync-reachable" as "available" for internalization.
       // Otherwise, allowing sync traversal through boundaries would incorrectly internalize
       // async bundles whose *root* becomes reachable via another bundle's sync tree.
-      if !self.bundle_boundaries.contains(&asset_key) {
-        if let Some(asset_sync_node_idx) = asset_sync_node_idx {
-          let from_root_key = id.as_asset_key();
-          if let Some(&root_bit) = reachability.root_to_bit.get(&from_root_key)
-            && reachability.reach_bits[asset_sync_node_idx.index()].contains(root_bit)
-          {
-            return true;
-          }
+      if !self.bundle_boundaries.contains(&asset_key)
+        && let Some(asset_sync_node_idx) = asset_sync_node_idx
+      {
+        let from_root_key = id.as_asset_key();
+        if let Some(&root_bit) = reachability.root_to_bit.get(&from_root_key)
+          && reachability.reach_bits[asset_sync_node_idx.index()].contains(root_bit)
+        {
+          return true;
         }
       }
 

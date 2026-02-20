@@ -940,6 +940,7 @@ impl Bundler for IdealGraphBundler {
 }
 
 /// Materialize an IdealBundle into the NativeBundleGraph, returning its node id.
+#[allow(clippy::too_many_arguments)]
 fn materialize_ideal_bundle(
   bundle_graph: &mut NativeBundleGraph,
   _ideal_graph: &types::IdealGraph,
@@ -3137,6 +3138,46 @@ mod tests {
         "c.js" sync shared(cd),
         "d.js" sync shared(bd),
         "d.js" sync shared(cd),
+      },
+    });
+  }
+
+  #[test]
+  fn subgraph_reuse_prevents_shared_bundle_when_root_reachable() {
+    // Scenario:
+    //   entry -> lazy a
+    //   entry -> lazy b
+    //   b -> sync a
+    //   a -> sync shared
+    //   b -> sync shared
+    //
+    // `shared.js` is reachable from both `a` and `b`, but `b` can sync-reach `a`.
+    // JS Insert Or Share "subgraph absorption" removes `b` from the eligible set,
+    // so `shared.js` is placed into `a`'s bundle and no shared bundle is created.
+    let asset_graph = fixture_graph(
+      &["entry.js"],
+      &[
+        EdgeSpec::new("entry.js", "a.js", Priority::Lazy),
+        EdgeSpec::new("entry.js", "b.js", Priority::Lazy),
+        EdgeSpec::new("b.js", "a.js", Priority::Sync),
+        EdgeSpec::new("a.js", "shared.js", Priority::Sync),
+        EdgeSpec::new("b.js", "shared.js", Priority::Sync),
+      ],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js"],
+        "a.js" => ["a.js", "shared.js"],
+        "b.js" => ["b.js"],
+      },
+      edges: {
+        "entry.js" lazy "a.js",
+        "entry.js" lazy "b.js",
+        "b.js" sync "a.js",
       },
     });
   }
