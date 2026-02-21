@@ -34,3 +34,6 @@ debug-symbols/
 mocha-cpu-profiles/
 *.trace
 packaging-output/
+
+# Rovo Dev local prompts
+.rovodev/

@@ -114,6 +114,8 @@ pub struct TargetDescriptor {
   pub scope_hoist: Option<bool>,
   pub source: Option<SourceField>,
   pub source_map: Option<SourceMapField>,
+  #[serde(rename = "__unstable_singleFileOutput")]
+  pub unstable_single_file_output: Option<bool>,
 }
 
 #[derive(Clone, Debug, Default, Hash, PartialEq, Serialize)]

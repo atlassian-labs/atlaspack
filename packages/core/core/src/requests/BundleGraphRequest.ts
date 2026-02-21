@@ -14,7 +14,6 @@ import type {ConfigAndCachePath} from './AtlaspackConfigRequest';
 
 import fs from 'fs';
 import invariant from 'assert';
-import assert from 'assert';
 import nullthrows from 'nullthrows';
 import {instrumentAsync, PluginLogger} from '@atlaspack/logger';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
@@ -36,13 +35,8 @@ import {
   createDevDependency,
   getDevDepRequests,
   invalidateDevDeps,
-  runDevDepRequest,
 } from './DevDepRequest';
-import {
-  loadPluginConfig,
-  runConfigRequest,
-  PluginWithLoadConfig,
-} from './ConfigRequest';
+import {PluginWithLoadConfig} from './ConfigRequest';
 import {fromProjectPathRelative} from '../projectPath';
 import {
   validateBundles,
@@ -406,12 +400,14 @@ class BundlerRunner {
         }
 
         // this the normal bundle workflow (bundle, optimizing, run-times, naming)
-        await bundler.bundle({
-          bundleGraph: mutableBundleGraph,
-          config: this.configs.get(plugin.name)?.result,
-          options: this.pluginOptions,
-          logger,
-          tracer,
+        await instrumentAsync('bundle (V2)', async () => {
+          await bundler.bundle({
+            bundleGraph: mutableBundleGraph,
+            config: this.configs.get(plugin.name)?.result,
+            options: this.pluginOptions,
+            logger,
+            tracer,
+          });
         });
 
         measurement && measurement.end();

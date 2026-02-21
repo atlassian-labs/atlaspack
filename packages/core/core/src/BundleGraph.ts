@@ -1758,10 +1758,20 @@ export default class BundleGraph {
       }
 
       // Get a list of parent bundle nodes pointing to the bundle group
-      let parentBundleNodes = this._graph.getNodeIdsConnectedTo(
-        this._graph.getNodeIdByContentKey(getBundleGroupId(bundleGroup)),
-        bundleGraphEdgeTypes.bundle,
-      );
+      let parentBundleNodes = this._graph
+        .getNodeIdsConnectedTo(
+          this._graph.getNodeIdByContentKey(getBundleGroupId(bundleGroup)),
+          bundleGraphEdgeTypes.bundle,
+        )
+        .filter((id) => {
+          let node = this._graph.getNode(id);
+          return node?.type !== 'root';
+        });
+
+      // Entry bundle groups have no real parent bundles, so reachability doesn't apply.
+      if (parentBundleNodes.length === 0) {
+        return false;
+      }
 
       // Check that every parent bundle has a bundle group in its ancestry that contains the asset.
       return parentBundleNodes.every((bundleNodeId) => {

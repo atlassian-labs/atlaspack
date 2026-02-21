@@ -15,10 +15,13 @@ This document contains comprehensive research and analysis for rewriting the Atl
 
 1. [Current Architecture Overview](#current-architecture-overview)
 2. [Proposed Rust Architecture](#proposed-rust-architecture)
-3. [Dominator Algorithm Approach](#dominator-algorithm-approach)
-4. [Decision Tracking System](#decision-tracking-system)
-5. [Tricky Cases Deep Dive](#tricky-cases-deep-dive)
-6. [Implementation Roadmap](#implementation-roadmap)
+3. [Dominator Algorithm Design](#dominator-algorithm-design)
+4. [Implementation Status and Architecture Decisions](#implementation-status-and-architecture-decisions)
+5. [Decision Tracking System](#decision-tracking-system)
+6. [Tricky Cases Deep Dive](#tricky-cases-deep-dive)
+7. [Remaining Work](#remaining-work)
+8. [Future Research and Aspirational Ideas](#future-research-and-aspirational-ideas)
+9. [Bundle Groups: Keep or Remove?](#bundle-groups-keep-or-remove)
 
 ---
 
@@ -1038,12 +1041,14 @@ pub fn immediate_dominator(&self, asset: AssetId) -> Option<AssetId> {
 }
 ```
 
-#### Step 4: Assigning Assets to Bundles
+#### Step 4: Creating Bundle Root Shells
 
-For each asset, find its immediate dominator and assign to that bundle:
+Create empty bundles for all bundle roots (entries + boundaries). Non-root assets are NOT
+placed yet -- they are deferred to Steps 6-8 where dominator subtree information,
+availability, and reachability are used together.
 
 ```rust
-pub fn assign_assets_to_bundles(&mut self, ctx: &mut BundlerContext) -> IdealGraph {
+pub fn create_bundle_roots(&mut self, ctx: &BundlerContext) -> IdealGraph {
     let mut ideal = IdealGraph::new();
 
     // Create bundles for entries
@@ -1054,51 +1059,86 @@ pub fn assign_assets_to_bundles(&mut self, ctx: &mut BundlerContext) -> IdealGra
 
     // Create bundles for bundle boundaries
     for &boundary_asset in &self.bundle_boundaries {
-        let bundle = Bundle::new(boundary_asset, ctx.asset_graph.asset(boundary_asset).asset_type.clone());
+        let asset = ctx.asset_graph.asset(boundary_asset);
+        let bundle = Bundle::new(boundary_asset, asset.asset_type.clone());
         ideal.bundles.insert(boundary_asset, bundle);
-    }
-
-    // Assign each asset to its dominating bundle
-    for asset in ctx.asset_graph.assets() {
-        // Skip if this asset is itself a bundle root
-        if ideal.bundles.contains_key(&asset.id) {
-            continue;
-        }
-
-        // Find the immediate dominator
-        let bundle_id = self.find_dominating_bundle(asset.id, &ideal);
-
-        // Add asset to that bundle
-        if let Some(bundle) = ideal.bundles.get_mut(&bundle_id) {
-            bundle.assets.insert(asset.id);
-            bundle.size += asset.stats.size;
-
-            ctx.decisions.record(BundlerEvent::AssetPlaced {
-                asset_id: asset.id,
-                bundle_id,
-                reason: AssetPlacementReason::DominatedBy(bundle_id),
-            });
-        }
     }
 
     ideal
 }
+```
 
-fn find_dominating_bundle(&self, asset: AssetId, ideal: &IdealGraph) -> BundleId {
-    let mut current = asset;
+**Why defer non-root placement?**
 
-    // Walk up dominator tree until we find a bundle root
-    loop {
-        if ideal.bundles.contains_key(&current) {
-            return current;
-        }
+The original design placed all assets in Step 4 by walking up the dominator tree, then
+moved multi-root assets into shared bundles in a later step. This "place then move" pattern
+was wasteful -- many assets placed in Step 4 would be immediately moved in Step 8. By
+deferring placement, we avoid redundant work and can make placement decisions with full
+availability information.
 
-        match self.immediate_dominator(current) {
-            Some(idom) => current = idom,
-            None => panic!("Asset {} has no dominating bundle", asset),
+#### Step 5: Bundle Dependency Graph
+
+Build edges between bundles based on dependency priorities (lazy, sync, parallel, conditional).
+
+#### Step 6: Dominator-Based Reachability
+
+Instead of per-root DFS traversals (O(roots \* graph_size)), derive reachability from the
+dominator tree in a single O(n) pass:
+
+```rust
+pub fn compute_reachability_from_dominators(&self) -> HashMap<AssetKey, HashSet<AssetKey>> {
+    // Build dominator tree child lists: parent -> [children]
+    let dom_children = build_dom_children(&self.dominators, &self.sync_graph);
+
+    // For each bundle root, DFS its dominator subtree.
+    // Assets in root R's subtree are reachable ONLY from R.
+    let mut asset_roots: HashMap<AssetKey, HashSet<AssetKey>> = HashMap::new();
+    for root in &self.bundle_roots {
+        for asset in dominator_subtree(root, &dom_children) {
+            asset_roots.entry(asset).or_default().insert(root);
         }
     }
+
+    // Multi-root assets (idom = virtual_root) need a reverse walk on the
+    // sync graph to find which roots can reach them. This is a small subset.
+    for asset in virtual_root_children(&dom_children) {
+        let reaching = reverse_walk_to_roots(asset, &self.sync_graph, &self.bundle_roots);
+        asset_roots.insert(asset, reaching);
+    }
+
+    asset_roots
 }
+```
+
+**Key insight**: The dominator tree encodes reachability for most assets for free. Only
+multi-root assets (those whose idom is virtual_root) require an additional reverse walk,
+and these are typically a small fraction of the total.
+
+#### Step 7: Single-Root Asset Placement
+
+Place assets that are reachable from exactly one root, or from entry roots:
+
+- **Single non-entry root**: Place directly in that root's bundle (dominator subtree).
+- **Entry roots**: Duplicate into ALL reaching entry bundles. Each entry must be
+  self-contained because entries can be loaded independently. This matches the JS
+  algorithm's `addAssetToBundleRoot` behavior.
+- **Multiple non-entry roots**: Deferred to Step 8.
+
+```rust
+// Entry duplication: asset goes into EVERY reaching entry bundle
+for entry_root in reaching_entries {
+    ideal.bundles[entry_root].assets.insert(asset);
+}
+```
+
+#### Step 8: Availability + Shared Bundle Extraction
+
+1. **Compute availability** over bundles (now including placed single-root assets).
+2. For multi-root assets (deferred from Step 7), filter by availability:
+   - If availability reduces eligible roots to 1 → place directly.
+   - If >1 eligible roots remain → extract into a shared bundle.
+3. **Recompute availability** after shared bundle insertion.
+
 ```
 
 ### Concrete Examples with Code
@@ -1108,244 +1148,250 @@ These examples show how the dominator algorithm handles various bundling scenari
 #### Example 1: Type Change (JS → CSS)
 
 ```
+
 Asset Graph:
-  entry.js (Entry)
-    ↓ [sync]
-  app.js
-    ↓ [sync, type change]
-  styles.css
-    ↓ [sync]
-  theme.css
+entry.js (Entry)
+↓ [sync]
+app.js
+↓ [sync, type change]
+styles.css
+↓ [sync]
+theme.css
+
 ```
 
 **Step 1: Build Sync Graph**
 
 ```
+
 virtual_root → entry.js → app.js
-               (stops here due to type change)
+(stops here due to type change)
+
 ```
 
 **Step 2: Identify Boundaries**
 
 ```
-bundle_boundaries = {styles.css}  // Type change from JS to CSS
+
+bundle_boundaries = {styles.css} // Type change from JS to CSS
+
 ```
 
 **Step 3: Compute Dominators**
 
 ```
+
 idom(entry.js) = virtual_root
 idom(app.js) = entry.js
 idom(styles.css) = undefined (boundary, not in sync graph)
 idom(theme.css) = styles.css (separate sync graph for CSS)
+
 ```
 
 **Step 4: Assign Assets**
 
 ```
+
 Bundle 1 (entry.js):
-  - entry.js (bundle root)
-  - app.js (dominated by entry.js)
+
+- entry.js (bundle root)
+- app.js (dominated by entry.js)
 
 Bundle 2 (styles.css):
-  - styles.css (bundle root, type change boundary)
-  - theme.css (dominated by styles.css)
+
+- styles.css (bundle root, type change boundary)
+- theme.css (dominated by styles.css)
 
 Bundle Graph:
-  Bundle 1 → Bundle 2 (parallel edge, loads together)
+Bundle 1 → Bundle 2 (parallel edge, loads together)
+
 ```
 
 **Decision Tracking**:
 
 ```
+
 Event 1: BundleCreated { bundle_id: styles.css, reason: TypeChange { from_type: "js", to_type: "css" }}
 Event 2: AssetPlaced { asset_id: app.js, bundle_id: entry.js, reason: DominatedBy(entry.js) }
 Event 3: AssetPlaced { asset_id: theme.css, bundle_id: styles.css, reason: DominatedBy(styles.css) }
+
 ```
 
 #### Example 2: Async Import
 
 ```
+
 Asset Graph:
-  entry.js (Entry)
-    ↓ [sync]
-  app.js
-    ↓ [lazy]
-  heavy.js
-    ↓ [sync]
-  lib.js
+entry.js (Entry)
+↓ [sync]
+app.js
+↓ [lazy]
+heavy.js
+↓ [sync]
+lib.js
+
 ```
 
 **Step 1: Build Sync Graph**
 
 ```
+
 virtual_root → entry.js → app.js
-               (stops at heavy.js due to lazy)
+(stops at heavy.js due to lazy)
 
 Separate subgraph:
-  heavy.js → lib.js
+heavy.js → lib.js
+
 ```
 
 **Step 2: Identify Boundaries**
 
 ```
-bundle_boundaries = {heavy.js}  // Lazy import
+
+bundle_boundaries = {heavy.js} // Lazy import
+
 ```
 
 **Step 3: Compute Dominators**
 
 ```
+
 idom(entry.js) = virtual_root
 idom(app.js) = entry.js
 idom(heavy.js) = undefined (boundary)
 idom(lib.js) = heavy.js (in separate subgraph)
+
 ```
 
 **Step 4: Assign Assets**
 
 ```
+
 Bundle 1 (entry.js):
-  - entry.js (bundle root)
-  - app.js (dominated by entry.js)
+
+- entry.js (bundle root)
+- app.js (dominated by entry.js)
 
 Bundle 2 (heavy.js):
-  - heavy.js (bundle root, async boundary)
-  - lib.js (dominated by heavy.js)
+
+- heavy.js (bundle root, async boundary)
+- lib.js (dominated by heavy.js)
 
 Bundle Graph:
-  Bundle 1 → Bundle 2 (lazy edge, loads on-demand)
-```
-
-#### Example 3: Shared Assets (Multiple Dominators)
+Bundle 1 → Bundle 2 (lazy edge, loads on-demand)
 
 ```
+
+#### Example 3: Multi-Entry Shared Assets (Entry Duplication)
+
+```
+
 Asset Graph:
-  entry1.js (Entry)         entry2.js (Entry)
-    ↓ [sync]                  ↓ [sync]
-  page1.js                  page2.js
-    ↓ [sync]                  ↓ [sync]
-    └─────→ shared.js ←──────┘
-              ↓ [sync]
-            lodash.js
+entry1.js (Entry) entry2.js (Entry)
+↓ [sync] ↓ [sync]
+page1.js page2.js
+↓ [sync] ↓ [sync]
+└─────→ shared.js ←──────┘
+↓ [sync]
+lodash.js
+
 ```
 
 **Step 1: Build Sync Graph**
 
 ```
+
 virtual_root → entry1.js → page1.js → shared.js → lodash.js
-            ↘ entry2.js → page2.js ↗
+↘ entry2.js → page2.js ↗
+
 ```
 
 **Step 2: Identify Boundaries**
 
 ```
-bundle_boundaries = {}  // No boundaries, all sync
+
+bundle_boundaries = {} // No boundaries, all sync
+
 ```
 
 **Step 3: Compute Dominators**
 
 ```
+
 idom(entry1.js) = virtual_root
 idom(entry2.js) = virtual_root
 idom(page1.js) = entry1.js
 idom(page2.js) = entry2.js
 idom(shared.js) = virtual_root (reached from both entries)
-idom(lodash.js) = shared.js
-```
-
-**Step 4: Assign Assets**
+idom(lodash.js) = shared.js (dominated by shared.js, which is multi-root)
 
 ```
-shared.js has idom = virtual_root, meaning it's not dominated by any real bundle.
-This indicates it needs a SHARED BUNDLE.
 
-Reachable from: {entry1.js, entry2.js}
+**Step 6: Reachability**
 
-Create shared bundle:
-  Bundle 3 (shared):
-    - shared.js
-    - lodash.js (dominated by shared.js)
+```
+
+shared.js has idom = virtual_root → reachable from {entry1.js, entry2.js}
+lodash.js has idom = shared.js, which is under virtual_root → also reachable from both entries
+
+```
+
+**Step 7: Entry Duplication**
+
+```
+
+Both reaching roots are entries. Since entries can be loaded independently,
+shared.js and lodash.js are DUPLICATED into both entry bundles.
+
+This matches the JS algorithm's behavior: entries always get a copy of every
+sync-reachable asset via addAssetToBundleRoot.
 
 Final bundles:
-  Bundle 1 (entry1.js): entry1.js, page1.js
-  Bundle 2 (entry2.js): entry2.js, page2.js
-  Bundle 3 (shared): shared.js, lodash.js
+Bundle 1 (entry1.js): entry1.js, page1.js, shared.js, lodash.js
+Bundle 2 (entry2.js): entry2.js, page2.js, shared.js, lodash.js
 
-Bundle Graph:
-  Bundle 1 → Bundle 3 (sync edge)
-  Bundle 2 → Bundle 3 (sync edge)
+No shared bundle needed — entries are self-contained.
+
 ```
 
-**Rust Implementation**:
-
-```rust
-pub fn assign_assets_to_bundles(&mut self, ctx: &mut BundlerContext) -> IdealGraph {
-    // ... (previous code)
-
-    for asset in ctx.asset_graph.assets() {
-        let idom = self.immediate_dominator(asset.id);
-
-        if idom == Some(AssetId::virtual()) {
-            // Asset is reachable from multiple entries - needs shared bundle
-            let reachable_bundles = self.find_reachable_bundles(asset.id, &ideal);
-
-            if reachable_bundles.len() > ctx.config.min_bundles {
-                // Create shared bundle
-                let shared_bundle_id = self.create_shared_bundle(
-                    asset.id,
-                    &reachable_bundles,
-                    &mut ideal,
-                );
-
-                ctx.decisions.record(BundlerEvent::AssetPlaced {
-                    asset_id: asset.id,
-                    bundle_id: shared_bundle_id,
-                    reason: AssetPlacementReason::SharedAcross(reachable_bundles),
-                });
-            } else {
-                // Duplicate in all bundles (below minBundles threshold)
-                for &bundle_id in &reachable_bundles {
-                    ideal.bundles.get_mut(&bundle_id).unwrap().assets.insert(asset.id);
-                }
-            }
-        }
-    }
-
-    ideal
-}
-```
+**Important**: This is correct because either entry could be loaded on its own. If
+`shared.js` were only in entry1's bundle, loading entry2 in isolation would fail.
 
 #### Example 4: Manual Shared Bundles with Dominators
 
 ```
+
 Config:
-  manualSharedBundles: [{
-    name: "vendor",
-    assets: ["node_modules/**"],
-    types: ["js"]
-  }]
+manualSharedBundles: [{
+name: "vendor",
+assets: ["node_modules/**"],
+types: ["js"]
+}]
 
 Asset Graph:
-  entry.js
-    ↓ [sync]
-  app.js
-    ↓ [sync]
-  node_modules/react.js (matches MSB)
-    ↓ [sync]
-  node_modules/react-dom.js (matches MSB)
+entry.js
+↓ [sync]
+app.js
+↓ [sync]
+node_modules/react.js (matches MSB)
+↓ [sync]
+node_modules/react-dom.js (matches MSB)
+
 ```
 
 **With Dominators**:
 
 ```
+
 Normal dominator assignment would place:
-  react.js → dominated by entry.js
-  react-dom.js → dominated by react.js
+react.js → dominated by entry.js
+react-dom.js → dominated by react.js
 
 But MSB config OVERRIDES this:
-  react.js → vendor bundle (manual override)
-  react-dom.js → vendor bundle (manual override)
-```
+react.js → vendor bundle (manual override)
+react-dom.js → vendor bundle (manual override)
+
+````
 
 **Implementation**:
 
@@ -1381,7 +1427,7 @@ pub fn apply_manual_shared_bundles(
         }
     }
 }
-```
+````
 
 #### Example 5: Conditional Bundling
 
@@ -1460,16 +1506,26 @@ Asset Graph:
   both import shared.js
 ```
 
-**Solution**: Virtual root connects all entries
+**Solution**: Virtual root connects all entries. Since both reaching roots are entries,
+`shared.js` is duplicated into both entry bundles (not extracted to a shared bundle).
+Entries must be self-contained because they can be loaded independently.
 
-```rust
+```
 sync_graph:
   virtual_root → entry1.js → shared.js
               ↘ entry2.js ↗
 
 idom(shared.js) = virtual_root (not dominated by either entry)
-→ Needs shared bundle
+→ Duplicated into both entry bundles
+
+Result:
+  entry1.js bundle: [entry1.js, shared.js]
+  entry2.js bundle: [entry2.js, shared.js]
 ```
+
+**Note**: Shared bundles are only created for assets reachable from multiple _non-entry_
+roots (e.g., async bundle boundaries). When all reaching roots are entries, duplication
+is the correct behavior.
 
 ### Performance Comparison
 
@@ -1509,6 +1565,94 @@ The dominator algorithm provides:
 5. **Debugging**: Can explain via dominator relationships
 
 The key is treating bundle boundaries (async, type changes, isolated) as "cuts" in the sync graph, then applying dominators to each connected component.
+
+---
+
+## Implementation Status and Architecture Decisions
+
+This section documents key decisions made during implementation that differ from or extend
+the original research above. These decisions are canonical -- when in doubt, this section
+takes precedence over the pseudocode examples elsewhere in this document.
+
+### Multi-Pass Architecture
+
+**Decision**: The bundler uses an "ideal graph first, then optimization passes" model.
+Features like manual shared bundles, minBundles thresholds, shared bundle merging, and
+bundle internalization are implemented as separate passes that transform the ideal graph
+after it is constructed. They do NOT interleave with the core ideal graph construction.
+
+**Rationale**: The old JS bundler interleaved MSB, internalization, and other features
+directly into the ideal graph construction, making the code hard to debug and understand.
+The multi-pass approach:
+
+1. Each pass is independently testable with "input ideal graph -> output ideal graph"
+2. Per-pass tracing/profiling comes for free (each phase is instrumented)
+3. Feature flags become trivial -- just skip a pass
+4. Debugging is straightforward -- dump the ideal graph between passes
+5. New optimizations can be prototyped without risking regressions in core logic
+
+**Performance cost**: Negligible. The ideal graph is lightweight metadata (interned keys,
+string IDs, HashSets). Each optimization pass shuffles this metadata in O(bundles \* assets)
+worst case, which is microseconds to low milliseconds. The actual bundler bottleneck is
+transformation, resolution, and packaging -- not graph metadata manipulation.
+
+### Implemented Phase Pipeline
+
+The current implementation uses these phases:
+
+| Phase | Name                         | Description                                                                              |
+| ----- | ---------------------------- | ---------------------------------------------------------------------------------------- |
+| 1     | Identify bundle boundaries   | Find assets that create new bundles (lazy, type change, isolated, parallel, conditional) |
+| 2     | Build sync graph             | Construct sync-only graph with virtual root for dominator computation                    |
+| 3     | Compute dominators           | Lengauer-Tarjan algorithm via `petgraph::algo::dominators`                               |
+| 4     | Create bundle root shells    | Create empty bundles for entries + boundaries (no non-root placement)                    |
+| 5     | Build bundle edges           | Bundle dependency graph with edge types (lazy, sync, parallel, conditional)              |
+| 6     | Dominator-based reachability | Derive asset->roots map from dominator subtrees + sync graph reverse walk                |
+| 7     | Place single-root assets     | Place dominated assets + duplicate into all reaching entry bundles                       |
+| 8a    | Availability propagation     | Compute ancestor assets via topological sort of bundle graph                             |
+| 8b    | Shared bundle extraction     | Extract multi-root non-entry assets into shared bundles, filtered by availability        |
+| 9     | Final availability           | Recompute availability after shared bundle insertion                                     |
+
+**Future passes** (not yet implemented, will be added as separate post-ideal-graph transforms):
+
+| Pass                   | Description                                                | Status      |
+| ---------------------- | ---------------------------------------------------------- | ----------- |
+| Manual shared bundles  | Override asset placement per user config                   | Not started |
+| minBundles threshold   | Duplicate instead of shared-extract when below threshold   | Not started |
+| Bundle internalization | Remove redundant async bundles already available in parent | Not started |
+| Shared bundle merging  | Merge small shared bundles to reduce HTTP requests         | Not started |
+| Bundle reuse           | Reuse existing bundles instead of creating shared bundles  | Not started |
+| Inline constants       | Place constant modules with their parent asset             | Not started |
+
+### Entry Duplication Rule
+
+**Decision**: Assets reachable from entry roots are duplicated into ALL reaching entry
+bundles. Shared bundles are only created for assets reachable from multiple non-entry
+roots (async boundaries).
+
+**Rationale**: Entry bundles must be self-contained because they can be loaded independently.
+If entry-a.js and entry-b.js both sync-import shared.js, and shared.js is only placed in
+entry-a's bundle, then loading entry-b in isolation would fail at runtime.
+
+This matches the JS algorithm's `addAssetToBundleRoot` behavior, where entries always get
+a copy of every sync-reachable asset.
+
+### Dominator Subtree Reachability
+
+**Decision**: Reachability is derived from the dominator tree structure rather than per-root
+DFS traversals on the asset graph.
+
+**How it works**:
+
+1. Build dominator tree child lists in O(n) (one pass over all nodes)
+2. For each bundle root, DFS its dominator subtree -- these assets are reachable only from that root
+3. For multi-root assets (idom = virtual_root), reverse-walk the sync graph to find reaching roots
+
+**Advantages over per-root DFS**:
+
+- O(n) for single-dominator assets (the common case) vs O(roots \* graph_size)
+- Reuses the sync graph already built for dominators instead of re-traversing the asset graph
+- Multi-root reverse walks are scoped to a small subset of assets
 
 ---
 
@@ -2303,180 +2447,52 @@ if bundle.behavior == Some(BundleBehavior::Isolated) {
 
 ---
 
-## Implementation Roadmap
+## Remaining Work
 
-### Phase 1: Core Infrastructure (Week 1-2)
+The core ideal graph pipeline (Phases 1-9) is implemented and tested. The following
+features need to be added as post-ideal-graph optimization passes:
 
-**Goal**: Set up Rust module structure and basic types
+### High Priority (Required for Production Parity)
 
-**Tasks**:
+1. **Manual Shared Bundles (MSB)**: Override asset placement per user config.
+   Post-ideal-graph pass that moves assets matching MSB patterns into designated bundles.
 
-1. Create `crates/atlaspack_bundler_default/` structure
-2. Define core types: `Bundle`, `IdealGraph`, `BundlerContext`
-3. Implement `BundlerDecisions` tracking system
-4. Set up test infrastructure with fixtures from JS tests
+2. **minBundles threshold**: When a shared bundle would serve fewer roots than the
+   configured threshold, duplicate the asset into all reaching roots instead of
+   extracting a shared bundle. The JS algorithm defaults to `minBundles = 1`.
 
-**Deliverables**:
+3. **Bundle internalization**: Remove redundant async bundles when all their assets
+   are already available from ancestor bundles.
 
-- Compiling Rust crate with type definitions
-- Basic decision tracking implementation
-- Test harness that can load asset graphs
+4. **Non-splittable / isolated / stable-name bundles**: The JS algorithm treats these
+   like entries (duplicating assets into them). Currently not fully handled.
 
-### Phase 2: Ideal Graph with Dominators (Week 3-4)
+### Medium Priority (Optimization)
 
-**Goal**: Implement phase 1 (ideal graph creation) using dominator algorithm
+5. **Shared bundle merging**: Merge small shared bundles that serve overlapping root
+   sets to reduce HTTP request count. Controlled by `minBundleSize` config.
 
-**Tasks**:
+6. **Bundle reuse**: Detect when an existing bundle already contains the required
+   assets and reuse it instead of creating a new shared bundle.
 
-1. Implement sync dependency graph builder
-2. Integrate `petgraph` dominator computation
-3. Implement bundle boundary detection
-4. Implement asset-to-bundle assignment
-5. Write comprehensive tests against JS output
+7. **Parallel request limits**: Enforce `maxParallelRequests` config by merging
+   bundles within the same load group.
 
-**Deliverables**:
+### Lower Priority (Enhancement)
 
-- Working ideal graph generator
-- Tests showing identical output to JS for simple cases
-- Performance benchmarks
+8. **Inline constants**: Place constant modules with their importing asset rather
+   than in separate bundles.
 
-**Success criteria**: Passes 80% of simple bundling tests
-
-### Phase 3: Tricky Cases (Week 5-6)
-
-**Goal**: Handle all edge cases documented above
-
-**Tasks**:
-
-1. Implement Manual Shared Bundles (MSB) support
-2. Implement Conditional Bundling with config handling
-3. Implement Bundle Internalization algorithm
-4. Implement Constant Module tracking
-5. Handle Bundle Groups properly
-
-**Deliverables**:
-
-- All edge cases handled
-- Tests for each tricky case
-- Decision tracking for all special cases
-
-**Success criteria**: Passes 95% of bundling tests
-
-### Phase 4: Optimization Phase (Week 7-8)
-
-**Goal**: Implement phase 2 (bundle merging and optimization)
-
-**Tasks**:
-
-1. Implement Shared Bundle Merging
-2. Implement Async Bundle Merging
-3. Implement Bundle Reuse detection
-4. Handle size limits and parallel request limits
-5. Optimize for performance
-
-**Deliverables**:
-
-- Complete optimization phase
-- Performance benchmarks vs JS
-- Memory profiling
-
-**Success criteria**: Passes 100% of bundling tests, faster than JS
-
-### Phase 5: Integration (Week 9-10)
-
-**Goal**: Integrate with Atlaspack core and production-test
-
-**Tasks**:
-
-1. Wire up to Atlaspack plugin system
-2. Export decisions to `@atlaspack/inspector`
-3. Add configuration migration helpers
-4. Test on real Atlassian products
-5. Performance tuning
-
-**Deliverables**:
-
-- Production-ready bundler
-- Documentation for migration
-- Performance comparison report
-
-**Success criteria**: Successfully bundles real applications, measurably faster
+9. **Conditional bundling**: Handle `importCond` dependencies with proper bundle
+   variant creation.
 
 ### Testing Strategy
 
-**Unit tests**: Each phase independently tested
-
-```rust
-#[test]
-fn test_dominator_basic() {
-    let asset_graph = build_test_graph();
-    let dominators = compute_dominators(&asset_graph);
-    assert_eq!(dominators.immediate_dominator(asset_b), Some(asset_a));
-}
-```
-
-**Integration tests**: Full bundling pipeline
-
-```rust
-#[test]
-fn test_manual_shared_bundles() {
-    let ctx = BundlerContext::from_fixture("msb-test");
-    let ideal = build_ideal_graph(&mut ctx);
-    assert_bundle_contains(ideal, "vendor", "node_modules/lodash");
-}
-```
-
-**Comparison tests**: Output matches JS implementation
-
-```rust
-#[test]
-fn test_matches_js_output() {
-    let rust_output = run_rust_bundler("fixture");
-    let js_output = run_js_bundler("fixture");
-    assert_bundle_graphs_equivalent(rust_output, js_output);
-}
-```
-
-**Performance benchmarks**: Track improvements
-
-```rust
-#[bench]
-fn bench_large_app(b: &mut Bencher) {
-    let ctx = load_large_app_fixture();
-    b.iter(|| build_ideal_graph(&mut ctx));
-}
-```
-
-### Benefits of This Approach
-
-1. **Clearer algorithm**: Dominator-based logic is easier to understand and reason about
-2. **Better performance**: O(n log n) dominators vs O(n²) manual reachability
-3. **Debuggability**: Decision tracking explains every bundling choice
-4. **Testability**: Clear phases make testing isolated components easy
-5. **Maintainability**: Well-defined boundaries between phases
-6. **Extensibility**: Easy to add new optimization passes
-
-### Risks and Mitigation
-
-**Risk**: Dominator algorithm doesn't handle all cases
-
-- **Mitigation**: Fall back to manual reachability for edge cases
-- **Evidence**: Most cases fit dominator model, only MSBs need special handling
-
-**Risk**: Output differs from JS implementation
-
-- **Mitigation**: Extensive comparison testing, gradual rollout
-- **Evidence**: Algorithm is deterministic, can reproduce exactly
-
-**Risk**: Performance regression
-
-- **Mitigation**: Comprehensive benchmarking, profiling
-- **Evidence**: Rust + better algorithm should be faster
-
-**Risk**: Increased complexity in Rust
-
-- **Mitigation**: Clear documentation, decision tracking for debugging
-- **Evidence**: Phase-based approach reduces complexity
+- **Unit tests**: Each phase independently tested with `fixture_graph` helper and
+  `assert_graph!` macro (see `mod.rs` test module).
+- **Comparison tests**: Output should match JS `idealGraph.ts` for equivalent inputs.
+  Priority is matching the JS algorithm's behavior for production rollout safety.
+- **Performance benchmarks**: Track per-phase timing via `#[instrument]` tracing.
 
 ---
 
@@ -2491,12 +2507,17 @@ Rewriting the Atlaspack bundler in Rust with a dominator-based algorithm and pha
 
 The tricky cases (MSB, conditional bundling, internalization, etc.) are all solvable with the proposed architecture. The key is treating them as separate passes that modify the ideal graph rather than trying to handle everything in one monolithic algorithm.
 
-**Recommended next steps**:
+**Current status**: Core ideal graph pipeline (Phases 1-9) is implemented with dominator-based
+reachability, entry duplication, and shared bundle extraction. See "Remaining Work" section
+for outstanding features needed for production parity.
 
-1. Review this research with the team
-2. Create proof-of-concept for ideal graph phase with dominators
-3. Validate decision tracking API meets debugging needs
-4. Begin Phase 1 implementation
+---
+
+## Future Research and Aspirational Ideas
+
+The following sections contain research and ideas for future consideration.
+They have not been validated against the current implementation and may need
+updating as the architecture evolves.
 
 ---
 
@@ -5486,6 +5507,8 @@ bundler.register_cost_model(Box::new(cost_model));
 - [ ] Performance benchmarking infrastructure
 
 **Result**: New optimizations can be added as plugins/passes without touching core bundler logic, making experimentation safe and rollback easy.
+
+---
 
 ---
 
