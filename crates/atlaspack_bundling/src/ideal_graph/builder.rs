@@ -19,7 +19,7 @@ struct Reachability {
 
 use anyhow::Context;
 use atlaspack_core::{
-  asset_graph::{AssetGraph, NodeId},
+  asset_graph::{AssetGraph, DependencyState, NodeId},
   types::{BundleBehavior, EnvironmentContext, Priority},
 };
 use petgraph::{
@@ -258,6 +258,12 @@ impl IdealGraphBuilder {
           continue;
         };
 
+        // Match JS `skipUnusedDependencies: true`.
+        let state = asset_graph.get_dependency_state(&dep_node_id);
+        if matches!(state, DependencyState::Deferred | DependencyState::Excluded) {
+          continue;
+        }
+
         for target_asset_node_id in asset_graph.get_outgoing_neighbors(&dep_node_id) {
           let Some(target_asset) = asset_graph.get_asset(&target_asset_node_id) else {
             continue;
@@ -319,6 +325,12 @@ impl IdealGraphBuilder {
         let Some(dep) = asset_graph.get_dependency(&dep_node_id) else {
           continue;
         };
+
+        // Match JS `skipUnusedDependencies: true`.
+        let state = asset_graph.get_dependency_state(&dep_node_id);
+        if matches!(state, DependencyState::Deferred | DependencyState::Excluded) {
+          continue;
+        }
 
         for target_asset_node_id in asset_graph.get_outgoing_neighbors(&dep_node_id) {
           let Some(target_asset) = asset_graph.get_asset(&target_asset_node_id) else {
@@ -455,6 +467,12 @@ impl IdealGraphBuilder {
         if dep.bundle_behavior == Some(BundleBehavior::Isolated)
           || dep.bundle_behavior == Some(BundleBehavior::InlineIsolated)
         {
+          continue;
+        }
+
+        // Match JS `skipUnusedDependencies: true`.
+        let state = asset_graph.get_dependency_state(&dep_node_id);
+        if matches!(state, DependencyState::Deferred | DependencyState::Excluded) {
           continue;
         }
 
@@ -803,102 +821,132 @@ impl IdealGraphBuilder {
     // counts which then slow down availability computation.
     let mut seen_edges: HashSet<(NodeIndex, NodeIndex, BundleRootEdgeType)> = HashSet::new();
 
-    // For each root, walk its sync-reachable asset subgraph (using the sync-only graph).
+    // For each root, traverse the asset graph using a stack-based DFS.
+    //
+    // This mirrors the JS reference implementation:
+    // - full asset graph traversal (not sync_graph BFS)
+    // - `skipUnusedDependencies: true` (skip Deferred/Excluded dependency subtrees)
+    // - dependency nodes are visited interleaved with asset nodes
     for root in roots {
       let Some(&from_node) = self.bundle_root_graph_nodes.get(&root) else {
         continue;
       };
-      let Some(&root_sync_node) = self.asset_to_sync_node.get(&root) else {
-        continue;
-      };
+
       let Some((root_ctx, _root_behavior)) = asset_info.get(&root).copied() else {
         continue;
       };
 
-      let mut queue: VecDeque<NodeIndex> = VecDeque::new();
-      let mut visited: HashSet<NodeIndex> = HashSet::new();
-      queue.push_back(root_sync_node);
+      let Some(&root_asset_node_id) = asset_node_by_key.get(&root) else {
+        continue;
+      };
 
-      while let Some(n) = queue.pop_front() {
-        if !visited.insert(n) {
+      // Stack-based DFS (LIFO) to match JS traverse.
+      let mut stack: Vec<NodeId> = Vec::new();
+      let mut visited: HashSet<NodeId> = HashSet::new();
+      stack.push(root_asset_node_id);
+
+      while let Some(node_id) = stack.pop() {
+        if !visited.insert(node_id) {
           continue;
         }
 
-        let Some(SyncNode::Asset(asset_key)) = self.sync_graph.node_weight(n).copied() else {
-          continue;
-        };
+        // Asset node handling.
+        if let Some(asset) = asset_graph.get_asset(&node_id) {
+          let Some(asset_key) = self.assets.key_for(&asset.id) else {
+            continue;
+          };
 
-        // Skip traversing children past isolated assets (matches JS `asset.bundleBehavior != null`).
-        // Skip assets with bundleBehavior Isolated/InlineIsolated (matching JS line 730:
-        // `if (asset.bundleBehavior != null) { actions.skipChildren(); return; }`).
-        // But don't skip the ROOT of this BFS — JS only checks descendants, not the root.
-        if asset_key != root
-          && let Some((_ctx, Some(beh))) = asset_info.get(&asset_key)
-          && (beh == &BundleBehavior::Isolated || beh == &BundleBehavior::InlineIsolated)
-        {
-          continue;
-        }
+          // Skip traversing children past isolated assets (matches JS `asset.bundleBehavior != null`).
+          // But don't skip the ROOT of this DFS.
+          if asset_key != root && asset.bundle_behavior.is_some() {
+            continue;
+          }
 
-        // Scan outgoing dependencies in the asset graph for non-sync edges that point to bundle roots.
-        if let Some(asset_node_id) = asset_node_by_key.get(&asset_key) {
-          for dep_node_id in asset_graph.get_outgoing_neighbors(asset_node_id) {
-            let Some(dep) = asset_graph.get_dependency(&dep_node_id) else {
-              continue;
-            };
-
-            // Only model lazy/parallel edges (conditional is not yet handled here).
-            let edge_ty = match dep.priority {
-              Priority::Lazy => Some(BundleRootEdgeType::Lazy),
-              Priority::Parallel => Some(BundleRootEdgeType::Parallel),
-              _ => None,
-            };
-
-            let Some(edge_ty) = edge_ty else {
-              continue;
-            };
-
-            // Target assets of this dependency.
-            for target_asset_node_id in asset_graph.get_outgoing_neighbors(&dep_node_id) {
-              let Some(target_asset) = asset_graph.get_asset(&target_asset_node_id) else {
-                continue;
-              };
-              let Some(target_key) = self.assets.key_for(&target_asset.id) else {
-                continue;
-              };
-
-              if !self.bundle_roots.contains(&target_key) {
-                continue;
-              }
-
-              // Filter: match JS `bundle.bundleBehavior == null` and `!bundle.env.isIsolated()`.
-              if dep.bundle_behavior.is_some() || target_asset.bundle_behavior.is_some() {
-                continue;
-              }
-
-              if env_is_isolated(target_asset.env.context) {
-                continue;
-              }
-
-              if target_asset.env.context != root_ctx {
-                continue;
-              }
-
-              let Some(&to_node) = self.bundle_root_graph_nodes.get(&target_key) else {
-                continue;
-              };
-
-              // Deduplicate edges (see `seen_edges` above).
-              if seen_edges.insert((from_node, to_node, edge_ty)) {
-                self.bundle_root_graph.add_edge(from_node, to_node, edge_ty);
-              }
+          // Traverse children (dependency nodes) in insertion order.
+          // We push in reverse so the first neighbor is processed first.
+          let children: Vec<NodeId> = asset_graph.get_outgoing_neighbors(&node_id);
+          for child in children.into_iter().rev() {
+            if !visited.contains(&child) {
+              stack.push(child);
             }
           }
+
+          continue;
         }
 
-        // Traverse to sync successors.
-        for succ in self.sync_graph.neighbors_directed(n, Direction::Outgoing) {
-          queue.push_back(succ);
+        // Dependency node handling.
+        if let Some(dep) = asset_graph.get_dependency(&node_id) {
+          // JS `skipUnusedDependencies: true`
+          let state = asset_graph.get_dependency_state(&node_id);
+          if matches!(state, DependencyState::Deferred | DependencyState::Excluded) {
+            continue;
+          }
+
+          if dep.priority == Priority::Sync {
+            // Continue DFS into sync target assets.
+            let children: Vec<NodeId> = asset_graph.get_outgoing_neighbors(&node_id);
+            for child in children.into_iter().rev() {
+              if !visited.contains(&child) {
+                stack.push(child);
+              }
+            }
+            continue;
+          }
+
+          // Non-sync deps: add edge for Lazy/Parallel when they point to bundle roots,
+          // then skip children (do not traverse into that subtree).
+          let edge_ty = match dep.priority {
+            Priority::Lazy => Some(BundleRootEdgeType::Lazy),
+            Priority::Parallel => Some(BundleRootEdgeType::Parallel),
+            _ => None,
+          };
+
+          let Some(edge_ty) = edge_ty else {
+            continue;
+          };
+
+          for target_asset_node_id in asset_graph.get_outgoing_neighbors(&node_id) {
+            let Some(target_asset) = asset_graph.get_asset(&target_asset_node_id) else {
+              continue;
+            };
+
+            let Some(target_key) = self.assets.key_for(&target_asset.id) else {
+              continue;
+            };
+
+            if !self.bundle_roots.contains(&target_key) {
+              continue;
+            }
+
+            // Filter: match JS `bundle.bundleBehavior == null` and `!bundle.env.isIsolated()`.
+            // Keep existing bundleBehavior checks on dep and target.
+            if dep.bundle_behavior.is_some() || target_asset.bundle_behavior.is_some() {
+              continue;
+            }
+
+            if env_is_isolated(target_asset.env.context) {
+              continue;
+            }
+
+            // Env context mismatch check.
+            if target_asset.env.context != root_ctx {
+              continue;
+            }
+
+            let Some(&to_node) = self.bundle_root_graph_nodes.get(&target_key) else {
+              continue;
+            };
+
+            // Deduplicate edges (see `seen_edges` above).
+            if seen_edges.insert((from_node, to_node, edge_ty)) {
+              self.bundle_root_graph.add_edge(from_node, to_node, edge_ty);
+            }
+          }
+
+          continue;
         }
+
+        // Root/Entry nodes (or any other node types) are ignored.
       }
     }
 
