@@ -60,6 +60,13 @@ pub struct IdealGraphBuilder {
   bundle_root_graph_nodes: HashMap<AssetKey, NodeIndex>,
   bundle_root_graph_virtual_root: Option<NodeIndex>,
 
+  // Bundle-root graph node ordering matching the JS reference implementation:
+  // iterative DFS post-order starting from `bundle_root_graph_virtual_root`.
+  //
+  // This intentionally differs from SCC-condensation ordering: cycles are handled by
+  // skipping already-visited nodes (like JS topoSort).
+  bundle_root_graph_topo_order: Vec<AssetKey>,
+
   // Entry roots.
   entry_roots: HashSet<super::types::AssetKey>,
 
@@ -68,6 +75,10 @@ pub struct IdealGraphBuilder {
 
   // Asset key -> file type, populated during asset interning.
   asset_file_types: HashMap<super::types::AssetKey, atlaspack_core::types::FileType>,
+
+  // Only assets reachable from the current target entry roots.
+  // Matches JS bundler behavior where non-target entry dependency subtrees are skipped.
+  reachable_assets: HashSet<super::types::AssetKey>,
 
   // Bundle roots that should be treated like entries (assets duplicated into them).
   // Includes entries, non-splittable, isolated, and stable-name bundle roots.
@@ -110,6 +121,10 @@ impl IdealGraphBuilder {
     );
     let entry_assets = self.extract_entry_assets(asset_graph)?;
     self.entry_roots = entry_assets.iter().copied().collect();
+
+    // Compute which assets are reachable from the current target entries.
+    // This must run before any phase that iterates over assets.
+    self.compute_reachable_assets(asset_graph, &entry_assets)?;
 
     // Phase 0: gather core stats.
     let stats = IdealGraphBuildStats {
@@ -208,6 +223,70 @@ impl IdealGraphBuilder {
   }
 
   // ----------------------------
+  // Reachable assets
+  // ----------------------------
+
+  /// Compute the set of assets reachable from the current target entry roots.
+  ///
+  /// Mirrors the JS bundler behavior where subtrees under non-target entry dependencies
+  /// are skipped.
+  #[instrument(level = "debug", skip_all, fields(entries = entry_assets.len()))]
+  fn compute_reachable_assets(
+    &mut self,
+    asset_graph: &AssetGraph,
+    entry_assets: &[AssetKey],
+  ) -> anyhow::Result<()> {
+    self.reachable_assets.clear();
+
+    let mut queue: VecDeque<NodeId> = VecDeque::new();
+
+    for &entry_key in entry_assets {
+      self.reachable_assets.insert(entry_key);
+
+      let entry_asset_id = self.assets.id_for(entry_key);
+      if let Some(node_id) = asset_graph
+        .get_node_id_by_content_key(entry_asset_id)
+        .copied()
+      {
+        queue.push_back(node_id);
+      }
+    }
+
+    while let Some(asset_node_id) = queue.pop_front() {
+      for dep_node_id in asset_graph.get_outgoing_neighbors(&asset_node_id) {
+        let Some(dep) = asset_graph.get_dependency(&dep_node_id) else {
+          continue;
+        };
+
+        for target_asset_node_id in asset_graph.get_outgoing_neighbors(&dep_node_id) {
+          let Some(target_asset) = asset_graph.get_asset(&target_asset_node_id) else {
+            continue;
+          };
+
+          let Some(target_key) = self.assets.key_for(&target_asset.id) else {
+            continue;
+          };
+
+          // Skip subtrees under entry dependencies that are not part of the current target entries.
+          if dep.is_entry && !self.entry_roots.contains(&target_key) {
+            continue;
+          }
+
+          if self.reachable_assets.insert(target_key) {
+            queue.push_back(target_asset_node_id);
+          }
+        }
+      }
+    }
+
+    debug!(
+      reachable = self.reachable_assets.len(),
+      "ideal graph: reachable assets computed"
+    );
+    Ok(())
+  }
+
+  // ----------------------------
   // Phase 1: Bundle boundaries
   // ----------------------------
 
@@ -231,6 +310,10 @@ impl IdealGraphBuilder {
       let Some(from_key) = self.assets.key_for(&from_asset.id) else {
         continue;
       };
+
+      if !self.reachable_assets.contains(&from_key) {
+        continue;
+      }
 
       for dep_node_id in asset_graph.get_outgoing_neighbors(&asset_node_id) {
         let Some(dep) = asset_graph.get_dependency(&dep_node_id) else {
@@ -266,6 +349,10 @@ impl IdealGraphBuilder {
             let Some(target_key) = self.assets.key_for(&target_asset.id) else {
               continue;
             };
+
+            if !self.reachable_assets.contains(&target_key) {
+              continue;
+            }
 
             let inserted = self.bundle_boundaries.insert(target_key);
             if inserted {
@@ -309,11 +396,14 @@ impl IdealGraphBuilder {
     let virtual_root = self.sync_graph.add_node(SyncNode::VirtualRoot);
     self.virtual_root = Some(virtual_root);
 
-    // Add all assets as nodes.
+    // Add reachable assets as nodes.
     for asset_id in self.assets.ids().iter() {
       let Some(key) = self.assets.key_for(asset_id) else {
         continue;
       };
+      if !self.reachable_assets.contains(&key) {
+        continue;
+      }
       let idx = self.sync_graph.add_node(SyncNode::Asset(key));
       self.asset_to_sync_node.insert(key, idx);
     }
@@ -344,6 +434,11 @@ impl IdealGraphBuilder {
       let Some(from_key) = self.assets.key_for(&from_asset.id) else {
         continue;
       };
+
+      if !self.reachable_assets.contains(&from_key) {
+        continue;
+      }
+
       let Some(&from_idx) = self.asset_to_sync_node.get(&from_key) else {
         continue;
       };
@@ -371,6 +466,10 @@ impl IdealGraphBuilder {
           let Some(target_key) = self.assets.key_for(&target_asset.id) else {
             continue;
           };
+
+          if !self.reachable_assets.contains(&target_key) {
+            continue;
+          }
 
           // Note: sync type-change edges (e.g. JS → CSS) are NOT skipped here.
           // CSS assets from sync imports are regular sync-reachable assets (not
@@ -730,7 +829,11 @@ impl IdealGraphBuilder {
         };
 
         // Skip traversing children past isolated assets (matches JS `asset.bundleBehavior != null`).
-        if let Some((_ctx, Some(beh))) = asset_info.get(&asset_key)
+        // Skip assets with bundleBehavior Isolated/InlineIsolated (matching JS line 730:
+        // `if (asset.bundleBehavior != null) { actions.skipChildren(); return; }`).
+        // But don't skip the ROOT of this BFS — JS only checks descendants, not the root.
+        if asset_key != root
+          && let Some((_ctx, Some(beh))) = asset_info.get(&asset_key)
           && (beh == &BundleBehavior::Isolated || beh == &BundleBehavior::InlineIsolated)
         {
           continue;
@@ -768,10 +871,6 @@ impl IdealGraphBuilder {
               }
 
               // Filter: match JS `bundle.bundleBehavior == null` and `!bundle.env.isIsolated()`.
-              //
-              // In JS, `bundle.bundleBehavior` is derived from the dependency or the target asset
-              // and is `null` for normal splittable bundles. For our purposes, treat any explicit
-              // bundle behavior on the dep or target asset as ineligible.
               if dep.bundle_behavior.is_some() || target_asset.bundle_behavior.is_some() {
                 continue;
               }
@@ -803,9 +902,13 @@ impl IdealGraphBuilder {
       }
     }
 
+    // Precompute JS-matching topo order for availability computation.
+    self.bundle_root_graph_topo_order = self.compute_bundle_root_graph_topo_order();
+
     debug!(
       bundle_root_nodes = self.bundle_root_graph.node_count(),
       bundle_root_edges = self.bundle_root_graph.edge_count(),
+      topo_order_len = self.bundle_root_graph_topo_order.len(),
       "ideal graph: built bundle root graph"
     );
 
@@ -816,12 +919,67 @@ impl IdealGraphBuilder {
   // Phase 6: Availability propagation
   // ----------------------------
 
+  /// Compute bundle-root graph order via iterative DFS post-order.
+  ///
+  /// Requirements (must match JS):
+  /// - start from `bundle_root_graph_virtual_root`
+  /// - stack-based DFS (no recursion)
+  /// - process children in petgraph insertion order
+  /// - push children in reverse order onto the stack so the first child is processed first
+  /// - on exit/backtrack, append node's `AssetKey`
+  /// - skip already visited nodes (cycle back-edges)
+  /// - reverse post-order result to get topo order
+  fn compute_bundle_root_graph_topo_order(&self) -> Vec<AssetKey> {
+    let Some(virtual_root) = self.bundle_root_graph_virtual_root else {
+      return Vec::new();
+    };
+
+    let mut visited: HashSet<NodeIndex> = HashSet::new();
+    let mut post_order: Vec<AssetKey> = Vec::new();
+
+    // (node, exiting)
+    let mut stack: Vec<(NodeIndex, bool)> = Vec::new();
+    stack.push((virtual_root, false));
+
+    while let Some((node, exiting)) = stack.pop() {
+      if exiting {
+        if node != virtual_root
+          && let Some(&key) = self.bundle_root_graph.node_weight(node)
+        {
+          post_order.push(key);
+        }
+        continue;
+      }
+
+      if !visited.insert(node) {
+        continue;
+      }
+
+      stack.push((node, true));
+
+      // Children in insertion order, then pushed reversed for LIFO.
+      let children: Vec<NodeIndex> = self
+        .bundle_root_graph
+        .edges_directed(node, Direction::Outgoing)
+        .map(|e| e.target())
+        .collect();
+
+      for child in children.into_iter().rev() {
+        if !visited.contains(&child) {
+          stack.push((child, false));
+        }
+      }
+    }
+
+    post_order.reverse();
+    post_order
+  }
+
   /// Computes `ancestor_assets` for each bundle root using the JS bundler semantics.
   ///
   /// This propagates availability down the `bundle_root_graph` (lazy/parallel edges) in
   /// topological order, intersecting availability through all parent paths.
   ///
-  /// If the bundle-root graph is cyclic, we fall back to SCC condensation order.
   #[instrument(level = "debug", skip_all)]
   fn compute_availability(
     &mut self,
@@ -870,17 +1028,14 @@ impl IdealGraphBuilder {
     };
 
     // Determine processing order.
-    let order: Vec<NodeIndex> = match petgraph::algo::toposort(&self.bundle_root_graph, None) {
-      Ok(o) => o,
-      Err(_) => {
-        debug!(
-          "ideal graph: bundle root graph has cycles; computing availability via SCC condensation"
-        );
-        self
-          .bundle_root_graph_scc_order()
-          .context("failed to compute SCC order for bundle root graph")?
-      }
-    };
+    //
+    // Must match JS `topoSort` exactly: DFS post-order from the virtual root, using
+    // insertion-order edges (no sorting) and skipping already-visited nodes.
+    let order: Vec<NodeIndex> = self
+      .bundle_root_graph_topo_order
+      .iter()
+      .filter_map(|k| self.bundle_root_graph_nodes.get(k).copied())
+      .collect();
 
     // Precompute bundle group membership.
     //
@@ -1034,28 +1189,13 @@ impl IdealGraphBuilder {
       // Maintain per-parent parallel sibling availability: later parallel siblings see earlier siblings.
       let mut parallel_availability = RoaringBitmap::new();
 
-      // Deterministic order for children to match JS behavior.
-      let mut children: Vec<(NodeIndex, BundleRootEdgeType)> = self
+      // Children must be processed in insertion order (matches JS `getNodeIdsConnectedFrom`).
+      for e in self
         .bundle_root_graph
         .edges_directed(node, Direction::Outgoing)
-        .map(|e| (e.target(), *e.weight()))
-        .collect();
-      children.sort_by_key(|(child, ty)| {
-        let w = self
-          .bundle_root_graph
-          .node_weight(*child)
-          .copied()
-          .unwrap_or(AssetKey(0));
-        (
-          w,
-          match ty {
-            BundleRootEdgeType::Parallel => 0u8,
-            BundleRootEdgeType::Lazy => 1u8,
-          },
-        )
-      });
-
-      for (child, edge_ty) in children {
+      {
+        let child = e.target();
+        let edge_ty = *e.weight();
         if child == virtual_root {
           continue;
         }
@@ -1112,61 +1252,6 @@ impl IdealGraphBuilder {
     );
 
     Ok(())
-  }
-
-  /// Compute an ordering of `bundle_root_graph` nodes by SCC condensation (a DAG).
-  ///
-  /// This is a fallback for cycle handling when `petgraph::algo::toposort` fails.
-  fn bundle_root_graph_scc_order(&self) -> anyhow::Result<Vec<NodeIndex>> {
-    let sccs: Vec<Vec<NodeIndex>> = kosaraju_scc(&self.bundle_root_graph);
-
-    let mut scc_of: HashMap<NodeIndex, usize> = HashMap::new();
-    for (i, scc) in sccs.iter().enumerate() {
-      for &n in scc {
-        scc_of.insert(n, i);
-      }
-    }
-
-    // Build SCC DAG.
-    let mut scc_graph: StableDiGraph<usize, ()> = StableDiGraph::new();
-    let scc_nodes: Vec<NodeIndex> = (0..sccs.len()).map(|i| scc_graph.add_node(i)).collect();
-
-    for e in self.bundle_root_graph.edge_references() {
-      let a = e.source();
-      let b = e.target();
-      let sa = scc_of[&a];
-      let sb = scc_of[&b];
-      if sa != sb {
-        scc_graph.add_edge(scc_nodes[sa], scc_nodes[sb], ());
-      }
-    }
-
-    let scc_order = petgraph::algo::toposort(&scc_graph, None).map_err(|cycle| {
-      anyhow::anyhow!(
-        "bundle_root_graph SCC condensation graph unexpectedly cyclic (cycle at {:?})",
-        cycle.node_id()
-      )
-    })?;
-
-    // Flatten SCCs in topo order, with deterministic ordering within SCC.
-    let mut out: Vec<NodeIndex> = Vec::new();
-    for scc_node in scc_order {
-      let scc_idx = *scc_graph
-        .node_weight(scc_node)
-        .context("SCC node missing")?;
-
-      let mut members = sccs[scc_idx].clone();
-      members.sort_by_key(|n| {
-        self
-          .bundle_root_graph
-          .node_weight(*n)
-          .copied()
-          .unwrap_or(AssetKey(0))
-      });
-      out.extend(members);
-    }
-
-    Ok(out)
   }
 
   // ----------------------------

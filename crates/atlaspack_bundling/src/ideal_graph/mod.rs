@@ -1433,6 +1433,7 @@ mod tests {
   #[derive(Clone, Debug)]
   struct AssetOptions {
     is_bundle_splittable: bool,
+    bundle_behavior: Option<atlaspack_core::types::BundleBehavior>,
   }
 
   fn fixture_graph_with_options(
@@ -1475,6 +1476,7 @@ mod tests {
       };
       if let Some(opts) = asset_options.get(entry) {
         asset.is_bundle_splittable = opts.is_bundle_splittable;
+        asset.bundle_behavior = opts.bundle_behavior;
       }
       let entry_asset_node = asset_graph.add_asset(Arc::new(asset), false);
       asset_graph.add_edge(&entry_dep_node, &entry_asset_node);
@@ -1499,6 +1501,7 @@ mod tests {
         };
         if let Some(opts) = asset_options.get(id) {
           asset.is_bundle_splittable = opts.is_bundle_splittable;
+          asset.bundle_behavior = opts.bundle_behavior;
         }
         let node = asset_graph.add_asset(Arc::new(asset), false);
         asset_nodes.insert(id.into(), node);
@@ -2518,6 +2521,7 @@ mod tests {
         "a.js",
         AssetOptions {
           is_bundle_splittable: false,
+          bundle_behavior: None,
         },
       )],
     );
@@ -3300,6 +3304,51 @@ mod tests {
         "entry.js" lazy "page.js",
         "page.js" parallel "page.css",
         "page.js" lazy "dialog.js",
+      },
+    });
+  }
+
+  #[test]
+  fn isolated_entry_still_discovers_lazy_children_in_bundle_root_graph() {
+    // Regression test: entry assets with bundleBehavior=Isolated must still
+    // discover their lazy children during bundleRootGraph BFS. Without the
+    // fix, the BFS skips the entry entirely, producing 0 outgoing edges and
+    // breaking availability propagation.
+    let asset_graph = fixture_graph_with_options(
+      &["entry.js"],
+      &[
+        EdgeSpec::new("entry.js", "a.js", Priority::Lazy),
+        EdgeSpec::new("entry.js", "b.js", Priority::Lazy),
+        EdgeSpec::new("a.js", "shared.js", Priority::Sync),
+        EdgeSpec::new("b.js", "shared.js", Priority::Sync),
+      ],
+      &[(
+        "entry.js",
+        AssetOptions {
+          is_bundle_splittable: true,
+          bundle_behavior: Some(atlaspack_core::types::BundleBehavior::Isolated),
+        },
+      )],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    // The key assertion: shared.js should be in a shared bundle (not duplicated
+    // or missing), proving that the entry's lazy children were properly discovered
+    // in the bundleRootGraph and availability was propagated.
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js"],
+        "a.js" => ["a.js"],
+        "b.js" => ["b.js"],
+        shared(shared) => ["shared.js"],
+      },
+      edges: {
+        "entry.js" lazy "a.js",
+        "entry.js" lazy "b.js",
+        "a.js" sync shared(shared),
+        "b.js" sync shared(shared),
       },
     });
   }
