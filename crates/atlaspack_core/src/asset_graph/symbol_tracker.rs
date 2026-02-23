@@ -485,11 +485,6 @@ impl SymbolTracker {
         }
 
         let Some(final_location) = requirement.final_location else {
-          // Speculative requirements (from star re-exports) don't need to be satisfied
-          // since another sibling star dep might satisfy them instead
-          if requirement.speculation_group_id.is_some() {
-            continue;
-          }
           panic!(
             "Symbol {} required by dependency [{}] was not satisfied",
             requirement.symbol.exported, dep_id
@@ -1337,7 +1332,7 @@ mod tests {
   }
 
   #[test]
-  #[should_panic(expected = "was requested through star re-exports but not found")]
+  #[should_panic(expected = "speculation groups were not satisfied")]
   fn finalize_panics_when_speculation_group_not_satisfied() {
     // Test case: symbol requested through star re-exports but not provided by any
     let mut graph = AssetGraph::new();
