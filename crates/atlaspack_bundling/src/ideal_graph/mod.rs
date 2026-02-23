@@ -3417,12 +3417,12 @@ mod tests {
     // a (entry) -> sync b (asset bundleBehavior=Isolated) -> sync c
     // a (entry) -> lazy d -> sync c
     //
-    // Sync reachability/availability propagation should STOP at b because b has an
-    // asset-level bundleBehavior, meaning c should NOT be considered sync-reachable
-    // from a through b.
+    // Reachability propagation should stop UPSTREAM bits at b (b has bundleBehavior),
+    // meaning c should NOT be considered sync-reachable from a through b.
+    // However, b's OWN root bit still propagates to c, so c IS reachable from b.
     //
-    // As a result, c is only reachable from the async root d and should be placed
-    // into d's bundle (not duplicated into a, and not extracted to a shared bundle).
+    // As a result, c is reachable from both b (entry-like/isolated) and d (splittable).
+    // c gets duplicated into b's bundle (entry-like always gets assets) and d's bundle.
     let asset_graph = fixture_graph_with_options(
       &["a.js"],
       &[
@@ -3446,12 +3446,42 @@ mod tests {
     assert_graph!(g, {
       bundles: {
         "a.js" => ["a.js"],
-        "b.js" => ["b.js"],
+        "b.js" => ["b.js", "c.js"],
         "d.js" => ["c.js", "d.js"],
       },
       edges: {
         "a.js" sync "b.js",
         "a.js" lazy "d.js",
+      },
+    });
+  }
+
+  #[test]
+  fn available_entry_asset_still_reachable_from_async() {
+    // entry.js sync-imports shared.js and also lazy-loads async.js.
+    // async.js sync-imports shared.js too.
+    //
+    // Since shared.js is already in the entry bundle, it should be available to async.js via
+    // ancestor_assets and must NOT be duplicated into async.js.
+    let asset_graph = fixture_graph(
+      &["entry.js"],
+      &[
+        EdgeSpec::new("entry.js", "shared.js", Priority::Sync),
+        EdgeSpec::new("entry.js", "async.js", Priority::Lazy),
+        EdgeSpec::new("async.js", "shared.js", Priority::Sync),
+      ],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js", "shared.js"],
+        "async.js" => ["async.js"],
+      },
+      edges: {
+        "entry.js" lazy "async.js",
       },
     });
   }

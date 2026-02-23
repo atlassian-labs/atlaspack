@@ -53,6 +53,9 @@ pub struct IdealGraphBuilder {
   sync_graph: StableDiGraph<SyncNode, ()>,
   virtual_root: Option<NodeIndex>,
   asset_to_sync_node: HashMap<super::types::AssetKey, NodeIndex>,
+  /// Sync graph nodes for non-entry assets with `bundle_behavior.is_some()`.
+  /// Maps to the asset key so we can look up the node's own root bit.
+  bundle_behavior_sync_nodes: HashMap<NodeIndex, AssetKey>,
 
   // Graph of bundle root assets with Lazy/Parallel edges.
   // Includes a virtual root connected to all entry bundle roots.
@@ -99,6 +102,7 @@ impl IdealGraphBuilder {
       options,
       decisions: super::types::DecisionLog::default(),
       type_change_siblings: HashMap::new(),
+      bundle_behavior_sync_nodes: HashMap::new(),
       ..Self::default()
     }
   }
@@ -402,6 +406,7 @@ impl IdealGraphBuilder {
   ) -> anyhow::Result<()> {
     self.sync_graph = StableDiGraph::new();
     self.asset_to_sync_node.clear();
+    self.bundle_behavior_sync_nodes.clear();
 
     let virtual_root = self.sync_graph.add_node(SyncNode::VirtualRoot);
     self.virtual_root = Some(virtual_root);
@@ -449,19 +454,17 @@ impl IdealGraphBuilder {
         continue;
       }
 
-      // JS semantics: if an asset has `bundleBehavior != null` and it is NOT the current
-      // traversal root, traversal stops before visiting its children.
-      //
-      // In the shared sync-graph representation, we model this by not creating outgoing
-      // sync edges from non-entry assets with an explicit bundle behavior.
-      // Those assets are bundle roots themselves and will get their own reachability subtree.
-      if from_asset.bundle_behavior.is_some() && !self.entry_roots.contains(&from_key) {
-        continue;
-      }
+      // Note: JS stops reachability traversal at bundleBehavior assets (skipChildren),
+      // but still creates sync edges FROM them. The filtering is done in reachability
+      // propagation (compute_reachability_topological), not here in the sync graph.
 
       let Some(&from_idx) = self.asset_to_sync_node.get(&from_key) else {
         continue;
       };
+
+      if from_asset.bundle_behavior.is_some() && !self.entry_roots.contains(&from_key) {
+        self.bundle_behavior_sync_nodes.insert(from_idx, from_key);
+      }
 
       for dep_node_id in asset_graph.get_outgoing_neighbors(&asset_node_id) {
         let Some(dep) = asset_graph.get_dependency(&dep_node_id) else {
@@ -1348,11 +1351,18 @@ impl IdealGraphBuilder {
     let mut reach_bits: Vec<FixedBitSet> = vec![FixedBitSet::with_capacity(num_roots); bound];
 
     // Seed root bits.
+    // Track the initial seed bits separately so we can stop propagation past bundleBehavior assets.
+    let mut initial_bits: HashMap<NodeIndex, FixedBitSet> = HashMap::new();
     for (i, root_key) in roots.iter().copied().enumerate() {
       let Some(&root_idx) = self.asset_to_sync_node.get(&root_key) else {
         continue;
       };
+
       reach_bits[root_idx.index()].insert(i);
+
+      let mut bs = FixedBitSet::with_capacity(num_roots);
+      bs.insert(i);
+      initial_bits.insert(root_idx, bs);
     }
 
     let root_to_bit: HashMap<AssetKey, usize> =
@@ -1372,11 +1382,31 @@ impl IdealGraphBuilder {
           continue;
         }
 
+        // JS semantics: `asset.bundleBehavior != null` stops OTHER roots' reachability
+        // traversal (skipChildren). The bundleBehavior asset's OWN root bit still propagates
+        // to its children (it IS a bundle root with its own seeded bit).
+        let propagate_bits = if let Some(asset_key) = self.bundle_behavior_sync_nodes.get(&node) {
+          // Only propagate this node's own root bit, not inherited upstream bits.
+          let mut own_bits = FixedBitSet::with_capacity(num_roots);
+          if let Some(&root_bit) = root_to_bit.get(asset_key) {
+            if bits.contains(root_bit) {
+              own_bits.insert(root_bit);
+            }
+          }
+          own_bits
+        } else {
+          bits
+        };
+
+        if propagate_bits.is_empty() {
+          continue;
+        }
+
         for succ in self
           .sync_graph
           .neighbors_directed(node, Direction::Outgoing)
         {
-          reach_bits[succ.index()].union_with(&bits);
+          reach_bits[succ.index()].union_with(&propagate_bits);
         }
       }
     } else {
@@ -1428,6 +1458,28 @@ impl IdealGraphBuilder {
         scc_bits[scc_idx] = agg;
       }
 
+      // Build propagation mask per SCC: if any member is a bundleBehavior sync node,
+      // only propagate that member's own root bit (matching JS skipChildren).
+      let mut scc_propagate_mask: Vec<Option<FixedBitSet>> = vec![None; sccs.len()];
+      for (scc_idx, nodes) in sccs.iter().enumerate() {
+        let has_bundle_behavior_node = nodes
+          .iter()
+          .any(|&n| self.bundle_behavior_sync_nodes.contains_key(&n));
+
+        if has_bundle_behavior_node {
+          // Only propagate own root bits of bundleBehavior members in this SCC.
+          let mut own_bits = FixedBitSet::with_capacity(num_roots);
+          for &n in nodes {
+            if let Some(asset_key) = self.bundle_behavior_sync_nodes.get(&n) {
+              if let Some(&root_bit) = root_to_bit.get(asset_key) {
+                own_bits.insert(root_bit);
+              }
+            }
+          }
+          scc_propagate_mask[scc_idx] = Some(own_bits);
+        }
+      }
+
       // Propagate across SCC DAG.
       for scc_node in scc_order {
         let scc_idx = *scc_graph
@@ -1439,11 +1491,24 @@ impl IdealGraphBuilder {
           continue;
         }
 
+        // Apply bundleBehavior mask: only propagate own root bits from this SCC.
+        let propagate_bits = if let Some(mask) = &scc_propagate_mask[scc_idx] {
+          let mut masked = bits;
+          masked.intersect_with(mask);
+          masked
+        } else {
+          bits
+        };
+
+        if propagate_bits.is_empty() {
+          continue;
+        }
+
         for succ in scc_graph.neighbors_directed(scc_node, Direction::Outgoing) {
           let succ_idx = *scc_graph
             .node_weight(succ)
             .context("SCC successor missing")?;
-          scc_bits[succ_idx].union_with(&bits);
+          scc_bits[succ_idx].union_with(&propagate_bits);
         }
       }
 

@@ -750,4 +750,59 @@ describe('Native bundling ready', function () {
     ]);
     await run(b);
   });
+
+  it('available assets from entry not duplicated into async descendant bundles', async function () {
+    await fsFixture(overlayFS, __dirname)`
+      native-bundler-parity-available-from-entry-not-duplicated
+        index.js:
+          import shared from './shared';
+          import('./async');
+          export default shared;
+        shared.js:
+          export default 'shared';
+        async.js:
+          import shared from './shared';
+          export const value = shared + '-async';
+          export default import('./deep');
+        deep.js:
+          import shared from './shared';
+          export default shared + '-deep';
+        package.json:
+          {}
+        yarn.lock: {}
+    `;
+
+    let b = await bundle(
+      path.join(
+        __dirname,
+        'native-bundler-parity-available-from-entry-not-duplicated/index.js',
+      ),
+      {
+        mode: 'production',
+        defaultTargetOptions: {shouldScopeHoist: false},
+        inputFS: overlayFS,
+      },
+    );
+
+    // shared.js is sync-imported by the entry, and also reachable from async.js and deep.js.
+    // It should remain only in the entry bundle and be available to descendants via ancestry.
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        type: 'js',
+        assets: [
+          'index.js',
+          'shared.js',
+          'esmodule-helpers.js',
+          'bundle-url.js',
+          'cacheLoader.js',
+          'js-loader.js',
+          'bundle-manifest.js',
+        ],
+      },
+      {type: 'js', assets: ['async.js']},
+      {type: 'js', assets: ['deep.js']},
+    ]);
+    await run(b);
+  });
 });
