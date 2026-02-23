@@ -11,15 +11,30 @@ use crate::{
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct SymbolTracker {
   requirements_by_dep: HashMap<String, Vec<SymbolRequirement>>,
+  /// Maps speculation group IDs to the dependency IDs that contain speculative
+  /// requirements for that group. This allows efficient lookup and deletion
+  /// when one member of the group is satisfied.
+  speculation_group_locations: HashMap<String, Vec<String>>,
 }
+
+/*
+* A speculation group is a collection of requirements that might satisfy a * re-export. Since we
+* can't know which asset, and thus dependency, will satisfy a symbol requested through a star
+* re-export until we process the providing asset, we mark these requirements as speculative and
+* group them together. When one member of the group is satisfied, we can remove the other
+* speculative requirements since they are mutually exclusive (only one can be correct since they
+* come from the same parent symbol request).
+*/
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SymbolRequirement {
   pub symbol: Symbol,
   pub final_location: Option<FinalSymbolLocation>,
-  /// If true, this requirement was speculatively forwarded through a star re-export
-  /// and doesn't need to be satisfied (another star dep might satisfy it instead)
-  pub is_speculative: bool,
+  /// Links speculative requirements that are mutually exclusive (same symbol from same parent).
+  /// Format: "{parent_dep_id}:{symbol_name}". When one is satisfied, others can be removed.
+  /// If Some, this requirement was speculatively forwarded through a star re-export.
+  /// If None, this is a direct requirement that must be satisfied.
+  pub speculation_group_id: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -44,6 +59,15 @@ fn dep_has_symbol(dep: &Dependency, symbol: &Symbol) -> bool {
 /// Star re-exports have both `exported` and `local` set to "*".
 fn is_star_reexport_symbol(symbol: &Symbol) -> bool {
   symbol.exported == "*" && symbol.local == "*"
+}
+
+/// Represents a symbol request from an incoming dependency.
+/// Used for tracking speculation groups when propagating through star re-exports.
+struct IncomingSymbolRequest {
+  /// The symbol name being requested
+  symbol: String,
+  /// The dependency ID that originates this request (used for speculation group ID)
+  source_dep_id: String,
 }
 
 fn get_parent_asset_node_id<'a>(
@@ -142,7 +166,7 @@ impl SymbolTracker {
           SymbolRequirement {
             symbol: symbol.clone(),
             final_location: None,
-            is_speculative: false,
+            speculation_group_id: None,
           },
         );
       }
@@ -154,25 +178,37 @@ impl SymbolTracker {
         continue;
       }
 
-      for requested_symbol in &incoming_requested_symbols {
+      for request in &incoming_requested_symbols {
         // Don't add duplicate requirements
-        if symbols.iter().any(|s| s.exported == *requested_symbol) {
+        if symbols.iter().any(|s| s.exported == request.symbol) {
           continue;
         }
         // Create a forwarded requirement for this symbol
         // Mark as speculative since this star dep might not provide this symbol
         // (another star dep sibling might provide it instead)
+        // The speculation_group_id links all speculative requirements for the same
+        // symbol from the same parent dependency, so we can clean up siblings when
+        // one is satisfied.
+        let speculation_group_id = format!("{}:{}", request.source_dep_id, request.symbol);
+
+        // Register this dependency as containing a member of this speculation group
+        self
+          .speculation_group_locations
+          .entry(speculation_group_id.clone())
+          .or_default()
+          .push(dep.id.clone());
+
         self.add_required_symbol(
           &dep.id,
           SymbolRequirement {
             symbol: Symbol {
-              exported: requested_symbol.clone(),
+              exported: request.symbol.clone(),
               local: "*".to_string(), // Mark as coming from star re-export
               is_weak: true,
               ..Default::default()
             },
             final_location: None,
-            is_speculative: true,
+            speculation_group_id: Some(speculation_group_id),
           },
         );
       }
@@ -238,6 +274,8 @@ impl SymbolTracker {
 
     // Reusable buffer for matched requirements to avoid repeated allocations
     let mut matched_locals: Vec<String> = Vec::new();
+    // Track speculation groups that were satisfied so we can clean up siblings
+    let mut satisfied_speculation_groups: Vec<String> = Vec::new();
 
     while let Some((dep, symbol_name_to_match)) = work_queue.pop() {
       matched_locals.clear();
@@ -266,6 +304,11 @@ impl SymbolTracker {
           required.final_location = Some(located_symbol.clone());
           // Store the local name for propagation lookup
           matched_locals.push(required.symbol.local.clone());
+
+          // If this was a speculative requirement, track its group for cleanup
+          if let Some(ref group_id) = required.speculation_group_id {
+            satisfied_speculation_groups.push(group_id.clone());
+          }
         }
       }
 
@@ -303,7 +346,42 @@ impl SymbolTracker {
       }
     }
 
+    // Clean up sibling speculative requirements that are now unnecessary
+    // (another member of the same speculation group was satisfied)
+    self.remove_unsatisfied_speculation_siblings(&satisfied_speculation_groups, &dep.id);
+
     Ok(())
+  }
+
+  /// Removes unsatisfied speculative requirements that belong to the given speculation groups.
+  /// This is called after a speculative requirement is satisfied - since only one member
+  /// of each group needs to be satisfied, the others can be removed.
+  fn remove_unsatisfied_speculation_siblings(
+    &mut self,
+    satisfied_groups: &[String],
+    satisfied_dep_id: &str,
+  ) {
+    for group_id in satisfied_groups {
+      // Get the dependency IDs that contain members of this speculation group
+      let Some(dep_ids) = self.speculation_group_locations.remove(group_id) else {
+        continue;
+      };
+
+      // Remove unsatisfied speculative requirements from sibling dependencies
+      for dep_id in dep_ids {
+        // Skip the dependency that was just satisfied
+        if dep_id == satisfied_dep_id {
+          continue;
+        }
+
+        if let Some(requirements) = self.requirements_by_dep.get_mut(&dep_id) {
+          requirements.retain(|req| {
+            // Keep if not part of this speculation group
+            req.speculation_group_id.as_ref() != Some(group_id)
+          });
+        }
+      }
+    }
   }
 
   fn add_required_symbol(&mut self, dep_id: &str, question: SymbolRequirement) {
@@ -318,18 +396,19 @@ impl SymbolTracker {
   /// This looks at both:
   /// 1. Requirements that have been registered on incoming dependencies but not yet satisfied
   /// 2. Symbols declared on the incoming dependency itself (from the dependency's symbols field)
+  ///
   /// This is used to propagate symbol requests through star re-exports.
   fn get_incoming_requested_symbols(
     &self,
     asset_graph: &AssetGraph,
     asset: &Arc<Asset>,
-  ) -> Vec<String> {
+  ) -> Vec<IncomingSymbolRequest> {
     let Some(asset_node_id) = asset_graph.get_node_id_by_content_key(asset.id.as_str()) else {
       return Vec::new();
     };
 
-    let incoming_deps = get_incoming_dependencies(asset_graph, &asset_node_id);
-    let mut requested_symbols = Vec::new();
+    let incoming_deps = get_incoming_dependencies(asset_graph, asset_node_id);
+    let mut requested_symbols: Vec<IncomingSymbolRequest> = Vec::new();
 
     for dep in incoming_deps {
       // Look at requirements that have been registered on this dependency
@@ -343,8 +422,14 @@ impl SymbolTracker {
           if req.symbol.exported == "*" {
             continue;
           }
-          if !requested_symbols.contains(&req.symbol.exported) {
-            requested_symbols.push(req.symbol.exported.clone());
+          if !requested_symbols
+            .iter()
+            .any(|r| r.symbol == req.symbol.exported)
+          {
+            requested_symbols.push(IncomingSymbolRequest {
+              symbol: req.symbol.exported.clone(),
+              source_dep_id: dep.id.clone(),
+            });
           }
         }
       }
@@ -358,8 +443,11 @@ impl SymbolTracker {
           if sym.exported == "*" {
             continue;
           }
-          if !requested_symbols.contains(&sym.exported) {
-            requested_symbols.push(sym.exported.clone());
+          if !requested_symbols.iter().any(|r| r.symbol == sym.exported) {
+            requested_symbols.push(IncomingSymbolRequest {
+              symbol: sym.exported.clone(),
+              source_dep_id: dep.id.clone(),
+            });
           }
         }
       }
@@ -375,6 +463,15 @@ impl SymbolTracker {
   /// conflicts.
   #[tracing::instrument(name = "finalize_symbol_tracker", skip_all)]
   pub fn finalize(self) -> FinalizedSymbolTracker {
+    // Any speculation groups still in the map were never satisfied
+    // (satisfied groups are removed during cleanup)
+    if !self.speculation_group_locations.is_empty() {
+      panic!(
+        "The following speculation groups were not satisfied: {:?}",
+        self.speculation_group_locations.keys()
+      );
+    }
+
     let mut requirements_by_dep: HashMap<DependencyId, DependencyUsedSymbols> = HashMap::new();
 
     for (dep_id, requirements) in self.requirements_by_dep.into_iter() {
@@ -390,7 +487,7 @@ impl SymbolTracker {
         let Some(final_location) = requirement.final_location else {
           // Speculative requirements (from star re-exports) don't need to be satisfied
           // since another sibling star dep might satisfy them instead
-          if requirement.is_speculative {
+          if requirement.speculation_group_id.is_some() {
             continue;
           }
           panic!(
@@ -1083,5 +1180,208 @@ mod tests {
         .is_some(),
       "foo_dep should have used symbols"
     );
+  }
+
+  #[test]
+  fn track_symbols_cleans_up_speculative_siblings_when_one_is_satisfied() {
+    // Test case: barrel with multiple star re-exports
+    // index.js imports "mySymbol" from barrel.js
+    // barrel.js has:
+    //   export * from './sub-dep-1'  (does NOT have mySymbol)
+    //   export * from './sub-dep-2'  (HAS mySymbol)
+    //   export * from './sub-dep-3'  (does NOT have mySymbol)
+    //
+    // All three sub-deps get speculative requirements for mySymbol,
+    // but only sub-dep-2 satisfies it. The others should be cleaned up.
+
+    let mut graph = AssetGraph::new();
+
+    let entry_dep = make_entry_dependency();
+    let entry_dep_node = graph.add_entry_dependency(entry_dep, false);
+
+    // index.js
+    let index_asset = make_asset("index.js", vec![]);
+    let index_asset_node = graph.add_asset(index_asset.clone(), false);
+    graph.add_edge(&entry_dep_node, &index_asset_node);
+
+    // Dependency to barrel requesting mySymbol
+    let barrel_dep = make_dependency(
+      &index_asset,
+      "./barrel.js",
+      vec![("$index$import$mySymbol", "mySymbol", false)],
+    );
+    let barrel_dep_node = graph.add_dependency(barrel_dep.clone(), false);
+    graph.add_edge(&index_asset_node, &barrel_dep_node);
+
+    // barrel.js with star re-exports
+    let barrel_asset = make_asset("barrel.js", vec![("*", "*", true)]);
+    let barrel_asset_node = graph.add_asset(barrel_asset.clone(), false);
+    graph.add_edge(&barrel_dep_node, &barrel_asset_node);
+
+    // Three star dependencies
+    let sub_dep_1 = make_dependency(&barrel_asset, "./sub-dep-1.js", vec![("*", "*", true)]);
+    let sub_dep_1_node = graph.add_dependency(sub_dep_1.clone(), false);
+    graph.add_edge(&barrel_asset_node, &sub_dep_1_node);
+
+    let sub_dep_2 = make_dependency(&barrel_asset, "./sub-dep-2.js", vec![("*", "*", true)]);
+    let sub_dep_2_node = graph.add_dependency(sub_dep_2.clone(), false);
+    graph.add_edge(&barrel_asset_node, &sub_dep_2_node);
+
+    let sub_dep_3 = make_dependency(&barrel_asset, "./sub-dep-3.js", vec![("*", "*", true)]);
+    let sub_dep_3_node = graph.add_dependency(sub_dep_3.clone(), false);
+    graph.add_edge(&barrel_asset_node, &sub_dep_3_node);
+
+    // sub-dep-1.js - does NOT have mySymbol
+    let sub_asset_1 = make_asset("sub-dep-1.js", vec![("other1", "other1", false)]);
+    let sub_asset_1_node = graph.add_asset(sub_asset_1.clone(), false);
+    graph.add_edge(&sub_dep_1_node, &sub_asset_1_node);
+
+    // sub-dep-2.js - HAS mySymbol
+    let sub_asset_2 = make_asset("sub-dep-2.js", vec![("mySymbol", "mySymbol", false)]);
+    let sub_asset_2_node = graph.add_asset(sub_asset_2.clone(), false);
+    graph.add_edge(&sub_dep_2_node, &sub_asset_2_node);
+
+    // sub-dep-3.js - does NOT have mySymbol
+    let sub_asset_3 = make_asset("sub-dep-3.js", vec![("other3", "other3", false)]);
+    let sub_asset_3_node = graph.add_asset(sub_asset_3.clone(), false);
+    graph.add_edge(&sub_dep_3_node, &sub_asset_3_node);
+
+    let mut tracker = SymbolTracker::default();
+
+    // Process in traversal order
+    tracker
+      .track_symbols(&graph, &index_asset, std::slice::from_ref(&barrel_dep))
+      .unwrap();
+    tracker
+      .track_symbols(
+        &graph,
+        &barrel_asset,
+        &[sub_dep_1.clone(), sub_dep_2.clone(), sub_dep_3.clone()],
+      )
+      .unwrap();
+
+    // At this point, all three sub-deps should have speculative requirements for mySymbol
+    assert!(
+      tracker
+        .requirements_by_dep
+        .get(&sub_dep_1.id)
+        .unwrap()
+        .iter()
+        .any(|r| r.symbol.exported == "mySymbol" && r.speculation_group_id.is_some()),
+      "sub_dep_1 should have speculative requirement for mySymbol"
+    );
+    assert!(
+      tracker
+        .requirements_by_dep
+        .get(&sub_dep_2.id)
+        .unwrap()
+        .iter()
+        .any(|r| r.symbol.exported == "mySymbol" && r.speculation_group_id.is_some()),
+      "sub_dep_2 should have speculative requirement for mySymbol"
+    );
+    assert!(
+      tracker
+        .requirements_by_dep
+        .get(&sub_dep_3.id)
+        .unwrap()
+        .iter()
+        .any(|r| r.symbol.exported == "mySymbol" && r.speculation_group_id.is_some()),
+      "sub_dep_3 should have speculative requirement for mySymbol"
+    );
+
+    // Process sub-assets - sub_asset_2 provides mySymbol
+    tracker.track_symbols(&graph, &sub_asset_1, &[]).unwrap();
+    tracker.track_symbols(&graph, &sub_asset_2, &[]).unwrap();
+    tracker.track_symbols(&graph, &sub_asset_3, &[]).unwrap();
+
+    // After sub_asset_2 satisfies the requirement, siblings should be cleaned up
+    // sub_dep_1 and sub_dep_3 should no longer have the mySymbol requirement
+    let sub_dep_1_reqs = tracker.requirements_by_dep.get(&sub_dep_1.id).unwrap();
+    assert!(
+      !sub_dep_1_reqs
+        .iter()
+        .any(|r| r.symbol.exported == "mySymbol"),
+      "sub_dep_1 should NOT have mySymbol requirement after cleanup"
+    );
+
+    let sub_dep_3_reqs = tracker.requirements_by_dep.get(&sub_dep_3.id).unwrap();
+    assert!(
+      !sub_dep_3_reqs
+        .iter()
+        .any(|r| r.symbol.exported == "mySymbol"),
+      "sub_dep_3 should NOT have mySymbol requirement after cleanup"
+    );
+
+    // sub_dep_2 should still have the satisfied requirement
+    let sub_dep_2_reqs = tracker.requirements_by_dep.get(&sub_dep_2.id).unwrap();
+    let satisfied_req = sub_dep_2_reqs
+      .iter()
+      .find(|r| r.symbol.exported == "mySymbol");
+    assert!(
+      satisfied_req.is_some(),
+      "sub_dep_2 should still have mySymbol requirement"
+    );
+    assert!(
+      satisfied_req.unwrap().final_location.is_some(),
+      "sub_dep_2 mySymbol requirement should be satisfied"
+    );
+
+    // Finalize should succeed
+    let finalized = tracker.finalize();
+    assert!(
+      finalized
+        .get_used_symbols_for_dependency(&barrel_dep.id)
+        .is_some(),
+      "barrel_dep should have used symbols"
+    );
+  }
+
+  #[test]
+  #[should_panic(expected = "was requested through star re-exports but not found")]
+  fn finalize_panics_when_speculation_group_not_satisfied() {
+    // Test case: symbol requested through star re-exports but not provided by any
+    let mut graph = AssetGraph::new();
+
+    let entry_dep = make_entry_dependency();
+    let entry_dep_node = graph.add_entry_dependency(entry_dep, false);
+
+    let index_asset = make_asset("index.js", vec![]);
+    let index_asset_node = graph.add_asset(index_asset.clone(), false);
+    graph.add_edge(&entry_dep_node, &index_asset_node);
+
+    let barrel_dep = make_dependency(
+      &index_asset,
+      "./barrel.js",
+      vec![("$index$import$missingSymbol", "missingSymbol", false)],
+    );
+    let barrel_dep_node = graph.add_dependency(barrel_dep.clone(), false);
+    graph.add_edge(&index_asset_node, &barrel_dep_node);
+
+    // barrel.js with star re-export
+    let barrel_asset = make_asset("barrel.js", vec![("*", "*", true)]);
+    let barrel_asset_node = graph.add_asset(barrel_asset.clone(), false);
+    graph.add_edge(&barrel_dep_node, &barrel_asset_node);
+
+    let sub_dep = make_dependency(&barrel_asset, "./sub.js", vec![("*", "*", true)]);
+    let sub_dep_node = graph.add_dependency(sub_dep.clone(), false);
+    graph.add_edge(&barrel_asset_node, &sub_dep_node);
+
+    // sub.js does NOT have missingSymbol
+    let sub_asset = make_asset("sub.js", vec![("otherSymbol", "otherSymbol", false)]);
+    let sub_asset_node = graph.add_asset(sub_asset.clone(), false);
+    graph.add_edge(&sub_dep_node, &sub_asset_node);
+
+    let mut tracker = SymbolTracker::default();
+
+    tracker
+      .track_symbols(&graph, &index_asset, std::slice::from_ref(&barrel_dep))
+      .unwrap();
+    tracker
+      .track_symbols(&graph, &barrel_asset, std::slice::from_ref(&sub_dep))
+      .unwrap();
+    tracker.track_symbols(&graph, &sub_asset, &[]).unwrap();
+
+    // This should panic because missingSymbol was not found in any star re-export
+    tracker.finalize();
   }
 }
