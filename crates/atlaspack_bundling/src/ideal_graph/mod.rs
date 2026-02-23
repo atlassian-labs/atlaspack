@@ -3457,6 +3457,76 @@ mod tests {
   }
 
   #[test]
+  fn entry_like_roots_always_get_assets_regardless_of_availability() {
+    // entry.js --sync--> a.js --sync--> shared.js
+    // entry.js --lazy--> lazy.js --sync--> shared.js
+    //
+    // Both entry.js and lazy.js reach shared.js.
+    // Even if lazy.js sees shared.js as available via ancestors, entry.js is entry-like and must
+    // ALWAYS contain shared.js (matches JS addAssetToBundleRoot semantics for entries).
+    let asset_graph = fixture_graph(
+      &["entry.js"],
+      &[
+        EdgeSpec::new("entry.js", "a.js", Priority::Sync),
+        EdgeSpec::new("a.js", "shared.js", Priority::Sync),
+        EdgeSpec::new("entry.js", "lazy.js", Priority::Lazy),
+        EdgeSpec::new("lazy.js", "shared.js", Priority::Sync),
+      ],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js", "a.js", "shared.js"],
+        // shared.js is already available from the ancestor entry bundle, so it should not be
+        // duplicated into the async bundle.
+        "lazy.js"  => ["lazy.js"],
+      },
+      edges: {
+        "entry.js" lazy "lazy.js",
+      },
+    });
+  }
+
+  #[test]
+  fn available_everywhere_assets_placed_via_coload_fallback() {
+    // entry.js --lazy--> a.js --sync--> shared.js
+    // entry.js --lazy--> b.js --sync--> shared.js
+    // entry.js --lazy--> c.js --sync--> shared.js
+    //
+    // In cases where availability filtering marks `shared.js` as available from all reachable roots,
+    // the asset must still be placed somewhere (co-load fallback) and not be left unplaced.
+    let asset_graph = fixture_graph(
+      &["entry.js"],
+      &[
+        EdgeSpec::new("entry.js", "a.js", Priority::Lazy),
+        EdgeSpec::new("entry.js", "b.js", Priority::Lazy),
+        EdgeSpec::new("entry.js", "c.js", Priority::Lazy),
+        EdgeSpec::new("a.js", "shared.js", Priority::Sync),
+        EdgeSpec::new("b.js", "shared.js", Priority::Sync),
+        EdgeSpec::new("c.js", "shared.js", Priority::Sync),
+      ],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    let shared_key = g
+      .assets
+      .key_for("shared.js")
+      .expect("expected shared.js in AssetInterner");
+
+    // Key assertion: shared.js must be assigned to some bundle (either a root bundle or a shared bundle).
+    assert!(
+      g.asset_bundle(&shared_key).is_some(),
+      "shared.js was left unplaced (asset_bundle == None). Actual graph:\n{}",
+      format_bundle_snapshot(&g)
+    );
+  }
+
+  #[test]
   fn available_entry_asset_still_reachable_from_async() {
     // entry.js sync-imports shared.js and also lazy-loads async.js.
     // async.js sync-imports shared.js too.

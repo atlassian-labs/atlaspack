@@ -1637,12 +1637,12 @@ impl IdealGraphBuilder {
         .collect();
 
       // Availability filtering (JS Insert Or Share semantics):
-      // If this asset is already available from *all* reaching roots (via ancestor bundles),
-      // it doesn't need to be placed anywhere.
-      let available_roots: HashSet<AssetKey> = reaching_entry_like
+      // Only splittable roots are filtered by availability. Entry-like roots ALWAYS
+      // get assets placed into them regardless of availability (matching JS
+      // addAssetToBundleRoot which is called unconditionally for entry-like roots).
+      let available_roots: HashSet<AssetKey> = splittable_roots
         .iter()
         .copied()
-        .chain(splittable_roots.iter().copied())
         .filter(|root| {
           root_bundle_ids
             .get(root)
@@ -1651,13 +1651,11 @@ impl IdealGraphBuilder {
         })
         .collect();
 
-      if available_roots.len() == reaching_entry_like.len() + splittable_roots.len()
-        && !reaching_entry_like.is_empty()
-      {
-        // All reaching roots have this asset available via ancestors.
-        // Since there is at least one entry-like root, the asset is truly placed upstream.
-        continue;
-      }
+      // Note: we do NOT skip assets where all splittable roots have them "available".
+      // Parallel sibling availability can be circular (A sees B's assets as available,
+      // B sees A's), which would cause assets to be skipped entirely. Instead, we let
+      // the eligible_splittable_roots filtering handle this naturally — if all roots
+      // are filtered, the co-load fallback places the asset in the first root.
 
       // Duplicate asset into ALL reaching entry-like bundles (matching JS algorithm).
       // Each entry-like bundle must independently contain every sync-reachable asset
@@ -1666,11 +1664,8 @@ impl IdealGraphBuilder {
       // If the asset's file type differs from the bundle's type (e.g. CSS asset in JS bundle),
       // redirect it into a type-change sibling bundle keyed by (root, file_type).
       for &root in &reaching_entry_like {
-        // Skip if already available from an ancestor of this root.
-        if available_roots.contains(&root) {
-          continue;
-        }
-
+        // Entry-like roots ALWAYS get assets placed — no availability check.
+        // This matches JS addAssetToBundleRoot which is unconditional for entries.
         let bundle_id = &root_bundle_ids[&root];
         let target_bundle_id =
           self.resolve_type_change_target(asset_key, root, bundle_id, ideal)?;
@@ -1943,7 +1938,8 @@ impl IdealGraphBuilder {
       // Availability filtering (JS Insert Or Share semantics):
       // roots where the asset is already available via `ancestor_assets[root]` are removed.
       let mut eligible: Vec<AssetKey> = reachable
-        .into_iter()
+        .iter()
+        .copied()
         .filter(|root| {
           root_bundle_ids
             .get(root)
@@ -2003,7 +1999,21 @@ impl IdealGraphBuilder {
 
       match eligible.len() {
         0 => {
-          // JS: if reachableArray.length == 0, the asset is available everywhere; no shared bundle.
+          // All splittable roots have this asset available via ancestors.
+          // If the asset was already placed in entry-like bundles, it's truly handled upstream.
+          // Otherwise, place it in the first reachable root as a co-load fallback to avoid
+          // leaving assets unplaced (parallel sibling availability can be circular).
+          if reaching_entry_like.is_empty() && !reachable.is_empty() {
+            let root = reachable[0];
+            let bundle_id = &root_bundle_ids[&root];
+            let target_bundle_id =
+              self.resolve_type_change_target(asset_key, root, bundle_id, ideal)?;
+            let bundle = ideal
+              .get_bundle_mut(&target_bundle_id)
+              .context("bundle missing for co-load fallback in create_shared_bundles")?;
+            bundle.assets.insert(asset_key.0 as usize);
+            ideal.move_asset_to_bundle(asset_key, &target_bundle_id)?;
+          }
           continue;
         }
         1 => {
