@@ -61,6 +61,12 @@ fn is_star_reexport_symbol(symbol: &Symbol) -> bool {
   symbol.exported == "*" && symbol.local == "*"
 }
 
+/// Returns true if this symbol represents a namespace re-export (`export * as ns from './dep'`).
+/// Namespace re-exports have `exported` set to "*" but `local` is the namespace name (not "*").
+fn is_namespace_reexport_symbol(symbol: &Symbol) -> bool {
+  symbol.exported == "*" && symbol.local != "*"
+}
+
 /// Represents a symbol request from an incoming dependency.
 /// Used for tracking speculation groups when propagating through star re-exports.
 struct IncomingSymbolRequest {
@@ -156,9 +162,24 @@ impl SymbolTracker {
       let is_star_dep = symbols.iter().any(is_star_reexport_symbol);
 
       for symbol in symbols {
-        // Skip any "*" symbols - they are markers for namespace exports or star re-exports,
-        // not actual requirements that need to be satisfied
-        if symbol.exported == "*" {
+        // Skip star re-export markers (exported="*", local="*") - these are handled
+        // separately below via speculative forwarding.
+        // But do NOT skip namespace re-exports (exported="*", local="ns") - these are
+        // concrete requirements that need to be satisfied by the target asset's namespace.
+        if is_star_reexport_symbol(symbol) {
+          continue;
+        }
+        if is_namespace_reexport_symbol(symbol) {
+          // Namespace re-export: register a "*" requirement on this dependency.
+          // This will be satisfied when the target asset is processed.
+          self.add_required_symbol(
+            &dep.id,
+            SymbolRequirement {
+              symbol: symbol.clone(),
+              final_location: None,
+              speculation_group_id: None,
+            },
+          );
           continue;
         }
         self.add_required_symbol(
@@ -181,6 +202,17 @@ impl SymbolTracker {
       for request in &incoming_requested_symbols {
         // Don't add duplicate requirements
         if symbols.iter().any(|s| s.exported == request.symbol) {
+          continue;
+        }
+        // Don't forward symbols through star deps if the current asset already
+        // provides them as a named export (e.g. via a namespace re-export like
+        // `export * as ns from './dep'` which creates an "ns" export on the asset).
+        // These symbols are handled directly, not via star forwarding.
+        if asset
+          .symbols
+          .as_ref()
+          .is_some_and(|syms| syms.iter().any(|s| s.exported == request.symbol))
+        {
           continue;
         }
         // Create a forwarded requirement for this symbol
@@ -216,45 +248,72 @@ impl SymbolTracker {
 
     // Track all of the symbols that this asset provides to other assets, and
     // satisfy any requirements that have been asked about them
-    if let Some(provided_symbols) = &asset.symbols {
+    {
       let Some(asset_node_id) = asset_graph.get_node_id_by_content_key(asset.id.as_str()) else {
         return Err(anyhow!("Unable to get node ID for asset ID {}", asset.id));
       };
 
       let incoming_nodes = asset_graph.get_incoming_neighbors(asset_node_id);
-      let incoming_deps = incoming_nodes.iter().filter_map(|node| match node {
-        AssetGraphNode::Dependency(dep) => Some(dep.as_ref()),
-        _ => None,
-      });
+      let incoming_deps: Vec<&Dependency> = incoming_nodes
+        .iter()
+        .filter_map(|node| match node {
+          AssetGraphNode::Dependency(dep) => Some(dep.as_ref()),
+          _ => None,
+        })
+        .collect();
 
-      for incoming_dep in incoming_deps {
-        for sym in provided_symbols {
-          // Skip star symbols on the asset - these are markers for "export *" patterns,
-          // not actual symbols that can satisfy requirements
-          if sym.exported == "*" {
-            continue;
+      // Check if any incoming dependency has a namespace re-export requirement ("*").
+      // For `export * as ns from './dep'`, the dependency to dep has exported="*", local="ns".
+      // When we process dep, we satisfy the "*" requirement with dep's own namespace.
+      for incoming_dep in &incoming_deps {
+        if let Some(dep_symbols) = &incoming_dep.symbols {
+          for dep_sym in dep_symbols {
+            if !is_namespace_reexport_symbol(dep_sym) {
+              continue;
+            }
+
+            // This asset's entire namespace satisfies the "*" requirement
+            let final_location = FinalSymbolLocation {
+              local_name: "*".to_string(),
+              imported_name: "*".to_string(),
+              providing_asset_id: asset.id.clone(),
+            };
+
+            self.handle_answer_propagation(asset_graph, final_location, incoming_dep)?;
           }
+        }
+      }
 
-          // If the incoming dependency does not ask for this symbol, skip it
-          if !dep_has_symbol(incoming_dep, sym) {
-            continue;
+      if let Some(provided_symbols) = &asset.symbols {
+        for incoming_dep in &incoming_deps {
+          for sym in provided_symbols {
+            // Skip star symbols on the asset - these are markers for "export *" patterns,
+            // not actual symbols that can satisfy requirements
+            if sym.exported == "*" {
+              continue;
+            }
+
+            // If the incoming dependency does not ask for this symbol, skip it
+            if !dep_has_symbol(incoming_dep, sym) {
+              continue;
+            }
+
+            // If a symbol is weak, it cannot be a final location. We still add
+            // these as requirements, so that other assets asking for the symbol
+            // can find it here, but we don't want to register this re-export as
+            // the source of truth
+            if sym.is_weak {
+              continue;
+            }
+
+            let final_location = FinalSymbolLocation {
+              local_name: sym.local.clone(),
+              imported_name: sym.exported.clone(),
+              providing_asset_id: asset.id.clone(),
+            };
+
+            self.handle_answer_propagation(asset_graph, final_location, incoming_dep)?;
           }
-
-          // If a symbol is weak, it cannot be a final location. We still add
-          // these as requirements, so that other assets asking for the symbol
-          // can find it here, but we don't want to register this re-export as
-          // the source of truth
-          if sym.is_weak {
-            continue;
-          }
-
-          let final_location = FinalSymbolLocation {
-            local_name: sym.local.clone(),
-            imported_name: sym.exported.clone(),
-            providing_asset_id: asset.id.clone(),
-          };
-
-          self.handle_answer_propagation(asset_graph, final_location, incoming_dep)?;
         }
       }
     }
@@ -508,9 +567,11 @@ impl SymbolTracker {
       let mut used_symbols = HashMap::new();
 
       for requirement in requirements.into_iter() {
-        // Skip "*" symbols in finalization - these are namespace markers, not actual
-        // symbols that need to be satisfied
-        if requirement.symbol.exported == "*" {
+        // Skip star re-export markers (exported="*", local="*") in finalization -
+        // these are forwarding markers, not actual symbols that need to be satisfied.
+        // But keep namespace re-export requirements (exported="*", local!="*") -
+        // these are real requirements that should have been satisfied.
+        if is_star_reexport_symbol(&requirement.symbol) {
           continue;
         }
 
