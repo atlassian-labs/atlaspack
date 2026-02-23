@@ -1174,4 +1174,148 @@ mod tests {
 
     ctx.assert_finalize_panics("speculation groups were not satisfied");
   }
+
+  // =====================================================================
+  // Namespace re-export tests: `export * as ns from './dep'`
+  // =====================================================================
+
+  #[test]
+  fn track_symbols_handles_basic_namespace_reexport() {
+    // barrel.js has `export * as ns from './dep'`
+    // index.js imports `ns` from barrel
+    //
+    // The dependency from barrel to dep has: exported="*", local="ns"
+    // barrel.js asset has a symbol: exported="ns", local="ns"
+    // This is NOT a star re-export (local != "*"), so it should behave like
+    // a named re-export where the whole namespace is the value.
+    let m = "$barrel$re_export$ns";
+
+    let ctx = symbol_tracker_test! {
+      entry "index.js" provides [] {
+        dep "./barrel.js" imports [("$index$import$ns", "ns", false)]
+          from "barrel.js" provides [(m, "ns", true)] {
+          dep "./dep.js" imports [(m, "*", true)]
+            from "dep.js" provides [("foo", "foo", false), ("bar", "bar", false)] {}
+        }
+      }
+    };
+
+    // The namespace import should resolve: barrel.js's "ns" should point to dep.js
+    // The dep's exported symbol is "*" meaning the whole namespace
+    ctx.assert_symbol_resolved("./barrel.js", "ns", "dep.js", "*");
+    ctx.assert_symbol_resolved("./dep.js", "*", "dep.js", "*");
+    ctx.assert_finalize_ok();
+  }
+
+  #[test]
+  fn track_symbols_handles_namespace_reexport_with_other_named_exports() {
+    // barrel.js has both named exports and a namespace re-export:
+    //   export * as ns from './dep';
+    //   export { localFn } (own export)
+    //
+    // index.js imports both: import { ns, localFn } from './barrel';
+    let m = "$barrel$re_export$ns";
+
+    let ctx = symbol_tracker_test! {
+      entry "index.js" provides [] {
+        dep "./barrel.js" imports [("$index$import$ns", "ns", false), ("$index$import$localFn", "localFn", false)]
+          from "barrel.js" provides [(m, "ns", true), ("localFn", "localFn", false)] {
+          dep "./dep.js" imports [(m, "*", true)]
+            from "dep.js" provides [("foo", "foo", false)] {}
+        }
+      }
+    };
+
+    // "ns" should resolve to dep.js's namespace
+    ctx.assert_symbol_resolved("./barrel.js", "ns", "dep.js", "*");
+    // "localFn" should resolve to barrel.js's own export
+    ctx.assert_symbol_resolved("./barrel.js", "localFn", "barrel.js", "localFn");
+    ctx.assert_finalize_ok();
+  }
+
+  #[test]
+  fn track_symbols_handles_namespace_reexport_alongside_star_reexport() {
+    // barrel.js has both:
+    //   export * from './star-dep';        (star re-export: exported="*", local="*")
+    //   export * as ns from './ns-dep';    (namespace re-export: exported="*", local="ns")
+    //
+    // index.js imports: import { foo, ns } from './barrel';
+    // foo comes from star-dep, ns is the namespace of ns-dep
+    let m = "$barrel$re_export$ns";
+
+    let ctx = symbol_tracker_test! {
+      entry "index.js" provides [] {
+        dep "./barrel.js" imports [("$index$import$foo", "foo", false), ("$index$import$ns", "ns", false)]
+          from "barrel.js" provides [("*", "*", true), (m, "ns", true)] {
+          dep "./star-dep.js" imports [("*", "*", true)]
+            from "star-dep.js" provides [("foo", "foo", false)] {}
+          dep "./ns-dep.js" imports [(m, "*", true)]
+            from "ns-dep.js" provides [("bar", "bar", false)] {}
+        }
+      }
+    };
+
+    // "foo" resolves through the star re-export to star-dep.js
+    ctx.assert_symbol_resolved("./barrel.js", "foo", "star-dep.js", "foo");
+    // "ns" resolves to ns-dep.js's namespace
+    ctx.assert_symbol_resolved("./barrel.js", "ns", "ns-dep.js", "*");
+    ctx.assert_finalize_ok();
+  }
+
+  #[test]
+  fn track_symbols_handles_chained_namespace_reexport() {
+    // barrel1.js: export * as innerNs from './barrel2';
+    // barrel2.js: export * as deepNs from './source';
+    // source.js: export function foo() {}
+    //
+    // index.js: import { innerNs } from './barrel1';
+    // innerNs.deepNs.foo()
+    let m1 = "$barrel1$re_export$innerNs";
+    let m2 = "$barrel2$re_export$deepNs";
+
+    let ctx = symbol_tracker_test! {
+      entry "index.js" provides [] {
+        dep "./barrel1.js" imports [("$index$import$innerNs", "innerNs", false)]
+          from "barrel1.js" provides [(m1, "innerNs", true)] {
+          dep "./barrel2.js" imports [(m1, "*", true)]
+            from "barrel2.js" provides [(m2, "deepNs", true)] {
+            dep "./source.js" imports [(m2, "*", true)]
+              from "source.js" provides [("foo", "foo", false)] {}
+          }
+        }
+      }
+    };
+
+    // innerNs should resolve to barrel2.js's namespace (since that's the whole module)
+    ctx.assert_symbol_resolved("./barrel1.js", "innerNs", "barrel2.js", "*");
+    ctx.assert_symbol_resolved("./barrel2.js", "*", "barrel2.js", "*");
+    ctx.assert_finalize_ok();
+  }
+
+  #[test]
+  fn track_symbols_handles_multiple_namespace_reexports_from_same_barrel() {
+    // barrel.js has multiple namespace re-exports:
+    //   export * as nsFoo from './foo';
+    //   export * as nsBar from './bar';
+    //
+    // index.js: import { nsFoo, nsBar } from './barrel';
+    let mfoo = "$barrel$re_export$nsFoo";
+    let mbar = "$barrel$re_export$nsBar";
+
+    let ctx = symbol_tracker_test! {
+      entry "index.js" provides [] {
+        dep "./barrel.js" imports [("$index$import$nsFoo", "nsFoo", false), ("$index$import$nsBar", "nsBar", false)]
+          from "barrel.js" provides [(mfoo, "nsFoo", true), (mbar, "nsBar", true)] {
+          dep "./foo.js" imports [(mfoo, "*", true)]
+            from "foo.js" provides [("a", "a", false)] {}
+          dep "./bar.js" imports [(mbar, "*", true)]
+            from "bar.js" provides [("b", "b", false)] {}
+        }
+      }
+    };
+
+    ctx.assert_symbol_resolved("./barrel.js", "nsFoo", "foo.js", "*");
+    ctx.assert_symbol_resolved("./barrel.js", "nsBar", "bar.js", "*");
+    ctx.assert_finalize_ok();
+  }
 }
