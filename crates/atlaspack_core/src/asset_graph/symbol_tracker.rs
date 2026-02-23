@@ -698,7 +698,6 @@ mod tests {
 
   /// Holds the results of a symbol tracker test setup, providing lookup by specifier/file_path.
   struct SymbolTrackerTestCtx {
-    graph: AssetGraph,
     tracker: SymbolTracker,
     /// Maps specifier -> Dependency
     deps: HashMap<String, Dependency>,
@@ -926,7 +925,7 @@ mod tests {
         tracker.track_symbols(&graph, asset, outgoing).unwrap();
       }
 
-      SymbolTrackerTestCtx { graph, tracker, deps, assets }
+      SymbolTrackerTestCtx { tracker, deps, assets }
     }};
 
     // Recursive rule: add a dependency -> asset -> children
