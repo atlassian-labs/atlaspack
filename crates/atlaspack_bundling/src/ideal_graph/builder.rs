@@ -37,9 +37,15 @@ use super::types::{
 };
 
 /// When true, the bundler skips dependencies marked as Deferred or Excluded by symbol propagation.
-/// Set to false for parity testing against the JS bundler with skipUnusedDependencies=false.
-/// This will be removed once full symbol propagation is implemented in Rust.
-const SKIP_UNUSED_DEPENDENCIES: bool = false;
+/// Controlled by the `ATLASPACK_SKIP_UNUSED_DEPENDENCIES` env var (default: true).
+/// Both JS and Rust bundlers read this same env var to stay in sync for parity testing.
+/// Set to false (e.g. `ATLASPACK_SKIP_UNUSED_DEPENDENCIES=false`) when testing Rust bundler
+/// parity, since the Rust side does not yet have symbol propagation.
+fn skip_unused_dependencies() -> bool {
+  std::env::var("ATLASPACK_SKIP_UNUSED_DEPENDENCIES")
+    .map(|v| v != "false")
+    .unwrap_or(true)
+}
 
 /// Intermediate state for building an [`IdealGraph`].
 ///
@@ -269,7 +275,7 @@ impl IdealGraphBuilder {
 
         // Match JS `skipUnusedDependencies: true`.
         let state = asset_graph.get_dependency_state(&dep_node_id);
-        if SKIP_UNUSED_DEPENDENCIES
+        if skip_unused_dependencies()
           && matches!(state, DependencyState::Deferred | DependencyState::Excluded)
         {
           continue;
@@ -339,7 +345,7 @@ impl IdealGraphBuilder {
 
         // Match JS `skipUnusedDependencies: true`.
         let state = asset_graph.get_dependency_state(&dep_node_id);
-        if SKIP_UNUSED_DEPENDENCIES
+        if skip_unused_dependencies()
           && matches!(state, DependencyState::Deferred | DependencyState::Excluded)
         {
           continue;
@@ -492,7 +498,7 @@ impl IdealGraphBuilder {
 
         // Match JS `skipUnusedDependencies: true`.
         let state = asset_graph.get_dependency_state(&dep_node_id);
-        if SKIP_UNUSED_DEPENDENCIES
+        if skip_unused_dependencies()
           && matches!(state, DependencyState::Deferred | DependencyState::Excluded)
         {
           continue;
@@ -900,7 +906,7 @@ impl IdealGraphBuilder {
         if let Some(dep) = asset_graph.get_dependency(&node_id) {
           // JS `skipUnusedDependencies: true`
           let state = asset_graph.get_dependency_state(&node_id);
-          if SKIP_UNUSED_DEPENDENCIES
+          if skip_unused_dependencies()
             && matches!(state, DependencyState::Deferred | DependencyState::Excluded)
           {
             continue;
