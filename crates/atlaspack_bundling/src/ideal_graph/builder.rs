@@ -36,6 +36,11 @@ use super::types::{
   IdealGraphBuildOptions, IdealGraphBuildStats,
 };
 
+/// When true, the bundler skips dependencies marked as Deferred or Excluded by symbol propagation.
+/// Set to false for parity testing against the JS bundler with skipUnusedDependencies=false.
+/// This will be removed once full symbol propagation is implemented in Rust.
+const SKIP_UNUSED_DEPENDENCIES: bool = false;
+
 /// Intermediate state for building an [`IdealGraph`].
 ///
 /// This mirrors the phase-based design in `bundler-rust-rewrite-research.md`.
@@ -264,7 +269,9 @@ impl IdealGraphBuilder {
 
         // Match JS `skipUnusedDependencies: true`.
         let state = asset_graph.get_dependency_state(&dep_node_id);
-        if matches!(state, DependencyState::Deferred | DependencyState::Excluded) {
+        if SKIP_UNUSED_DEPENDENCIES
+          && matches!(state, DependencyState::Deferred | DependencyState::Excluded)
+        {
           continue;
         }
 
@@ -332,7 +339,9 @@ impl IdealGraphBuilder {
 
         // Match JS `skipUnusedDependencies: true`.
         let state = asset_graph.get_dependency_state(&dep_node_id);
-        if matches!(state, DependencyState::Deferred | DependencyState::Excluded) {
+        if SKIP_UNUSED_DEPENDENCIES
+          && matches!(state, DependencyState::Deferred | DependencyState::Excluded)
+        {
           continue;
         }
 
@@ -483,7 +492,9 @@ impl IdealGraphBuilder {
 
         // Match JS `skipUnusedDependencies: true`.
         let state = asset_graph.get_dependency_state(&dep_node_id);
-        if matches!(state, DependencyState::Deferred | DependencyState::Excluded) {
+        if SKIP_UNUSED_DEPENDENCIES
+          && matches!(state, DependencyState::Deferred | DependencyState::Excluded)
+        {
           continue;
         }
 
@@ -889,7 +900,9 @@ impl IdealGraphBuilder {
         if let Some(dep) = asset_graph.get_dependency(&node_id) {
           // JS `skipUnusedDependencies: true`
           let state = asset_graph.get_dependency_state(&node_id);
-          if matches!(state, DependencyState::Deferred | DependencyState::Excluded) {
+          if SKIP_UNUSED_DEPENDENCIES
+            && matches!(state, DependencyState::Deferred | DependencyState::Excluded)
+          {
             continue;
           }
 
