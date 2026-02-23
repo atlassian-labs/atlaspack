@@ -185,33 +185,23 @@ export default new Transformer({
             logger.warn(convertDiagnostic(error));
           }
         } else {
-          // Set diagnostic.stack to a V8-format stack string so that Sentry
-          // renders the source location in its stacktrace panel.
+          // Embed a V8-format stack string in each diagnostic so that Sentry
+          // renders a clickable stacktrace panel with the source location.
           //
-          // Background: this transformer runs in a WorkerFarm worker process.
-          // Errors cross the worker boundary via anyToDiagnostic(), which only
-          // preserves the Diagnostic[] array — any post-construction mutation
-          // to ThrowableDiagnostic properties is discarded. Source location
-          // info must therefore live inside the Diagnostic object itself.
+          // Background: errors cross the WorkerFarm boundary via
+          // anyToDiagnostic(), which only preserves the Diagnostic[] array.
+          // The stack must therefore live inside the Diagnostic object itself
+          // so it survives serialisation and is picked up by the
+          // ThrowableDiagnostic constructor on the other side.
           //
-          // Sentry reads Error.stack (set from diagnostic.stack by
-          // ThrowableDiagnostic's constructor) and parses it for stack frames.
-          // Arbitrary plain text is silently discarded. A V8-format line
-          // ("    at <label> (file:line:col)") IS parsed and displayed as a
-          // clickable stacktrace frame — giving Sentry the file location
-          // without hitting the ~250-char message truncation limit.
+          // meta.sentryOnly: true signals prettyDiagnostic to skip rendering
+          // the stack in the terminal (avoiding duplication with codeFrames).
           //
-          // codeFrames is kept intact so the terminal CLI reporter continues to
-          // render the fully highlighted code frame as normal.
-          //
-          // One V8-format frame is emitted per highlighted line so that Sentry
-          // marks each line in its code viewer. The actual code content of each
-          // line is used as the frame label so it appears inline in Sentry's
-          // stacktrace list without needing source maps.
-          //
-          // Parentheses in code content are replaced with square brackets to
-          // avoid breaking the V8 stack frame parser, which splits on ' (' to
-          // separate the label from the (file:line:col) suffix.
+          // One V8 frame is emitted per highlighted line. The source line
+          // content is used as the frame label so it appears inline in
+          // Sentry's stacktrace list without needing source maps.
+          // Parentheses are replaced with square brackets to prevent breaking
+          // the V8 parser, which splits on ' (' to find the (file:line:col).
           throw new ThrowableDiagnostic({
             diagnostic: errors.map((error) => {
               const converted = convertDiagnostic(error);
@@ -241,6 +231,7 @@ export default new Transformer({
                 return {
                   ...converted,
                   stack: `Error: ${converted.message}\n${frames.join('\n')}`,
+                  meta: {...converted.meta, sentryOnly: true},
                 };
               }
               return converted;
