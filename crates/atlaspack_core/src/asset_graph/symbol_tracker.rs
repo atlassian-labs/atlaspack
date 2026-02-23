@@ -356,29 +356,59 @@ impl SymbolTracker {
   /// Removes unsatisfied speculative requirements that belong to the given speculation groups.
   /// This is called after a speculative requirement is satisfied - since only one member
   /// of each group needs to be satisfied, the others can be removed.
+  ///
+  /// This also recursively cleans up any speculation groups that were created from the
+  /// removed requirements (for diamond patterns where multiple paths converge).
   fn remove_unsatisfied_speculation_siblings(
     &mut self,
     satisfied_groups: &[String],
     satisfied_dep_id: &str,
   ) {
-    for group_id in satisfied_groups {
+    let mut groups_to_process: Vec<String> = satisfied_groups.to_vec();
+    let mut processed_groups: Vec<String> = Vec::new();
+
+    while let Some(group_id) = groups_to_process.pop() {
+      // Skip if already processed (avoid infinite loops)
+      if processed_groups.contains(&group_id) {
+        continue;
+      }
+      processed_groups.push(group_id.clone());
+
       // Get the dependency IDs that contain members of this speculation group
-      let Some(dep_ids) = self.speculation_group_locations.remove(group_id) else {
+      let Some(dep_ids) = self.speculation_group_locations.remove(&group_id) else {
         continue;
       };
 
       // Remove unsatisfied speculative requirements from sibling dependencies
       for dep_id in dep_ids {
-        // Skip the dependency that was just satisfied
-        if dep_id == satisfied_dep_id {
+        // Skip the dependency that was just satisfied (only for top-level groups)
+        if dep_id == satisfied_dep_id && satisfied_groups.contains(&group_id) {
           continue;
         }
 
         if let Some(requirements) = self.requirements_by_dep.get_mut(&dep_id) {
           requirements.retain(|req| {
             // Keep if not part of this speculation group
-            req.speculation_group_id.as_ref() != Some(group_id)
+            req.speculation_group_id.as_ref() != Some(&group_id)
           });
+        }
+
+        // Check if there are any speculation groups that were sourced from this dep
+        // (i.e., groups with ID starting with "{dep_id}:")
+        // These need to be cleaned up too since their source was removed
+        let orphaned_groups: Vec<String> = self
+          .speculation_group_locations
+          .keys()
+          .filter(|g| g.starts_with(&format!("{}:", dep_id)))
+          .cloned()
+          .collect();
+
+        for orphaned_group in orphaned_groups {
+          if !groups_to_process.contains(&orphaned_group)
+            && !processed_groups.contains(&orphaned_group)
+          {
+            groups_to_process.push(orphaned_group);
+          }
         }
       }
     }
@@ -1319,6 +1349,125 @@ mod tests {
     assert!(
       satisfied_req.unwrap().final_location.is_some(),
       "sub_dep_2 mySymbol requirement should be satisfied"
+    );
+
+    // Finalize should succeed
+    let finalized = tracker.finalize();
+    assert!(
+      finalized
+        .get_used_symbols_for_dependency(&barrel_dep.id)
+        .is_some(),
+      "barrel_dep should have used symbols"
+    );
+  }
+
+  #[test]
+  fn track_symbols_handles_diamond_pattern_star_reexports() {
+    // Diamond pattern:
+    //       index.js
+    //          ↓
+    //       barrel.js (export * from left, export * from right)
+    //        ↙    ↘
+    //   left.js   right.js (both: export * from shared)
+    //        ↘    ↙
+    //       shared.js (exports foo)
+    //
+    // The symbol 'foo' can be reached via two paths.
+
+    let mut graph = AssetGraph::new();
+
+    let entry_dep = make_entry_dependency();
+    let entry_dep_node = graph.add_entry_dependency(entry_dep, false);
+
+    // index.js
+    let index_asset = make_asset("index.js", vec![]);
+    let index_asset_node = graph.add_asset(index_asset.clone(), false);
+    graph.add_edge(&entry_dep_node, &index_asset_node);
+
+    // Dependency from index.js to barrel.js requesting "foo"
+    let barrel_dep = make_dependency(
+      &index_asset,
+      "./barrel.js",
+      vec![("$index$import$foo", "foo", false)],
+    );
+    let barrel_dep_node = graph.add_dependency(barrel_dep.clone(), false);
+    graph.add_edge(&index_asset_node, &barrel_dep_node);
+
+    // barrel.js - has `export * from './left'` and `export * from './right'`
+    let barrel_asset = make_asset("barrel.js", vec![("*", "*", true)]);
+    let barrel_asset_node = graph.add_asset(barrel_asset.clone(), false);
+    graph.add_edge(&barrel_dep_node, &barrel_asset_node);
+
+    // Dependency from barrel.js to left.js (star re-export)
+    let left_dep = make_dependency(&barrel_asset, "./left.js", vec![("*", "*", true)]);
+    let left_dep_node = graph.add_dependency(left_dep.clone(), false);
+    graph.add_edge(&barrel_asset_node, &left_dep_node);
+
+    // Dependency from barrel.js to right.js (star re-export)
+    let right_dep = make_dependency(&barrel_asset, "./right.js", vec![("*", "*", true)]);
+    let right_dep_node = graph.add_dependency(right_dep.clone(), false);
+    graph.add_edge(&barrel_asset_node, &right_dep_node);
+
+    // left.js - has `export * from './shared'`
+    let left_asset = make_asset("left.js", vec![("*", "*", true)]);
+    let left_asset_node = graph.add_asset(left_asset.clone(), false);
+    graph.add_edge(&left_dep_node, &left_asset_node);
+
+    // right.js - has `export * from './shared'`
+    let right_asset = make_asset("right.js", vec![("*", "*", true)]);
+    let right_asset_node = graph.add_asset(right_asset.clone(), false);
+    graph.add_edge(&right_dep_node, &right_asset_node);
+
+    // Dependency from left.js to shared.js (star re-export)
+    let left_shared_dep = make_dependency(&left_asset, "./shared.js", vec![("*", "*", true)]);
+    let left_shared_dep_node = graph.add_dependency(left_shared_dep.clone(), false);
+    graph.add_edge(&left_asset_node, &left_shared_dep_node);
+
+    // Dependency from right.js to shared.js (star re-export)
+    let right_shared_dep = make_dependency(&right_asset, "./shared.js", vec![("*", "*", true)]);
+    let right_shared_dep_node = graph.add_dependency(right_shared_dep.clone(), false);
+    graph.add_edge(&right_asset_node, &right_shared_dep_node);
+
+    // shared.js - provides "foo" (strong symbol)
+    let shared_asset = make_asset("shared.js", vec![("foo", "foo", false)]);
+    let shared_asset_node = graph.add_asset(shared_asset.clone(), false);
+    graph.add_edge(&left_shared_dep_node, &shared_asset_node);
+    graph.add_edge(&right_shared_dep_node, &shared_asset_node);
+
+    let mut tracker = SymbolTracker::default();
+
+    // Process in traversal order
+    tracker
+      .track_symbols(&graph, &index_asset, std::slice::from_ref(&barrel_dep))
+      .unwrap();
+    tracker
+      .track_symbols(
+        &graph,
+        &barrel_asset,
+        &[left_dep.clone(), right_dep.clone()],
+      )
+      .unwrap();
+    tracker
+      .track_symbols(&graph, &left_asset, std::slice::from_ref(&left_shared_dep))
+      .unwrap();
+    tracker
+      .track_symbols(
+        &graph,
+        &right_asset,
+        std::slice::from_ref(&right_shared_dep),
+      )
+      .unwrap();
+    tracker.track_symbols(&graph, &shared_asset, &[]).unwrap();
+
+    // Verify barrel_dep requirement is satisfied
+    let barrel_requirements = tracker.requirements_by_dep.get(&barrel_dep.id).unwrap();
+    let barrel_final = barrel_requirements[0]
+      .final_location
+      .as_ref()
+      .expect("barrel_dep requirement should be satisfied");
+    assert_eq!(
+      barrel_final.providing_asset_id, shared_asset.id,
+      "barrel_dep should point to shared.js as provider"
     );
 
     // Finalize should succeed
