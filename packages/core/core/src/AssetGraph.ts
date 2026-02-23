@@ -33,7 +33,6 @@ import {
   toEnvironmentRef,
 } from './EnvironmentManager';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
-import {report} from './ReporterRunner';
 
 type InitOpts = {
   entries?: Array<ProjectPath>;
@@ -448,24 +447,12 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
         // @ts-expect-error TS2339
         if (!ctx?.hasDeferred) {
           this.safeToIncrementallyBundle = false;
-          report({
-            type: 'log',
-            level: 'progress',
-            message:
-              '[AssetGraph] safeToIncrementallyBundle = false (asset_group without hasDeferred in traverse)',
-          });
           this.setNeedsBundling();
           delete traversedNode.hasDeferred;
         }
         actions.skipChildren();
       } else if (traversedNode.type === 'dependency') {
         this.safeToIncrementallyBundle = false;
-        report({
-          type: 'log',
-          level: 'progress',
-          message:
-            '[AssetGraph] safeToIncrementallyBundle = false (dependency node in traverse)',
-        });
         this.setNeedsBundling();
         traversedNode.hasDeferred = false;
       } else if (nodeId !== traversedNodeId) {

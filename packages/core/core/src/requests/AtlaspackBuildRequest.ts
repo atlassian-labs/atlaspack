@@ -97,12 +97,6 @@ async function run({
       (options.shouldBuildLazily && requestedAssetIds.size > 0),
   });
 
-  report({
-    type: 'log',
-    level: 'progress',
-    message: `[AtlaspackBuildRequest] value of didIncrementallyBundle: ${didIncrementallyBundle} nativePackager: ${getFeatureFlag('nativePackager') ? 'true' : 'false'} nativePackagerSSRDev: ${getFeatureFlag('nativePackagerSSRDev') ? 'true' : 'false'}`,
-  });
-
   if (
     getFeatureFlag('nativePackager') &&
     getFeatureFlag('nativePackagerSSRDev') &&
@@ -120,19 +114,9 @@ async function run({
     });
     if (hasSupportedTarget) {
       if (didIncrementallyBundle) {
-        report({
-          type: 'log',
-          level: 'progress',
-          message: `[AtlaspackBuildRequest] Updating bundle graph incrementally through native (${changedAssets.size} changed asset(s))`,
-        });
         const changedAssetIds = Array.from(changedAssets.keys());
         await rustAtlaspack.updateBundleGraph(bundleGraph, changedAssetIds);
       } else {
-        report({
-          type: 'log',
-          level: 'progress',
-          message: `[AtlaspackBuildRequest] Loading bundle graph from scratch through native`,
-        });
         await rustAtlaspack.loadBundleGraph(bundleGraph);
       }
     }

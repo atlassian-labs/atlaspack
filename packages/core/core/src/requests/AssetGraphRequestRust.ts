@@ -25,7 +25,6 @@ import {toEnvironmentRef} from '../EnvironmentManager';
 import {getEnvironmentHash} from '../Environment';
 import dumpGraphToGraphViz from '../dumpGraphToGraphViz';
 import assert from 'assert';
-import {report} from '../ReporterRunner';
 
 type RunInput = {
   input: AssetGraphRequestInput;
@@ -168,12 +167,6 @@ export function getAssetGraph(
       rootNodeId: prevAssetGraph.rootNodeId,
     });
     graph.safeToIncrementallyBundle = false;
-    report({
-      type: 'log',
-      level: 'progress',
-      message:
-        '[AssetGraphRequestRust] safeToIncrementallyBundle = false (graph from previous delta)',
-    });
   } else {
     graph = new AssetGraph({
       _contentKeyToNodeId: new Map(),
@@ -191,12 +184,6 @@ export function getAssetGraph(
 
     graph.setRootNodeId(rootNodeId);
     graph.safeToIncrementallyBundle = false;
-    report({
-      type: 'log',
-      level: 'progress',
-      message:
-        '[AssetGraphRequestRust] safeToIncrementallyBundle = false (new graph, no previous)',
-    });
   }
 
   invariant(graph, 'Asset graph not initialized');
