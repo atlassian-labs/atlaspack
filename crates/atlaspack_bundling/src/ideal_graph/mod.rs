@@ -1673,16 +1673,16 @@ mod tests {
     // extracted into a shared bundle.
     //
     // Note: comp-y is an async bundle root (lazy boundary) that is internalized.
-    // The internalized bundle still exists in the ideal graph, but can be empty.
+    // The internalized bundle is deleted (JS `deleteBundle`).
     let asset_graph = fixture_graph(
       &["entry.js"],
       &[
         EdgeSpec::new("entry.js", "route-1.js", Priority::Lazy),
         EdgeSpec::new("entry.js", "route-2.js", Priority::Lazy),
         EdgeSpec::new("route-1.js", "comp-x.js", Priority::Sync),
-        EdgeSpec::new("route-1.js", "comp-y.js", Priority::Lazy),
+        EdgeSpec::new("route-1.js", "comp-y.js", Priority::Lazy).specifier("comp-y.js?lazy"),
         EdgeSpec::new("route-2.js", "comp-x.js", Priority::Sync),
-        EdgeSpec::new("comp-x.js", "comp-y.js", Priority::Sync),
+        EdgeSpec::new("comp-x.js", "comp-y.js", Priority::Sync).specifier("comp-y.js?sync"),
         EdgeSpec::new("comp-y.js", "lib-z.js", Priority::Sync),
       ],
     );
@@ -1695,14 +1695,11 @@ mod tests {
         "entry.js"    => ["entry.js"],
         "route-1.js"  => ["route-1.js"],
         "route-2.js"  => ["route-2.js"],
-        "comp-y.js"   => [],
         shared(shared) => ["comp-x.js", "comp-y.js", "lib-z.js"],
       },
       edges: {
         "entry.js" lazy "route-1.js",
         "entry.js" lazy "route-2.js",
-        "route-1.js" lazy "comp-y.js",
-        "route-2.js" sync "comp-y.js",
         "route-1.js" sync shared(shared),
         "route-2.js" sync shared(shared),
       },
@@ -2550,8 +2547,8 @@ mod tests {
     // entry -> sync b
     //
     // b.js is both sync-imported by entry and async-imported by a.
-    // b.js's async bundle is internalized. The bundle root remains as a (now-empty) bundle,
-    // but b.js is placed into entry so it can be reprocessed by later phases.
+    // b.js's async bundle is internalized and deleted (JS `deleteBundle`).
+    // b.js is placed into entry so it can be processed like any other sync asset.
     let asset_graph = fixture_graph(
       &["entry.js"],
       &[
@@ -2567,17 +2564,40 @@ mod tests {
     assert_graph!(g, {
       bundles: {
         "entry.js" => ["entry.js", "a.js", "b.js"],
-        "b.js" => [],
-      },
-      edges: {
-        "entry.js" sync "b.js",
-        "entry.js" lazy "b.js",
       },
     });
   }
 
   #[test]
-  fn internalize_async_bundle_when_root_is_sync_reachable_through_parent_bundle() {
+  fn internalizes_async_bundle_when_root_sync_available_from_ancestor_and_parent() {
+    // Integration regression:
+    // index.js --sync--> a.js
+    // a.js    --sync--> b.js
+    // a.js    --lazy--> b.js (separate dependency id)
+    //
+    // Expected: b.js ends up in the entry bundle (sync-available from ancestor), and the
+    // async bundle for b.js is deleted.
+    let asset_graph = fixture_graph(
+      &["index.js"],
+      &[
+        EdgeSpec::new("index.js", "a.js", Priority::Sync),
+        EdgeSpec::new("a.js", "b.js", Priority::Sync).specifier("b.js?sync"),
+        EdgeSpec::new("a.js", "b.js", Priority::Lazy).specifier("b.js?lazy"),
+      ],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    assert_graph!(g, {
+      bundles: {
+        "index.js" => ["index.js", "a.js", "b.js"],
+      },
+    });
+  }
+
+  #[test]
+  fn internalizes_lazy_bundle_when_root_is_sync_available_from_ancestor() {
     // This fixture internalizes b.js's async bundle, but leaves a lazy dependency in the
     // asset graph pointing at b.js.
     //
@@ -2591,8 +2611,7 @@ mod tests {
     // a -> sync b
     //
     // b.js is a bundle boundary (lazy), but also sync-imported by a which is in the entry.
-    // b.js's async bundle is internalized. The bundle root remains as a (now-empty) bundle,
-    // but b.js is placed into entry so it can be reprocessed by later phases.
+    // b.js's async bundle is internalized and deleted. b.js is placed into entry.
     let asset_graph = fixture_graph(
       &["entry.js"],
       &[
@@ -2635,25 +2654,22 @@ mod tests {
     assert_graph!(g, {
       bundles: {
         "entry.js" => ["entry.js", "a.js", "b.js"],
-        "b.js" => [],
-      },
-      edges: {
-        "entry.js" sync "b.js",
-        "entry.js" lazy "b.js",
       },
     });
   }
 
   #[test]
   fn internalize_async_bundle_removes_bundle_and_places_root_in_parent() {
+    // (Regression) internalization should delete the async bundle so its root doesn't act as a hard boundary
+    // during entry bundle Contains traversal.
     // entry -> lazy route-1
     // route-1 -> sync comp-x, lazy comp-y
     // comp-x -> sync comp-y (sync edge to a boundary)
     // comp-y -> sync lib-z
     //
     // With internalization, comp-y is no longer treated as a bundle root for placement.
-    // The internalized bundle remains as an empty bundle, and comp-y/lib-z are placed into
-    // the parent (route-1) bundle.
+    // The async bundle for comp-y is internalized and deleted, and comp-y/lib-z are placed
+    // into the parent (route-1) bundle.
     let asset_graph = fixture_graph(
       &["entry.js"],
       &[
@@ -2672,12 +2688,9 @@ mod tests {
       bundles: {
         "entry.js" => ["entry.js"],
         "route-1.js" => ["comp-x.js", "comp-y.js", "lib-z.js", "route-1.js"],
-        "comp-y.js" => [],
       },
       edges: {
         "entry.js" lazy "route-1.js",
-        "route-1.js" lazy "comp-y.js",
-        "route-1.js" sync "comp-y.js",
       }
     });
   }
@@ -2899,6 +2912,52 @@ mod tests {
         "entry.js" => ["entry.js", "vendor.js"],
         "a.js"     => ["a.js"],
         "b.js"     => ["b.js"],
+      },
+    });
+  }
+
+  #[test]
+  fn deep_async_roots_shared_asset_is_handled_via_availability_or_shared_bundle() {
+    // Fixture from availability divergence investigation:
+    // A (entry) --sync--> B
+    // B --lazy--> C --sync--> D --lazy--> E --sync--> F
+    // B --lazy--> G --sync--> F
+    //
+    // F is reachable from both E and G. At availability time, each bundle initially contains
+    // only its root asset(s), and availability unions in sync-reachable assets (stopping at
+    // bundle boundaries). This test ensures the Rust implementation matches that behavior.
+    //
+    // Expected: F is extracted into a shared bundle referenced by both E and G.
+    let asset_graph = fixture_graph(
+      &["a.js"],
+      &[
+        EdgeSpec::new("a.js", "b.js", Priority::Sync),
+        EdgeSpec::new("b.js", "c.js", Priority::Lazy),
+        EdgeSpec::new("c.js", "d.js", Priority::Sync),
+        EdgeSpec::new("d.js", "e.js", Priority::Lazy),
+        EdgeSpec::new("e.js", "f.js", Priority::Sync),
+        EdgeSpec::new("b.js", "g.js", Priority::Lazy),
+        EdgeSpec::new("g.js", "f.js", Priority::Sync),
+      ],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    assert_graph!(g, {
+      bundles: {
+        "a.js" => ["a.js", "b.js"],
+        "c.js" => ["c.js", "d.js"],
+        "e.js" => ["e.js"],
+        "g.js" => ["g.js"],
+        shared(f) => ["f.js"],
+      },
+      edges: {
+        "a.js" lazy "c.js",
+        "a.js" lazy "g.js",
+        "c.js" lazy "e.js",
+        "e.js" sync shared(f),
+        "g.js" sync shared(f),
       },
     });
   }
@@ -3349,6 +3408,50 @@ mod tests {
         "entry.js" lazy "b.js",
         "a.js" sync shared(shared),
         "b.js" sync shared(shared),
+      },
+    });
+  }
+
+  #[test]
+  fn bundlebehavior_asset_blocks_sync_reachability_propagation() {
+    // a (entry) -> sync b (asset bundleBehavior=Isolated) -> sync c
+    // a (entry) -> lazy d -> sync c
+    //
+    // Sync reachability/availability propagation should STOP at b because b has an
+    // asset-level bundleBehavior, meaning c should NOT be considered sync-reachable
+    // from a through b.
+    //
+    // As a result, c is only reachable from the async root d and should be placed
+    // into d's bundle (not duplicated into a, and not extracted to a shared bundle).
+    let asset_graph = fixture_graph_with_options(
+      &["a.js"],
+      &[
+        EdgeSpec::new("a.js", "b.js", Priority::Sync),
+        EdgeSpec::new("b.js", "c.js", Priority::Sync),
+        EdgeSpec::new("a.js", "d.js", Priority::Lazy),
+        EdgeSpec::new("d.js", "c.js", Priority::Sync),
+      ],
+      &[(
+        "b.js",
+        AssetOptions {
+          is_bundle_splittable: true,
+          bundle_behavior: Some(atlaspack_core::types::BundleBehavior::Isolated),
+        },
+      )],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    assert_graph!(g, {
+      bundles: {
+        "a.js" => ["a.js"],
+        "b.js" => ["b.js"],
+        "d.js" => ["c.js", "d.js"],
+      },
+      edges: {
+        "a.js" sync "b.js",
+        "a.js" lazy "d.js",
       },
     });
   }

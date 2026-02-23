@@ -341,8 +341,6 @@ impl IdealGraphBuilder {
           let type_change = from_asset.file_type != target_asset.file_type;
           let isolated = dep.bundle_behavior == Some(BundleBehavior::Isolated)
             || dep.bundle_behavior == Some(BundleBehavior::InlineIsolated)
-            || from_asset.bundle_behavior == Some(BundleBehavior::Isolated)
-            || from_asset.bundle_behavior == Some(BundleBehavior::InlineIsolated)
             || target_asset.bundle_behavior == Some(BundleBehavior::Isolated)
             || target_asset.bundle_behavior == Some(BundleBehavior::InlineIsolated);
 
@@ -448,6 +446,16 @@ impl IdealGraphBuilder {
       };
 
       if !self.reachable_assets.contains(&from_key) {
+        continue;
+      }
+
+      // JS semantics: if an asset has `bundleBehavior != null` and it is NOT the current
+      // traversal root, traversal stops before visiting its children.
+      //
+      // In the shared sync-graph representation, we model this by not creating outgoing
+      // sync edges from non-entry assets with an explicit bundle behavior.
+      // Those assets are bundle roots themselves and will get their own reachability subtree.
+      if from_asset.bundle_behavior.is_some() && !self.entry_roots.contains(&from_key) {
         continue;
       }
 
@@ -1347,6 +1355,9 @@ impl IdealGraphBuilder {
       reach_bits[root_idx.index()].insert(i);
     }
 
+    let root_to_bit: HashMap<AssetKey, usize> =
+      roots.iter().enumerate().map(|(i, &k)| (k, i)).collect();
+
     if let Ok(order) = petgraph::algo::toposort(&self.sync_graph, None) {
       // ----------------------------
       // Fast path: DAG topo propagation
@@ -1406,11 +1417,14 @@ impl IdealGraphBuilder {
 
       // Aggregate initial bits per SCC (union of member seeds).
       let mut scc_bits: Vec<FixedBitSet> = vec![FixedBitSet::with_capacity(num_roots); sccs.len()];
+
       for (scc_idx, nodes) in sccs.iter().enumerate() {
         let mut agg = FixedBitSet::with_capacity(num_roots);
+
         for &n in nodes {
           agg.union_with(&reach_bits[n.index()]);
         }
+
         scc_bits[scc_idx] = agg;
       }
 
@@ -1471,9 +1485,6 @@ impl IdealGraphBuilder {
       assets_with_reachability,
       "ideal graph: computed topo-based reachability"
     );
-
-    let root_to_bit: HashMap<AssetKey, usize> =
-      roots.iter().enumerate().map(|(i, &k)| (k, i)).collect();
 
     Ok(Reachability {
       reach_bits,
@@ -2185,23 +2196,23 @@ impl IdealGraphBuilder {
       }
     }
 
-    // Apply internalization: match JS deleteBundle behavior.
+    // Apply internalization: match JS `deleteBundle` behavior.
+    //
+    // The JS bundler deletes the async bundle entirely. Keeping an "empty shell" bundle
+    // causes downstream materialization to treat the root asset as a bundle boundary and
+    // stop sync traversal early, which can make the internalized root asset disappear from
+    // all emitted bundles.
     for (bundle_id, parents, root_key) in &to_internalize {
-      // Remove from bundle_roots so shared bundles can re-process
+      // Remove from bundle_roots so placement/shared phases treat the root as a normal asset.
       self.bundle_roots.remove(root_key);
 
-      // Track as internalized
+      // Track as internalized (used later during NativeBundleGraph materialization).
       ideal
         .internalized_bundles
         .insert(*bundle_id, parents.clone());
 
-      // Clear assets and asset_to_bundle (internalized bundles remain as empty shells).
-      if let Some(bundle) = ideal.get_bundle_mut(bundle_id) {
-        bundle.assets.clear();
-      }
-      if let Some(entry) = ideal.asset_to_bundle.get_mut(root_key.0 as usize) {
-        *entry = None;
-      }
+      // Delete the bundle (removes edges and clears `asset_to_bundle` for its assets).
+      ideal.remove_bundle(bundle_id);
     }
 
     // Clear internalized root bits from reachability bitsets.

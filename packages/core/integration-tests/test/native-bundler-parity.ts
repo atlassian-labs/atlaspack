@@ -472,4 +472,282 @@ describe('Native bundling ready', function () {
     ]);
     await run(b);
   });
+
+  it('diamond async dependency creates shared bundle', async function () {
+    await fsFixture(overlayFS, __dirname)`
+      native-bundler-parity-diamond-async-shared
+        index.js:
+          import('./a');
+          import('./b');
+          export default 1;
+        a.js:
+          import shared from './shared';
+          export default shared + 'a';
+        b.js:
+          import shared from './shared';
+          export default shared + 'b';
+        shared.js:
+          export default 'shared';
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "minBundles": 0,
+              "minBundleSize": 0,
+              "maxParallelRequests": 100
+            }
+          }
+        yarn.lock: {}
+    `;
+
+    let b = await bundle(
+      path.join(
+        __dirname,
+        'native-bundler-parity-diamond-async-shared/index.js',
+      ),
+      {
+        mode: 'production',
+        defaultTargetOptions: {shouldScopeHoist: false},
+        inputFS: overlayFS,
+      },
+    );
+
+    // shared.js is used by both async bundles, so it should be extracted into its own shared bundle.
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        type: 'js',
+        assets: [
+          'index.js',
+          'esmodule-helpers.js',
+          'bundle-url.js',
+          'cacheLoader.js',
+          'js-loader.js',
+          'bundle-manifest.js',
+        ],
+      },
+      {type: 'js', assets: ['a.js']},
+      {type: 'js', assets: ['b.js']},
+      {type: 'js', assets: ['shared.js']},
+    ]);
+    await run(b);
+  });
+
+  it('deep sync chain with async at leaf', async function () {
+    await fsFixture(overlayFS, __dirname)`
+      native-bundler-parity-deep-sync-chain-async-leaf
+        index.js:
+          import a from './a';
+          export default a;
+        a.js:
+          import b from './b';
+          export default b;
+        b.js:
+          export default import('./c');
+        c.js:
+          export default 123;
+        package.json:
+          {}
+        yarn.lock: {}
+    `;
+
+    let b = await bundle(
+      path.join(
+        __dirname,
+        'native-bundler-parity-deep-sync-chain-async-leaf/index.js',
+      ),
+      {
+        mode: 'production',
+        defaultTargetOptions: {shouldScopeHoist: false},
+        inputFS: overlayFS,
+      },
+    );
+
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        type: 'js',
+        assets: [
+          'index.js',
+          'a.js',
+          'b.js',
+          'esmodule-helpers.js',
+          'bundle-url.js',
+          'cacheLoader.js',
+          'js-loader.js',
+          'bundle-manifest.js',
+        ],
+      },
+      {type: 'js', assets: ['c.js']},
+    ]);
+    await run(b);
+  });
+
+  it('multiple async imports sharing deep common dep', async function () {
+    await fsFixture(overlayFS, __dirname)`
+      native-bundler-parity-multiple-async-deep-shared
+        index.js:
+          import('./a');
+          import('./b');
+          export default 1;
+        a.js:
+          import x from './x';
+          export default x + 'a';
+        x.js:
+          import shared from './shared';
+          export default shared + 'x';
+        b.js:
+          import y from './y';
+          export default y + 'b';
+        y.js:
+          import shared from './shared';
+          export default shared + 'y';
+        shared.js:
+          export default 'shared';
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "minBundles": 0,
+              "minBundleSize": 0,
+              "maxParallelRequests": 100
+            }
+          }
+        yarn.lock: {}
+    `;
+
+    let b = await bundle(
+      path.join(
+        __dirname,
+        'native-bundler-parity-multiple-async-deep-shared/index.js',
+      ),
+      {
+        mode: 'production',
+        defaultTargetOptions: {shouldScopeHoist: false},
+        inputFS: overlayFS,
+      },
+    );
+
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        type: 'js',
+        assets: [
+          'index.js',
+          'esmodule-helpers.js',
+          'bundle-url.js',
+          'cacheLoader.js',
+          'js-loader.js',
+          'bundle-manifest.js',
+        ],
+      },
+      // Sync deps (x.js, y.js) stay in their respective async bundles.
+      {type: 'js', assets: ['a.js', 'x.js']},
+      {type: 'js', assets: ['b.js', 'y.js']},
+      {type: 'js', assets: ['shared.js']},
+    ]);
+    await run(b);
+  });
+
+  it('async bundle with CSS type-change sibling', async function () {
+    await fsFixture(overlayFS, __dirname)`
+      native-bundler-parity-async-css-sibling
+        index.js:
+          export default import('./page');
+        page.js:
+          import './page.css';
+          export default 'page';
+        page.css:
+          .root { color: red; }
+        package.json:
+          {}
+        yarn.lock: {}
+    `;
+
+    let b = await bundle(
+      path.join(__dirname, 'native-bundler-parity-async-css-sibling/index.js'),
+      {
+        mode: 'production',
+        defaultTargetOptions: {shouldScopeHoist: false},
+        inputFS: overlayFS,
+      },
+    );
+
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        type: 'js',
+        assets: [
+          'index.js',
+          'esmodule-helpers.js',
+          'bundle-url.js',
+          'cacheLoader.js',
+          'js-loader.js',
+          'css-loader.js',
+          'bundle-manifest.js',
+        ],
+      },
+      {type: 'js', assets: ['page.js']},
+      {type: 'css', assets: ['page.css']},
+    ]);
+    await run(b);
+  });
+
+  it('three-way shared bundle', async function () {
+    await fsFixture(overlayFS, __dirname)`
+      native-bundler-parity-three-way-shared
+        index.js:
+          import('./a');
+          import('./b');
+          import('./c');
+          export default 1;
+        a.js:
+          import shared from './shared';
+          export default shared + 'a';
+        b.js:
+          import shared from './shared';
+          export default shared + 'b';
+        c.js:
+          import shared from './shared';
+          export default shared + 'c';
+        shared.js:
+          export default 'shared';
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "minBundles": 0,
+              "minBundleSize": 0,
+              "maxParallelRequests": 100
+            }
+          }
+        yarn.lock: {}
+    `;
+
+    let b = await bundle(
+      path.join(__dirname, 'native-bundler-parity-three-way-shared/index.js'),
+      {
+        mode: 'production',
+        defaultTargetOptions: {shouldScopeHoist: false},
+        inputFS: overlayFS,
+      },
+    );
+
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        type: 'js',
+        assets: [
+          'index.js',
+          'esmodule-helpers.js',
+          'bundle-url.js',
+          'cacheLoader.js',
+          'js-loader.js',
+          'bundle-manifest.js',
+        ],
+      },
+      {type: 'js', assets: ['a.js']},
+      {type: 'js', assets: ['b.js']},
+      {type: 'js', assets: ['c.js']},
+      {type: 'js', assets: ['shared.js']},
+    ]);
+    await run(b);
+  });
 });
