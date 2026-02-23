@@ -928,36 +928,28 @@ mod tests {
       SymbolTrackerTestCtx { tracker, deps, assets }
     }};
 
-    // Recursive rule: add a dependency -> asset -> children
+    // Adds a dependency -> asset pair, then recursively processes children.
+    // Common setup (dep creation, asset creation/reuse, traversal registration)
+    // is shared via the @setup_dep_asset helper.
     (@add_dep
       $graph:ident, $deps:ident, $assets:ident, $traversal:ident,
       $parent_asset:expr, $parent_asset_node:expr,
       $parent_outgoing:ident,
       $spec:literal, [ $( ($dl:expr, $de:expr, $dw:expr) ),* ],
       $asset_path:literal, [ $( ($al:expr, $ae:expr, $aw:expr) ),* ],
-      { $($children:tt)* }
+      { $($children:tt)+ }
     ) => {
-      let dep = make_dependency(&$parent_asset, $spec, vec![ $( ($dl, $de, $dw), )* ]);
-      let dep_node = $graph.add_dependency(dep.clone(), false);
-      $graph.add_edge(&$parent_asset_node, &dep_node);
-      $deps.insert($spec.to_string(), dep.clone());
-      $parent_outgoing.push(dep.clone());
-
-      let asset = make_asset($asset_path, vec![ $( ($al, $ae, $aw), )* ]);
-      // If the asset already exists in the map, reuse its node (diamond pattern)
-      let asset_node = if let Some(existing) = $assets.get($asset_path) {
-        let existing_node = *$graph.get_node_id_by_content_key(existing.id.as_str())
-          .expect("Existing asset should have a node");
-        $graph.add_edge(&dep_node, &existing_node);
-        existing_node
-      } else {
-        let new_node = $graph.add_asset(asset.clone(), false);
-        $graph.add_edge(&dep_node, &new_node);
-        $assets.insert($asset_path.to_string(), asset.clone());
-        new_node
-      };
+      symbol_tracker_test!(@setup_dep_asset
+        $graph, $deps, $assets, $traversal,
+        $parent_asset, $parent_asset_node,
+        $parent_outgoing,
+        $spec, [ $( ($dl, $de, $dw) ),* ],
+        $asset_path, [ $( ($al, $ae, $aw) ),* ]
+      );
 
       let asset_ref = $assets.get($asset_path).unwrap().clone();
+      let asset_node = *$graph.get_node_id_by_content_key(asset_ref.id.as_str())
+        .expect("Asset should have a node after setup");
 
       // Only add to traversal if this asset hasn't been added yet (diamond pattern)
       let already_tracked = $traversal.iter().any(|(a, _)| a.id == asset_ref.id);
@@ -976,9 +968,59 @@ mod tests {
         child_outgoing,
         $($children)*
       );
-      // Update the reserved slot with the outgoing deps (if we created one)
       if let Some(idx) = traversal_idx {
         $traversal[idx].1 = child_outgoing;
+      }
+    };
+
+    // Leaf variant: no children (empty braces), so no need for child_outgoing or asset_node.
+    (@add_dep
+      $graph:ident, $deps:ident, $assets:ident, $traversal:ident,
+      $parent_asset:expr, $parent_asset_node:expr,
+      $parent_outgoing:ident,
+      $spec:literal, [ $( ($dl:expr, $de:expr, $dw:expr) ),* ],
+      $asset_path:literal, [ $( ($al:expr, $ae:expr, $aw:expr) ),* ],
+      {}
+    ) => {
+      symbol_tracker_test!(@setup_dep_asset
+        $graph, $deps, $assets, $traversal,
+        $parent_asset, $parent_asset_node,
+        $parent_outgoing,
+        $spec, [ $( ($dl, $de, $dw) ),* ],
+        $asset_path, [ $( ($al, $ae, $aw) ),* ]
+      );
+
+      let asset_ref = $assets.get($asset_path).unwrap().clone();
+      let already_tracked = $traversal.iter().any(|(a, _)| a.id == asset_ref.id);
+      if !already_tracked {
+        $traversal.push((asset_ref, Vec::new()));
+      }
+    };
+
+    // Common setup: creates the dependency and asset nodes, wires edges,
+    // and inserts into the dep/asset maps.
+    (@setup_dep_asset
+      $graph:ident, $deps:ident, $assets:ident, $traversal:ident,
+      $parent_asset:expr, $parent_asset_node:expr,
+      $parent_outgoing:ident,
+      $spec:literal, [ $( ($dl:expr, $de:expr, $dw:expr) ),* ],
+      $asset_path:literal, [ $( ($al:expr, $ae:expr, $aw:expr) ),* ]
+    ) => {
+      let dep = make_dependency(&$parent_asset, $spec, vec![ $( ($dl, $de, $dw), )* ]);
+      let dep_node = $graph.add_dependency(dep.clone(), false);
+      $graph.add_edge(&$parent_asset_node, &dep_node);
+      $deps.insert($spec.to_string(), dep.clone());
+      $parent_outgoing.push(dep.clone());
+
+      let asset = make_asset($asset_path, vec![ $( ($al, $ae, $aw), )* ]);
+      if let Some(existing) = $assets.get($asset_path) {
+        let existing_node = *$graph.get_node_id_by_content_key(existing.id.as_str())
+          .expect("Existing asset should have a node");
+        $graph.add_edge(&dep_node, &existing_node);
+      } else {
+        let new_node = $graph.add_asset(asset.clone(), false);
+        $graph.add_edge(&dep_node, &new_node);
+        $assets.insert($asset_path.to_string(), asset.clone());
       }
     };
 
