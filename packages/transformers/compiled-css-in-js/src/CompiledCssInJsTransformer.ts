@@ -13,7 +13,6 @@ import ThrowableDiagnostic, {
   convertSourceLocationToHighlight,
 } from '@atlaspack/diagnostic';
 import {remapSourceLocation} from '@atlaspack/utils';
-
 import {loadCompiledCssInJsConfig} from '@atlaspack/transformer-js';
 
 export default new Transformer({
@@ -96,9 +95,6 @@ export default new Transformer({
 
     if (result.diagnostics?.length > 0) {
       const diagnostics = result.diagnostics ?? [];
-      asset.meta.compiledCssDiagnostics = JSON.parse(
-        JSON.stringify(diagnostics),
-      );
 
       const original = await ensureOriginalMap();
       type PluginDiagnostic = (typeof diagnostics)[number];
@@ -171,6 +167,10 @@ export default new Transformer({
         return converted;
       };
 
+      asset.meta.compiledCssDiagnostics = JSON.parse(
+        JSON.stringify(diagnostics.map(convertDiagnostic)),
+      );
+
       const errors = diagnostics.filter(
         (diagnostic) =>
           diagnostic.severity === 'Error' ||
@@ -185,8 +185,66 @@ export default new Transformer({
             logger.warn(convertDiagnostic(error));
           }
         } else {
+          // Set diagnostic.stack to a V8-format stack string so that Sentry
+          // renders the source location in its stacktrace panel.
+          //
+          // Background: this transformer runs in a WorkerFarm worker process.
+          // Errors cross the worker boundary via anyToDiagnostic(), which only
+          // preserves the Diagnostic[] array — any post-construction mutation
+          // to ThrowableDiagnostic properties is discarded. Source location
+          // info must therefore live inside the Diagnostic object itself.
+          //
+          // Sentry reads Error.stack (set from diagnostic.stack by
+          // ThrowableDiagnostic's constructor) and parses it for stack frames.
+          // Arbitrary plain text is silently discarded. A V8-format line
+          // ("    at <label> (file:line:col)") IS parsed and displayed as a
+          // clickable stacktrace frame — giving Sentry the file location
+          // without hitting the ~250-char message truncation limit.
+          //
+          // codeFrames is kept intact so the terminal CLI reporter continues to
+          // render the fully highlighted code frame as normal.
+          //
+          // One V8-format frame is emitted per highlighted line so that Sentry
+          // marks each line in its code viewer. The actual code content of each
+          // line is used as the frame label so it appears inline in Sentry's
+          // stacktrace list without needing source maps.
+          //
+          // Parentheses in code content are replaced with square brackets to
+          // avoid breaking the V8 stack frame parser, which splits on ' (' to
+          // separate the label from the (file:line:col) suffix.
           throw new ThrowableDiagnostic({
-            diagnostic: errors.map(convertDiagnostic),
+            diagnostic: errors.map((error) => {
+              const converted = convertDiagnostic(error);
+              const frames = (converted.codeFrames ?? []).flatMap((frame) => {
+                const filePath = frame.filePath ?? asset.filePath;
+                const sourceLines = frame.code?.split('\n') ?? [];
+                return frame.codeHighlights.flatMap((h) => {
+                  const lineFrames = [];
+                  for (
+                    let lineNum = h.start.line;
+                    lineNum <= h.end.line;
+                    lineNum++
+                  ) {
+                    const raw = (sourceLines[lineNum - 1] ?? '').trim();
+                    const label = raw
+                      ? raw.replace(/\(/g, '[').replace(/\)/g, ']')
+                      : 'compiled css source error';
+                    const col = lineNum === h.start.line ? h.start.column : 0;
+                    lineFrames.push(
+                      `    at ${label} (${filePath}:${lineNum}:${col})`,
+                    );
+                  }
+                  return lineFrames;
+                });
+              });
+              if (frames.length > 0) {
+                return {
+                  ...converted,
+                  stack: `Error: ${converted.message}\n${frames.join('\n')}`,
+                };
+              }
+              return converted;
+            }),
           });
         }
       }
@@ -206,9 +264,6 @@ export default new Transformer({
     if (config.unsafeReportSafeAssetsForMigration) {
       // We need to run the transform without returning the result, so we can report the safe assets
       asset.meta.swcStyleRules = result.styleRules;
-      asset.meta.compiledCssDiagnostics = result.diagnostics.map(
-        (d) => d.message,
-      );
       asset.meta.compiledBailOut = result.bailOut;
 
       return [asset];

@@ -95,7 +95,9 @@ where
         let css_output = build_css(&Expr::Object(processed_value.clone()), meta);
 
         if !css_output.variables.is_empty() {
-          let has_token_call = css_output.variables.iter().any(|v| {
+          // Find the first variable that comes from a `token()` call so we can
+          // highlight its exact source span rather than the entire variant object.
+          let token_variable = css_output.variables.iter().find(|v| {
             matches!(
               &v.expression,
               Expr::Call(CallExpr {
@@ -105,13 +107,22 @@ where
             )
           });
 
-          let error_type = if has_token_call {
-            ErrorMessages::StaticVariantObjectWithToken
+          let (error_type, error_span) = if let Some(token_var) = token_variable {
+            // Point at the specific `token(...)` call expression.
+            (
+              ErrorMessages::StaticVariantObjectWithToken,
+              token_var.expression.span(),
+            )
           } else {
-            ErrorMessages::StaticVariantObjectWithVariables
+            // Point at the first offending CSS variable expression.
+            let first_var = &css_output.variables[0];
+            (
+              ErrorMessages::StaticVariantObjectWithVariables,
+              first_var.expression.span(),
+            )
           };
 
-          report_css_map_error_with_hints(meta, key_value.value.span(), error_type);
+          report_css_map_error_with_hints(meta, error_span, error_type);
           return empty_object(object_lit.span);
         }
 

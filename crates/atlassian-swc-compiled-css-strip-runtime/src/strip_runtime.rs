@@ -61,7 +61,8 @@ impl StripRuntimeTransform {
   }
 
   fn push_error(&mut self, message: impl Into<String>) -> Diagnostic {
-    let diagnostic = atlassian_swc_compiled_css::create_diagnostic(message, module_path!());
+    let diagnostic =
+      atlassian_swc_compiled_css::create_diagnostic(message, module_path!(), None, None);
     self.errors.push(diagnostic.clone());
     diagnostic
   }
@@ -370,7 +371,9 @@ impl StripRuntimeTransform {
             "@compiled/babel-plugin-strip-runtime expected the filename not to be empty, but actually got '{}'",
             self.config.filename.as_deref().unwrap_or("undefined")
           ),
-          module_path!()
+          module_path!(),
+          None,
+          None,
         )
       })?;
 
@@ -379,7 +382,14 @@ impl StripRuntimeTransform {
       .source_file_name
       .as_ref()
       .filter(|name| !name.is_empty())
-      .ok_or_else(|| create_diagnostic("Source filename was not defined", module_path!()))?;
+      .ok_or_else(|| {
+        create_diagnostic(
+          "Source filename was not defined",
+          module_path!(),
+          None,
+          None,
+        )
+      })?;
 
     let Some(relative_start) = source_file_name.find(&extract.source) else {
       return Err(create_diagnostic(
@@ -388,6 +398,8 @@ impl StripRuntimeTransform {
           extract.source, source_file_name
         ),
         module_path!(),
+        None,
+        None,
       ));
     };
 
@@ -409,6 +421,8 @@ impl StripRuntimeTransform {
         create_diagnostic(
           format!("Failed to resolve current directory: {err}"),
           module_path!(),
+          None,
+          None,
         )
       })?;
 
@@ -429,6 +443,8 @@ impl StripRuntimeTransform {
             parent.display()
           ),
           module_path!(),
+          None,
+          None,
         )
       })?;
     }
@@ -451,6 +467,8 @@ impl StripRuntimeTransform {
           css_path.display()
         ),
         module_path!(),
+        None,
+        None,
       )
     })?;
 
