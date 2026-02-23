@@ -181,4 +181,160 @@ describe.v3('rust symbol tracker parity', () => {
 
     await assertSymbolsEqual(bundleGraphOn, bundleGraphOff);
   });
+
+  it('should handle star re-exports', async () => {
+    let dir = path.join(__dirname, 'rust-symbol-tracker-parity-star');
+    await overlayFS.mkdirp(dir);
+
+    // index.js imports specific symbols from barrel
+    // barrel re-exports everything from multiple source files via export *
+    // Only the used symbols should propagate through
+    await fsFixture(overlayFS, dir)`
+      yarn.lock:
+        // required for .parcelrc
+
+      package.json:
+        {
+          "name": "rust-symbol-tracker-parity-star",
+          "sideEffects": false,
+          "version": "1.0.0"
+        }
+
+      index.js:
+        import {foo, bar} from './barrel';
+        console.log(foo() + bar);
+
+      barrel.js:
+        export * from './foo';
+        export * from './bar';
+
+      foo.js:
+        export function foo() { return 1; }
+        export function unusedFoo() { return 999; }
+
+      bar.js:
+        export const bar = 2;
+        export const unusedBar = 888;
+    `;
+
+    let entry = path.join(dir, 'index.js');
+
+    let {bundleGraphOn, bundleGraphOff} = await doubleBundleForFeatureFlag(
+      'rustSymbolTracker',
+      entry,
+      overlayFS,
+    );
+
+    await assertSymbolsEqual(bundleGraphOn, bundleGraphOff);
+  });
+
+  it('should handle chained star re-exports', async () => {
+    let dir = path.join(__dirname, 'rust-symbol-tracker-parity-chained-star');
+    await overlayFS.mkdirp(dir);
+
+    // index.js imports specific symbols from barrel
+    // barrel re-exports everything from multiple source files via export *
+    // Only the used symbols should propagate through
+    await fsFixture(overlayFS, dir)`
+      yarn.lock:
+        // required for .parcelrc
+
+      package.json:
+        {
+          "name": "rust-symbol-tracker-parity-star",
+          "sideEffects": false,
+          "version": "1.0.0"
+        }
+
+      index.js:
+        import {foo, bar} from './barrel';
+        console.log(foo() + bar);
+
+      barrel.js:
+        export * from './foo';
+        export * from './bar';
+
+      foo.js:
+        export * from './sub-foo';
+        export function topLevelFoo() { return 5; }
+
+
+      sub-foo.js:
+        export function foo() { return 1; }
+        export function unusedFoo() { return 999; }
+
+      bar.js:
+        export const bar = 2;
+        export const unusedBar = 888;
+    `;
+
+    let entry = path.join(dir, 'index.js');
+
+    let {bundleGraphOn, bundleGraphOff} = await doubleBundleForFeatureFlag(
+      'rustSymbolTracker',
+      entry,
+      overlayFS,
+    );
+
+    await assertSymbolsEqual(bundleGraphOn, bundleGraphOff);
+  });
+
+  it('should handle diamond pattern star re-exports', async () => {
+    let dir = path.join(__dirname, 'rust-symbol-tracker-parity-diamond');
+    await overlayFS.mkdirp(dir);
+
+    // Diamond pattern:
+    //       index.js
+    //          ↓
+    //       barrel.js (export * from left, export * from right)
+    //        ↙    ↘
+    //   left.js   right.js (both: export * from shared)
+    //        ↘    ↙
+    //       shared.js (exports foo)
+    //
+    // The symbol 'foo' can be reached via two paths:
+    // barrel -> left -> shared
+    // barrel -> right -> shared
+    await fsFixture(overlayFS, dir)`
+      yarn.lock:
+        // required for .parcelrc
+
+      package.json:
+        {
+          "name": "rust-symbol-tracker-parity-diamond",
+          "sideEffects": false,
+          "version": "1.0.0"
+        }
+
+      index.js:
+        import {foo} from './barrel';
+        console.log(foo);
+
+      barrel.js:
+        export * from './left';
+        export * from './right';
+
+      left.js:
+        export * from './shared';
+        export const leftOnly = 'left';
+
+      right.js:
+        export * from './shared';
+        export const rightOnly = 'right';
+
+      shared.js:
+        export const foo = 'shared-foo';
+        export const unusedShared = 'unused';
+    `;
+
+    let entry = path.join(dir, 'index.js');
+
+    let {bundleGraphOn, bundleGraphOff} = await doubleBundleForFeatureFlag(
+      'rustSymbolTracker',
+      entry,
+      overlayFS,
+    );
+
+    await assertSymbolsEqual(bundleGraphOn, bundleGraphOff);
+  });
 });
