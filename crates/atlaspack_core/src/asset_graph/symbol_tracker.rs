@@ -31,7 +31,7 @@ pub struct SymbolRequirement {
   pub symbol: Symbol,
   pub final_location: Option<FinalSymbolLocation>,
   /// Links speculative requirements that are mutually exclusive (same symbol from same parent).
-  /// Format: "{parent_dep_id}:{symbol_name}". When one is satisfied, others can be removed.
+  /// Format: `{parent_dep_id}:{symbol_name}`. When one is satisfied, others can be removed.
   /// If Some, this requirement was speculatively forwarded through a star re-export.
   /// If None, this is a direct requirement that must be satisfied.
   pub speculation_group_id: Option<String>,
@@ -99,11 +99,8 @@ fn get_parent_asset_node_id<'a>(
   Ok(*parent_asset_node_id)
 }
 
-fn get_incoming_dependencies<'a>(
-  asset_graph: &'a AssetGraph,
-  asset_node_id: &usize,
-) -> Vec<&'a Dependency> {
-  let incoming_nodes = asset_graph.get_incoming_neighbors(asset_node_id);
+fn get_incoming_dependencies(asset_graph: &AssetGraph, asset_node_id: usize) -> Vec<&Dependency> {
+  let incoming_nodes = asset_graph.get_incoming_neighbors(&asset_node_id);
   incoming_nodes
     .iter()
     .filter_map(|node| {
@@ -120,8 +117,8 @@ fn get_incoming_dependencies<'a>(
 /// exported name that corresponds to it in the asset's symbols.
 ///
 /// For a re-export like `export {foo as renamedFoo} from './foo'`:
-/// - The dependency to foo.js has: local='$assetId$re_export$renamedFoo', exported='foo'
-/// - The barrel asset has: local='$assetId$re_export$renamedFoo', exported='renamedFoo'
+/// - The dependency to foo.js has: local=`$assetId$re_export$renamedFoo`, exported='foo'
+/// - The barrel asset has: local=`$assetId$re_export$renamedFoo`, exported='renamedFoo'
 ///
 /// So we match on the mangled local name to find the exported name.
 fn find_exported_name_for_local(asset: &Asset, mangled_local: &str) -> Option<String> {
@@ -140,6 +137,10 @@ impl SymbolTracker {
   /// This looks at both the dependencies this asset has, to register symbols
   /// that it needs to find, and the symbols that this asset provides, to
   /// satisfy any outstanding requirements from above.
+  ///
+  /// # Errors
+  /// Returns an error if the asset graph is in an inconsistent state (e.g.,
+  /// missing nodes or conflicting symbol resolutions).
   pub fn track_symbols(
     &mut self,
     asset_graph: &AssetGraph,
@@ -246,74 +247,83 @@ impl SymbolTracker {
       }
     }
 
-    // Track all of the symbols that this asset provides to other assets, and
-    // satisfy any requirements that have been asked about them
-    {
-      let Some(asset_node_id) = asset_graph.get_node_id_by_content_key(asset.id.as_str()) else {
-        return Err(anyhow!("Unable to get node ID for asset ID {}", asset.id));
-      };
+    self.satisfy_provided_symbols(asset_graph, asset)
+  }
 
-      let incoming_nodes = asset_graph.get_incoming_neighbors(asset_node_id);
-      let incoming_deps: Vec<&Dependency> = incoming_nodes
-        .iter()
-        .filter_map(|node| match node {
-          AssetGraphNode::Dependency(dep) => Some(dep.as_ref()),
-          _ => None,
-        })
-        .collect();
+  /// Satisfies outstanding symbol requirements using the symbols provided by this asset.
+  ///
+  /// For each incoming dependency, checks if any of the asset's exported symbols
+  /// match pending requirements, and propagates the resolution upward through
+  /// the dependency chain. Also handles namespace re-export satisfaction.
+  fn satisfy_provided_symbols(
+    &mut self,
+    asset_graph: &AssetGraph,
+    asset: &Arc<Asset>,
+  ) -> anyhow::Result<()> {
+    let Some(asset_node_id) = asset_graph.get_node_id_by_content_key(asset.id.as_str()) else {
+      return Err(anyhow!("Unable to get node ID for asset ID {}", asset.id));
+    };
 
-      // Check if any incoming dependency has a namespace re-export requirement ("*").
-      // For `export * as ns from './dep'`, the dependency to dep has exported="*", local="ns".
-      // When we process dep, we satisfy the "*" requirement with dep's own namespace.
-      for incoming_dep in &incoming_deps {
-        if let Some(dep_symbols) = &incoming_dep.symbols {
-          for dep_sym in dep_symbols {
-            if !is_namespace_reexport_symbol(dep_sym) {
-              continue;
-            }
+    let incoming_nodes = asset_graph.get_incoming_neighbors(asset_node_id);
+    let incoming_deps: Vec<&Dependency> = incoming_nodes
+      .iter()
+      .filter_map(|node| match node {
+        AssetGraphNode::Dependency(dep) => Some(dep.as_ref()),
+        _ => None,
+      })
+      .collect();
 
-            // This asset's entire namespace satisfies the "*" requirement
-            let final_location = FinalSymbolLocation {
-              local_name: "*".to_string(),
-              imported_name: "*".to_string(),
-              providing_asset_id: asset.id.clone(),
-            };
-
-            self.handle_answer_propagation(asset_graph, final_location, incoming_dep)?;
+    // Check if any incoming dependency has a namespace re-export requirement ("*").
+    // For `export * as ns from './dep'`, the dependency to dep has exported="*", local="ns".
+    // When we process dep, we satisfy the "*" requirement with dep's own namespace.
+    for incoming_dep in &incoming_deps {
+      if let Some(dep_symbols) = &incoming_dep.symbols {
+        for dep_sym in dep_symbols {
+          if !is_namespace_reexport_symbol(dep_sym) {
+            continue;
           }
+
+          // This asset's entire namespace satisfies the "*" requirement
+          let final_location = FinalSymbolLocation {
+            local_name: "*".to_string(),
+            imported_name: "*".to_string(),
+            providing_asset_id: asset.id.clone(),
+          };
+
+          self.handle_answer_propagation(asset_graph, &final_location, incoming_dep)?;
         }
       }
+    }
 
-      if let Some(provided_symbols) = &asset.symbols {
-        for incoming_dep in &incoming_deps {
-          for sym in provided_symbols {
-            // Skip star symbols on the asset - these are markers for "export *" patterns,
-            // not actual symbols that can satisfy requirements
-            if sym.exported == "*" {
-              continue;
-            }
-
-            // If the incoming dependency does not ask for this symbol, skip it
-            if !dep_has_symbol(incoming_dep, sym) {
-              continue;
-            }
-
-            // If a symbol is weak, it cannot be a final location. We still add
-            // these as requirements, so that other assets asking for the symbol
-            // can find it here, but we don't want to register this re-export as
-            // the source of truth
-            if sym.is_weak {
-              continue;
-            }
-
-            let final_location = FinalSymbolLocation {
-              local_name: sym.local.clone(),
-              imported_name: sym.exported.clone(),
-              providing_asset_id: asset.id.clone(),
-            };
-
-            self.handle_answer_propagation(asset_graph, final_location, incoming_dep)?;
+    if let Some(provided_symbols) = &asset.symbols {
+      for incoming_dep in &incoming_deps {
+        for sym in provided_symbols {
+          // Skip star symbols on the asset - these are markers for "export *" patterns,
+          // not actual symbols that can satisfy requirements
+          if sym.exported == "*" {
+            continue;
           }
+
+          // If the incoming dependency does not ask for this symbol, skip it
+          if !dep_has_symbol(incoming_dep, sym) {
+            continue;
+          }
+
+          // If a symbol is weak, it cannot be a final location. We still add
+          // these as requirements, so that other assets asking for the symbol
+          // can find it here, but we don't want to register this re-export as
+          // the source of truth
+          if sym.is_weak {
+            continue;
+          }
+
+          let final_location = FinalSymbolLocation {
+            local_name: sym.local.clone(),
+            imported_name: sym.exported.clone(),
+            providing_asset_id: asset.id.clone(),
+          };
+
+          self.handle_answer_propagation(asset_graph, &final_location, incoming_dep)?;
         }
       }
     }
@@ -324,7 +334,7 @@ impl SymbolTracker {
   fn handle_answer_propagation(
     &mut self,
     asset_graph: &AssetGraph,
-    located_symbol: FinalSymbolLocation,
+    located_symbol: &FinalSymbolLocation,
     dep: &Dependency,
   ) -> anyhow::Result<()> {
     // Work queue contains (dependency, symbol_name_to_match)
@@ -384,7 +394,7 @@ impl SymbolTracker {
         // what symbol name to look for. If the parent asset has a symbol that
         // maps the dependency's mangled local name to an exported name, use that.
         let parent_asset_dependencies =
-          get_incoming_dependencies(asset_graph, &parent_asset_node_id);
+          get_incoming_dependencies(asset_graph, parent_asset_node_id);
 
         for parent_dep in parent_asset_dependencies {
           // For star re-exports (local == "*"), the symbol passes through unchanged,
@@ -458,7 +468,7 @@ impl SymbolTracker {
         let orphaned_groups: Vec<String> = self
           .speculation_group_locations
           .keys()
-          .filter(|g| g.starts_with(&format!("{}:", dep_id)))
+          .filter(|g| g.starts_with(&format!("{dep_id}:")))
           .cloned()
           .collect();
 
@@ -496,7 +506,7 @@ impl SymbolTracker {
       return Vec::new();
     };
 
-    let incoming_deps = get_incoming_dependencies(asset_graph, asset_node_id);
+    let incoming_deps = get_incoming_dependencies(asset_graph, *asset_node_id);
     let mut requested_symbols: Vec<IncomingSymbolRequest> = Vec::new();
 
     for dep in incoming_deps {
@@ -546,27 +556,30 @@ impl SymbolTracker {
   }
 
   /// Finalizes the symbol tracker, returning a read-only version of the
-  /// FinalizedSymbolTracker that can be used for serialization and lookup of
+  /// [`FinalizedSymbolTracker`] that can be used for serialization and lookup of
   /// symbol locations. This method also validates that there are no outstanding
   /// symbol requirements that have not been satisfied, and that there are no
   /// conflicts.
+  ///
+  /// # Panics
+  /// Panics if there are unsatisfied speculation groups or unresolved symbol
+  /// requirements, indicating an incomplete or inconsistent symbol propagation.
   #[tracing::instrument(name = "finalize_symbol_tracker", skip_all)]
   pub fn finalize(self) -> FinalizedSymbolTracker {
     // Any speculation groups still in the map were never satisfied
     // (satisfied groups are removed during cleanup)
-    if !self.speculation_group_locations.is_empty() {
-      panic!(
-        "The following speculation groups were not satisfied: {:?}",
-        self.speculation_group_locations.keys()
-      );
-    }
+    assert!(
+      self.speculation_group_locations.is_empty(),
+      "The following speculation groups were not satisfied: {:?}",
+      self.speculation_group_locations.keys()
+    );
 
     let mut requirements_by_dep: HashMap<DependencyId, DependencyUsedSymbols> = HashMap::new();
 
-    for (dep_id, requirements) in self.requirements_by_dep.into_iter() {
+    for (dep_id, requirements) in self.requirements_by_dep {
       let mut used_symbols = HashMap::new();
 
-      for requirement in requirements.into_iter() {
+      for requirement in requirements {
         // Skip star re-export markers (exported="*", local="*") in finalization -
         // these are forwarding markers, not actual symbols that need to be satisfied.
         // But keep namespace re-export requirements (exported="*", local!="*") -
@@ -619,6 +632,7 @@ pub struct FinalizedSymbolTracker {
 }
 
 impl FinalizedSymbolTracker {
+  #[must_use]
   pub fn get_used_symbols_for_dependency(
     &self,
     dep_id: &DependencyId,
