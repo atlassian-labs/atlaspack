@@ -3555,4 +3555,103 @@ mod tests {
       },
     });
   }
+
+  #[test]
+  fn bundle_behavior_asset_does_not_inflate_reachable_roots_across_lazy_boundary() {
+    // Regression test for reachability calculation:
+    //
+    // entry --lazy--> route-a --sync--> helper
+    // entry --lazy--> route-b --sync--> helper
+    // route-a --lazy--> isolated (asset bundle_behavior = Isolated)
+    // isolated --sync--> helper
+    //
+    // `isolated.js` must be treated as a separate bundle root that does NOT get added to the
+    // reachable root set of upstream assets.
+    //
+    // The bundler *will* extract `helper.js` into a shared bundle for (route-a, route-b).
+    // The regression we care about is that the shared bundle's root set must *not* also include
+    // `isolated.js` (i.e. it must be shared only between route-a and route-b).
+    let asset_graph = fixture_graph_with_options(
+      &["entry.js"],
+      &[
+        EdgeSpec::new("entry.js", "route-a.js", Priority::Lazy),
+        EdgeSpec::new("entry.js", "route-b.js", Priority::Lazy),
+        EdgeSpec::new("route-a.js", "helper.js", Priority::Sync),
+        EdgeSpec::new("route-b.js", "helper.js", Priority::Sync),
+        EdgeSpec::new("route-a.js", "isolated.js", Priority::Lazy),
+        EdgeSpec::new("isolated.js", "helper.js", Priority::Sync),
+      ],
+      &[(
+        "isolated.js",
+        AssetOptions {
+          is_bundle_splittable: true,
+          bundle_behavior: Some(atlaspack_core::types::BundleBehavior::Isolated),
+        },
+      )],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    assert_graph!(g, {
+      bundles: {
+        "entry.js"   => ["entry.js"],
+        "route-a.js" => ["route-a.js"],
+        "route-b.js" => ["route-b.js"],
+        "isolated.js" => ["isolated.js"],
+        // NOTE: the shared bundle label is arbitrary, but the bundle's identity and edges should
+        // reflect that helper is shared *only* between route-a and route-b.
+        shared(helper) => ["helper.js"],
+      },
+      edges: {
+        "entry.js" lazy "route-a.js",
+        "entry.js" lazy "route-b.js",
+        "route-a.js" lazy "isolated.js",
+        "route-a.js" sync shared(helper),
+        "route-b.js" sync shared(helper),
+      },
+    });
+  }
+
+  #[test]
+  fn reuses_existing_bundle_when_shared_asset_is_itself_a_lazy_root() {
+    // Regression test for subgraph reuse pass 1:
+    //
+    // entry --lazy--> a --sync--> x
+    // entry --lazy--> b --sync--> x
+    // entry --lazy--> x        (x is itself a bundle root)
+    //
+    // `x.js` should end up in its own bundle (because it's a lazy root) and that bundle should be
+    // reused when referenced from a/b, rather than duplicating x or incorrectly filtering all
+    // eligible roots.
+    let asset_graph = fixture_graph(
+      &["entry.js"],
+      &[
+        EdgeSpec::new("entry.js", "a.js", Priority::Lazy),
+        EdgeSpec::new("entry.js", "b.js", Priority::Lazy),
+        EdgeSpec::new("entry.js", "x.js", Priority::Lazy),
+        EdgeSpec::new("a.js", "x.js", Priority::Sync),
+        EdgeSpec::new("b.js", "x.js", Priority::Sync),
+      ],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js"],
+        "a.js" => ["a.js"],
+        "b.js" => ["b.js"],
+        "x.js" => ["x.js"],
+      },
+      edges: {
+        "entry.js" lazy "a.js",
+        "entry.js" lazy "b.js",
+        "entry.js" lazy "x.js",
+        "a.js" sync "x.js",
+        "b.js" sync "x.js",
+      },
+    });
+  }
 }
