@@ -219,7 +219,7 @@ export async function packageBundle(
       atlaspackV3: true,
     },
     defaultTargetOptions: {
-      shouldScopeHoist: true,
+      shouldScopeHoist: false,
     },
   });
 
@@ -455,16 +455,19 @@ export function formatComparisonResults(comparison: ComparisonResult): string {
 
 /**
  * Read the packaged bundle content from cache.
- * Checks the filesystem first (using the same path as LMDBLiteCache.getFileKey),
- * then falls back to LMDB. This ensures we can read content written by the native
- * packager regardless of the cachePerformanceImprovements feature flag.
+ * The native packager writes large blobs to the filesystem using the same path
+ * convention as LMDBLiteCache.getStream/setStream: `{cacheDir}/{key}`.
+ * We check the filesystem first, then fall back to LMDB for content written
+ * by older versions or the JS packager.
  */
 export async function readPackagedContent(
   cache: InstanceType<typeof LMDBLiteCache>,
   cacheKeys: {content: string; map: string; info: string},
 ): Promise<{content: Buffer; sourceMap: Buffer | null}> {
   let content: Buffer;
-  const filePath = cache.getFileKey(cacheKeys.content);
+  // The native packager writes via set_large_blob which uses
+  // `{cache_dir}/{key}` — the same convention as LMDBLiteCache.getStream.
+  const filePath = path.join(cache.dir, cacheKeys.content);
 
   try {
     // Try filesystem first (native packager always writes here)
@@ -477,7 +480,7 @@ export async function readPackagedContent(
   // Try to read source map if available
   let sourceMap: Buffer | null = null;
   try {
-    const mapFilePath = cache.getFileKey(cacheKeys.map);
+    const mapFilePath = path.join(cache.dir, cacheKeys.map);
     sourceMap = await fs.promises.readFile(mapFilePath);
   } catch {
     try {
