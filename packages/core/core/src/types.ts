@@ -112,6 +112,7 @@ export type Target = {
   loc?: InternalSourceLocation | null | undefined;
   pipeline?: string;
   source?: FilePath | Array<FilePath>;
+  inlineRequires?: boolean;
 };
 
 export const SpecifierType = {
