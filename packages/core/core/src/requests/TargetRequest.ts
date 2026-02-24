@@ -332,6 +332,7 @@ export class TargetResolver {
               publicUrl:
                 descriptor.publicUrl ??
                 this.options.defaultTargetOptions.publicUrl,
+              inlineRequires: descriptor.inlineRequires ?? false,
               env: createEnvironment({
                 engines: descriptor.engines,
                 context: descriptor.context,
