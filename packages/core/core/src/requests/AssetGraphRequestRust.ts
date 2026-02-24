@@ -344,7 +344,7 @@ export function getAssetGraph(
         id,
         type: 'dependency',
         deferred: false,
-        excluded: false,
+        excluded: node.excluded ?? false,
         hasDeferred: node.has_deferred,
         // @ts-expect-error TS2322
         usedSymbolsDown,
