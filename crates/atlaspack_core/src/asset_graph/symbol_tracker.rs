@@ -658,11 +658,20 @@ mod tests {
   }
 
   fn make_asset(file_path: &str, symbols: Vec<TestSymbol>) -> Arc<Asset> {
+    make_asset_opts(file_path, symbols, false)
+  }
+
+  fn make_asset_with_side_effects(file_path: &str, symbols: Vec<TestSymbol>) -> Arc<Asset> {
+    make_asset_opts(file_path, symbols, true)
+  }
+
+  fn make_asset_opts(file_path: &str, symbols: Vec<TestSymbol>, side_effects: bool) -> Arc<Asset> {
     let unique_id = ASSET_COUNTER.fetch_add(1, Ordering::SeqCst);
     Arc::new(Asset {
       id: format!("asset_{:016x}", unique_id),
       file_path: PathBuf::from(file_path),
       symbols: Some(symbols.iter().map(symbol).collect()),
+      side_effects,
       ..Asset::default()
     })
   }
@@ -683,6 +692,17 @@ mod tests {
       .build()
   }
 
+  fn make_dependency_without_symbols(source_asset: &Asset, specifier: &str) -> Dependency {
+    DependencyBuilder::default()
+      .specifier(specifier.to_string())
+      .env(Arc::new(Environment::default()))
+      .specifier_type(SpecifierType::default())
+      .source_path(source_asset.file_path.clone())
+      .source_asset_id(source_asset.id.clone())
+      .priority(Priority::default())
+      .build()
+  }
+
   fn make_entry_dependency() -> Dependency {
     Dependency::entry(String::from("entry.js"), Target::default())
   }
@@ -690,6 +710,7 @@ mod tests {
   /// Holds the results of a symbol tracker test setup, providing lookup by specifier/file_path.
   struct SymbolTrackerTestCtx {
     tracker: SymbolTracker,
+    graph: AssetGraph,
     /// Maps specifier -> Dependency
     deps: HashMap<String, Dependency>,
     /// Maps file_path -> Arc<Asset>
@@ -826,16 +847,42 @@ mod tests {
       );
     }
 
+    /// Assert that a dependency (by specifier) is excluded after finalization.
+    fn assert_dep_excluded(&self, finalized: &FinalizedSymbolTracker, dep_specifier: &str) {
+      let dep = self
+        .deps
+        .get(dep_specifier)
+        .unwrap_or_else(|| panic!("No dep with specifier '{}'", dep_specifier));
+      assert!(
+        finalized.is_dependency_excluded(&dep.id),
+        "Expected dep '{}' to be excluded, but it was not",
+        dep_specifier
+      );
+    }
+
+    /// Assert that a dependency (by specifier) is NOT excluded after finalization.
+    fn assert_dep_not_excluded(&self, finalized: &FinalizedSymbolTracker, dep_specifier: &str) {
+      let dep = self
+        .deps
+        .get(dep_specifier)
+        .unwrap_or_else(|| panic!("No dep with specifier '{}'", dep_specifier));
+      assert!(
+        !finalized.is_dependency_excluded(&dep.id),
+        "Expected dep '{}' to NOT be excluded, but it was",
+        dep_specifier
+      );
+    }
+
     /// Assert that finalize succeeds and return the finalized tracker.
     fn assert_finalize_ok(self) -> FinalizedSymbolTracker {
-      self.tracker.finalize()
+      self.tracker.finalize(&self.graph)
     }
 
     /// Assert that finalize panics with a message containing the expected string.
     /// Returns the panic message for further assertions.
     fn assert_finalize_panics(self, expected_msg: &str) {
       let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        self.tracker.finalize();
+        self.tracker.finalize(&self.graph);
       }));
       match result {
         Ok(_) => panic!(
@@ -916,7 +963,7 @@ mod tests {
         tracker.track_symbols(&graph, asset, outgoing).unwrap();
       }
 
-      SymbolTrackerTestCtx { tracker, deps, assets }
+      SymbolTrackerTestCtx { tracker, graph, deps, assets }
     }};
 
     // Adds a dependency -> asset pair, then recursively processes children.
@@ -1402,5 +1449,301 @@ mod tests {
     ctx.assert_symbol_resolved("./barrel.js", "nsFoo", "foo.js", "*");
     ctx.assert_symbol_resolved("./barrel.js", "nsBar", "bar.js", "*");
     ctx.assert_finalize_ok();
+  }
+
+  // =========================================================================
+  // Excluded dependency tests
+  // =========================================================================
+
+  #[test]
+  fn excluded_dep_with_no_used_symbols_and_side_effect_free_asset() {
+    // index.js imports {a} from './a.js' (used) and {unused} from './unused.js' (not used
+    // because unused.js doesn't provide the symbol — simulated by having no matching symbols).
+    // unused.js is side_effect_free, so the dep should be excluded.
+    //
+    // We need manual setup because the dep to unused.js has symbols declared on
+    // it but none are actually used (the asset provides nothing that matches).
+    // Actually, the simplest way: a dep that imports a symbol, the target asset
+    // provides it, but no *incoming* dep on the target asset asks for it. That's
+    // not how excluded works though.
+    //
+    // Re-reading the JS logic: excluded = dep.symbols != null && usedSymbolsUp.size === 0
+    // && all connected assets are side_effect_free.
+    //
+    // In our Rust model: a dep has zero used symbols when it has no entries in
+    // requirements_by_dep, OR all entries are star re-export markers. The simplest
+    // case: entry.js has a dep to unused.js with symbols declared on the dep,
+    // but the entry asset doesn't actually request any of those symbols (they're
+    // not in the entry asset's incoming deps' requirements).
+    //
+    // Wait — in the current tracker, every symbol on a dependency gets registered
+    // as a requirement. So if dep has symbols, they WILL appear in requirements.
+    // The "excluded" case is really about: after finalization, the dep has zero
+    // non-star used symbols. This happens when the dep has an EMPTY symbols list.
+    //
+    // Simplest case: dep with symbols = Some(vec![]) (empty symbol list) and
+    // target asset is side_effect_free.
+
+    let mut graph = AssetGraph::new();
+
+    let entry_dep = make_entry_dependency();
+    let entry_dep_node = graph.add_entry_dependency(entry_dep, false);
+
+    let entry_asset = make_asset("index.js", vec![]);
+    let entry_asset_node = graph.add_asset(entry_asset.clone(), false);
+    graph.add_edge(&entry_dep_node, &entry_asset_node);
+
+    // Dependency with empty symbols list (statically analyzable but nothing imported)
+    let dep_unused = make_dependency(&entry_asset, "./unused.js", vec![]);
+    let dep_unused_node = graph.add_dependency(dep_unused.clone(), false);
+    graph.add_edge(&entry_asset_node, &dep_unused_node);
+
+    // Target asset is side_effect_free (side_effects: false is the default)
+    let unused_asset = make_asset("unused.js", vec![("x", "x", false)]);
+    let unused_asset_node = graph.add_asset(unused_asset.clone(), false);
+    graph.add_edge(&dep_unused_node, &unused_asset_node);
+
+    let mut tracker = SymbolTracker::default();
+    tracker
+      .track_symbols(&graph, &entry_asset, &[dep_unused.clone()])
+      .unwrap();
+    tracker.track_symbols(&graph, &unused_asset, &[]).unwrap();
+
+    let finalized = tracker.finalize(&graph);
+
+    assert!(
+      finalized.is_dependency_excluded(&dep_unused.id),
+      "Dep with empty symbols and side_effect_free target should be excluded"
+    );
+  }
+
+  #[test]
+  fn not_excluded_dep_with_used_symbols() {
+    // A dependency that has used symbols should NOT be excluded, even if the
+    // target asset is side_effect_free.
+    let ctx = symbol_tracker_test! {
+      entry "index.js" provides [] {
+        dep "./a.js" imports [("a", "a", false)] from "a.js" provides [("a", "a", false)] {}
+      }
+    };
+
+    let dep_id = ctx.deps.get("./a.js").unwrap().id.clone();
+    let finalized = ctx.assert_finalize_ok();
+    // This dep has a used symbol "a", so it should NOT be excluded
+    assert!(
+      !finalized.is_dependency_excluded(&dep_id),
+      "Dep with used symbols should NOT be excluded"
+    );
+  }
+
+  #[test]
+  fn not_excluded_dep_with_side_effects() {
+    // A dependency with no used symbols but whose target asset HAS side effects
+    // should NOT be excluded.
+    let mut graph = AssetGraph::new();
+
+    let entry_dep = make_entry_dependency();
+    let entry_dep_node = graph.add_entry_dependency(entry_dep, false);
+
+    let entry_asset = make_asset("index.js", vec![]);
+    let entry_asset_node = graph.add_asset(entry_asset.clone(), false);
+    graph.add_edge(&entry_dep_node, &entry_asset_node);
+
+    // Dependency with empty symbols list
+    let dep_sideeffect = make_dependency(&entry_asset, "./sideeffect.js", vec![]);
+    let dep_sideeffect_node = graph.add_dependency(dep_sideeffect.clone(), false);
+    graph.add_edge(&entry_asset_node, &dep_sideeffect_node);
+
+    // Target asset HAS side effects
+    let sideeffect_asset = make_asset_with_side_effects("sideeffect.js", vec![("x", "x", false)]);
+    let sideeffect_asset_node = graph.add_asset(sideeffect_asset.clone(), false);
+    graph.add_edge(&dep_sideeffect_node, &sideeffect_asset_node);
+
+    let mut tracker = SymbolTracker::default();
+    tracker
+      .track_symbols(&graph, &entry_asset, &[dep_sideeffect.clone()])
+      .unwrap();
+    tracker
+      .track_symbols(&graph, &sideeffect_asset, &[])
+      .unwrap();
+
+    let finalized = tracker.finalize(&graph);
+
+    assert!(
+      !finalized.is_dependency_excluded(&dep_sideeffect.id),
+      "Dep with side-effectful target should NOT be excluded even with no used symbols"
+    );
+  }
+
+  #[test]
+  fn not_excluded_dep_with_no_symbols() {
+    // A dependency with symbols = None (not statically analyzable) should NOT be
+    // excluded, even if the target asset is side_effect_free.
+    let mut graph = AssetGraph::new();
+
+    let entry_dep = make_entry_dependency();
+    let entry_dep_node = graph.add_entry_dependency(entry_dep, false);
+
+    let entry_asset = make_asset("index.js", vec![]);
+    let entry_asset_node = graph.add_asset(entry_asset.clone(), false);
+    graph.add_edge(&entry_dep_node, &entry_asset_node);
+
+    // Dependency with symbols = None
+    let dep_dynamic = make_dependency_without_symbols(&entry_asset, "./dynamic.js");
+    let dep_dynamic_node = graph.add_dependency(dep_dynamic.clone(), false);
+    graph.add_edge(&entry_asset_node, &dep_dynamic_node);
+
+    let dynamic_asset = make_asset("dynamic.js", vec![("x", "x", false)]);
+    let dynamic_asset_node = graph.add_asset(dynamic_asset.clone(), false);
+    graph.add_edge(&dep_dynamic_node, &dynamic_asset_node);
+
+    let mut tracker = SymbolTracker::default();
+    tracker
+      .track_symbols(&graph, &entry_asset, &[dep_dynamic.clone()])
+      .unwrap();
+    tracker.track_symbols(&graph, &dynamic_asset, &[]).unwrap();
+
+    let finalized = tracker.finalize(&graph);
+
+    assert!(
+      !finalized.is_dependency_excluded(&dep_dynamic.id),
+      "Dep with symbols=None should NOT be excluded (not statically analyzable)"
+    );
+  }
+
+  #[test]
+  fn excluded_dep_multiple_connected_assets_all_side_effect_free() {
+    // When a dependency connects to multiple assets (e.g. via asset groups),
+    // it should only be excluded if ALL connected assets are side_effect_free.
+    let mut graph = AssetGraph::new();
+
+    let entry_dep = make_entry_dependency();
+    let entry_dep_node = graph.add_entry_dependency(entry_dep, false);
+
+    let entry_asset = make_asset("index.js", vec![]);
+    let entry_asset_node = graph.add_asset(entry_asset.clone(), false);
+    graph.add_edge(&entry_dep_node, &entry_asset_node);
+
+    // Dependency with empty symbols list
+    let dep = make_dependency(&entry_asset, "./multi.js", vec![]);
+    let dep_node = graph.add_dependency(dep.clone(), false);
+    graph.add_edge(&entry_asset_node, &dep_node);
+
+    // Two connected assets, both side_effect_free
+    let asset_a = make_asset("multi-a.js", vec![]);
+    let asset_a_node = graph.add_asset(asset_a.clone(), false);
+    graph.add_edge(&dep_node, &asset_a_node);
+
+    let asset_b = make_asset("multi-b.js", vec![]);
+    let asset_b_node = graph.add_asset(asset_b.clone(), false);
+    graph.add_edge(&dep_node, &asset_b_node);
+
+    let mut tracker = SymbolTracker::default();
+    tracker
+      .track_symbols(&graph, &entry_asset, &[dep.clone()])
+      .unwrap();
+    tracker.track_symbols(&graph, &asset_a, &[]).unwrap();
+    tracker.track_symbols(&graph, &asset_b, &[]).unwrap();
+
+    let finalized = tracker.finalize(&graph);
+
+    assert!(
+      finalized.is_dependency_excluded(&dep.id),
+      "Dep should be excluded when all connected assets are side_effect_free"
+    );
+  }
+
+  #[test]
+  fn not_excluded_dep_multiple_connected_assets_one_has_side_effects() {
+    // When one of the connected assets has side effects, the dep should NOT be excluded.
+    let mut graph = AssetGraph::new();
+
+    let entry_dep = make_entry_dependency();
+    let entry_dep_node = graph.add_entry_dependency(entry_dep, false);
+
+    let entry_asset = make_asset("index.js", vec![]);
+    let entry_asset_node = graph.add_asset(entry_asset.clone(), false);
+    graph.add_edge(&entry_dep_node, &entry_asset_node);
+
+    let dep = make_dependency(&entry_asset, "./multi.js", vec![]);
+    let dep_node = graph.add_dependency(dep.clone(), false);
+    graph.add_edge(&entry_asset_node, &dep_node);
+
+    // First asset: side_effect_free
+    let asset_a = make_asset("multi-a.js", vec![]);
+    let asset_a_node = graph.add_asset(asset_a.clone(), false);
+    graph.add_edge(&dep_node, &asset_a_node);
+
+    // Second asset: HAS side effects
+    let asset_b = make_asset_with_side_effects("multi-b.js", vec![]);
+    let asset_b_node = graph.add_asset(asset_b.clone(), false);
+    graph.add_edge(&dep_node, &asset_b_node);
+
+    let mut tracker = SymbolTracker::default();
+    tracker
+      .track_symbols(&graph, &entry_asset, &[dep.clone()])
+      .unwrap();
+    tracker.track_symbols(&graph, &asset_a, &[]).unwrap();
+    tracker.track_symbols(&graph, &asset_b, &[]).unwrap();
+
+    let finalized = tracker.finalize(&graph);
+
+    assert!(
+      !finalized.is_dependency_excluded(&dep.id),
+      "Dep should NOT be excluded when any connected asset has side effects"
+    );
+  }
+
+  #[test]
+  fn excluded_integrates_with_finalize_used_symbols() {
+    // Verify that excluded works correctly alongside the normal used symbols
+    // finalization. Entry imports "a" from a.js (used, not excluded) and has
+    // an empty import from unused.js (excluded).
+    let mut graph = AssetGraph::new();
+
+    let entry_dep = make_entry_dependency();
+    let entry_dep_node = graph.add_entry_dependency(entry_dep, false);
+
+    let entry_asset = make_asset("index.js", vec![]);
+    let entry_asset_node = graph.add_asset(entry_asset.clone(), false);
+    graph.add_edge(&entry_dep_node, &entry_asset_node);
+
+    // Used dependency
+    let dep_a = make_dependency(&entry_asset, "./a.js", vec![("a", "a", false)]);
+    let dep_a_node = graph.add_dependency(dep_a.clone(), false);
+    graph.add_edge(&entry_asset_node, &dep_a_node);
+
+    let asset_a = make_asset("a.js", vec![("a", "a", false)]);
+    let asset_a_node = graph.add_asset(asset_a.clone(), false);
+    graph.add_edge(&dep_a_node, &asset_a_node);
+
+    // Unused dependency (empty symbols, side_effect_free target)
+    let dep_unused = make_dependency(&entry_asset, "./unused.js", vec![]);
+    let dep_unused_node = graph.add_dependency(dep_unused.clone(), false);
+    graph.add_edge(&entry_asset_node, &dep_unused_node);
+
+    let unused_asset = make_asset("unused.js", vec![("x", "x", false)]);
+    let unused_asset_node = graph.add_asset(unused_asset.clone(), false);
+    graph.add_edge(&dep_unused_node, &unused_asset_node);
+
+    let mut tracker = SymbolTracker::default();
+    tracker
+      .track_symbols(&graph, &entry_asset, &[dep_a.clone(), dep_unused.clone()])
+      .unwrap();
+    tracker.track_symbols(&graph, &asset_a, &[]).unwrap();
+    tracker.track_symbols(&graph, &unused_asset, &[]).unwrap();
+
+    let finalized = tracker.finalize(&graph);
+
+    // a.js dep should NOT be excluded (has used symbols)
+    assert!(!finalized.is_dependency_excluded(&dep_a.id));
+    // unused.js dep should be excluded (no used symbols, side_effect_free)
+    assert!(finalized.is_dependency_excluded(&dep_unused.id));
+
+    // Verify the used symbols for a.js are still correct
+    let used = finalized
+      .get_used_symbols_for_dependency(&dep_a.id)
+      .expect("Should have used symbols");
+    assert_eq!(used.len(), 1);
   }
 }
