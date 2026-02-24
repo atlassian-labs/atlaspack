@@ -356,7 +356,9 @@ impl IdealGraphBuilder {
             continue;
           };
 
-          let dep_is_boundary = dep.priority != Priority::Sync;
+          let inline = dep.bundle_behavior == Some(BundleBehavior::Inline)
+            || target_asset.bundle_behavior == Some(BundleBehavior::Inline);
+          let dep_is_boundary = dep.priority != Priority::Sync || inline;
           let type_change = from_asset.file_type != target_asset.file_type;
           let isolated = dep.bundle_behavior == Some(BundleBehavior::Isolated)
             || dep.bundle_behavior == Some(BundleBehavior::InlineIsolated)
@@ -373,8 +375,8 @@ impl IdealGraphBuilder {
           // This matches the JS bundler's `idealGraph.ts` where CSS assets from sync
           // imports are NOT bundle roots — they flow through the normal placement/sharing
           // phases and get separated by type in `addAssetToBundleRoot`.
-          let is_sync_type_change = type_change && !dep_is_boundary && !isolated;
-          if (dep_is_boundary || type_change || isolated) && !is_sync_type_change {
+          let is_sync_type_change = type_change && !dep_is_boundary && !isolated && !inline;
+          if (dep_is_boundary || type_change || isolated || inline) && !is_sync_type_change {
             let Some(target_key) = self.assets.key_for(&target_asset.id) else {
               continue;
             };
@@ -492,6 +494,7 @@ impl IdealGraphBuilder {
 
         if dep.bundle_behavior == Some(BundleBehavior::Isolated)
           || dep.bundle_behavior == Some(BundleBehavior::InlineIsolated)
+          || dep.bundle_behavior == Some(BundleBehavior::Inline)
         {
           continue;
         }
@@ -914,6 +917,20 @@ impl IdealGraphBuilder {
 
           if dep.priority == Priority::Sync {
             // Continue DFS into sync target assets.
+            //
+            // IMPORTANT: Sync dependencies with bundle behavior (Isolated/InlineIsolated/Inline)
+            // are bundle boundaries and must not be traversed for availability propagation.
+            // Otherwise, the boundary root would be treated as "reachable" from its parent,
+            // which can lead to internalization/shared-extraction bugs.
+            if matches!(
+              dep.bundle_behavior,
+              Some(BundleBehavior::Isolated)
+                | Some(BundleBehavior::InlineIsolated)
+                | Some(BundleBehavior::Inline)
+            ) {
+              continue;
+            }
+
             let children: Vec<NodeId> = asset_graph.get_outgoing_neighbors(&node_id);
             for child in children.into_iter().rev() {
               if !visited.contains(&child) {
@@ -1219,6 +1236,7 @@ impl IdealGraphBuilder {
       // Compute `available` for this node.
       let mut available = if bundle.behavior == Some(BundleBehavior::Isolated)
         || bundle.behavior == Some(BundleBehavior::InlineIsolated)
+        || bundle.behavior == Some(BundleBehavior::Inline)
       {
         RoaringBitmap::new()
       } else {
@@ -1235,6 +1253,7 @@ impl IdealGraphBuilder {
       //     reachableAssets[bundleIdInGroup.root] are all available.
       if bundle.behavior != Some(BundleBehavior::Isolated)
         && bundle.behavior != Some(BundleBehavior::InlineIsolated)
+        && bundle.behavior != Some(BundleBehavior::Inline)
       {
         let group_root = bundle_group_of.get(&node).copied().unwrap_or(node);
         if let Some(members) = bundle_group_members.get(&group_root) {
@@ -1307,6 +1326,7 @@ impl IdealGraphBuilder {
         // Isolated bundles start fresh.
         if child_bundle.behavior == Some(BundleBehavior::Isolated)
           || child_bundle.behavior == Some(BundleBehavior::InlineIsolated)
+          || child_bundle.behavior == Some(BundleBehavior::Inline)
         {
           ancestor_by_node.insert(child, RoaringBitmap::new());
           continue;
@@ -2275,9 +2295,10 @@ impl IdealGraphBuilder {
         continue;
       };
 
-      // JS: canDelete starts as (behavior !== 'isolated' && behavior !== 'inlineIsolated')
+      // JS: canDelete starts as (behavior !== 'isolated' && behavior !== 'inlineIsolated' && behavior !== 'inline')
       let mut can_delete = bundle.behavior != Some(BundleBehavior::Isolated)
-        && bundle.behavior != Some(BundleBehavior::InlineIsolated);
+        && bundle.behavior != Some(BundleBehavior::InlineIsolated)
+        && bundle.behavior != Some(BundleBehavior::Inline);
 
       // Get all parents via incoming edges (JS: bundleRootGraph.getNodeIdsConnectedTo)
       let parent_nodes: Vec<NodeIndex> = self

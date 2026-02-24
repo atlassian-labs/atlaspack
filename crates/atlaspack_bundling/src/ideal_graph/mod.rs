@@ -1507,6 +1507,11 @@ mod tests {
       self.bundle_behavior = Some(atlaspack_core::types::BundleBehavior::Isolated);
       self
     }
+
+    fn inline(mut self) -> Self {
+      self.bundle_behavior = Some(atlaspack_core::types::BundleBehavior::Inline);
+      self
+    }
   }
 
   fn infer_file_type(name: &str) -> atlaspack_core::types::FileType {
@@ -3958,6 +3963,40 @@ mod tests {
         "entry.js" lazy "non-split.js",
         "entry.js" lazy "lazy-target.js",
         "non-split.js" sync "lazy-target.js",
+      },
+    });
+  }
+
+  #[test]
+  fn inline_bundle_behavior_creates_boundary_not_shared_bundle() {
+    // entry.html sync-imports both page.js and inline-script.js, and page.js also
+    // sync-imports inline-script.js.
+    //
+    // The inline dependency must create a bundle boundary (similar to Isolated):
+    // inline-script.js gets its own bundle and must NOT be extracted into a shared bundle.
+    let asset_graph = fixture_graph(
+      &["entry.html"],
+      &[
+        EdgeSpec::new("entry.html", "inline-script.js", Priority::Sync).inline(),
+        EdgeSpec::new("entry.html", "page.js", Priority::Sync),
+        EdgeSpec::new("page.js", "inline-script.js", Priority::Sync).inline(),
+      ],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    assert_graph!(g, {
+      bundles: {
+        "entry.html" => ["entry.html"],
+        // entry.html -> page.js is a sync type-change (Html -> Js), so page.js is placed into a
+        // type-change sibling bundle rooted at entry.html.
+        "@@typechange:entry.html:Js" => ["page.js"],
+        "inline-script.js" => ["inline-script.js"],
+      },
+      edges: {
+        "entry.html" sync "inline-script.js",
+        "entry.html" sync "@@typechange:entry.html:Js",
       },
     });
   }
