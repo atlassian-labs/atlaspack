@@ -310,7 +310,7 @@ impl Atlaspack {
   }
 
   #[tracing::instrument(level = "info", skip_all)]
-  pub fn package(&self, bundle_id: String) -> anyhow::Result<PackageResult> {
+  pub fn package(&self, bundle_id: String, inline_requires: bool) -> anyhow::Result<PackageResult> {
     // This possibly could be persistent between pacakges? But right now with SSR builds only we're talking about a few packages at most
     // so we can worry about that refactor later.
     let packager = JsPackager::new(
@@ -322,6 +322,7 @@ impl Atlaspack {
         )),
         project_root: self.project_root.clone(),
         debug_tools: self.debug_tools.clone(),
+        inline_requires,
       },
       Arc::clone(&self.bundle_graph),
     );

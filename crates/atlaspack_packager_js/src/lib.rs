@@ -14,6 +14,10 @@ pub struct PackagingContext {
   pub cache: CacheRef,
   pub project_root: PathBuf,
   pub debug_tools: DebugTools,
+  /// When true, top-level `require()` variable declarations are removed and their
+  /// usages are replaced with inline `(0, require("id"))` expressions. This defers
+  /// module initialisation to first use, improving startup performance.
+  pub inline_requires: bool,
 }
 
 pub struct JsPackager<B: BundleGraph + Send + Sync> {
@@ -21,5 +25,6 @@ pub struct JsPackager<B: BundleGraph + Send + Sync> {
   bundle_graph: Arc<RwLock<B>>,
 }
 
+pub mod inline_requires;
 pub mod js_packager;
 pub mod process_asset;

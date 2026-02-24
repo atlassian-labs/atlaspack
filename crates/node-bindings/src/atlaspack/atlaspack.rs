@@ -314,6 +314,15 @@ pub fn atlaspack_napi_load_bundle_graph(
   Ok(promise)
 }
 
+#[napi(object)]
+pub struct PackageOptions {
+  /// When true, top-level `require()` variable declarations are removed and their
+  /// usages are replaced with inline `(0, require("id"))` calls, deferring module
+  /// initialisation to first use and improving startup performance.
+  #[napi(js_name = "inlineRequires")]
+  pub inline_requires: Option<bool>,
+}
+
 #[napi]
 pub fn atlaspack_napi_update_bundle_graph(
   env: Env,
@@ -351,13 +360,15 @@ pub fn atlaspack_napi_package(
   env: Env,
   atlaspack_napi: AtlaspackNapi,
   bundle_id: String,
+  options: Option<PackageOptions>,
 ) -> napi::Result<JsObject> {
   let (deferred, promise) = env.create_deferred()?;
+  let inline_requires = options.and_then(|o| o.inline_requires).unwrap_or(false);
   thread::spawn({
     let atlaspack = atlaspack_napi.clone();
     move || {
       let atlaspack = atlaspack.read();
-      let result = atlaspack.package(bundle_id);
+      let result = atlaspack.package(bundle_id, inline_requires);
       deferred.resolve(move |env| match result {
         Ok(result) => NapiAtlaspackResult::ok(&env, JsPackageResult::from(result)),
         Err(error) => {
