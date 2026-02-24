@@ -97,6 +97,7 @@ impl Bundler for IdealGraphBundler {
             if target_asset.bundle_behavior == Some(atlaspack_core::types::BundleBehavior::Isolated)
               || target_asset.bundle_behavior
                 == Some(atlaspack_core::types::BundleBehavior::InlineIsolated)
+              || target_asset.bundle_behavior == Some(atlaspack_core::types::BundleBehavior::Inline)
             {
               non_sync_deps_by_target_asset_id
                 .entry(target_asset.id.clone())
@@ -606,7 +607,8 @@ impl Bundler for IdealGraphBundler {
             // The bundleBehavior can be on the dependency itself or on the target asset.
             let dep_is_isolated = dep.bundle_behavior
               == Some(atlaspack_core::types::BundleBehavior::Isolated)
-              || dep.bundle_behavior == Some(atlaspack_core::types::BundleBehavior::InlineIsolated);
+              || dep.bundle_behavior == Some(atlaspack_core::types::BundleBehavior::InlineIsolated)
+              || dep.bundle_behavior == Some(atlaspack_core::types::BundleBehavior::Inline);
             let targets_isolated_asset = !dep_is_isolated
               && asset_graph
                 .get_outgoing_neighbors(&dep_node_id)
@@ -616,6 +618,7 @@ impl Bundler for IdealGraphBundler {
                     a.bundle_behavior == Some(atlaspack_core::types::BundleBehavior::Isolated)
                       || a.bundle_behavior
                         == Some(atlaspack_core::types::BundleBehavior::InlineIsolated)
+                      || a.bundle_behavior == Some(atlaspack_core::types::BundleBehavior::Inline)
                   })
                 });
 
@@ -737,7 +740,8 @@ impl Bundler for IdealGraphBundler {
               let dep_has_isolated = dep.bundle_behavior
                 == Some(atlaspack_core::types::BundleBehavior::Isolated)
                 || dep.bundle_behavior
-                  == Some(atlaspack_core::types::BundleBehavior::InlineIsolated);
+                  == Some(atlaspack_core::types::BundleBehavior::InlineIsolated)
+                || dep.bundle_behavior == Some(atlaspack_core::types::BundleBehavior::Inline);
               let target_has_isolated = !dep_has_isolated
                 && dep.priority == atlaspack_core::types::Priority::Sync
                 && asset_graph
@@ -748,6 +752,7 @@ impl Bundler for IdealGraphBundler {
                       a.bundle_behavior == Some(atlaspack_core::types::BundleBehavior::Isolated)
                         || a.bundle_behavior
                           == Some(atlaspack_core::types::BundleBehavior::InlineIsolated)
+                        || a.bundle_behavior == Some(atlaspack_core::types::BundleBehavior::Inline)
                     })
                   });
               let is_isolated_sync = dep.priority == atlaspack_core::types::Priority::Sync
@@ -767,10 +772,13 @@ impl Bundler for IdealGraphBundler {
                       == Some(atlaspack_core::types::BundleBehavior::Isolated)
                       || dep.bundle_behavior
                         == Some(atlaspack_core::types::BundleBehavior::InlineIsolated)
+                      || dep.bundle_behavior == Some(atlaspack_core::types::BundleBehavior::Inline)
                       || target_asset.bundle_behavior
                         == Some(atlaspack_core::types::BundleBehavior::Isolated)
                       || target_asset.bundle_behavior
-                        == Some(atlaspack_core::types::BundleBehavior::InlineIsolated))
+                        == Some(atlaspack_core::types::BundleBehavior::InlineIsolated)
+                      || target_asset.bundle_behavior
+                        == Some(atlaspack_core::types::BundleBehavior::Inline))
                   {
                     continue;
                   }
@@ -3999,5 +4007,181 @@ mod tests {
         "entry.html" sync "@@typechange:entry.html:Js",
       },
     });
+  }
+
+  #[test]
+  fn bundle_root_with_type_change_does_not_create_typechange_sibling() {
+    // Regression test for `resolve_type_change_target`:
+    //
+    // We need a bundle root that would *also* be reachable via the sync graph from an entry,
+    // such that placement tries to assign it under the entry bundle and hits a type change.
+    //
+    // Fixture:
+    // - entry.js --lazy--> async.css        (makes async.css a *bundle root*)
+    // - entry.js --sync--> lib.js
+    // - lib.js   --sync--> async.css        (sync path makes the root reachable from entry)
+    //
+    // Without the guard in `resolve_type_change_target`, placement would create an extra
+    // empty-ish type-change sibling bundle:
+    //   @@typechange:entry.js:Css
+    //
+    // With the guard, no such sibling bundle should exist; async.css should remain its own bundle.
+    let asset_graph = fixture_graph_with_options(
+      &["entry.js"],
+      &[
+        EdgeSpec::new("entry.js", "async.css", Priority::Lazy),
+        EdgeSpec::new("entry.js", "lib.js", Priority::Sync),
+        EdgeSpec::new("lib.js", "async.css", Priority::Sync).specifier("async-sync"),
+      ],
+      &[(
+        "async.css",
+        AssetOptions {
+          is_bundle_splittable: true,
+          // Prevent internalization so `async.css` remains a bundle root,
+          // while still being sync-reachable from the entry.
+          bundle_behavior: Some(atlaspack_core::types::BundleBehavior::Inline),
+        },
+      )],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    // async.css must remain a real bundle root bundle.
+    let async_bundle_id = types::IdealBundleId::from_asset_key(
+      g.assets
+        .key_for("async.css")
+        .expect("expected async.css in AssetInterner"),
+    );
+    let async_bundle = g
+      .get_bundle(&async_bundle_id)
+      .expect("expected an async.css bundle");
+    assert!(
+      g.bundle_has_asset(&async_bundle_id, "async.css"),
+      "expected async.css bundle to contain async.css; got {:?}",
+      async_bundle.assets
+    );
+
+    // Critical assertion: no type-change sibling rooted at entry.js should exist.
+    assert!(
+      g.assets.key_for("@@typechange:entry.js:Css").is_none(),
+      "did not expect @@typechange:entry.js:Css bundle to exist"
+    );
+  }
+
+  #[test]
+  fn inline_js_dep_is_materializer_boundary() {
+    use atlaspack_core::bundle_graph::NativeBundleGraph;
+    use atlaspack_core::bundle_graph::native_bundle_graph::NativeBundleGraphEdgeType;
+
+    // Verify that BundleBehavior::Inline deps are treated as boundaries during
+    // entry bundle materialization: the inline asset and its children must NOT
+    // appear in the entry bundle's Contains edges.
+    //
+    // Note: this is defense-in-depth — the "don't cross into other bundle roots"
+    // guard in the entry DFS also prevents traversal. This test ensures the Inline
+    // boundary check works correctly even if the bundle-root guard changes.
+
+    // Use hex-like ids so NativeBundleGraph public id generation won't panic.
+    let entry = "0123456789abcdef.js";
+    let inline_root = "fedcba9876543210.js";
+    let inline_child = "1111111111111111.js";
+
+    let asset_graph = fixture_graph(
+      &[entry],
+      &[
+        // entry.js --sync,inline--> inline_root.js
+        EdgeSpec::new(entry, inline_root, Priority::Sync).inline(),
+        // inline_root.js --sync--> inline_child.js
+        EdgeSpec::new(inline_root, inline_child, Priority::Sync),
+      ],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let mut bundle_graph = NativeBundleGraph::from_asset_graph(&asset_graph);
+    bundler.bundle(&asset_graph, &mut bundle_graph).unwrap();
+
+    let edges = edge_triples(&bundle_graph);
+
+    // Find the entry bundle node (main_entry_id == entry.js).
+    let entry_bundle_id = bundle_graph
+      .get_bundles()
+      .iter()
+      .find(|b| b.main_entry_id.as_deref() == Some(entry))
+      .expect("expected an entry bundle")
+      .id
+      .clone();
+    let entry_bundle_node_id = *bundle_graph
+      .get_node_id_by_content_key(&entry_bundle_id)
+      .expect("expected entry bundle node id");
+
+    let entry_node_id = *bundle_graph
+      .get_node_id_by_content_key(entry)
+      .expect("expected entry asset node id");
+    let inline_root_node_id = *bundle_graph
+      .get_node_id_by_content_key(inline_root)
+      .expect("expected inline root asset node id");
+    let inline_child_node_id = *bundle_graph
+      .get_node_id_by_content_key(inline_child)
+      .expect("expected inline child asset node id");
+
+    // Entry bundle should contain entry.js.
+    assert_eq!(
+      edges.contains(&(
+        entry_bundle_node_id,
+        entry_node_id,
+        NativeBundleGraphEdgeType::Contains
+      )),
+      true,
+      "expected entry bundle to contain its entry asset; got edges: {:?}",
+      edges
+    );
+
+    // Critical assertions: entry bundle must NOT traverse into inline root (or its child)
+    // during Contains DFS.
+    assert_eq!(
+      edges.contains(&(
+        entry_bundle_node_id,
+        inline_root_node_id,
+        NativeBundleGraphEdgeType::Contains
+      )),
+      false,
+      "did not expect entry bundle to contain inline root asset; got edges: {:?}",
+      edges
+    );
+
+    assert_eq!(
+      edges.contains(&(
+        entry_bundle_node_id,
+        inline_child_node_id,
+        NativeBundleGraphEdgeType::Contains
+      )),
+      false,
+      "did not expect entry bundle to contain child of inline asset; got edges: {:?}",
+      edges
+    );
+
+    // And inline_root.js must be contained by its own separate bundle.
+    let inline_bundle_id = bundle_graph
+      .get_bundles()
+      .iter()
+      .find(|b| b.main_entry_id.as_deref() == Some(inline_root))
+      .expect("expected an inline JS bundle")
+      .id
+      .clone();
+    let inline_bundle_node_id = *bundle_graph
+      .get_node_id_by_content_key(&inline_bundle_id)
+      .expect("expected inline bundle node id");
+
+    assert_eq!(
+      edges.contains(&(
+        inline_bundle_node_id,
+        inline_root_node_id,
+        NativeBundleGraphEdgeType::Contains
+      )),
+      true,
+      "expected inline bundle to contain its inline root asset; got edges: {:?}",
+      edges
+    );
   }
 }

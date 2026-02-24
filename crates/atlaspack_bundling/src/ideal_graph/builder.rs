@@ -1707,8 +1707,26 @@ impl IdealGraphBuilder {
         // Entry-like roots ALWAYS get assets placed — no availability check.
         // This matches JS addAssetToBundleRoot which is unconditional for entries.
         let bundle_id = &root_bundle_ids[&root];
-        let target_bundle_id =
-          self.resolve_type_change_target(asset_key, root, bundle_id, ideal)?;
+
+        // Skip duplicating bundle roots into entry-like parents when a type change
+        // would occur (e.g. inline CSS bundle root reached from an HTML entry).
+        // These assets already have their own bundle and duplicating them into a
+        // type-change sibling creates extra bundles that the JS bundler doesn't produce.
+        if asset_key != root && self.bundle_roots.contains(&asset_key) {
+          let asset_ft = self.asset_file_types.get(&asset_key);
+          let parent_bundle = ideal.get_bundle(bundle_id);
+          if let (Some(aft), Some(pb)) = (asset_ft, parent_bundle) {
+            if *aft != pb.bundle_type {
+              continue;
+            }
+          }
+        }
+
+        let target_bundle_id = if asset_key == root {
+          *bundle_id
+        } else {
+          self.resolve_type_change_target(asset_key, root, bundle_id, ideal)?
+        };
 
         let bundle = ideal
           .get_bundle_mut(&target_bundle_id)
@@ -1734,8 +1752,11 @@ impl IdealGraphBuilder {
         .min()
       {
         let parent_bundle_id = root_bundle_ids[&canonical];
-        let canonical_bundle_id =
-          self.resolve_type_change_target(asset_key, canonical, &parent_bundle_id, ideal)?;
+        let canonical_bundle_id = if asset_key == canonical {
+          parent_bundle_id
+        } else {
+          self.resolve_type_change_target(asset_key, canonical, &parent_bundle_id, ideal)?
+        };
         // Only record canonical placement here (asset may have been duplicated into multiple bundles).
         // `move_asset_to_bundle` would remove it from the other entry-like bundles, which we don't want.
         ideal.set_asset_bundle(asset_key, Some(canonical_bundle_id));
@@ -1872,6 +1893,14 @@ impl IdealGraphBuilder {
       return Ok(*parent_bundle_id);
     }
 
+    // Bundle roots that would trigger a type change should not be redirected into
+    // type-change sibling bundles. They already have their own bundle created in
+    // Phase 3 (create_bundle_roots). Redirecting them creates extra empty-ish bundles
+    // that the JS bundler does not produce (e.g. inline CSS from HTML <style> tags).
+    if self.bundle_roots.contains(&asset_key) {
+      return Ok(*parent_bundle_id);
+    }
+
     let file_type = asset_file_type.unwrap().clone();
     let file_type_str = format!("{file_type:?}");
     let sibling_key = (parent_root, file_type_str.clone());
@@ -1886,7 +1915,6 @@ impl IdealGraphBuilder {
       self.assets.id_for(parent_root),
       file_type_str
     );
-
     // Insert synthetic id into the asset interner so IdealBundleId works.
     let sibling_asset_key = ideal.assets.insert_synthetic(sibling_id_str);
     let sibling_bundle_id = IdealBundleId::from_asset_key(sibling_asset_key);
