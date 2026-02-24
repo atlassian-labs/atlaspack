@@ -1,4 +1,5 @@
 import path from 'path';
+import assert from 'assert';
 import {
   assertBundles,
   bundle,
@@ -863,5 +864,40 @@ describe('Native bundling ready', function () {
       {type: 'js', assets: ['route-b.js']},
     ]);
     await run(b);
+  });
+
+  it('creates sibling bundle for sync svg import', async () => {
+    let dir = path.join(__dirname, 'native-bundler-parity-image-sibling');
+    await overlayFS.mkdirp(dir);
+    await fsFixture(overlayFS, dir)`
+      index.js:
+        import icon from './icon.svg';
+        output = icon;
+
+      icon.svg:
+        <svg xmlns="http://www.w3.org/2000/svg"><circle r="1"/></svg>
+
+      yarn.lock:
+
+      .parcelrc:
+        {
+          "extends": "@atlaspack/config-default",
+          "bundler": "@atlaspack/bundler-default"
+        }
+    `;
+
+    let b = await bundle(path.join(dir, 'index.js'), {
+      inputFS: overlayFS,
+      mode: 'production',
+    });
+
+    // Both JS and SVG bundles should exist.
+    // The SVG bundle is created as a type-change sibling with Isolated behavior.
+    let bundles = b.getBundles();
+    let svgBundles = bundles.filter((b) => b.type === 'svg');
+    assert(
+      svgBundles.length >= 1,
+      `Expected at least 1 SVG bundle, got ${svgBundles.length}. Bundles: ${bundles.map((b) => `${b.type}:${b.name}`).join(', ')}`,
+    );
   });
 });

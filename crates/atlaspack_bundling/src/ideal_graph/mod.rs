@@ -83,13 +83,30 @@ impl Bundler for IdealGraphBundler {
         continue;
       }
 
-      if dep.priority == atlaspack_core::types::Priority::Sync {
-        continue;
-      }
-
       let Some(dep_node_id) = asset_graph.get_node_id_by_content_key(&dep.id) else {
         continue;
       };
+
+      // Non-sync deps always create bundle groups. Sync deps normally don't, BUT sync deps
+      // that target an asset with bundleBehavior=Isolated/InlineIsolated should also get bundle
+      // groups so the isolated bundle is discoverable via `traverseBundles()`. This matches the
+      // JS bundler which creates bundle groups for isolated assets regardless of dep priority.
+      if dep.priority == atlaspack_core::types::Priority::Sync {
+        for neighbor in asset_graph.get_outgoing_neighbors(dep_node_id) {
+          if let Some(target_asset) = asset_graph.get_asset(&neighbor) {
+            if target_asset.bundle_behavior == Some(atlaspack_core::types::BundleBehavior::Isolated)
+              || target_asset.bundle_behavior
+                == Some(atlaspack_core::types::BundleBehavior::InlineIsolated)
+            {
+              non_sync_deps_by_target_asset_id
+                .entry(target_asset.id.clone())
+                .or_default()
+                .push(dep);
+            }
+          }
+        }
+        continue;
+      }
 
       for neighbor in asset_graph.get_outgoing_neighbors(dep_node_id) {
         if let Some(target_asset) = asset_graph.get_asset(&neighbor) {
@@ -1823,6 +1840,117 @@ mod tests {
         "entry.js" sync "@@typechange:entry.js:Css",
       },
     });
+  }
+
+  #[test]
+  fn materialization_creates_bundle_group_for_isolated_asset_reached_via_sync_dep() {
+    use atlaspack_core::bundle_graph::NativeBundleGraph;
+    use atlaspack_core::types::{BundleBehavior, Priority};
+
+    // Use hex-like ids so NativeBundleGraph public id generation won't panic.
+    let entry = "0123456789abcdef.js";
+    let icon = "1111111111111111.svg";
+
+    // entry.js -> (sync) icon.svg where the *asset* icon.svg has bundleBehavior=Isolated.
+    //
+    // Regression: sync deps normally don't create bundle groups, but isolated assets must
+    // still get a bundle group so they are discoverable from the root when traversing the
+    // materialized NativeBundleGraph.
+    let asset_graph = fixture_graph_with_options(
+      &[entry],
+      &[EdgeSpec::new(entry, icon, Priority::Sync)],
+      &[(
+        icon,
+        AssetOptions {
+          is_bundle_splittable: true,
+          bundle_behavior: Some(BundleBehavior::Isolated),
+        },
+      )],
+    );
+
+    let mut bundle_graph = NativeBundleGraph::from_asset_graph(&asset_graph);
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    bundler.bundle(&asset_graph, &mut bundle_graph).unwrap();
+
+    let root_node_id = *bundle_graph
+      .get_node_id_by_content_key("@@root")
+      .expect("expected @@root node id");
+
+    // Find the bundle group node for the isolated icon bundle.
+    let icon_bg_node_id = bundle_graph
+      .nodes()
+      .enumerate()
+      .find_map(|(id, n)| match n {
+        atlaspack_core::bundle_graph::native_bundle_graph::NativeBundleGraphNode::BundleGroup {
+          entry_asset_id,
+          ..
+        } if entry_asset_id == icon => Some(id),
+        _ => None,
+      })
+      .expect("expected a bundle group for isolated asset icon.svg");
+
+    // The sync dependency node that targets icon.svg should connect to the icon bundle group.
+    // Without the regression fix, this edge is missing because sync deps were skipped when
+    // building `non_sync_deps_by_target_asset_id`.
+    let sync_dep_id = asset_graph
+      .get_dependencies()
+      .find(|dep| {
+        if dep.is_entry {
+          return false;
+        }
+        if dep.priority != Priority::Sync {
+          return false;
+        }
+        if dep.source_asset_id.as_deref() != Some(entry) {
+          return false;
+        }
+
+        asset_graph
+          .get_node_id_by_content_key(&dep.id)
+          .map(|dep_node| {
+            asset_graph
+              .get_outgoing_neighbors(dep_node)
+              .iter()
+              .any(|n| {
+                asset_graph
+                  .get_asset(n)
+                  .is_some_and(|asset| asset.id == icon)
+              })
+          })
+          .unwrap_or(false)
+      })
+      .map(|dep| dep.id.clone())
+      .expect("expected a sync dependency entry -> icon");
+
+    let sync_dep_node_id = *bundle_graph
+      .get_node_id_by_content_key(&sync_dep_id)
+      .expect("expected sync dependency node id");
+
+    assert!(
+      bundle_graph.has_edge(
+        &sync_dep_node_id,
+        &icon_bg_node_id,
+        atlaspack_core::bundle_graph::native_bundle_graph::NativeBundleGraphEdgeType::Null
+      ),
+      "expected Null edge from sync dep -> icon bundle group"
+    );
+
+    // And the icon bundle group must be reachable from the root.
+    let mut seen: std::collections::HashSet<usize> = std::collections::HashSet::new();
+    let mut stack = vec![root_node_id];
+    while let Some(node) = stack.pop() {
+      if !seen.insert(node) {
+        continue;
+      }
+      for next in bundle_graph.get_outgoing_neighbors(&node) {
+        stack.push(next);
+      }
+    }
+
+    assert!(
+      seen.contains(&icon_bg_node_id),
+      "expected icon bundle group to be reachable from @@root"
+    );
   }
 
   #[test]
