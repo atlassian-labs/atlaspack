@@ -357,14 +357,26 @@ impl SymbolTracker {
             continue;
           }
 
-          // If the requirement is already satisfied, and we have a new location that
-          // matches, we have a conflict
-          if required.final_location.is_some() {
-            return Err(anyhow!(
-              "Required symbol {} for dep [{}] has already been located",
+          // If the requirement is already satisfied with the same location,
+          // skip it. This can happen legitimately when multiple code paths
+          // resolve to the same dependency (diamond patterns) and answer
+          // propagation reaches the same ancestor through different paths.
+          if let Some(existing_location) = &required.final_location {
+            if existing_location == located_symbol {
+              continue;
+            }
+            // Different location for the same symbol — this is unexpected
+            // and may indicate an ambiguous resolution. Log a warning but
+            // continue, matching the JS behavior where Map.set() overwrites.
+            tracing::warn!(
+              "Symbol {} for dep [{}] resolved to a different location: \
+               existing={:?}, new={:?}",
               required.symbol.exported,
-              dep.id
-            ));
+              dep.id,
+              existing_location,
+              located_symbol
+            );
+            continue;
           }
 
           required.final_location = Some(located_symbol.clone());
@@ -564,12 +576,20 @@ impl SymbolTracker {
   #[tracing::instrument(name = "finalize_symbol_tracker", skip_all)]
   pub fn finalize(self, asset_graph: &AssetGraph) -> FinalizedSymbolTracker {
     // Any speculation groups still in the map were never satisfied
-    // (satisfied groups are removed during cleanup)
-    assert!(
-      self.speculation_group_locations.is_empty(),
-      "The following speculation groups were not satisfied: {:?}",
-      self.speculation_group_locations.keys()
-    );
+    // (satisfied groups are removed during cleanup).
+    // This can happen legitimately in real apps when:
+    // - A star re-export forwards a symbol request speculatively, but
+    //   none of the star-exported modules actually provide that symbol
+    // - The symbol is resolved through a different path entirely
+    // We log a warning rather than panicking, matching the JS behavior
+    // which does not enforce that all speculative requests are resolved.
+    if !self.speculation_group_locations.is_empty() {
+      tracing::debug!(
+        "Unsatisfied speculation groups (these symbols were requested through \
+         star re-exports but not found): {:?}",
+        self.speculation_group_locations.keys().collect::<Vec<_>>()
+      );
+    }
 
     let mut requirements_by_dep: HashMap<DependencyId, DependencyUsedSymbols> = HashMap::new();
 
@@ -586,10 +606,21 @@ impl SymbolTracker {
         }
 
         let Some(final_location) = requirement.final_location else {
-          panic!(
-            "Symbol {} required by dependency [{}] was not satisfied",
-            requirement.symbol.exported, dep_id
+          // Unsatisfied requirements can occur in real apps when:
+          // - Speculative requirements forwarded through star re-exports
+          //   were never resolved by any target module
+          // - A symbol's providing asset hasn't been fully processed yet
+          //   at finalization time (ordering-dependent in incremental builds)
+          // - CJS/ESM interop where default exports behave differently
+          //
+          // The JS implementation does not crash on unresolved symbols —
+          // it leaves them unresolved. We match that behavior by skipping.
+          tracing::debug!(
+            "Symbol {} required by dependency [{}] was not satisfied (skipping)",
+            requirement.symbol.exported,
+            dep_id
           );
+          continue;
         };
 
         used_symbols.insert(
@@ -960,33 +991,6 @@ mod tests {
     fn assert_finalize_ok(&self) -> FinalizedSymbolTracker {
       self.tracker.clone().finalize(&self.graph)
     }
-
-    /// Assert that finalize panics with a message containing the expected string.
-    /// Returns the panic message for further assertions.
-    fn assert_finalize_panics(self, expected_msg: &str) {
-      let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        self.tracker.finalize(&self.graph);
-      }));
-      match result {
-        Ok(_) => panic!(
-          "Expected finalize to panic with '{}', but it succeeded",
-          expected_msg
-        ),
-        Err(e) => {
-          let msg = e
-            .downcast_ref::<String>()
-            .map(|s| s.as_str())
-            .or_else(|| e.downcast_ref::<&str>().copied())
-            .unwrap_or("(unknown panic)");
-          assert!(
-            msg.contains(expected_msg),
-            "Expected panic message to contain '{}', but got: '{}'",
-            expected_msg,
-            msg
-          );
-        }
-      }
-    }
   }
 
   /// Build a test graph and run symbol tracking in a declarative way.
@@ -1240,21 +1244,32 @@ mod tests {
   }
 
   #[test]
-  fn finalize_panics_on_unsatisfied_requirements() {
-    // lib.js has a weak symbol, so the requirement for "a" will not be satisfied
+  fn finalize_skips_unsatisfied_requirements() {
+    // lib.js has a weak symbol, so the requirement for "a" will not be satisfied.
+    // Unsatisfied requirements are gracefully skipped during finalization,
+    // matching JS behavior.
     let ctx = symbol_tracker_test! {
       entry "index.js" provides [] {
         dep "./lib.js" imports [("a", "a", false)] from "lib.js" provides [("a", "a", true)] {}
       }
     };
 
-    ctx.assert_finalize_panics("was not satisfied");
+    let finalized = ctx.assert_finalize_ok();
+    let dep = ctx.deps.get("./lib.js").unwrap();
+    // The unsatisfied symbol should not appear in used symbols
+    let used = finalized.get_used_symbols_for_dependency(&dep.id);
+    assert!(
+      used.is_none() || used.unwrap().is_empty(),
+      "Unsatisfied requirement should be skipped, not included in used symbols"
+    );
   }
 
   #[test]
-  fn track_symbols_errors_on_duplicate_symbol_resolution() {
-    // This test needs manual setup because the macro auto-tracks,
-    // and we need to track the same asset twice
+  fn track_symbols_skips_duplicate_symbol_resolution() {
+    // When an asset is processed multiple times (e.g. due to multiple incoming
+    // dependencies), duplicate symbol resolutions should be silently skipped
+    // rather than causing an error. This matches the JS behavior where
+    // Map.set() silently overwrites.
     let mut graph = AssetGraph::new();
 
     let entry_dep = make_entry_dependency();
@@ -1278,17 +1293,12 @@ mod tests {
       .unwrap();
     tracker.track_symbols(&graph, &asset_a, &[]).unwrap();
 
-    // Trying to satisfy again should error
+    // Processing the same asset again should succeed (idempotent skip)
     let result = tracker.track_symbols(&graph, &asset_a, &[]);
     assert!(
-      result.is_err(),
-      "Should error when symbol is resolved twice"
-    );
-    assert!(
-      result
-        .unwrap_err()
-        .to_string()
-        .contains("has already been located")
+      result.is_ok(),
+      "Duplicate symbol resolution should be silently skipped, but got error: {:?}",
+      result.err()
     );
   }
 
@@ -1398,8 +1408,10 @@ mod tests {
   }
 
   #[test]
-  fn finalize_panics_when_speculation_group_not_satisfied() {
-    // barrel.js star re-exports sub.js, but sub.js doesn't have "missingSymbol"
+  fn finalize_skips_unsatisfied_star_reexport_requirements() {
+    // barrel.js star re-exports sub.js, but sub.js doesn't have "missingSymbol".
+    // Both the direct requirement on ./barrel.js and the speculative requirement
+    // on ./sub.js are unsatisfied. Both are gracefully skipped during finalization.
     let ctx = symbol_tracker_test! {
       entry "index.js" provides [] {
         dep "./barrel.js" imports [("$index$import$missingSymbol", "missingSymbol", false)]
@@ -1409,7 +1421,14 @@ mod tests {
       }
     };
 
-    ctx.assert_finalize_panics("speculation groups were not satisfied");
+    let finalized = ctx.assert_finalize_ok();
+    let dep = ctx.deps.get("./barrel.js").unwrap();
+    // "missingSymbol" was never resolved, so it should not appear in used symbols
+    let used = finalized.get_used_symbols_for_dependency(&dep.id);
+    assert!(
+      used.is_none() || used.unwrap().is_empty(),
+      "Unsatisfied requirement should be skipped"
+    );
   }
 
   // =====================================================================
@@ -1907,6 +1926,118 @@ mod tests {
     assert!(
       used.is_none() || used.unwrap().is_empty(),
       "Bare import should have no used symbols"
+    );
+  }
+
+  #[test]
+  fn duplicate_symbol_resolution_is_idempotent() {
+    // When the same symbol is resolved through multiple paths (e.g. a shared
+    // helper imported by many modules), the answer propagation may reach the
+    // same ancestor dependency twice. This should be handled gracefully by
+    // skipping the duplicate rather than erroring.
+    //
+    // Graph:
+    //   entry -> dep_a -> shared.js (provides "helper")
+    //   entry -> dep_b -> shared.js (provides "helper")
+    //
+    // Both dep_a and dep_b point to the same shared.js asset. When shared.js
+    // is processed, it satisfies the "helper" requirement on dep_a. Then when
+    // we also process the dep_b path, propagation may try to re-satisfy the
+    // same requirement on the entry's incoming dep — which should be a no-op.
+    let entry_asset = make_asset("index.js", vec![]);
+    let shared_asset = make_asset("shared.js", vec![("helper", "helper", false)]);
+
+    let dep_a = make_dependency(&entry_asset, "./a", vec![("helper", "helper", false)]);
+    let dep_b = make_dependency(&entry_asset, "./b", vec![("helper", "helper", false)]);
+
+    let mut graph = AssetGraph::new();
+    let entry_dep = make_entry_dependency();
+    let entry_dep_node = graph.add_entry_dependency(entry_dep, false);
+    let entry_node = graph.add_asset(entry_asset.clone(), false);
+    graph.add_edge(&entry_dep_node, &entry_node);
+
+    let dep_a_node = graph.add_dependency(dep_a.clone(), false);
+    graph.add_edge(&entry_node, &dep_a_node);
+    let shared_node = graph.add_asset(shared_asset.clone(), false);
+    graph.add_edge(&dep_a_node, &shared_node);
+
+    let dep_b_node = graph.add_dependency(dep_b.clone(), false);
+    graph.add_edge(&entry_node, &dep_b_node);
+    // dep_b also points to the same shared.js asset
+    graph.add_edge(&dep_b_node, &shared_node);
+
+    let mut tracker = SymbolTracker::default();
+
+    // Process entry with its outgoing deps
+    tracker
+      .track_symbols(&graph, &entry_asset, &[dep_a.clone(), dep_b.clone()])
+      .unwrap();
+
+    // Process shared.js — this will satisfy "helper" on both dep_a and dep_b,
+    // and propagate upward. The entry's incoming dep may be visited twice,
+    // which should succeed without error.
+    let result = tracker.track_symbols(&graph, &shared_asset, &[]);
+    assert!(
+      result.is_ok(),
+      "Duplicate symbol resolution should not error: {:?}",
+      result.err()
+    );
+  }
+
+  #[test]
+  fn duplicate_symbol_resolution_with_different_location_does_not_crash() {
+    // When the same symbol is resolved through multiple paths but from
+    // DIFFERENT assets, the second resolution should warn but not crash.
+    // This matches the JS behavior where Map.set() silently overwrites.
+    //
+    // Graph:
+    //   entry -> dep_a -> a.js (provides "helper")
+    //   entry -> dep_b -> b.js (provides "helper")
+    //
+    // Both a.js and b.js provide "helper". When a.js is processed first,
+    // it satisfies the "helper" requirement. When b.js is processed, it
+    // tries to re-satisfy "helper" with a different location — this should
+    // succeed without error.
+    let entry_asset = make_asset("index.js", vec![]);
+    let asset_a = make_asset("a.js", vec![("helper", "helper", false)]);
+    let asset_b = make_asset("b.js", vec![("helper", "helper", false)]);
+
+    let dep_a = make_dependency(&entry_asset, "./a", vec![("helper", "helper", false)]);
+    let dep_b = make_dependency(&entry_asset, "./b", vec![("helper", "helper", false)]);
+
+    let mut graph = AssetGraph::new();
+    let entry_dep = make_entry_dependency();
+    let entry_dep_node = graph.add_entry_dependency(entry_dep, false);
+    let entry_node = graph.add_asset(entry_asset.clone(), false);
+    graph.add_edge(&entry_dep_node, &entry_node);
+
+    let dep_a_node = graph.add_dependency(dep_a.clone(), false);
+    graph.add_edge(&entry_node, &dep_a_node);
+    let asset_a_node = graph.add_asset(asset_a.clone(), false);
+    graph.add_edge(&dep_a_node, &asset_a_node);
+
+    let dep_b_node = graph.add_dependency(dep_b.clone(), false);
+    graph.add_edge(&entry_node, &dep_b_node);
+    let asset_b_node = graph.add_asset(asset_b.clone(), false);
+    graph.add_edge(&dep_b_node, &asset_b_node);
+
+    let mut tracker = SymbolTracker::default();
+
+    // Process entry with both outgoing deps
+    tracker
+      .track_symbols(&graph, &entry_asset, &[dep_a.clone(), dep_b.clone()])
+      .unwrap();
+
+    // Process a.js — satisfies "helper" on dep_a
+    tracker.track_symbols(&graph, &asset_a, &[]).unwrap();
+
+    // Process b.js — tries to satisfy "helper" on dep_b with a different
+    // asset location. This should warn but not crash.
+    let result = tracker.track_symbols(&graph, &asset_b, &[]);
+    assert!(
+      result.is_ok(),
+      "Duplicate symbol resolution with different location should not error: {:?}",
+      result.err()
     );
   }
 }
