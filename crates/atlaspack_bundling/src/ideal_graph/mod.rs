@@ -602,9 +602,45 @@ impl Bundler for IdealGraphBundler {
               continue;
             }
 
-            if dep.bundle_behavior == Some(atlaspack_core::types::BundleBehavior::Isolated)
-              || dep.bundle_behavior == Some(atlaspack_core::types::BundleBehavior::InlineIsolated)
-            {
+            // Check if the dep OR any target asset has Isolated/InlineIsolated behavior.
+            // The bundleBehavior can be on the dependency itself or on the target asset.
+            let dep_is_isolated = dep.bundle_behavior
+              == Some(atlaspack_core::types::BundleBehavior::Isolated)
+              || dep.bundle_behavior == Some(atlaspack_core::types::BundleBehavior::InlineIsolated);
+            let targets_isolated_asset = !dep_is_isolated
+              && asset_graph
+                .get_outgoing_neighbors(&dep_node_id)
+                .iter()
+                .any(|n| {
+                  asset_graph.get_asset(n).is_some_and(|a| {
+                    a.bundle_behavior == Some(atlaspack_core::types::BundleBehavior::Isolated)
+                      || a.bundle_behavior
+                        == Some(atlaspack_core::types::BundleBehavior::InlineIsolated)
+                  })
+                });
+
+            if dep_is_isolated || targets_isolated_asset {
+              // Sync isolated deps are boundaries and the isolated asset has its own bundle group.
+              // Even though we don't traverse into the isolated asset for entry bundle contents,
+              // we still need to create the `bundle -> bundle_group` edge so the isolated bundle
+              // group is reachable via `traverseBundles()`.
+              for target_node_id in asset_graph.get_outgoing_neighbors(&dep_node_id) {
+                let Some(target_asset) = asset_graph.get_asset(&target_node_id) else {
+                  continue;
+                };
+
+                let bg_key = format!("bundle_group:{}{}", default_target.name, &target_asset.id);
+                let Some(&to_bg_node_id) = bundle_graph.get_node_id_by_content_key(&bg_key) else {
+                  continue;
+                };
+
+                let native_edge_type = NativeBundleGraphEdgeType::Bundle;
+                if seen_bundle_to_bg_edges.insert((bundle_node_id, to_bg_node_id, native_edge_type))
+                {
+                  bundle_graph.add_edge(&bundle_node_id, &to_bg_node_id, native_edge_type);
+                }
+              }
+
               continue;
             }
 
@@ -696,14 +732,48 @@ impl Bundler for IdealGraphBundler {
 
               // Shared bundles are not ideal bundle roots and therefore don't appear in
               // `ideal_graph.bundle_edges`. If a shared/async bundle contains a lazy
-              // dependency, we must still add the parent `bundle -> bundle_group` edge
-              // so the target bundle group is reachable from the root.
-              if dep.priority == atlaspack_core::types::Priority::Lazy {
+              // dependency (or a sync isolated dependency), we must still add the parent
+              // `bundle -> bundle_group` edge so the target bundle group is reachable from the root.
+              let dep_has_isolated = dep.bundle_behavior
+                == Some(atlaspack_core::types::BundleBehavior::Isolated)
+                || dep.bundle_behavior
+                  == Some(atlaspack_core::types::BundleBehavior::InlineIsolated);
+              let target_has_isolated = !dep_has_isolated
+                && dep.priority == atlaspack_core::types::Priority::Sync
+                && asset_graph
+                  .get_outgoing_neighbors(&dep_node_id)
+                  .iter()
+                  .any(|n| {
+                    asset_graph.get_asset(n).is_some_and(|a| {
+                      a.bundle_behavior == Some(atlaspack_core::types::BundleBehavior::Isolated)
+                        || a.bundle_behavior
+                          == Some(atlaspack_core::types::BundleBehavior::InlineIsolated)
+                    })
+                  });
+              let is_isolated_sync = dep.priority == atlaspack_core::types::Priority::Sync
+                && (dep_has_isolated || target_has_isolated);
+
+              if dep.priority == atlaspack_core::types::Priority::Lazy || is_isolated_sync {
                 // Follow dep -> target asset (if resolved).
                 for target_node_id in asset_graph.get_outgoing_neighbors(&dep_node_id) {
                   let Some(target_asset) = asset_graph.get_asset(&target_node_id) else {
                     continue;
                   };
+
+                  // For isolated sync deps, the `bundle_behavior` may live on the *asset* rather
+                  // than the dependency. Ensure we still treat it as a boundary.
+                  if dep.priority == atlaspack_core::types::Priority::Sync
+                    && !(dep.bundle_behavior
+                      == Some(atlaspack_core::types::BundleBehavior::Isolated)
+                      || dep.bundle_behavior
+                        == Some(atlaspack_core::types::BundleBehavior::InlineIsolated)
+                      || target_asset.bundle_behavior
+                        == Some(atlaspack_core::types::BundleBehavior::Isolated)
+                      || target_asset.bundle_behavior
+                        == Some(atlaspack_core::types::BundleBehavior::InlineIsolated))
+                  {
+                    continue;
+                  }
 
                   // Only async bundle roots have bundle groups.
                   let target_bundle_id = ideal_graph
