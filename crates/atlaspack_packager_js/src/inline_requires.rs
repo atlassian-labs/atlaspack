@@ -17,18 +17,21 @@
 //! It produces:
 //! ```js
 //! function doWork() {
-//!   return (0, require('fs')).readFileSync('./something');
+//!   return require('fs').readFileSync('./something');
 //! }
 //! ```
 //!
 //! Top-level `require()` variable declarations are removed and each use of the binding is
-//! replaced with a `(0, require("id"))` sequence expression. The `(0, ...)` wrapper is
-//! necessary to preserve `new` expression semantics — without it, `new x.Cls()` would behave
-//! differently from `new (0, require("x")).Cls()`.
+//! replaced with a fresh `require("id")` call. When the replaced identifier appears directly
+//! as the callee of a call expression (e.g. `foo()` where `foo = require("x")`), the call is
+//! wrapped as `(0, require("x"))()` to prevent the JS engine from binding `this` to the module
+//! namespace object. In all other positions (member access object, argument, assignment RHS,
+//! etc.) the bare `require("id")` is emitted without the wrapper, keeping output readable.
 //!
 //! `parcelHelpers.interopDefault(x)` chains are also inlined: if `x` was itself a require
 //! binding, the `interopDefault` wrapper declaration is also removed and its usages are
-//! replaced with `(0, parcelHelpers.interopDefault((0, require("x"))))`.
+//! replaced with `parcelHelpers.interopDefault(require("x"))` (with `(0, ...)` only when in
+//! callee position).
 //!
 //! ## Scope handling
 //!
@@ -272,18 +275,31 @@ impl<'a> VisitMut<'a> for InlineRequiresCollector<'_> {
 ///
 /// Building fresh nodes (a handful of small arena allocations) is significantly cheaper than
 /// deep-cloning a pre-built `Expression<'a>` tree for every occurrence of the binding.
+///
+/// The `(0, expr)` sequence wrapper is needed only when the expression is in **callee position**
+/// of a call expression — without it, `require("foo")()` would pass the object holding `require`
+/// as `this` to the callee. When the expression is not in callee position (member access,
+/// assignment RHS, argument, etc.) the bare expression is emitted instead, producing cleaner
+/// and more readable output.
 struct InlineRequiresReplacer<'a> {
   ast: AstBuilder<'a>,
   replacements: HashMap<String, Replacement>,
+  /// Whether the current expression node is in callee position of a call expression.
+  /// When true, replacements are wrapped with `(0, expr)` to preserve `this` semantics.
+  in_callee_position: bool,
 }
 
 impl<'a> InlineRequiresReplacer<'a> {
   fn new(ast: AstBuilder<'a>, replacements: HashMap<String, Replacement>) -> Self {
-    Self { ast, replacements }
+    Self {
+      ast,
+      replacements,
+      in_callee_position: false,
+    }
   }
 
-  /// Build `(0, require("module_id"))`.
-  fn make_require_seq(&self, module_id: oxc_span::Atom<'a>) -> Expression<'a> {
+  /// Build `require("module_id")` or `(0, require("module_id"))` depending on context.
+  fn make_require(&self, module_id: oxc_span::Atom<'a>) -> Expression<'a> {
     let callee = self.ast.expression_identifier(SPAN, "require");
     let str_lit = self.ast.expression_string_literal(SPAN, module_id, None);
     let mut args = self.ast.vec();
@@ -295,12 +311,30 @@ impl<'a> InlineRequiresReplacer<'a> {
       args,
       false,
     ));
-    self.make_seq(require_call)
+    if self.in_callee_position {
+      self.make_seq(require_call)
+    } else {
+      require_call
+    }
   }
 
-  /// Build `(0, parcelHelpers.interopDefault((0, require("module_id"))))`.
-  fn make_interop_seq(&self, module_id: oxc_span::Atom<'a>) -> Expression<'a> {
-    let inner_require = self.make_require_seq(module_id);
+  /// Build `parcelHelpers.interopDefault(require("module_id"))` or with `(0, ...)` wrappers
+  /// depending on context. The inner require never needs a wrapper (it's an argument, not a
+  /// callee). The outer interopDefault call only needs a wrapper when in callee position.
+  fn make_interop(&self, module_id: oxc_span::Atom<'a>) -> Expression<'a> {
+    // Inner require — always bare (it's an argument, not a callee)
+    let callee_inner = self.ast.expression_identifier(SPAN, "require");
+    let str_lit = self.ast.expression_string_literal(SPAN, module_id, None);
+    let mut inner_args = self.ast.vec();
+    inner_args.push(Argument::from(str_lit));
+    let inner_require = Expression::CallExpression(self.ast.alloc_call_expression(
+      SPAN,
+      callee_inner,
+      Option::<TSTypeParameterInstantiation>::None,
+      inner_args,
+      false,
+    ));
+    // Outer interopDefault call
     let obj = self.ast.expression_identifier(SPAN, "parcelHelpers");
     let callee = Expression::StaticMemberExpression(self.ast.alloc_static_member_expression(
       SPAN,
@@ -317,7 +351,11 @@ impl<'a> InlineRequiresReplacer<'a> {
       args,
       false,
     ));
-    self.make_seq(interop_call)
+    if self.in_callee_position {
+      self.make_seq(interop_call)
+    } else {
+      interop_call
+    }
   }
 
   /// Wrap `expr` in `(0, expr)`.
@@ -333,22 +371,56 @@ impl<'a> InlineRequiresReplacer<'a> {
 }
 
 impl<'a> VisitMut<'a> for InlineRequiresReplacer<'a> {
+  fn visit_call_expression(&mut self, call: &mut CallExpression<'a>) {
+    // The callee of a call expression is in callee position only if it is a bare identifier —
+    // e.g. `foo()`. If the callee is a member expression (`obj.method()`), the `obj` part is
+    // NOT in callee position; only the member expression as a whole is.
+    //
+    // We visit the callee with in_callee_position = true, but member expression visitors reset
+    // it to false for their object sub-expressions.
+    let prev = self.in_callee_position;
+    self.in_callee_position = true;
+    self.visit_expression(&mut call.callee);
+    self.in_callee_position = prev;
+    // Arguments are never in callee position.
+    for arg in call.arguments.iter_mut() {
+      self.visit_argument(arg);
+    }
+  }
+
+  fn visit_static_member_expression(&mut self, expr: &mut StaticMemberExpression<'a>) {
+    // The object of a member expression is not in callee position regardless of context —
+    // `obj.method` uses `obj` as `this` for the resulting call, but `obj` itself is accessed
+    // as a plain value, not called.
+    let prev = self.in_callee_position;
+    self.in_callee_position = false;
+    self.visit_expression(&mut expr.object);
+    self.in_callee_position = prev;
+    // property is an identifier name, not an expression — no need to visit
+  }
+
+  fn visit_computed_member_expression(&mut self, expr: &mut ComputedMemberExpression<'a>) {
+    let prev = self.in_callee_position;
+    self.in_callee_position = false;
+    self.visit_expression(&mut expr.object);
+    self.visit_expression(&mut expr.expression);
+    self.in_callee_position = prev;
+  }
+
   fn visit_expression(&mut self, expr: &mut Expression<'a>) {
     if let Expression::Identifier(ident) = expr {
-      // Intern the module_id into the arena first to get Atom<'a>, then build the expression.
-      // We clone the Replacement enum (cheap: just a tag + short String) so the immutable
-      // borrow on self.replacements ends before we call the &mut self builder methods.
+      // Clone the Replacement (cheap: tag + short String) to end the immutable borrow
+      // on self.replacements before calling &mut self builder methods.
       let replacement = self.replacements.get(ident.name.as_str()).cloned();
       if let Some(r) = replacement {
-        // Intern the module_id string into the OXC arena to obtain Atom<'a>.
         let new_expr = match r {
           Replacement::Require(ref module_id) => {
             let atom = self.ast.atom(module_id.as_str());
-            self.make_require_seq(atom)
+            self.make_require(atom)
           }
           Replacement::InteropDefault(ref module_id) => {
             let atom = self.ast.atom(module_id.as_str());
-            self.make_interop_seq(atom)
+            self.make_interop(atom)
           }
         };
         *expr = new_expr;
@@ -413,7 +485,7 @@ function doWork() {
       &output,
       r#"
 function doWork() {
-    return (0, require("fs")).readFileSync("./something");
+    return require("fs").readFileSync("./something");
 }
 "#,
     );
@@ -443,7 +515,7 @@ parcelRegister("k4tEj", function(module, exports) {
     Object.defineProperty(module.exports, "InternSet", {
         enumerable: true,
         get: function() {
-            return (0, require("internmap")).InternSet;
+            return require("internmap").InternSet;
         }
     });
 });
@@ -467,7 +539,7 @@ parcelRequire.register('moduleId', function(require, module, exports) {
       r#"
 parcelRequire.register("moduleId", function(require, module, exports) {
     function doWork() {
-        return (0, require("fs")).readFileSync("./something");
+        return require("fs").readFileSync("./something");
     }
 });
 "#,
@@ -495,7 +567,7 @@ console.log(sideEffects.value);
 "#;
     let output = run(code);
     assert!(
-      output.contains("(0, require(\"side-effects\"))"),
+      output.contains("require(\"side-effects\")"),
       "require should be inlined, got:\n{output}"
     );
     assert!(
@@ -531,7 +603,7 @@ function work() {
     );
     // The safe module should still be inlined
     assert!(
-      output.contains("(0, require(\"def456\"))"),
+      output.contains("require(\"def456\")"),
       "safe module should be inlined, got:\n{output}"
     );
     assert!(
@@ -555,7 +627,7 @@ function run() {
       &output,
       r#"
 function run() {
-    return (0, parcelHelpers.interopDefault((0, require("./App")))).test();
+    return parcelHelpers.interopDefault(require("./App")).test();
 }
 "#,
     );
@@ -589,7 +661,7 @@ function work() {
       &output,
       r#"
 function work() {
-    return (0, require("mod-a")).foo + (0, require("mod-b")).bar;
+    return require("mod-a").foo + require("mod-b").bar;
 }
 "#,
     );
@@ -604,7 +676,7 @@ function b() { return fs.writeFileSync("b", "x"); }
 "#;
     let output = run(code);
     assert_eq!(
-      output.matches("(0, require(\"fs\"))").count(),
+      output.matches("require(\"fs\")").count(),
       2,
       "both usages should be inlined, got:\n{output}"
     );
@@ -630,11 +702,11 @@ parcelRegister("12345", function(module, exports) {
 "#;
     let output = run(code);
     assert!(
-      output.contains("(0, require(\"internmap\")).InternSet"),
+      output.contains("require(\"internmap\").InternSet"),
       "internmap require should be inlined, got:\n{output}"
     );
     assert!(
-      output.contains("(0, require(\"other-module\")).otherKey"),
+      output.contains("require(\"other-module\").otherKey"),
       "other-module require should be inlined, got:\n{output}"
     );
     assert!(
