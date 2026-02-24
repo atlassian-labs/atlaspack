@@ -11,6 +11,7 @@ import {
 } from '@atlaspack/test-utils';
 
 import {extractSymbolTrackerSnapshot} from './utils/symbolTracker';
+import {BundleGraph, PackagedBundle} from '@atlaspack/types-internal';
 
 async function doubleBundleForFeatureFlag(
   featureFlag: string,
@@ -44,7 +45,10 @@ async function doubleBundleForFeatureFlag(
   return {bundleGraphOn, bundleGraphOff};
 }
 
-async function assertSymbolsEqual(bundleGraphA, bundleGraphB) {
+async function assertSymbolsEqual(
+  bundleGraphA: BundleGraph<PackagedBundle>,
+  bundleGraphB: BundleGraph<PackagedBundle>,
+) {
   await run(bundleGraphA);
   await run(bundleGraphB);
 
@@ -325,6 +329,211 @@ describe.v3('rust symbol tracker parity', () => {
       shared.js:
         export const foo = 'shared-foo';
         export const unusedShared = 'unused';
+    `;
+
+    let entry = path.join(dir, 'index.js');
+
+    let {bundleGraphOn, bundleGraphOff} = await doubleBundleForFeatureFlag(
+      'rustSymbolTracker',
+      entry,
+      overlayFS,
+    );
+
+    await assertSymbolsEqual(bundleGraphOn, bundleGraphOff);
+  });
+
+  // Namespace re-export tests: `export * as ns from './dep'`
+
+  it('should handle basic namespace re-export', async () => {
+    let dir = path.join(__dirname, 'rust-symbol-tracker-parity-ns-basic');
+    await overlayFS.mkdirp(dir);
+
+    await fsFixture(overlayFS, dir)`
+      yarn.lock:
+        // required for .parcelrc
+
+      package.json:
+        {
+          "name": "rust-symbol-tracker-parity-ns-basic",
+          "sideEffects": false,
+          "version": "1.0.0"
+        }
+
+      index.js:
+        import {ns} from './barrel';
+        console.log(ns.foo, ns.bar);
+
+      barrel.js:
+        export * as ns from './dep';
+
+      dep.js:
+        export function foo() { return 1; }
+        export function bar() { return 2; }
+        export function unused() { return 999; }
+    `;
+
+    let entry = path.join(dir, 'index.js');
+
+    let {bundleGraphOn, bundleGraphOff} = await doubleBundleForFeatureFlag(
+      'rustSymbolTracker',
+      entry,
+      overlayFS,
+    );
+
+    await assertSymbolsEqual(bundleGraphOn, bundleGraphOff);
+  });
+
+  it('should handle namespace re-export alongside named exports', async () => {
+    let dir = path.join(__dirname, 'rust-symbol-tracker-parity-ns-mixed');
+    await overlayFS.mkdirp(dir);
+
+    await fsFixture(overlayFS, dir)`
+      yarn.lock:
+        // required for .parcelrc
+
+      package.json:
+        {
+          "name": "rust-symbol-tracker-parity-ns-mixed",
+          "sideEffects": false,
+          "version": "1.0.0"
+        }
+
+      index.js:
+        import {ns, localFn} from './barrel';
+        console.log(ns.foo, localFn());
+
+      barrel.js:
+        export * as ns from './dep';
+        export function localFn() { return 42; }
+
+      dep.js:
+        export function foo() { return 1; }
+    `;
+
+    let entry = path.join(dir, 'index.js');
+
+    let {bundleGraphOn, bundleGraphOff} = await doubleBundleForFeatureFlag(
+      'rustSymbolTracker',
+      entry,
+      overlayFS,
+    );
+
+    await assertSymbolsEqual(bundleGraphOn, bundleGraphOff);
+  });
+
+  it('should handle namespace re-export alongside star re-export', async () => {
+    let dir = path.join(__dirname, 'rust-symbol-tracker-parity-ns-with-star');
+    await overlayFS.mkdirp(dir);
+
+    await fsFixture(overlayFS, dir)`
+      yarn.lock:
+        // required for .parcelrc
+
+      package.json:
+        {
+          "name": "rust-symbol-tracker-parity-ns-with-star",
+          "sideEffects": false,
+          "version": "1.0.0"
+        }
+
+      index.js:
+        import {foo, ns} from './barrel';
+        console.log(foo, ns.bar);
+
+      barrel.js:
+        export * from './star-dep';
+        export * as ns from './ns-dep';
+
+      star-dep.js:
+        export function foo() { return 1; }
+        export function unusedFoo() { return 999; }
+
+      ns-dep.js:
+        export function bar() { return 2; }
+        export function unusedBar() { return 888; }
+    `;
+
+    let entry = path.join(dir, 'index.js');
+
+    let {bundleGraphOn, bundleGraphOff} = await doubleBundleForFeatureFlag(
+      'rustSymbolTracker',
+      entry,
+      overlayFS,
+    );
+
+    await assertSymbolsEqual(bundleGraphOn, bundleGraphOff);
+  });
+
+  it('should handle multiple namespace re-exports from same barrel', async () => {
+    let dir = path.join(__dirname, 'rust-symbol-tracker-parity-ns-multi');
+    await overlayFS.mkdirp(dir);
+
+    await fsFixture(overlayFS, dir)`
+      yarn.lock:
+        // required for .parcelrc
+
+      package.json:
+        {
+          "name": "rust-symbol-tracker-parity-ns-multi",
+          "sideEffects": false,
+          "version": "1.0.0"
+        }
+
+      index.js:
+        import {nsFoo, nsBar} from './barrel';
+        console.log(nsFoo.a, nsBar.b);
+
+      barrel.js:
+        export * as nsFoo from './foo';
+        export * as nsBar from './bar';
+
+      foo.js:
+        export const a = 1;
+        export const unusedA = 999;
+
+      bar.js:
+        export const b = 2;
+        export const unusedB = 888;
+    `;
+
+    let entry = path.join(dir, 'index.js');
+
+    let {bundleGraphOn, bundleGraphOff} = await doubleBundleForFeatureFlag(
+      'rustSymbolTracker',
+      entry,
+      overlayFS,
+    );
+
+    await assertSymbolsEqual(bundleGraphOn, bundleGraphOff);
+  });
+
+  it('should handle chained namespace re-exports', async () => {
+    let dir = path.join(__dirname, 'rust-symbol-tracker-parity-ns-chained');
+    await overlayFS.mkdirp(dir);
+
+    await fsFixture(overlayFS, dir)`
+      yarn.lock:
+        // required for .parcelrc
+
+      package.json:
+        {
+          "name": "rust-symbol-tracker-parity-ns-chained",
+          "sideEffects": false,
+          "version": "1.0.0"
+        }
+
+      index.js:
+        import {innerNs} from './barrel1';
+        console.log(innerNs.deepNs.foo());
+
+      barrel1.js:
+        export * as innerNs from './barrel2';
+
+      barrel2.js:
+        export * as deepNs from './source';
+
+      source.js:
+        export function foo() { return 42; }
     `;
 
     let entry = path.join(dir, 'index.js');
