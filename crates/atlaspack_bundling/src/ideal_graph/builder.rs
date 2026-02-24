@@ -1089,13 +1089,30 @@ impl IdealGraphBuilder {
     // Precompute reachable assets per root bit so we don't scan all assets for every root.
     //
     // `reachable_assets_per_root[bit]` contains all assets sync-reachable from `reachability.roots[bit]`.
+    // JS semantics: assets with `bundleBehavior != null` are NOT included in `reachableAssets`
+    // (JS returns before `reachable.add()` at line 732-735 in idealGraph.ts). They act as
+    // traversal boundaries but are never counted as "reachable" from upstream roots.
+    // However, a bundleBehavior asset IS reachable from its own root (it is a bundle root).
     let reachable_assets_per_root: Vec<RoaringBitmap> = {
       let num_roots = reachability.roots.len();
       let mut per_root: Vec<RoaringBitmap> = (0..num_roots).map(|_| RoaringBitmap::new()).collect();
 
       for (&asset_key, &sync_idx) in &self.asset_to_sync_node {
+        // Check if this asset has bundleBehavior set.
+        let has_bundle_behavior = self.bundle_behavior_sync_nodes.contains_key(&sync_idx);
+
         let bs = &reachability.reach_bits[sync_idx.index()];
         for bit in bs.ones() {
+          // Skip bundleBehavior assets for OTHER roots (matches JS exclusion).
+          // A bundleBehavior asset's own root bit is allowed (it's a bundle root).
+          if has_bundle_behavior {
+            if let Some(&root_key) = reachability.roots.get(bit) {
+              if root_key != asset_key {
+                continue;
+              }
+            }
+          }
+
           if let Some(slot) = per_root.get_mut(bit) {
             slot.insert(asset_key.0);
           }
@@ -1965,35 +1982,49 @@ impl IdealGraphBuilder {
       {
         let mut to_remove: HashSet<AssetKey> = HashSet::new();
 
-        for &candidate in &eligible {
-          if to_remove.contains(&candidate) {
-            continue;
+        // Pass 1: If the current asset is itself a bundle root, reuse its bundle directly.
+        let asset_bundle_id = IdealBundleId::from_asset_key(asset_key);
+        if ideal.get_bundle(&asset_bundle_id).is_some() {
+          for &candidate in &eligible {
+            to_remove.insert(candidate);
+            ideal.add_bundle_edge(
+              IdealBundleId::from_asset_key(candidate),
+              asset_bundle_id,
+              IdealEdgeType::Sync,
+            );
           }
-
-          let Some(&candidate_bit) = reachability.root_to_bit.get(&candidate) else {
-            continue;
-          };
-
-          for &other in &eligible {
-            if other == candidate {
+        } else {
+          // Pass 2: Inter-root reachability filtering.
+          for &candidate in &eligible {
+            if to_remove.contains(&candidate) {
               continue;
             }
 
-            let Some(&other_sync_idx) = self.asset_to_sync_node.get(&other) else {
+            let Some(&candidate_bit) = reachability.root_to_bit.get(&candidate) else {
               continue;
             };
 
-            // `reach_bits[node]` contains bits for all roots that can reach `node`.
-            // If `candidate`'s bit is set on `other`'s sync node, then `candidate`
-            // can sync-reach `other` (i.e. `other` appears in `reachableAssets[candidate]` in JS).
-            if reachability.reach_bits[other_sync_idx.index()].contains(candidate_bit) {
-              to_remove.insert(candidate);
-              ideal.add_bundle_edge(
-                IdealBundleId::from_asset_key(candidate),
-                IdealBundleId::from_asset_key(other),
-                IdealEdgeType::Sync,
-              );
-              break;
+            for &other in &eligible {
+              if other == candidate || to_remove.contains(&other) {
+                continue;
+              }
+
+              let Some(&other_sync_idx) = self.asset_to_sync_node.get(&other) else {
+                continue;
+              };
+
+              // `reach_bits[node]` contains bits for all roots that can reach `node`.
+              // If `candidate`'s bit is set on `other`'s sync node, then `candidate`
+              // can sync-reach `other` (i.e. `other` appears in `reachableAssets[candidate]` in JS).
+              if reachability.reach_bits[other_sync_idx.index()].contains(candidate_bit) {
+                to_remove.insert(candidate);
+                ideal.add_bundle_edge(
+                  IdealBundleId::from_asset_key(candidate),
+                  IdealBundleId::from_asset_key(other),
+                  IdealEdgeType::Sync,
+                );
+                break;
+              }
             }
           }
         }
