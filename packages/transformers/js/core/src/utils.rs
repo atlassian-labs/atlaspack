@@ -1,6 +1,5 @@
 use std::cmp::Ordering;
 
-use atlassian_swc_compiled_css::TransformError;
 use serde::Deserialize;
 use serde::Serialize;
 use swc_core::common::DUMMY_SP;
@@ -510,32 +509,52 @@ pub fn error_buffer_to_diagnostics(
     .collect()
 }
 
-pub fn transform_errors_to_diagnostics(
-  errors: Vec<TransformError>,
-  source_map: &SourceMap,
-) -> Vec<Diagnostic> {
-  errors
-    .into_iter()
-    .map(|error| {
-      let code_highlights = error.span.and_then(|span| {
-        if span.lo().is_dummy() || span.hi().is_dummy() {
-          None
-        } else {
-          Some(vec![CodeHighlight {
-            message: None,
-            loc: SourceLocation::from(source_map, span),
-          }])
-        }
-      });
+/// Convert atlaspack_core::types::Diagnostic to utils::Diagnostic
+///
+/// Note: This conversion loses some fidelity as atlaspack_core diagnostics support
+/// multiple code frames, while utils diagnostics only support a single list of highlights.
+/// We flatten all code frames into a single list of highlights.
+pub fn atlaspack_diagnostic_to_utils_diagnostic(
+  diagnostic: atlaspack_core::types::Diagnostic,
+) -> Diagnostic {
+  // Flatten all code_frames into a single list of code_highlights
+  let code_highlights = if !diagnostic.code_frames.is_empty() {
+    let highlights: Vec<CodeHighlight> = diagnostic
+      .code_frames
+      .iter()
+      .flat_map(|frame| &frame.code_highlights)
+      .map(|highlight| CodeHighlight {
+        message: highlight.message.clone(),
+        loc: SourceLocation {
+          start_line: highlight.start.line,
+          start_col: highlight.start.column,
+          end_line: highlight.end.line,
+          end_col: highlight.end.column,
+        },
+      })
+      .collect();
 
-      Diagnostic {
-        message: error.message,
-        code_highlights,
-        hints: None,
-        show_environment: false,
-        severity: DiagnosticSeverity::Error,
-        documentation_url: None,
-      }
-    })
-    .collect()
+    if highlights.is_empty() {
+      None
+    } else {
+      Some(highlights)
+    }
+  } else {
+    None
+  };
+
+  let hints = if diagnostic.hints.is_empty() {
+    None
+  } else {
+    Some(diagnostic.hints)
+  };
+
+  Diagnostic {
+    message: diagnostic.message,
+    code_highlights,
+    hints,
+    show_environment: false,
+    severity: DiagnosticSeverity::Error,
+    documentation_url: diagnostic.documentation_url,
+  }
 }

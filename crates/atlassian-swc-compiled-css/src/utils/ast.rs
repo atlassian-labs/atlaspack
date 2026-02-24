@@ -1,25 +1,7 @@
-use swc_core::common::{DUMMY_SP, Span, SyntaxContext};
+use swc_core::common::{DUMMY_SP, SyntaxContext};
 use swc_core::ecma::ast::{
   ArrowExpr, BlockStmt, BlockStmtOrExpr, CallExpr, Callee, Expr, Function,
 };
-
-use crate::errors::set_transform_span;
-use crate::types::Metadata;
-
-/// Formats a diagnostic message that mirrors Babel's `buildCodeFrameError` helper.
-///
-/// The message mirrors the original behaviour by appending ` (line:column).` to the
-/// provided error when a span is available. When no span is available the message is
-/// returned unchanged with a trailing period.
-pub fn build_code_frame_error(message: &str, span: Option<Span>, meta: &Metadata) -> String {
-  let resolved_span = span.or(meta.own_span).or(meta.parent_span);
-  if let Some(span) = resolved_span {
-    // Capture span for panic diagnostics so TransformError::from_panic can attach it.
-    set_transform_span(span);
-  }
-
-  format!("{message}.")
-}
 
 /// Wraps the provided block or expression in an IIFE.
 pub fn wrap_node_in_iife(body: BlockStmtOrExpr) -> Expr {
@@ -103,14 +85,14 @@ pub fn pick_function_body(expr: &Expr) -> Expr {
 
 #[cfg(test)]
 mod tests {
-  use super::{build_code_frame_error, pick_function_body, wrap_node_in_iife};
+  use super::{pick_function_body, wrap_node_in_iife};
   use crate::types::{
     Metadata, PluginOptions, TransformFile, TransformFileOptions, TransformState,
   };
   use std::cell::RefCell;
   use std::rc::Rc;
   use swc_core::common::sync::Lrc;
-  use swc_core::common::{BytePos, DUMMY_SP, FileName, SourceMap, Span, SyntaxContext};
+  use swc_core::common::{DUMMY_SP, SourceMap, SyntaxContext};
   use swc_core::ecma::ast::{
     ArrowExpr, BlockStmt, BlockStmtOrExpr, CallExpr, Callee, Expr, FnExpr, Function, Ident,
     ReturnStmt, Stmt,
@@ -283,22 +265,5 @@ mod tests {
       },
       other => panic!("unexpected result: {other:?}"),
     }
-  }
-
-  #[test]
-  fn build_code_frame_error_formats_location() {
-    let meta = create_metadata_with_file();
-    let state = meta.state();
-    let sm = &state.file().source_map;
-    let file = sm.new_source_file(
-      Lrc::new(FileName::Custom("virtual.tsx".into())),
-      "let x = 1;".to_string(),
-    );
-    drop(state);
-
-    let span = Span::new(file.start_pos, file.start_pos + BytePos(3));
-    let message = build_code_frame_error("Example error", Some(span), &meta);
-
-    assert_eq!(message, "Example error.");
   }
 }
