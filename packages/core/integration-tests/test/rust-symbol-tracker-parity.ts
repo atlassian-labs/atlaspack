@@ -11,6 +11,7 @@ import {
 } from '@atlaspack/test-utils';
 
 import {extractSymbolTrackerSnapshot} from './utils/symbolTracker';
+import {BundleGraph, PackagedBundle} from '@atlaspack/types-internal';
 
 async function doubleBundleForFeatureFlag(
   featureFlag: string,
@@ -44,7 +45,10 @@ async function doubleBundleForFeatureFlag(
   return {bundleGraphOn, bundleGraphOff};
 }
 
-async function assertSymbolsEqual(bundleGraphA, bundleGraphB) {
+async function assertSymbolsEqual(
+  bundleGraphA: BundleGraph<PackagedBundle>,
+  bundleGraphB: BundleGraph<PackagedBundle>,
+) {
   await run(bundleGraphA);
   await run(bundleGraphB);
 
@@ -344,8 +348,6 @@ describe.v3('rust symbol tracker parity', () => {
     let dir = path.join(__dirname, 'rust-symbol-tracker-parity-ns-basic');
     await overlayFS.mkdirp(dir);
 
-    // barrel.js: export * as ns from './dep'
-    // index.js: import { ns } from './barrel'; console.log(ns.foo);
     await fsFixture(overlayFS, dir)`
       yarn.lock:
         // required for .parcelrc
@@ -385,7 +387,6 @@ describe.v3('rust symbol tracker parity', () => {
     let dir = path.join(__dirname, 'rust-symbol-tracker-parity-ns-mixed');
     await overlayFS.mkdirp(dir);
 
-    // barrel.js has both a namespace re-export and its own named export
     await fsFixture(overlayFS, dir)`
       yarn.lock:
         // required for .parcelrc
@@ -424,9 +425,6 @@ describe.v3('rust symbol tracker parity', () => {
     let dir = path.join(__dirname, 'rust-symbol-tracker-parity-ns-with-star');
     await overlayFS.mkdirp(dir);
 
-    // barrel.js has both:
-    //   export * from './star-dep';     (star re-export)
-    //   export * as ns from './ns-dep'; (namespace re-export)
     await fsFixture(overlayFS, dir)`
       yarn.lock:
         // required for .parcelrc
@@ -470,9 +468,6 @@ describe.v3('rust symbol tracker parity', () => {
     let dir = path.join(__dirname, 'rust-symbol-tracker-parity-ns-multi');
     await overlayFS.mkdirp(dir);
 
-    // barrel.js:
-    //   export * as nsFoo from './foo';
-    //   export * as nsBar from './bar';
     await fsFixture(overlayFS, dir)`
       yarn.lock:
         // required for .parcelrc
@@ -516,12 +511,6 @@ describe.v3('rust symbol tracker parity', () => {
     let dir = path.join(__dirname, 'rust-symbol-tracker-parity-ns-chained');
     await overlayFS.mkdirp(dir);
 
-    // barrel1.js: export * as innerNs from './barrel2';
-    // barrel2.js: export * as deepNs from './source';
-    // source.js: export function foo() {}
-    //
-    // index.js: import { innerNs } from './barrel1';
-    // innerNs.deepNs.foo()
     await fsFixture(overlayFS, dir)`
       yarn.lock:
         // required for .parcelrc

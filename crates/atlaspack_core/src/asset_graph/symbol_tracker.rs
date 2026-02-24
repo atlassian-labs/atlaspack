@@ -137,10 +137,6 @@ impl SymbolTracker {
   /// This looks at both the dependencies this asset has, to register symbols
   /// that it needs to find, and the symbols that this asset provides, to
   /// satisfy any outstanding requirements from above.
-  ///
-  /// # Errors
-  /// Returns an error if the asset graph is in an inconsistent state (e.g.,
-  /// missing nodes or conflicting symbol resolutions).
   pub fn track_symbols(
     &mut self,
     asset_graph: &AssetGraph,
@@ -560,10 +556,6 @@ impl SymbolTracker {
   /// symbol locations. This method also validates that there are no outstanding
   /// symbol requirements that have not been satisfied, and that there are no
   /// conflicts.
-  ///
-  /// # Panics
-  /// Panics if there are unsatisfied speculation groups or unresolved symbol
-  /// requirements, indicating an incomplete or inconsistent symbol propagation.
   #[tracing::instrument(name = "finalize_symbol_tracker", skip_all)]
   pub fn finalize(self) -> FinalizedSymbolTracker {
     // Any speculation groups still in the map were never satisfied
@@ -632,7 +624,6 @@ pub struct FinalizedSymbolTracker {
 }
 
 impl FinalizedSymbolTracker {
-  #[must_use]
   pub fn get_used_symbols_for_dependency(
     &self,
     dep_id: &DependencyId,
@@ -1325,11 +1316,6 @@ mod tests {
 
   #[test]
   fn track_symbols_handles_namespace_reexport_with_other_named_exports() {
-    // barrel.js has both named exports and a namespace re-export:
-    //   export * as ns from './dep';
-    //   export { localFn } (own export)
-    //
-    // index.js imports both: import { ns, localFn } from './barrel';
     let m = "$barrel$re_export$ns";
 
     let ctx = symbol_tracker_test! {
@@ -1351,12 +1337,6 @@ mod tests {
 
   #[test]
   fn track_symbols_handles_namespace_reexport_alongside_star_reexport() {
-    // barrel.js has both:
-    //   export * from './star-dep';        (star re-export: exported="*", local="*")
-    //   export * as ns from './ns-dep';    (namespace re-export: exported="*", local="ns")
-    //
-    // index.js imports: import { foo, ns } from './barrel';
-    // foo comes from star-dep, ns is the namespace of ns-dep
     let m = "$barrel$re_export$ns";
 
     let ctx = symbol_tracker_test! {
@@ -1380,12 +1360,6 @@ mod tests {
 
   #[test]
   fn track_symbols_handles_chained_namespace_reexport() {
-    // barrel1.js: export * as innerNs from './barrel2';
-    // barrel2.js: export * as deepNs from './source';
-    // source.js: export function foo() {}
-    //
-    // index.js: import { innerNs } from './barrel1';
-    // innerNs.deepNs.foo()
     let m1 = "$barrel1$re_export$innerNs";
     let m2 = "$barrel2$re_export$deepNs";
 
@@ -1410,11 +1384,6 @@ mod tests {
 
   #[test]
   fn track_symbols_handles_multiple_namespace_reexports_from_same_barrel() {
-    // barrel.js has multiple namespace re-exports:
-    //   export * as nsFoo from './foo';
-    //   export * as nsBar from './bar';
-    //
-    // index.js: import { nsFoo, nsBar } from './barrel';
     let mfoo = "$barrel$re_export$nsFoo";
     let mbar = "$barrel$re_export$nsBar";
 
