@@ -31,6 +31,7 @@ impl DebugTools {
             tools.simple_cli_reporter = true;
             tools.bundle_stats = true;
             tools.scope_hoisting_stats = true;
+            tools.debug_prelude = true;
             break;
           }
           "asset-file-names-in-output" => tools.asset_file_names_in_output = true,
