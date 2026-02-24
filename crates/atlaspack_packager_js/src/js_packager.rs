@@ -123,7 +123,16 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
     })
   }
 
-  #[tracing::instrument(level = "trace", skip_all)]
+  #[tracing::instrument(
+    level = "trace",
+    skip_all,
+    fields(
+      asset = %diff_paths(&asset.file_path, &self.context.project_root)
+        .unwrap_or_else(|| asset.file_path.clone())
+        .display()
+        .to_string()
+    )
+  )]
   fn process_asset(
     &self,
     bundle: &Bundle,
