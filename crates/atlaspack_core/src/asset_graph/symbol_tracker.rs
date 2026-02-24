@@ -1,6 +1,7 @@
 use anyhow::anyhow;
 use serde::Serialize;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use crate::{
@@ -556,8 +557,12 @@ impl SymbolTracker {
   /// symbol locations. This method also validates that there are no outstanding
   /// symbol requirements that have not been satisfied, and that there are no
   /// conflicts.
+  ///
+  /// The `asset_graph` is used to determine which dependencies should be
+  /// marked as excluded (no used symbols and all connected assets are
+  /// side-effect free).
   #[tracing::instrument(name = "finalize_symbol_tracker", skip_all)]
-  pub fn finalize(self) -> FinalizedSymbolTracker {
+  pub fn finalize(self, asset_graph: &AssetGraph) -> FinalizedSymbolTracker {
     // Any speculation groups still in the map were never satisfied
     // (satisfied groups are removed during cleanup)
     assert!(
@@ -600,8 +605,16 @@ impl SymbolTracker {
       requirements_by_dep.insert(dep_id, used_symbols);
     }
 
+    // Compute excluded dependencies.
+    // A dependency is excluded when:
+    // 1. It has statically analyzable symbols (symbols != None)
+    // 2. It has zero used symbols after propagation
+    // 3. All assets connected to the dependency are side-effect free
+    let excluded_deps = compute_excluded_deps(asset_graph, &requirements_by_dep);
+
     FinalizedSymbolTracker {
       requirements_by_dep,
+      excluded_deps,
     }
   }
 }
@@ -618,9 +631,67 @@ pub struct UsedSymbol {
 
 pub type DependencyUsedSymbols = HashMap<Symbol, UsedSymbol>;
 
+/// Computes the set of excluded dependency IDs.
+///
+/// A dependency is excluded when all three conditions are met:
+/// 1. The dependency has statically analyzable symbols (`symbols != None`)
+/// 2. The dependency has zero used symbols after propagation
+/// 3. Every asset connected to the dependency is side-effect free (`side_effects == false`)
+///
+/// This mirrors the JS implementation in `SymbolPropagation.ts` (propagateSymbolsUp).
+fn compute_excluded_deps(
+  asset_graph: &AssetGraph,
+  requirements_by_dep: &HashMap<DependencyId, DependencyUsedSymbols>,
+) -> HashSet<DependencyId> {
+  let mut excluded = HashSet::new();
+
+  for dep in asset_graph.get_dependencies() {
+    // Condition 1: dependency must have statically analyzable symbols
+    if dep.symbols.is_none() {
+      continue;
+    }
+
+    // Condition 2: dependency must have zero used symbols after propagation.
+    // A dep has zero used symbols when it either has no entry in requirements_by_dep
+    // (no symbols were ever registered for it) or the entry is empty.
+    // Dependencies with only star re-export markers (already filtered out during
+    // finalization) will also show as empty here.
+    let has_used_symbols = requirements_by_dep
+      .get(&dep.id)
+      .is_some_and(|used| !used.is_empty());
+
+    if has_used_symbols {
+      continue;
+    }
+
+    // Condition 3: all connected assets must be side-effect free.
+    let Some(dep_node_id) = asset_graph.get_node_id_by_content_key(dep.id.as_str()) else {
+      continue;
+    };
+
+    let connected_node_ids = asset_graph.get_outgoing_neighbors(dep_node_id);
+    let all_side_effect_free = connected_node_ids.iter().all(|node_id| {
+      match asset_graph.get_node(node_id) {
+        Some(AssetGraphNode::Asset(asset)) => !asset.side_effects,
+        // For non-asset nodes (e.g. asset groups) or missing nodes, we
+        // conservatively treat them as having side effects to avoid
+        // incorrectly excluding.
+        _ => false,
+      }
+    });
+
+    if all_side_effect_free {
+      excluded.insert(dep.id.clone());
+    }
+  }
+
+  excluded
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct FinalizedSymbolTracker {
   requirements_by_dep: HashMap<DependencyId, DependencyUsedSymbols>,
+  excluded_deps: HashSet<DependencyId>,
 }
 
 impl FinalizedSymbolTracker {
@@ -629,6 +700,16 @@ impl FinalizedSymbolTracker {
     dep_id: &DependencyId,
   ) -> Option<&DependencyUsedSymbols> {
     self.requirements_by_dep.get(dep_id)
+  }
+
+  /// Returns true if the dependency was excluded during symbol propagation.
+  ///
+  /// A dependency is excluded when it has statically analyzable symbols,
+  /// zero used symbols globally, and all connected assets are side-effect free.
+  /// Excluded dependencies can be safely dropped from the bundle — they bring
+  /// in nothing that is used and have no observable effects.
+  pub fn is_dependency_excluded(&self, dep_id: &DependencyId) -> bool {
+    self.excluded_deps.contains(dep_id)
   }
 }
 
@@ -874,8 +955,10 @@ mod tests {
     }
 
     /// Assert that finalize succeeds and return the finalized tracker.
-    fn assert_finalize_ok(self) -> FinalizedSymbolTracker {
-      self.tracker.finalize(&self.graph)
+    /// Clones the tracker internally so that `self` remains available for
+    /// post-finalization assertions (e.g. `assert_dep_excluded`).
+    fn assert_finalize_ok(&self) -> FinalizedSymbolTracker {
+      self.tracker.clone().finalize(&self.graph)
     }
 
     /// Assert that finalize panics with a message containing the expected string.
@@ -1505,16 +1588,20 @@ mod tests {
 
     let mut tracker = SymbolTracker::default();
     tracker
-      .track_symbols(&graph, &entry_asset, &[dep_unused.clone()])
+      .track_symbols(&graph, &entry_asset, std::slice::from_ref(&dep_unused))
       .unwrap();
     tracker.track_symbols(&graph, &unused_asset, &[]).unwrap();
 
-    let finalized = tracker.finalize(&graph);
-
-    assert!(
-      finalized.is_dependency_excluded(&dep_unused.id),
-      "Dep with empty symbols and side_effect_free target should be excluded"
-    );
+    let mut deps = HashMap::new();
+    deps.insert("./unused.js".to_string(), dep_unused);
+    let ctx = SymbolTrackerTestCtx {
+      tracker,
+      graph,
+      deps,
+      assets: HashMap::new(),
+    };
+    let finalized = ctx.assert_finalize_ok();
+    ctx.assert_dep_excluded(&finalized, "./unused.js");
   }
 
   #[test]
@@ -1527,13 +1614,8 @@ mod tests {
       }
     };
 
-    let dep_id = ctx.deps.get("./a.js").unwrap().id.clone();
     let finalized = ctx.assert_finalize_ok();
-    // This dep has a used symbol "a", so it should NOT be excluded
-    assert!(
-      !finalized.is_dependency_excluded(&dep_id),
-      "Dep with used symbols should NOT be excluded"
-    );
+    ctx.assert_dep_not_excluded(&finalized, "./a.js");
   }
 
   #[test]
@@ -1561,7 +1643,7 @@ mod tests {
 
     let mut tracker = SymbolTracker::default();
     tracker
-      .track_symbols(&graph, &entry_asset, &[dep_sideeffect.clone()])
+      .track_symbols(&graph, &entry_asset, std::slice::from_ref(&dep_sideeffect))
       .unwrap();
     tracker
       .track_symbols(&graph, &sideeffect_asset, &[])
@@ -1599,7 +1681,7 @@ mod tests {
 
     let mut tracker = SymbolTracker::default();
     tracker
-      .track_symbols(&graph, &entry_asset, &[dep_dynamic.clone()])
+      .track_symbols(&graph, &entry_asset, std::slice::from_ref(&dep_dynamic))
       .unwrap();
     tracker.track_symbols(&graph, &dynamic_asset, &[]).unwrap();
 
@@ -1640,7 +1722,7 @@ mod tests {
 
     let mut tracker = SymbolTracker::default();
     tracker
-      .track_symbols(&graph, &entry_asset, &[dep.clone()])
+      .track_symbols(&graph, &entry_asset, std::slice::from_ref(&dep))
       .unwrap();
     tracker.track_symbols(&graph, &asset_a, &[]).unwrap();
     tracker.track_symbols(&graph, &asset_b, &[]).unwrap();
@@ -1681,7 +1763,7 @@ mod tests {
 
     let mut tracker = SymbolTracker::default();
     tracker
-      .track_symbols(&graph, &entry_asset, &[dep.clone()])
+      .track_symbols(&graph, &entry_asset, std::slice::from_ref(&dep))
       .unwrap();
     tracker.track_symbols(&graph, &asset_a, &[]).unwrap();
     tracker.track_symbols(&graph, &asset_b, &[]).unwrap();

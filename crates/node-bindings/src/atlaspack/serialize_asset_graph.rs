@@ -85,6 +85,10 @@ fn serialize_asset_graph_nodes(
             .and_then(|tracker| tracker.get_used_symbols_for_dependency(&dependency.id))
             .map(|u| u.values().collect());
 
+          let excluded = symbol_tracker
+            .map(|tracker| tracker.is_dependency_excluded(&dependency.id))
+            .unwrap_or(false);
+
           SerializedAssetGraphNode::Dependency {
             value: SerializedDependency {
               id: dependency.id(),
@@ -92,6 +96,7 @@ fn serialize_asset_graph_nodes(
             },
             has_deferred: *dep_state == DependencyState::Deferred,
             used_symbols_up,
+            excluded,
           }
         }
       }))
@@ -131,5 +136,6 @@ enum SerializedAssetGraphNode<'a> {
     value: SerializedDependency<'a>,
     has_deferred: bool,
     used_symbols_up: Option<Vec<&'a UsedSymbol>>,
+    excluded: bool,
   },
 }

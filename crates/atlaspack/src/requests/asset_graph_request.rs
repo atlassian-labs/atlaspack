@@ -319,7 +319,7 @@ impl AssetGraphBuilder {
     }
 
     let finalized_symbol_tracker = if self.enable_symbol_tracker {
-      Some(self.symbol_tracker.finalize())
+      Some(self.symbol_tracker.finalize(&self.graph))
     } else {
       None
     };
