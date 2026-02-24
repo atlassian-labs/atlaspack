@@ -97,7 +97,6 @@ impl Bundler for IdealGraphBundler {
             if target_asset.bundle_behavior == Some(atlaspack_core::types::BundleBehavior::Isolated)
               || target_asset.bundle_behavior
                 == Some(atlaspack_core::types::BundleBehavior::InlineIsolated)
-              || target_asset.bundle_behavior == Some(atlaspack_core::types::BundleBehavior::Inline)
             {
               non_sync_deps_by_target_asset_id
                 .entry(target_asset.id.clone())
@@ -623,10 +622,11 @@ impl Bundler for IdealGraphBundler {
                 });
 
             if dep_is_isolated || targets_isolated_asset {
-              // Sync isolated deps are boundaries and the isolated asset has its own bundle group.
-              // Even though we don't traverse into the isolated asset for entry bundle contents,
-              // we still need to create the `bundle -> bundle_group` edge so the isolated bundle
-              // group is reachable via `traverseBundles()`.
+              // Sync isolated/inline deps are boundaries. For Isolated and InlineIsolated
+              // targets, the isolated asset has its own bundle group and we need to create
+              // a `bundle -> bundle_group` edge so it's reachable via `traverseBundles()`.
+              // Inline targets don't have bundle groups (they're embedded inline), so the
+              // bg_key lookup below will simply not find them — no edge is created.
               for target_node_id in asset_graph.get_outgoing_neighbors(&dep_node_id) {
                 let Some(target_asset) = asset_graph.get_asset(&target_node_id) else {
                   continue;
@@ -4182,6 +4182,46 @@ mod tests {
       true,
       "expected inline bundle to contain its inline root asset; got edges: {:?}",
       edges
+    );
+  }
+
+  #[test]
+  fn inline_asset_does_not_get_bundle_group() {
+    use atlaspack_core::bundle_graph::NativeBundleGraph;
+    use atlaspack_core::types::Priority;
+
+    // Regression test: inline CSS assets (from HTML <style> tags) are sync deps with
+    // BundleBehavior::Inline, but they must NOT be treated as async boundary roots.
+    // Otherwise they incorrectly get bundle groups and can create empty bundle groups.
+
+    // Use hex-like ids so NativeBundleGraph public id generation won't panic.
+    let entry = "0123456789abcdef.html";
+    let inline_css = "fedcba9876543210.css";
+
+    let asset_graph = fixture_graph_with_options(
+      &[entry],
+      &[EdgeSpec::new(entry, inline_css, Priority::Sync).inline()],
+      &[(
+        inline_css,
+        AssetOptions {
+          bundle_behavior: Some(atlaspack_core::types::BundleBehavior::Inline),
+          is_bundle_splittable: true,
+        },
+      )],
+    );
+
+    let mut bundle_graph = NativeBundleGraph::from_asset_graph(&asset_graph);
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    bundler.bundle(&asset_graph, &mut bundle_graph).unwrap();
+
+    let has_inline_css_bundle_group = bundle_graph.nodes().any(|node| match node {
+      NativeBundleGraphNode::BundleGroup { entry_asset_id, .. } => entry_asset_id == inline_css,
+      _ => false,
+    });
+
+    assert_eq!(
+      has_inline_css_bundle_group, false,
+      "did not expect a bundle group for inline CSS asset {inline_css}"
     );
   }
 }
