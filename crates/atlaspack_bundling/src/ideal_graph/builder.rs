@@ -1640,13 +1640,10 @@ impl IdealGraphBuilder {
         continue;
       }
 
-      // Bundle roots are already placed.
-      if self.bundle_roots.contains(&asset_key) {
-        continue;
-      }
-
       // Entry-like roots: entries, non-splittable, isolated, needs-stable-name.
       // These get assets duplicated into them (same as entries in JS algorithm).
+      // Note: we must compute this even for bundle roots, so that bundle roots can be
+      // duplicated into entry-like bundles (matching the JS bundler).
       let reaching_entry_like: Vec<AssetKey> = bs
         .ones()
         .map(|i| reachability.roots[i])
@@ -1722,6 +1719,12 @@ impl IdealGraphBuilder {
         // Only record canonical placement here (asset may have been duplicated into multiple bundles).
         // `move_asset_to_bundle` would remove it from the other entry-like bundles, which we don't want.
         ideal.set_asset_bundle(asset_key, Some(canonical_bundle_id));
+      }
+
+      // Bundle roots have their own bundles — skip splittable/shared placement.
+      // (But keep the entry-like duplication + canonical assignment above.)
+      if self.bundle_roots.contains(&asset_key) {
+        continue;
       }
 
       // If this asset is reachable from an entry root, do not place it into splittable
@@ -2131,6 +2134,14 @@ impl IdealGraphBuilder {
       "create_shared_bundles: grouped assets by root set"
     );
 
+    // Precompute entry-like bundle ids so we can preserve duplication semantics when
+    // extracting shared bundles.
+    let entry_like_bundle_ids: HashSet<IdealBundleId> = self
+      .entry_like_roots
+      .iter()
+      .filter_map(|root| root_bundle_ids.get(root).copied())
+      .collect();
+
     for ((mut roots, file_type), assets) in assets_by_root_set_and_type {
       roots.sort();
       roots.dedup();
@@ -2174,11 +2185,22 @@ impl IdealGraphBuilder {
       );
 
       for asset in assets {
-        let bundle = ideal
-          .get_bundle_mut(&shared_bundle_id)
-          .context("shared bundle missing")?;
-        bundle.assets.insert(asset.0 as usize);
-        ideal.move_asset_to_bundle(asset, &shared_bundle_id)?;
+        let prev = ideal.asset_bundle(&asset);
+        let was_in_entry_like = prev.is_some_and(|pid| entry_like_bundle_ids.contains(&pid));
+
+        if was_in_entry_like {
+          // Entry-like bundles (entries, isolated, non-splittable) duplicate assets into them.
+          // When extracting a shared bundle we must NOT remove the asset from those bundles,
+          // but we DO want the shared bundle to become the canonical assignment.
+          let bundle = ideal
+            .get_bundle_mut(&shared_bundle_id)
+            .context("shared bundle missing")?;
+          bundle.assets.insert(asset.0 as usize);
+          ideal.set_asset_bundle(asset, Some(shared_bundle_id));
+        } else {
+          // Normal case: move asset out of its previous canonical bundle.
+          ideal.move_asset_to_bundle(asset, &shared_bundle_id)?;
+        }
 
         if let Some(&from_root) = roots.first() {
           self.decision(

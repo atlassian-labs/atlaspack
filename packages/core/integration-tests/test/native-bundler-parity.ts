@@ -805,4 +805,63 @@ describe('Native bundling ready', function () {
     ]);
     await run(b);
   });
+
+  it('bundle root is duplicated into entry-like bundles', async function () {
+    await fsFixture(overlayFS, __dirname)`
+      native-bundling-root-in-entry-like
+        index.js:
+          import('./shared-root');
+          import('./route-a');
+          import('./route-b');
+          export default 1;
+        shared-root.js:
+          export default 'shared-root';
+        route-a.js:
+          import sr from './shared-root';
+          export default sr + 'a';
+        route-b.js:
+          import sr from './shared-root';
+          export default sr + 'b';
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "minBundles": 0,
+              "minBundleSize": 0,
+              "maxParallelRequests": 100
+            }
+          }
+        yarn.lock: {}
+    `;
+
+    let b = await bundle(
+      path.join(__dirname, 'native-bundling-root-in-entry-like/index.js'),
+      {
+        mode: 'production',
+        defaultTargetOptions: {shouldScopeHoist: false},
+        inputFS: overlayFS,
+      },
+    );
+
+    // shared-root.js is a lazy import target (bundle root) AND is sync-imported by
+    // route-a and route-b. The bundler should reuse the existing shared-root bundle
+    // rather than creating a separate shared bundle.
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        type: 'js',
+        assets: [
+          'index.js',
+          'esmodule-helpers.js',
+          'bundle-url.js',
+          'cacheLoader.js',
+          'js-loader.js',
+          'bundle-manifest.js',
+        ],
+      },
+      {type: 'js', assets: ['shared-root.js']},
+      {type: 'js', assets: ['route-a.js']},
+      {type: 'js', assets: ['route-b.js']},
+    ]);
+    await run(b);
+  });
 });

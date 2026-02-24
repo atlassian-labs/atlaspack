@@ -1566,10 +1566,12 @@ mod tests {
       for asset_idx in bundle.assets.ones() {
         let asset = g.assets.id_for(types::AssetKey(asset_idx as u32));
         if let Some(prev) = seen.insert(asset, *bundle_id) {
-          // Allow duplication if both bundles are entry-like (non-shared).
-          let both_entry_like =
-            entry_like_bundles.contains(&prev) && entry_like_bundles.contains(bundle_id);
-          if !both_entry_like {
+          // Allow duplication if either bundle is entry-like (rooted, non-shared).
+          // Entry-like bundles must be self-contained, but we also allow a shared bundle
+          // to contain the same asset (canonical assignment lives in the shared bundle).
+          let allow_duplicate =
+            entry_like_bundles.contains(&prev) || entry_like_bundles.contains(bundle_id);
+          if !allow_duplicate {
             panic!(
               "asset appears in multiple bundles unexpectedly: {asset} in {} and {}\n{}",
               g.assets.id_for(prev.as_asset_key()),
@@ -3445,7 +3447,8 @@ mod tests {
 
     assert_graph!(g, {
       bundles: {
-        "a.js" => ["a.js"],
+        // Bundle roots are also duplicated into entry-like bundles.
+        "a.js" => ["a.js", "b.js"],
         "b.js" => ["b.js", "c.js"],
         "d.js" => ["c.js", "d.js"],
       },
@@ -3598,7 +3601,7 @@ mod tests {
         "entry.js"   => ["entry.js"],
         "route-a.js" => ["route-a.js"],
         "route-b.js" => ["route-b.js"],
-        "isolated.js" => ["isolated.js"],
+        "isolated.js" => ["helper.js", "isolated.js"],
         // NOTE: the shared bundle label is arbitrary, but the bundle's identity and edges should
         // reflect that helper is shared *only* between route-a and route-b.
         shared(helper) => ["helper.js"],
@@ -3651,6 +3654,112 @@ mod tests {
         "entry.js" lazy "x.js",
         "a.js" sync "x.js",
         "b.js" sync "x.js",
+      },
+    });
+  }
+
+  #[test]
+  fn entry_like_bundle_preserves_assets_when_shared_bundle_extracted() {
+    // Regression test for Phase 9 shared extraction:
+    //
+    // When a shared bundle is extracted, assets that originated from an entry-like bundle
+    // (e.g. a non-splittable bundle) must be *preserved* in that entry-like bundle as well.
+    //
+    // Without the fix, extracting `helper.js` into a shared bundle removed it from the
+    // entry-like `non-split.js` bundle (because `move_asset_to_bundle` detached it).
+    // With the fix, `helper.js` remains in `non-split.js` and is also present in the shared bundle.
+    //
+    // Graph:
+    // entry.js --lazy--> non-split.js (non-splittable)
+    // non-split.js --sync--> helper.js
+    // entry.js --lazy--> route-a.js --sync--> helper.js
+    // entry.js --lazy--> route-b.js --sync--> helper.js
+    let asset_graph = fixture_graph_with_options(
+      &["entry.js"],
+      &[
+        EdgeSpec::new("entry.js", "non-split.js", Priority::Lazy),
+        EdgeSpec::new("non-split.js", "helper.js", Priority::Sync),
+        EdgeSpec::new("entry.js", "route-a.js", Priority::Lazy),
+        EdgeSpec::new("route-a.js", "helper.js", Priority::Sync),
+        EdgeSpec::new("entry.js", "route-b.js", Priority::Lazy),
+        EdgeSpec::new("route-b.js", "helper.js", Priority::Sync),
+      ],
+      &[(
+        "non-split.js",
+        AssetOptions {
+          is_bundle_splittable: false,
+          bundle_behavior: None,
+        },
+      )],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    // Key assertions:
+    // - `helper.js` is duplicated into the entry-like `non-split.js` bundle
+    // - `helper.js` is also extracted into a shared bundle
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js"],
+        "non-split.js" => ["helper.js", "non-split.js"],
+        "route-a.js" => ["route-a.js"],
+        "route-b.js" => ["route-b.js"],
+        shared(helper) => ["helper.js"],
+      },
+    });
+  }
+
+  #[test]
+  fn bundle_root_duplicated_into_entry_like_bundle() {
+    // Regression test for Phase 8 parent bundle roots:
+    //
+    // If an asset is a bundle root (async boundary) AND is also sync-imported by an entry-like
+    // bundle (e.g. a non-splittable bundle), the bundle root must be duplicated into the
+    // entry-like bundle.
+    //
+    // Without the fix, Phase 8 skipped duplicating bundle roots into entry-like bundles.
+    // With the fix, `lazy-target.js` ends up in BOTH `non-split.js`'s bundle and its own bundle.
+    //
+    // Graph:
+    // entry.js --lazy--> non-split.js (non-splittable)
+    // non-split.js --sync--> lazy-target.js
+    // entry.js --lazy--> lazy-target.js  (bundle root)
+    // lazy-target.js --sync--> child.js
+    let asset_graph = fixture_graph_with_options(
+      &["entry.js"],
+      &[
+        EdgeSpec::new("entry.js", "non-split.js", Priority::Lazy),
+        EdgeSpec::new("non-split.js", "lazy-target.js", Priority::Sync),
+        EdgeSpec::new("entry.js", "lazy-target.js", Priority::Lazy),
+        EdgeSpec::new("lazy-target.js", "child.js", Priority::Sync),
+      ],
+      &[(
+        "non-split.js",
+        AssetOptions {
+          is_bundle_splittable: false,
+          bundle_behavior: None,
+        },
+      )],
+    );
+
+    let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
+    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+
+    // Key assertions:
+    // - `lazy-target.js` has its own bundle (it's a lazy root)
+    // - `lazy-target.js` is also duplicated into the entry-like `non-split.js` bundle
+    // - `child.js` is in both bundles since it's sync-reachable from lazy-target
+    assert_graph!(g, {
+      bundles: {
+        "entry.js" => ["entry.js"],
+        "non-split.js" => ["child.js", "lazy-target.js", "non-split.js"],
+        "lazy-target.js" => ["child.js", "lazy-target.js"],
+      },
+      edges: {
+        "entry.js" lazy "non-split.js",
+        "entry.js" lazy "lazy-target.js",
+        "non-split.js" sync "lazy-target.js",
       },
     });
   }
