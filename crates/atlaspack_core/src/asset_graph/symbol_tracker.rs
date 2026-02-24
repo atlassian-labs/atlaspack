@@ -365,17 +365,22 @@ impl SymbolTracker {
             if existing_location == located_symbol {
               continue;
             }
-            // Different location for the same symbol — this is unexpected
-            // and may indicate an ambiguous resolution. Log a warning but
-            // continue, matching the JS behavior where Map.set() overwrites.
-            tracing::warn!(
-              "Symbol {} for dep [{}] resolved to a different location: \
-               existing={:?}, new={:?}",
-              required.symbol.exported,
-              dep.id,
-              existing_location,
-              located_symbol
-            );
+            // Different location for the same symbol. For the `*` wildcard
+            // this is expected: multiple CJS assets or star re-exports all
+            // provide `*` and answer propagation resolves it multiple times
+            // from different sources. For named symbols this may indicate
+            // a genuine ambiguity; log a warning matching the JS behavior
+            // where Map.set() silently overwrites.
+            if required.symbol.exported != "*" {
+              tracing::warn!(
+                "Symbol conflict: {} for dep [{}] resolved to a different location: \
+                 existing={:?}, new={:?}",
+                required.symbol.exported,
+                dep.id,
+                existing_location,
+                located_symbol
+              );
+            }
             continue;
           }
 
