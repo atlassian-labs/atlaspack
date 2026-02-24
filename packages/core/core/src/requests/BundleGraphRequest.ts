@@ -14,7 +14,6 @@ import type {ConfigAndCachePath} from './AtlaspackConfigRequest';
 
 import fs from 'fs';
 import invariant from 'assert';
-import assert from 'assert';
 import nullthrows from 'nullthrows';
 import {instrumentAsync, PluginLogger} from '@atlaspack/logger';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
@@ -36,13 +35,8 @@ import {
   createDevDependency,
   getDevDepRequests,
   invalidateDevDeps,
-  runDevDepRequest,
 } from './DevDepRequest';
-import {
-  loadPluginConfig,
-  runConfigRequest,
-  PluginWithLoadConfig,
-} from './ConfigRequest';
+import {PluginWithLoadConfig} from './ConfigRequest';
 import {fromProjectPathRelative} from '../projectPath';
 import {
   validateBundles,
@@ -77,6 +71,7 @@ export type BundleGraphResult = {
   assetGraphBundlingVersion: number;
   changedAssets: Map<string, Asset>;
   assetRequests: Array<AssetGroup>;
+  didIncrementallyBundle: boolean;
 };
 
 type BundleGraphRequest = {
@@ -335,7 +330,7 @@ class BundlerRunner {
       type: 'buildProgress',
       phase: 'bundling',
     });
-
+    let didIncrementallyBundle = false;
     await this.loadConfigs();
 
     let plugin = await this.config.getBundler();
@@ -373,6 +368,7 @@ class BundlerRunner {
           invariant(changedAssetNode.type === 'asset');
           internalBundleGraph.updateAsset(changedAssetNode);
         }
+        didIncrementallyBundle = true;
       } else {
         internalBundleGraph = InternalBundleGraph.fromAssetGraph(
           graph,
@@ -468,6 +464,7 @@ class BundlerRunner {
             assetGraphBundlingVersion: graph.getBundlingVersion(),
             changedAssets: new Map(),
             assetRequests: [],
+            didIncrementallyBundle,
           },
           this.cacheKey,
         );
@@ -554,6 +551,7 @@ class BundlerRunner {
         assetGraphBundlingVersion: graph.getBundlingVersion(),
         changedAssets: new Map(),
         assetRequests: [],
+        didIncrementallyBundle,
       },
       this.cacheKey,
     );
@@ -563,6 +561,7 @@ class BundlerRunner {
       assetGraphBundlingVersion: graph.getBundlingVersion(),
       changedAssets: changedRuntimes,
       assetRequests,
+      didIncrementallyBundle,
     };
   }
 }

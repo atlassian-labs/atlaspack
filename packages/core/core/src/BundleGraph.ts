@@ -655,6 +655,45 @@ export default class BundleGraph {
   }
 
   /**
+   * Serialize only the given asset nodes for native incremental update.
+   * Same node shape and env/omit logic as serializeForNative.
+   */
+  serializeAssetNodesForNative(assetIds: Array<string>): string {
+    const start = performance.now();
+
+    if (assetIds.length === 0) {
+      return '[]';
+    }
+
+    const nodes: Array<BundleGraphNode> = [];
+    for (const assetId of assetIds) {
+      const node = this._graph.getNodeByContentKey(assetId);
+      if (node?.type !== 'asset') {
+        continue;
+      }
+      const processedNode = {...node};
+      if (node.value?.env) {
+        processedNode.value = {
+          ...node.value,
+          env: fromEnvironmentId(node.value.env).id,
+        };
+      }
+      nodes.push(processedNode);
+    }
+    const optimizedNodes = nodes.map((node) => this._omitNulls(node));
+    const nodesJson = JSON.stringify(optimizedNodes);
+
+    const duration = performance.now() - start;
+    const nodesSizeMB = (nodesJson.length / (1024 * 1024)).toFixed(2);
+
+    logger.verbose({
+      origin: '@atlaspack/core',
+      message: `serializeAssetNodesForNative: ${duration.toFixed(1)}ms, ${nodesSizeMB}MB nodes, ${nodes.length} nodes`,
+    });
+    return nodesJson;
+  }
+
+  /**
    * Remove null and undefined values from an object to reduce JSON size.
    * Preserves false, 0, empty strings, and arrays.
    */

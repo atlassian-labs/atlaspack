@@ -5,7 +5,7 @@ use std::sync::Arc;
 use atlaspack_config::atlaspack_rc_config_loader::{AtlaspackRcConfigLoader, LoadConfigOptions};
 use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode, FinalizedSymbolTracker};
 use atlaspack_core::bundle_graph::bundle_graph_from_js::{
-  BundleGraphEdgeType, BundleGraphFromJs, BundleGraphNode,
+  BundleGraphEdgeType, BundleGraphFromJs, BundleGraphNode, types::AssetNode,
 };
 use atlaspack_core::config_loader::ConfigLoader;
 use atlaspack_core::package_result::PackageResult;
@@ -262,6 +262,19 @@ impl Atlaspack {
     *self.bundle_graph.write() =
       BundleGraphFromJs::new(nodes, edges, public_id_by_asset_id, environments);
     Ok(())
+  }
+
+  /// Returns the bundle graph's environment map
+  pub fn get_bundle_graph_environments(&self) -> Vec<Arc<Environment>> {
+    self.bundle_graph.read().get_environments()
+  }
+
+  /// Updates existing asset nodes in the bundle graph. `nodes` are pre-deserialized
+  /// at the node-bindings level using the graph's existing environment map.
+  #[tracing::instrument(level = "info", skip_all, fields(node_count = nodes.len()))]
+  pub fn update_bundle_graph(&self, nodes: Vec<AssetNode>) -> anyhow::Result<()> {
+    let mut graph = self.bundle_graph.write();
+    graph.update_assets(nodes)
   }
 
   #[tracing::instrument(level = "info", skip_all)]
