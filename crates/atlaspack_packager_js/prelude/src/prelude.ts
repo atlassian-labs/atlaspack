@@ -20,14 +20,15 @@ declare const MODE: 'debug' | 'dev' | 'prod';
 
 let registry: Record<string, ModuleFactory> = {};
 let modules: Record<string, Module> = {};
+let logEntries: string[] = MODE === 'debug' ? [] : undefined as unknown as string[];
 
 // Debug-only: tracks the current require call chain
 const requireStack: string[] = MODE === 'debug' ? [] : (undefined as unknown as string[]);
-
+const log: (message: string) => void = MODE === 'debug' ? (message: string) => logEntries.push(message) : () => {};
+const metrics: { registered: number, executed: number, timings: Record<string, number> } = { registered: 0, executed: 0, timings: {} };
 const require = (id: string): ModuleExports => {
   if (modules[id]) {
-    // eslint-disable-next-line no-console
-    MODE === 'debug' && console.log(`${' '.repeat(requireStack.length)}require(${id})`);
+    MODE === 'debug' && log(`${' '.repeat(requireStack.length)}require(${id})`);
     return modules[id].exports;
   }
   const module: Module = {exports: {}};
@@ -38,10 +39,9 @@ const require = (id: string): ModuleExports => {
     e.code = 'MODULE_NOT_FOUND';
     throw e;
   }
-  // eslint-disable-next-line no-console
-  MODE === 'debug' && console.log(`${' '.repeat(requireStack.length)}require(${id})::factory`);
   if (MODE === 'debug') {
     requireStack.push(id);
+    const startTime = Date.now();
     try {
       registry[id].call(
         module.exports,
@@ -50,12 +50,13 @@ const require = (id: string): ModuleExports => {
         module.exports,
         globalObject,
       );
+      const endTime = Date.now();
+      log(`${' '.repeat(requireStack.length - 1)}require(${id})::factory ${endTime - startTime}ms`);
+      metrics.timings[id] = endTime - startTime;
     } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error(`\nRequire stack trace (module that threw listed first):`);
+      log(`\nRequire stack trace (module that threw listed first):`);
       for (let i = requireStack.length - 1; i >= 0; i--) {
-        // eslint-disable-next-line no-console
-        console.error(`  ${i === requireStack.length - 1 ? '>' : ' '} ${requireStack[i]}`);
+        log(`  ${i === requireStack.length - 1 ? '>' : ' '} ${requireStack[i]}`);
       }
       throw e;
     } finally {
@@ -70,10 +71,12 @@ const require = (id: string): ModuleExports => {
       globalObject,
     );
   }
+  metrics.executed += 1;
   return module.exports;
 };
 const define = (id: string, factory: ModuleFactory): void => {
   registry[id] = factory;
+  metrics.registered += 1;
 };
 
 // Used for testing
@@ -85,4 +88,6 @@ export default {
   require,
   define,
   __reset,
+  metrics,
+  logEntries
 };
