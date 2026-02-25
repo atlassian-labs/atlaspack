@@ -189,14 +189,14 @@ impl IdealGraphBuilder {
 
     // Phase 6: availability propagation (ancestor_assets).
     //
-    // Note: Phase 6 placement needs `ancestor_assets` to avoid placing assets that are already
+    // Note: Phase 8 placement needs `ancestor_assets` to avoid placing assets that are already
     // available from an ancestor bundle (matches JS Insert Or Share filtering).
     self.compute_availability(&reachability, &mut ideal)?;
 
     // Phase 7: internalize async bundles whose root is already available from all parents.
     // Must run before placement so internalized roots are removed from reachability
     // (matching JS where internalization runs before Insert Or Share).
-    self.internalize_async_bundles(asset_graph, &mut reachability, &mut ideal)?;
+    self.internalize_async_bundles(&mut reachability, &mut ideal)?;
 
     // Phase 8: place single-root assets into their dominating bundle.
     self.place_single_root_assets(&reachability, &mut ideal)?;
@@ -382,7 +382,7 @@ impl IdealGraphBuilder {
 
           // Sync type-change deps (e.g. `import './style.css'` from JS) should NOT create
           // bundle boundaries. They are regular sync-reachable assets that get separated
-          // into type-change sibling bundles during Phase 6 placement.
+          // into type-change sibling bundles during Phase 8 placement.
           //
           // Non-sync type-change (e.g. lazy CSS, which doesn't exist in practice) and
           // isolated type-change (SVG via `new URL()`) ARE boundaries.
@@ -507,10 +507,7 @@ impl IdealGraphBuilder {
           continue;
         }
 
-        if dep.bundle_behavior == Some(BundleBehavior::Isolated)
-          || dep.bundle_behavior == Some(BundleBehavior::InlineIsolated)
-          || dep.bundle_behavior == Some(BundleBehavior::Inline)
-        {
+        if dep.bundle_behavior.is_some_and(|b| b.is_boundary()) {
           continue;
         }
 
@@ -538,7 +535,7 @@ impl IdealGraphBuilder {
           // Note: sync type-change edges (e.g. JS → CSS) are NOT skipped here.
           // CSS assets from sync imports are regular sync-reachable assets (not
           // boundaries), so they naturally participate in the sync graph. They
-          // will be separated into type-change sibling bundles during Phase 6.
+          // will be separated into type-change sibling bundles during Phase 8.
           let Some(&to_idx) = self.asset_to_sync_node.get(&target_key) else {
             continue;
           };
@@ -557,10 +554,10 @@ impl IdealGraphBuilder {
   }
 
   // ----------------------------
-  // Phase 3: Placement
+  // Phase 3: Create bundle roots
   // ----------------------------
 
-  /// Phase 4: Create bundle root shells only.
+  /// Phase 3: Create bundle root shells only.
   ///
   /// Non-root assets are left unplaced; they will be assigned in Phase 8 using
   /// dominator subtree information combined with availability/reachability data.
@@ -1123,12 +1120,12 @@ impl IdealGraphBuilder {
 
     // NodeIndex -> computed ancestor assets for that bundle root.
     // Only populated for nodes we actually process.
-    let mut ancestor_by_node: HashMap<NodeIndex, RoaringBitmap> = HashMap::new();
+    let mut availability_by_node: HashMap<NodeIndex, RoaringBitmap> = HashMap::new();
 
     // Initialize entries to empty ancestor set (matches JS `ancestorAssets[entry] = empty`).
     for entry in self.entry_roots.iter() {
       if let Some(&idx) = self.bundle_root_graph_nodes.get(entry) {
-        ancestor_by_node.insert(idx, RoaringBitmap::new());
+        availability_by_node.insert(idx, RoaringBitmap::new());
       }
     }
 
@@ -1269,7 +1266,7 @@ impl IdealGraphBuilder {
       {
         RoaringBitmap::new()
       } else {
-        ancestor_by_node
+        availability_by_node
           .get(&node)
           .cloned()
           .unwrap_or_else(RoaringBitmap::new)
@@ -1314,7 +1311,7 @@ impl IdealGraphBuilder {
 
       // Persist computed ancestor assets back onto the IdealBundle.
       if let Some(b) = ideal.get_bundle_mut(&bundle_id) {
-        b.ancestor_assets = ancestor_by_node
+        b.ancestor_assets = availability_by_node
           .get(&node)
           .cloned()
           .unwrap_or_else(RoaringBitmap::new);
@@ -1357,7 +1354,7 @@ impl IdealGraphBuilder {
           || child_bundle.behavior == Some(BundleBehavior::InlineIsolated)
           || child_bundle.behavior == Some(BundleBehavior::Inline)
         {
-          ancestor_by_node.insert(child, RoaringBitmap::new());
+          availability_by_node.insert(child, RoaringBitmap::new());
           continue;
         }
 
@@ -1370,10 +1367,10 @@ impl IdealGraphBuilder {
         };
 
         // Intersect across all parents.
-        if let Some(existing) = ancestor_by_node.get_mut(&child) {
+        if let Some(existing) = availability_by_node.get_mut(&child) {
           *existing &= &current_child_available;
         } else {
-          ancestor_by_node.insert(child, current_child_available.clone());
+          availability_by_node.insert(child, current_child_available.clone());
         }
 
         // Update parallel availability for later siblings.
@@ -1399,7 +1396,7 @@ impl IdealGraphBuilder {
   }
 
   // ----------------------------
-  // Phase 6: Reachability
+  // Phase 5: Reachability
   // ----------------------------
 
   /// Derive reachability by propagating bundle-root bitsets through the sync graph in
@@ -1436,18 +1433,12 @@ impl IdealGraphBuilder {
     let mut reach_bits: Vec<FixedBitSet> = vec![FixedBitSet::with_capacity(num_roots); bound];
 
     // Seed root bits.
-    // Track the initial seed bits separately so we can stop propagation past bundleBehavior assets.
-    let mut initial_bits: HashMap<NodeIndex, FixedBitSet> = HashMap::new();
     for (i, root_key) in roots.iter().copied().enumerate() {
       let Some(&root_idx) = self.asset_to_sync_node.get(&root_key) else {
         continue;
       };
 
       reach_bits[root_idx.index()].insert(i);
-
-      let mut bs = FixedBitSet::with_capacity(num_roots);
-      bs.insert(i);
-      initial_bits.insert(root_idx, bs);
     }
 
     let root_to_bit: HashMap<AssetKey, usize> =
@@ -1636,7 +1627,7 @@ impl IdealGraphBuilder {
   }
 
   // ----------------------------
-  // Phase 6: Single-root asset placement
+  // Phase 8: Single-root asset placement
   // ----------------------------
 
   /// Place assets that are reachable from exactly one bundle root into that root's bundle.
@@ -1791,7 +1782,7 @@ impl IdealGraphBuilder {
 
       // If this asset is reachable from an entry root, do not place it into splittable
       // (async) roots as well. Entry bundles are ancestors of async bundles, so the asset
-      // will be available via ancestor_assets (Phase 8a).
+      // will be available via ancestor_assets (Phase 8).
       //
       // Special-case: `esmodule-helpers.js` should be treated as entry-like when also reachable
       // from any entry-like root. This prevents it from being placed into async bundles in
@@ -1885,7 +1876,7 @@ impl IdealGraphBuilder {
   }
 
   // ----------------------------
-  // Phase 6 helper: type-change sibling bundle resolution
+  // Phase 8 helper: type-change sibling bundle resolution
   // ----------------------------
 
   /// If the asset's file type differs from the target bundle's type, resolve to a
@@ -1967,7 +1958,7 @@ impl IdealGraphBuilder {
 
   /// Extract shared bundles for multi-root assets (reachable from >1 non-entry roots).
   ///
-  /// After availability is computed over placed single-root assets (Phase 8a),
+  /// After availability is computed over placed single-root assets (Phase 8),
   /// we filter multi-root assets by availability and either:
   /// - Place into a single eligible root (if availability reduces to 1).
   /// - Extract into a shared bundle.
@@ -2297,7 +2288,7 @@ impl IdealGraphBuilder {
   }
 
   // ----------------------------
-  // Phase 8: Internalization
+  // Phase 7: Internalization
   // ----------------------------
 
   /// Internalize async bundles whose root asset is already available from all parent bundles.
@@ -2309,7 +2300,6 @@ impl IdealGraphBuilder {
   /// Matches the JS algorithm's "Step Internalize async bundles" behavior.
   fn internalize_async_bundles(
     &mut self,
-    _asset_graph: &AssetGraph,
     reachability: &mut Reachability,
     ideal: &mut IdealGraph,
   ) -> anyhow::Result<()> {

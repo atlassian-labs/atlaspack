@@ -29,12 +29,7 @@ use self::{
 };
 
 fn is_boundary_behavior(behavior: Option<atlaspack_core::types::BundleBehavior>) -> bool {
-  matches!(
-    behavior,
-    Some(atlaspack_core::types::BundleBehavior::Isolated)
-      | Some(atlaspack_core::types::BundleBehavior::InlineIsolated)
-      | Some(atlaspack_core::types::BundleBehavior::Inline)
-  )
+  behavior.is_some_and(|b| b.is_boundary())
 }
 
 /// Bundler implementation backed by the (future) ideal graph algorithm.
@@ -165,7 +160,7 @@ impl Bundler for IdealGraphBundler {
         .context("ideal bundle missing")?;
 
       // Create the bundle group.
-      let bundle_group_id = format!("bundle_group:{}{}", target.name, entry_asset_id);
+      let bundle_group_id = bg_key(&target.name, entry_asset_id);
       let bundle_group_node_id =
         bundle_graph.add_bundle_group(bundle_group_id, target.clone(), entry_asset_id.clone());
 
@@ -284,7 +279,7 @@ impl Bundler for IdealGraphBundler {
       if let Some(root_asset_id) = &ideal_bundle.root_asset_id
         && has_own_bundle_group
       {
-        let bundle_group_id = format!("bundle_group:{}{}", default_target.name, root_asset_id);
+        let bundle_group_id = bg_key(&default_target.name, root_asset_id);
         let bundle_group_node_id = bundle_graph.add_bundle_group(
           bundle_group_id,
           default_target.clone(),
@@ -366,7 +361,7 @@ impl Bundler for IdealGraphBundler {
       };
 
       let group_root_id = ideal_graph.assets.id_for(group_root_key);
-      let bg_key = format!("bundle_group:{}{}", default_target.name, group_root_id);
+      let bg_key = bg_key(&default_target.name, group_root_id);
       let Some(&bg_node_id) = bundle_graph.get_node_id_by_content_key(&bg_key) else {
         continue;
       };
@@ -422,7 +417,7 @@ impl Bundler for IdealGraphBundler {
         if let Some(from_bundle) = ideal_graph.get_bundle(from_id)
           && let Some(from_root_asset_id) = &from_bundle.root_asset_id
         {
-          let bg_key = format!("bundle_group:{}{}", default_target.name, from_root_asset_id);
+          let bg_key = bg_key(&default_target.name, from_root_asset_id);
           if let Some(&bg_node_id) = bundle_graph.get_node_id_by_content_key(&bg_key) {
             // Add the shared bundle to the bundle group for graph traversal only (Null edge).
             //
@@ -510,7 +505,7 @@ impl Bundler for IdealGraphBundler {
             continue;
           };
           let bg_root_asset_id = ideal_graph.assets.id_for(bg_root_key);
-          let from_bg_key = format!("bundle_group:{}{}", default_target.name, bg_root_asset_id);
+          let from_bg_key = bg_key(&default_target.name, bg_root_asset_id);
           let Some(&from_bg_node_id) = bundle_graph.get_node_id_by_content_key(&from_bg_key) else {
             continue;
           };
@@ -540,7 +535,7 @@ impl Bundler for IdealGraphBundler {
         };
 
         // Non-type-change edges: connect to the child's bundle group (if it exists).
-        let bg_key = format!("bundle_group:{}{}", default_target.name, to_root_asset_id);
+        let bg_key = bg_key(&default_target.name, to_root_asset_id);
         let Some(&to_bg_node_id) = bundle_graph.get_node_id_by_content_key(&bg_key) else {
           continue;
         };
@@ -690,8 +685,9 @@ impl Bundler for IdealGraphBundler {
                   continue;
                 };
 
-                let bg_key = format!("bundle_group:{}{}", default_target.name, &target_asset.id);
-                let Some(&to_bg_node_id) = bundle_graph.get_node_id_by_content_key(&bg_key) else {
+                let target_bg_key = bg_key(&default_target.name, &target_asset.id);
+                let Some(&to_bg_node_id) = bundle_graph.get_node_id_by_content_key(&target_bg_key)
+                else {
                   continue;
                 };
 
@@ -838,8 +834,9 @@ impl Bundler for IdealGraphBundler {
                     continue;
                   }
 
-                  let bg_key = format!("bundle_group:{}{}", default_target.name, &target_asset.id);
-                  let Some(&to_bg_node_id) = bundle_graph.get_node_id_by_content_key(&bg_key)
+                  let target_bg_key = bg_key(&default_target.name, &target_asset.id);
+                  let Some(&to_bg_node_id) =
+                    bundle_graph.get_node_id_by_content_key(&target_bg_key)
                   else {
                     continue;
                   };
@@ -1151,6 +1148,11 @@ fn materialize_ideal_bundle(
   let node_id = bundle_graph.add_bundle(bundle);
   materialized.insert(*ideal_bundle_id, node_id);
   Ok(node_id)
+}
+
+/// Generate a bundle group content key from a target name and asset ID.
+fn bg_key(target_name: &str, asset_id: &str) -> String {
+  format!("bundle_group:{}{}", target_name, asset_id)
 }
 
 #[cfg(test)]
@@ -2102,7 +2104,7 @@ mod tests {
       .get_node_id_by_content_key(&styles_bundle.id)
       .unwrap();
 
-    let entry_bg_key = format!("bundle_group:{}{}", Target::default().name, entry);
+    let entry_bg_key = bg_key(&Target::default().name, entry);
     let entry_bg_node = *bundle_graph
       .get_node_id_by_content_key(&entry_bg_key)
       .unwrap();
@@ -2147,7 +2149,7 @@ mod tests {
     );
 
     // And styles should NOT have its own bundle group.
-    let styles_bg_key = format!("bundle_group:{}{}", Target::default().name, styles);
+    let styles_bg_key = bg_key(&Target::default().name, styles);
     assert!(
       bundle_graph
         .get_node_id_by_content_key(&styles_bg_key)
