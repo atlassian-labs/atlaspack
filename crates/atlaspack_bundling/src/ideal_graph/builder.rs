@@ -2,6 +2,8 @@ use fixedbitset::FixedBitSet;
 use roaring::RoaringBitmap;
 use std::collections::{HashMap, HashSet, VecDeque};
 
+use super::dense_bitset::DenseBitset;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum SyncNode {
   VirtualRoot,
@@ -1168,13 +1170,13 @@ impl IdealGraphBuilder {
 
     // NodeIndex -> computed ancestor assets for that bundle root.
     // Only populated for nodes we actually process.
-    let mut availability_by_node: Vec<Option<RoaringBitmap>> =
+    let mut availability_by_node: Vec<Option<DenseBitset>> =
       vec![None; self.bundle_root_graph.node_bound()];
 
     // Initialize entries to empty ancestor set (matches JS `ancestorAssets[entry] = empty`).
     for entry in self.entry_roots.iter() {
       if let Some(&idx) = self.bundle_root_graph_nodes.get(entry) {
-        availability_by_node[idx.index()] = Some(RoaringBitmap::new());
+        availability_by_node[idx.index()] = Some(DenseBitset::new());
       }
     }
 
@@ -1191,9 +1193,9 @@ impl IdealGraphBuilder {
     // (JS returns before `reachable.add()` at line 732-735 in idealGraph.ts). They act as
     // traversal boundaries but are never counted as "reachable" from upstream roots.
     // However, a bundleBehavior asset IS reachable from its own root (it is a bundle root).
-    let reachable_assets_per_root: Vec<RoaringBitmap> = {
+    let reachable_assets_per_root: Vec<DenseBitset> = {
       let num_roots = reachability.roots.len();
-      let mut per_root: Vec<RoaringBitmap> = (0..num_roots).map(|_| RoaringBitmap::new()).collect();
+      let mut per_root: Vec<DenseBitset> = (0..num_roots).map(|_| DenseBitset::new()).collect();
 
       for (sync_i, bs) in reachability.reach_bits.iter().enumerate() {
         let Some(asset_key) = sync_idx_to_asset.get(sync_i).and_then(|v| *v) else {
@@ -1313,11 +1315,11 @@ impl IdealGraphBuilder {
 
     // Precompute per-bundle-group union of all members' reachable assets.
     // This avoids re-computing the same union for every node in the group.
-    let group_unions: Vec<Option<RoaringBitmap>> = {
+    let group_unions: Vec<Option<DenseBitset>> = {
       let capacity = self.bundle_root_graph.node_bound();
-      let mut unions: Vec<Option<RoaringBitmap>> = vec![None; capacity];
+      let mut unions: Vec<Option<DenseBitset>> = vec![None; capacity];
       for (&group_root, members) in &bundle_group_members {
-        let mut group_union = RoaringBitmap::new();
+        let mut group_union = DenseBitset::new();
         for &member in members {
           let Some(&member_key) = self.bundle_root_graph.node_weight(member) else {
             continue;
@@ -1362,11 +1364,11 @@ impl IdealGraphBuilder {
         || bundle.behavior == Some(BundleBehavior::InlineIsolated)
         || bundle.behavior == Some(BundleBehavior::Inline)
       {
-        RoaringBitmap::new()
+        DenseBitset::new()
       } else {
         availability_by_node[node.index()]
           .clone()
-          .unwrap_or_else(RoaringBitmap::new)
+          .unwrap_or_else(DenseBitset::new)
       };
 
       // Bundle-group co-load: union in reachable assets from ALL bundles in this node's bundle group.
@@ -1391,6 +1393,7 @@ impl IdealGraphBuilder {
       if let Some(b) = ideal.get_bundle_mut(&bundle_id) {
         b.ancestor_assets = availability_by_node[node.index()]
           .take()
+          .map(|db| db.to_roaring())
           .unwrap_or_default();
 
         self.decision(
@@ -1404,7 +1407,7 @@ impl IdealGraphBuilder {
 
       // Propagate to children.
       // Maintain per-parent parallel sibling availability: later parallel siblings see earlier siblings.
-      let mut parallel_availability = RoaringBitmap::new();
+      let mut parallel_availability = DenseBitset::new();
 
       // Children must be processed in insertion order (matches JS `getNodeIdsConnectedFrom`).
       for e in self
@@ -1431,7 +1434,7 @@ impl IdealGraphBuilder {
           || child_bundle.behavior == Some(BundleBehavior::InlineIsolated)
           || child_bundle.behavior == Some(BundleBehavior::Inline)
         {
-          availability_by_node[child.index()] = Some(RoaringBitmap::new());
+          availability_by_node[child.index()] = Some(DenseBitset::new());
           continue;
         }
 

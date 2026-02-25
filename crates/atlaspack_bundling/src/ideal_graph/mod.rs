@@ -11,6 +11,8 @@
 pub mod builder;
 pub mod types;
 
+mod dense_bitset;
+
 use anyhow::Context;
 use atlaspack_core::{
   asset_graph::AssetGraph,
