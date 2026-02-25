@@ -1137,12 +1137,13 @@ impl IdealGraphBuilder {
 
     // NodeIndex -> computed ancestor assets for that bundle root.
     // Only populated for nodes we actually process.
-    let mut availability_by_node: HashMap<NodeIndex, RoaringBitmap> = HashMap::new();
+    let mut availability_by_node: Vec<Option<RoaringBitmap>> =
+      vec![None; self.bundle_root_graph.node_bound()];
 
     // Initialize entries to empty ancestor set (matches JS `ancestorAssets[entry] = empty`).
     for entry in self.entry_roots.iter() {
       if let Some(&idx) = self.bundle_root_graph_nodes.get(entry) {
-        availability_by_node.insert(idx, RoaringBitmap::new());
+        availability_by_node[idx.index()] = Some(RoaringBitmap::new());
       }
     }
 
@@ -1279,6 +1280,38 @@ impl IdealGraphBuilder {
       }
     }
 
+    // Precompute per-bundle-group union of all members' reachable assets.
+    // This avoids re-computing the same union for every node in the group.
+    let group_unions: Vec<Option<RoaringBitmap>> = {
+      let capacity = self.bundle_root_graph.node_bound();
+      let mut unions: Vec<Option<RoaringBitmap>> = vec![None; capacity];
+      for (&group_root, members) in &bundle_group_members {
+        let mut group_union = RoaringBitmap::new();
+        for &member in members {
+          let Some(&member_key) = self.bundle_root_graph.node_weight(member) else {
+            continue;
+          };
+          // Skip members with bundleBehavior set.
+          let member_bundle_id = IdealBundleId::from_asset_key(member_key);
+          if let Some(member_bundle) = ideal.get_bundle(&member_bundle_id)
+            && member_bundle.behavior.is_some()
+          {
+            continue;
+          }
+          // Union in member's full sync-reachable set.
+          if let Some(&member_bit) = reachability.root_to_bit.get(&member_key)
+            && let Some(reachable) = reachable_assets_per_root.get(member_bit)
+          {
+            group_union |= reachable;
+          }
+          // The member root itself is always available.
+          group_union.insert(member_key.0);
+        }
+        unions[group_root.index()] = Some(group_union);
+      }
+      unions
+    };
+
     for node in order {
       if node == virtual_root {
         continue;
@@ -1300,9 +1333,8 @@ impl IdealGraphBuilder {
       {
         RoaringBitmap::new()
       } else {
-        availability_by_node
-          .get(&node)
-          .cloned()
+        availability_by_node[node.index()]
+          .clone()
           .unwrap_or_else(RoaringBitmap::new)
       };
 
@@ -1316,39 +1348,19 @@ impl IdealGraphBuilder {
         && bundle.behavior != Some(BundleBehavior::Inline)
       {
         let group_root = bundle_group_of.get(&node).copied().unwrap_or(node);
-        if let Some(members) = bundle_group_members.get(&group_root) {
-          for &member in members {
-            let Some(&member_key) = self.bundle_root_graph.node_weight(member) else {
-              continue;
-            };
-
-            // Skip bundles with an explicit behavior (matches JS `bundleBehavior != null`).
-            let member_bundle_id = IdealBundleId::from_asset_key(member_key);
-            if let Some(member_bundle) = ideal.get_bundle(&member_bundle_id)
-              && member_bundle.behavior.is_some()
-            {
-              continue;
-            }
-
-            // Union in member's full sync-reachable set.
-            if let Some(&member_bit) = reachability.root_to_bit.get(&member_key)
-              && let Some(reachable) = reachable_assets_per_root.get(member_bit)
-            {
-              available |= reachable;
-            }
-
-            // The member root itself is always available.
-            available.insert(member_key.0);
-          }
+        if let Some(group_union) = group_unions
+          .get(group_root.index())
+          .and_then(|v| v.as_ref())
+        {
+          available |= group_union;
         }
       }
 
       // Persist computed ancestor assets back onto the IdealBundle.
       if let Some(b) = ideal.get_bundle_mut(&bundle_id) {
-        b.ancestor_assets = availability_by_node
-          .get(&node)
-          .cloned()
-          .unwrap_or_else(RoaringBitmap::new);
+        b.ancestor_assets = availability_by_node[node.index()]
+          .take()
+          .unwrap_or_default();
 
         self.decision(
           "availability",
@@ -1388,23 +1400,26 @@ impl IdealGraphBuilder {
           || child_bundle.behavior == Some(BundleBehavior::InlineIsolated)
           || child_bundle.behavior == Some(BundleBehavior::Inline)
         {
-          availability_by_node.insert(child, RoaringBitmap::new());
+          availability_by_node[child.index()] = Some(RoaringBitmap::new());
           continue;
         }
 
-        let current_child_available = if edge_ty == BundleRootEdgeType::Parallel {
-          let mut tmp = available.clone();
-          tmp |= &parallel_availability;
-          tmp
+        // Intersect across all parents, avoiding clones where possible.
+        if edge_ty == BundleRootEdgeType::Parallel {
+          let mut current_child_available = available.clone();
+          current_child_available |= &parallel_availability;
+          if let Some(existing) = availability_by_node[child.index()].as_mut() {
+            *existing &= &current_child_available;
+          } else {
+            availability_by_node[child.index()] = Some(current_child_available);
+          }
         } else {
-          available.clone()
-        };
-
-        // Intersect across all parents.
-        if let Some(existing) = availability_by_node.get_mut(&child) {
-          *existing &= &current_child_available;
-        } else {
-          availability_by_node.insert(child, current_child_available.clone());
+          // Lazy edge: avoid clone when we can intersect directly.
+          if let Some(existing) = availability_by_node[child.index()].as_mut() {
+            *existing &= &available;
+          } else {
+            availability_by_node[child.index()] = Some(available.clone());
+          }
         }
 
         // Update parallel availability for later siblings.
