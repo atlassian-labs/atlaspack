@@ -918,6 +918,17 @@ impl IdealGraphBuilder {
       }
     }
 
+    // Dense lookup tables from root bit -> (bundle-root graph node, env context).
+    //
+    // This avoids HashMap lookups in the hot inner loop below.
+    let num_roots = reachability.roots.len();
+    let mut root_bit_to_node: Vec<Option<NodeIndex>> = vec![None; num_roots];
+    let mut root_bit_to_ctx: Vec<Option<EnvironmentContext>> = vec![None; num_roots];
+    for (bit, &root_key) in reachability.roots.iter().enumerate() {
+      root_bit_to_node[bit] = self.bundle_root_graph_nodes.get(&root_key).copied();
+      root_bit_to_ctx[bit] = root_envs.get(&root_key).copied();
+    }
+
     let env_is_isolated = |ctx: EnvironmentContext| -> bool {
       matches!(
         ctx,
@@ -928,12 +939,24 @@ impl IdealGraphBuilder {
       )
     };
 
-    // Track (from, to, edge type) to avoid inserting duplicate edges.
+    // De-dup edges.
     //
     // `petgraph::DiGraph::add_edge` always creates a new edge even if an identical one already exists.
     // The JS bundler deduplicates these edges, and without it we can end up with huge duplicate edge
     // counts which then slow down availability computation.
-    let mut seen_edges: HashSet<(NodeIndex, NodeIndex, BundleRootEdgeType)> = HashSet::new();
+    //
+    // Lazy edges are extremely common, so use a per-source-node bitset of already-seen targets.
+    // Parallel edges are extremely rare, so keep a small HashSet for those.
+    let node_bound = self.bundle_root_graph.node_bound();
+    let mut seen_lazy: Vec<FixedBitSet> = (0..node_bound)
+      .map(|_| {
+        let mut bs = FixedBitSet::with_capacity(node_bound);
+        bs.grow(node_bound);
+        bs
+      })
+      .collect();
+
+    let mut seen_parallel: HashSet<(NodeIndex, NodeIndex)> = HashSet::new();
 
     // Single-pass construction of bundle-root edges using Phase 5 reachability.
     //
@@ -1015,16 +1038,12 @@ impl IdealGraphBuilder {
 
           // Fan out edges from every reaching root -> target.
           for bit in bs.ones() {
-            let Some(&root_key) = reachability.roots.get(bit) else {
-              continue;
-            };
-
-            let Some(&from_node) = self.bundle_root_graph_nodes.get(&root_key) else {
+            let Some(from_node) = root_bit_to_node[bit] else {
               continue;
             };
 
             // Env context mismatch check.
-            let Some(&root_ctx) = root_envs.get(&root_key) else {
+            let Some(root_ctx) = root_bit_to_ctx[bit] else {
               continue;
             };
             if target_asset.env.context != root_ctx {
@@ -1032,8 +1051,20 @@ impl IdealGraphBuilder {
             }
 
             // Deduplicate edges.
-            if seen_edges.insert((from_node, to_node, edge_ty)) {
-              self.bundle_root_graph.add_edge(from_node, to_node, edge_ty);
+            match edge_ty {
+              BundleRootEdgeType::Lazy => {
+                let from_i = from_node.index();
+                let to_i = to_node.index();
+                if !seen_lazy[from_i].contains(to_i) {
+                  seen_lazy[from_i].set(to_i, true);
+                  self.bundle_root_graph.add_edge(from_node, to_node, edge_ty);
+                }
+              }
+              BundleRootEdgeType::Parallel => {
+                if seen_parallel.insert((from_node, to_node)) {
+                  self.bundle_root_graph.add_edge(from_node, to_node, edge_ty);
+                }
+              }
             }
           }
         }
