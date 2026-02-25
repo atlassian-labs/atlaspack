@@ -257,9 +257,23 @@ impl Bundler for IdealGraphBundler {
       // Create a bundle group only for async boundary bundles (not shared bundles, and not
       // sync type-change bundles).
       //
-      // Sync type-change bundles are siblings in their parent's bundle group.
+      // A bundle gets its own bundle group if:
+      // 1. The builder assigned it (bundle_group_root == self), OR
+      // 2. It's an async boundary root that wasn't covered by the builder
+      //    (fallback for bundles created during materialization).
+      let ideal_bundle_asset_key = ideal_bundle_id.as_asset_key();
+      let builder_assigned_own_group =
+        ideal_bundle.bundle_group_root == Some(ideal_bundle_asset_key);
+      let is_async_fallback = ideal_bundle.bundle_group_root.is_none()
+        && ideal_bundle.root_asset_id.as_deref().is_some_and(|id| {
+          non_sync_deps_by_target_asset_id
+            .get(id)
+            .is_some_and(|deps| !deps.is_empty())
+        });
+      let has_own_bundle_group = builder_assigned_own_group || is_async_fallback;
+
       if let Some(root_asset_id) = &ideal_bundle.root_asset_id
-        && is_async_boundary_root(root_asset_id, &non_sync_deps_by_target_asset_id)
+        && has_own_bundle_group
       {
         let bundle_group_id = format!("bundle_group:{}{}", default_target.name, root_asset_id);
         let bundle_group_node_id = bundle_graph.add_bundle_group(
@@ -321,6 +335,43 @@ impl Bundler for IdealGraphBundler {
           }
         }
       }
+    }
+
+    // Add inherited-group bundles to their parent's bundle group.
+    // These are bundles where bundle_group_root points to a DIFFERENT bundle's root key,
+    // meaning they should be members of that bundle's group (e.g. render.js inheriting
+    // from dashboard-spa-container.html's bundle group).
+    for (ideal_bundle_id, ideal_bundle) in ideal_graph.bundles_iter() {
+      let bundle_asset_key = ideal_bundle_id.as_asset_key();
+
+      // Only process bundles that inherit a parent's group.
+      let Some(group_root_key) = ideal_bundle.bundle_group_root else {
+        continue;
+      };
+      if group_root_key == bundle_asset_key {
+        continue; // has its own group, already handled
+      }
+
+      let Some(&bundle_node_id) = materialized_bundle_nodes.get(ideal_bundle_id) else {
+        continue;
+      };
+
+      let group_root_id = ideal_graph.assets.id_for(group_root_key);
+      let bg_key = format!("bundle_group:{}{}", default_target.name, group_root_id);
+      let Some(&bg_node_id) = bundle_graph.get_node_id_by_content_key(&bg_key) else {
+        continue;
+      };
+
+      bundle_graph.add_edge(
+        &bg_node_id,
+        &bundle_node_id,
+        NativeBundleGraphEdgeType::Null,
+      );
+      bundle_graph.add_edge(
+        &bg_node_id,
+        &bundle_node_id,
+        NativeBundleGraphEdgeType::Bundle,
+      );
     }
 
     // Wire shared bundles into the bundle groups of the async bundles that depend on them.
@@ -443,10 +494,14 @@ impl Bundler for IdealGraphBundler {
           }
 
           // Add the type-change bundle to the parent's bundle group.
-          let Some(from_root_asset_id) = &from_bundle.root_asset_id else {
+          // Use bundle_group_root to find the correct bundle group for the parent.
+          // This handles cases where the parent bundle inherits a group from an ancestor
+          // (e.g. a JS bundle that is a sync type-change child of an HTML entry).
+          let Some(bg_root_key) = from_bundle.bundle_group_root else {
             continue;
           };
-          let from_bg_key = format!("bundle_group:{}{}", default_target.name, from_root_asset_id);
+          let bg_root_asset_id = ideal_graph.assets.id_for(bg_root_key);
+          let from_bg_key = format!("bundle_group:{}{}", default_target.name, bg_root_asset_id);
           let Some(&from_bg_node_id) = bundle_graph.get_node_id_by_content_key(&from_bg_key) else {
             continue;
           };
@@ -1109,22 +1164,6 @@ fn materialize_ideal_bundle(
   let node_id = bundle_graph.add_bundle(bundle);
   materialized.insert(*ideal_bundle_id, node_id);
   Ok(node_id)
-}
-
-fn is_async_boundary_root(
-  root_asset_id: &str,
-  non_sync_deps_by_target_asset_id: &std::collections::HashMap<
-    String,
-    Vec<&atlaspack_core::types::Dependency>,
-  >,
-) -> bool {
-  // A bundle root gets a bundle group iff at least one incoming dependency boundary is non-sync.
-  //
-  // This distinguishes async boundaries (Lazy/Parallel/Conditional) from sync type-change
-  // boundaries (e.g. JS -> CSS), which must not get their own bundle group.
-  non_sync_deps_by_target_asset_id
-    .get(root_asset_id)
-    .is_some_and(|deps| !deps.is_empty())
 }
 
 #[cfg(test)]

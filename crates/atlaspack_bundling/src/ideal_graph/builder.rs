@@ -163,7 +163,7 @@ impl IdealGraphBuilder {
     // Phase 3: create bundle root shells (no non-root asset placement yet).
     let mut ideal = self.create_bundle_roots(asset_graph, &entry_assets)?;
 
-    // Phase 4: bundle dependency graph (edge types).
+    // Phase 4: bundle dependency graph (edge types) + bundle group assignment.
     self.build_bundle_edges(asset_graph, &mut ideal)?;
 
     // Phase 5: derive reachability via topological bitset propagation.
@@ -628,6 +628,7 @@ impl IdealGraphBuilder {
       ideal.create_bundle(IdealBundle {
         id: bundle_id,
         root_asset_id: Some(root_asset_id.clone()),
+        bundle_group_root: None,
         assets: {
           let mut bs = FixedBitSet::with_capacity(self.assets.len());
           bs.insert(root_key.0 as usize);
@@ -720,6 +721,14 @@ impl IdealGraphBuilder {
       map
     };
 
+    // Seed entry bundles with their own bundle group.
+    for &root in &self.entry_roots {
+      let bundle_id = IdealBundleId::from_asset_key(root);
+      if let Some(bundle) = ideal.get_bundle_mut(&bundle_id) {
+        bundle.bundle_group_root = Some(root);
+      }
+    }
+
     for asset_node_id in self.asset_node_ids(asset_graph) {
       let Some(from_asset) = asset_graph.get_asset(&asset_node_id) else {
         continue;
@@ -765,7 +774,59 @@ impl IdealGraphBuilder {
           }
 
           ideal.add_bundle_edge(from_bundle, to_bundle, edge_type);
+
+          // Assign bundle group root. Own-group edges (lazy/conditional/isolated)
+          // always win over inherited-group edges (sync/parallel), regardless of
+          // encounter order. This matches JS semantics where DFS order naturally
+          // processes lazy edges first, but Rust iterates edges in arbitrary order.
+          let target_behavior = target_asset.bundle_behavior;
+          let is_own_group = matches!(edge_type, IdealEdgeType::Lazy | IdealEdgeType::Conditional)
+            || matches!(
+              target_behavior,
+              Some(BundleBehavior::Isolated) | Some(BundleBehavior::InlineIsolated)
+            );
+
+          let current_group = ideal
+            .get_bundle(&to_bundle)
+            .and_then(|b| b.bundle_group_root);
+          let current_is_own = current_group == Some(target_key);
+
+          // Only assign if:
+          // - No group assigned yet, OR
+          // - Current group is inherited and this edge wants own group
+          if current_group.is_none() || (is_own_group && !current_is_own) {
+            let group_root = if is_own_group {
+              Some(target_key)
+            } else if target_behavior == Some(BundleBehavior::Inline) {
+              None
+            } else {
+              // Sync/parallel targets inherit the parent bundle's group.
+              ideal
+                .get_bundle(&from_bundle)
+                .and_then(|b| b.bundle_group_root)
+            };
+            if let Some(bundle) = ideal.get_bundle_mut(&to_bundle) {
+              bundle.bundle_group_root = group_root;
+            }
+          }
         }
+      }
+    }
+
+    // Fallback: any remaining bundles with a root asset that weren't reached
+    // by bundle edges start their own group (except Inline bundles).
+    for slot in ideal.bundles.iter_mut() {
+      let Some(bundle) = slot.as_mut() else {
+        continue;
+      };
+      if bundle.bundle_group_root.is_some() {
+        continue;
+      }
+      if bundle.behavior == Some(BundleBehavior::Inline) {
+        continue;
+      }
+      if bundle.root_asset_id.is_some() {
+        bundle.bundle_group_root = Some(bundle.id.as_asset_key());
       }
     }
 
@@ -1922,6 +1983,7 @@ impl IdealGraphBuilder {
     ideal.create_bundle(IdealBundle {
       id: sibling_bundle_id,
       root_asset_id: None, // Type-change sibling bundles have no root asset.
+      bundle_group_root: None,
       assets: FixedBitSet::with_capacity(self.assets.len()),
       bundle_type: file_type,
       needs_stable_name: false,
@@ -2216,6 +2278,7 @@ impl IdealGraphBuilder {
       ideal.create_bundle(super::types::IdealBundle {
         id: shared_bundle_id,
         root_asset_id: None,
+        bundle_group_root: None,
         assets: FixedBitSet::with_capacity(self.assets.len()),
         bundle_type,
         needs_stable_name: false,

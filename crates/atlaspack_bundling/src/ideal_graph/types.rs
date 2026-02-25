@@ -278,6 +278,12 @@ pub struct IdealBundle {
   /// The asset that created this bundle (entry/boundary). Shared bundles may not have one.
   pub root_asset_id: Option<String>,
 
+  /// Which bundle group this bundle belongs to.
+  ///
+  /// This is the `AssetKey` of the bundle group's entry asset.
+  /// `None` means no bundle group (e.g. inline bundles).
+  pub bundle_group_root: Option<AssetKey>,
+
   /// Assets assigned to this bundle (no duplication in the ideal phase).
   ///
   /// Indexed by `AssetKey.0 as usize`.
