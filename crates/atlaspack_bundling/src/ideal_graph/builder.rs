@@ -17,6 +17,16 @@ struct Reachability {
   root_to_bit: HashMap<AssetKey, usize>,
 }
 
+/// Pre-classified reaching roots for an asset, computed once after Phase 7.
+/// Reused by Phase 8 (placement) and Phase 9 (shared bundles).
+#[derive(Debug, Clone)]
+struct AssetRootClassification {
+  /// Entry-like roots reaching this asset (entries, isolated, stable-name, non-splittable)
+  entry_like: Vec<AssetKey>,
+  /// Non-entry-like (splittable/async) roots reaching this asset, sorted and deduped
+  splittable: Vec<AssetKey>,
+}
+
 use anyhow::Context;
 use atlaspack_core::{
   asset_graph::{AssetGraph, DependencyState, NodeId},
@@ -112,9 +122,13 @@ pub struct IdealGraphBuilder {
   // Includes entries, non-splittable, isolated, and stable-name bundle roots.
   entry_like_roots: HashSet<super::types::AssetKey>,
 
+  /// Pre-classified reaching roots per asset, built after Phase 7 (internalization).
+  /// Index is asset_key.0 as usize. None means no reaching roots.
+  asset_root_classifications: Vec<Option<AssetRootClassification>>,
+
   // Type-change sibling bundles: keyed by (parent_bundle_root, file_type_str).
   // When placing a CSS asset into a JS bundle, redirect into a sibling bundle.
-  type_change_siblings: HashMap<(AssetKey, String), IdealBundleId>,
+  type_change_siblings: HashMap<(AssetKey, atlaspack_core::types::FileType), IdealBundleId>,
 }
 
 impl IdealGraphBuilder {
@@ -129,6 +143,7 @@ impl IdealGraphBuilder {
       decisions: super::types::DecisionLog::default(),
       type_change_siblings: HashMap::new(),
       bundle_behavior_sync_nodes: HashMap::new(),
+      asset_root_classifications: Vec::new(),
       ..Self::default()
     }
   }
@@ -197,6 +212,8 @@ impl IdealGraphBuilder {
     // Must run before placement so internalized roots are removed from reachability
     // (matching JS where internalization runs before Insert Or Share).
     self.internalize_async_bundles(&mut reachability, &mut ideal)?;
+
+    self.classify_asset_roots(&reachability);
 
     // Phase 8: place single-root assets into their dominating bundle.
     self.place_single_root_assets(&reachability, &mut ideal)?;
@@ -1129,6 +1146,12 @@ impl IdealGraphBuilder {
       }
     }
 
+    // Build dense sync-index → asset-key map for cache-friendly iteration.
+    let mut sync_idx_to_asset: Vec<Option<AssetKey>> = vec![None; self.sync_graph.node_bound()];
+    for (&asset_key, &sync_idx) in &self.asset_to_sync_node {
+      sync_idx_to_asset[sync_idx.index()] = Some(asset_key);
+    }
+
     // Precompute reachable assets per root bit so we don't scan all assets for every root.
     //
     // `reachable_assets_per_root[bit]` contains all assets sync-reachable from `reachability.roots[bit]`.
@@ -1140,19 +1163,30 @@ impl IdealGraphBuilder {
       let num_roots = reachability.roots.len();
       let mut per_root: Vec<RoaringBitmap> = (0..num_roots).map(|_| RoaringBitmap::new()).collect();
 
-      for (&asset_key, &sync_idx) in &self.asset_to_sync_node {
+      for (sync_i, bs) in reachability.reach_bits.iter().enumerate() {
+        let Some(asset_key) = sync_idx_to_asset.get(sync_i).and_then(|v| *v) else {
+          continue;
+        };
+        if bs.is_empty() {
+          continue;
+        }
+        let sync_idx = NodeIndex::new(sync_i);
+
         // Check if this asset has bundleBehavior set.
         let has_bundle_behavior = self.bundle_behavior_sync_nodes.contains_key(&sync_idx);
 
-        let bs = &reachability.reach_bits[sync_idx.index()];
+        // Precompute own root bit for bundleBehavior assets to avoid per-bit lookup.
+        let own_bit = if has_bundle_behavior {
+          reachability.root_to_bit.get(&asset_key).copied()
+        } else {
+          None
+        };
+
         for bit in bs.ones() {
           // Skip bundleBehavior assets for OTHER roots (matches JS exclusion).
-          // A bundleBehavior asset's own root bit is allowed (it's a bundle root).
           if has_bundle_behavior {
-            if let Some(&root_key) = reachability.roots.get(bit) {
-              if root_key != asset_key {
-                continue;
-              }
+            if own_bit != Some(bit) {
+              continue;
             }
           }
 
@@ -1627,6 +1661,49 @@ impl IdealGraphBuilder {
   }
 
   // ----------------------------
+  // Phase 7.5: Root classification cache
+  // ----------------------------
+
+  /// Phase 7.5: Pre-classify reaching roots per asset for Phase 8+9 reuse.
+  ///
+  /// Must run AFTER Phase 7 (internalize_async_bundles) which mutates reach_bits,
+  /// so the cached data reflects the post-internalization state.
+  #[instrument(level = "debug", skip_all)]
+  fn classify_asset_roots(&mut self, reachability: &Reachability) {
+    let num_assets = self.assets.len();
+    self.asset_root_classifications = vec![None; num_assets];
+
+    for (&asset_key, &sync_idx) in &self.asset_to_sync_node {
+      let bs = &reachability.reach_bits[sync_idx.index()];
+      if bs.is_empty() {
+        continue;
+      }
+
+      let mut entry_like = Vec::new();
+      let mut splittable = Vec::new();
+
+      for bit in bs.ones() {
+        let root = reachability.roots[bit];
+        if self.entry_like_roots.contains(&root) {
+          entry_like.push(root);
+        } else {
+          splittable.push(root);
+        }
+      }
+
+      // Pre-sort and dedup splittable roots (Phase 9 needs this)
+      sort_and_dedup(&mut splittable);
+
+      if !entry_like.is_empty() || !splittable.is_empty() {
+        self.asset_root_classifications[asset_key.0 as usize] = Some(AssetRootClassification {
+          entry_like,
+          splittable,
+        });
+      }
+    }
+  }
+
+  // ----------------------------
   // Phase 8: Single-root asset placement
   // ----------------------------
 
@@ -1641,7 +1718,7 @@ impl IdealGraphBuilder {
   #[instrument(level = "debug", skip_all)]
   fn place_single_root_assets(
     &mut self,
-    reachability: &Reachability,
+    _reachability: &Reachability,
     ideal: &mut IdealGraph,
   ) -> anyhow::Result<()> {
     // Precompute bundle ids for all known bundle roots once.
@@ -1660,33 +1737,16 @@ impl IdealGraphBuilder {
     // `bundleGroup.mainEntryAsset.id + '.' + asset.type` as a coalescing key.
     self.type_change_siblings.clear();
 
-    let sync_nodes: Vec<(AssetKey, NodeIndex)> = self
-      .asset_to_sync_node
-      .iter()
-      .map(|(&asset_key, &node_idx)| (asset_key, node_idx))
-      .collect();
-
-    for (asset_key, node_idx) in sync_nodes {
-      let bs = &reachability.reach_bits[node_idx.index()];
-      if bs.is_empty() {
+    for asset_idx in 0..self.assets.len() {
+      let asset_key = AssetKey(asset_idx as u32);
+      let Some(classification) = &self.asset_root_classifications[asset_idx] else {
         continue;
-      }
+      };
 
-      // Entry-like roots: entries, non-splittable, isolated, needs-stable-name.
-      // These get assets duplicated into them (same as entries in JS algorithm).
-      // Note: we must compute this even for bundle roots, so that bundle roots can be
-      // duplicated into entry-like bundles (matching the JS bundler).
-      let reaching_entry_like: Vec<AssetKey> = bs
-        .ones()
-        .map(|i| reachability.roots[i])
-        .filter(|r| self.entry_like_roots.contains(r))
-        .collect();
-
-      let splittable_roots: Vec<AssetKey> = bs
-        .ones()
-        .map(|i| reachability.roots[i])
-        .filter(|r| !self.entry_like_roots.contains(r))
-        .collect();
+      // Clone since Phase 8 calls helpers that take `&mut self`, which cannot coexist with
+      // an active immutable borrow into `self.asset_root_classifications`.
+      let reaching_entry_like: Vec<AssetKey> = classification.entry_like.clone();
+      let splittable_roots: Vec<AssetKey> = classification.splittable.clone();
 
       // Availability filtering (JS Insert Or Share semantics):
       // Only splittable roots are filtered by availability. Entry-like roots ALWAYS
@@ -1715,7 +1775,7 @@ impl IdealGraphBuilder {
       //
       // If the asset's file type differs from the bundle's type (e.g. CSS asset in JS bundle),
       // redirect it into a type-change sibling bundle keyed by (root, file_type).
-      for &root in &reaching_entry_like {
+      for &root in reaching_entry_like.iter() {
         // Entry-like roots ALWAYS get assets placed — no availability check.
         // This matches JS addAssetToBundleRoot which is unconditional for entries.
         let bundle_id = &root_bundle_ids[&root];
@@ -1915,7 +1975,7 @@ impl IdealGraphBuilder {
 
     let file_type = asset_file_type.unwrap().clone();
     let file_type_str = format!("{file_type:?}");
-    let sibling_key = (parent_root, file_type_str.clone());
+    let sibling_key = (parent_root, file_type.clone());
 
     if let Some(&existing_id) = self.type_change_siblings.get(&sibling_key) {
       return Ok(existing_id);
@@ -1985,17 +2045,11 @@ impl IdealGraphBuilder {
 
     let mut eligible_roots_by_asset: HashMap<AssetKey, Vec<AssetKey>> = HashMap::new();
 
-    let sync_nodes: Vec<(AssetKey, NodeIndex)> = self
-      .asset_to_sync_node
-      .iter()
-      .map(|(&asset_key, &node_idx)| (asset_key, node_idx))
-      .collect();
-
-    for (asset_key, node_idx) in sync_nodes {
-      let bs = &reachability.reach_bits[node_idx.index()];
-      if bs.is_empty() {
+    for asset_idx in 0..self.assets.len() {
+      let asset_key = AssetKey(asset_idx as u32);
+      let Some(classification) = &self.asset_root_classifications[asset_idx] else {
         continue;
-      }
+      };
 
       // Bundle roots are already handled as bundles (unless they were internalized and removed
       // from `bundle_roots`, in which case they'll be treated as regular assets here).
@@ -2003,23 +2057,9 @@ impl IdealGraphBuilder {
         continue;
       }
 
-      // Track whether this asset is also reachable from any entry-like root.
-      // If so, we must avoid `move_asset_to_bundle` later because that would remove it
-      // from the entry-like bundle (duplication semantics).
-      let reaching_entry_like: Vec<AssetKey> = bs
-        .ones()
-        .map(|i| reachability.roots[i])
-        .filter(|r| self.entry_like_roots.contains(r))
-        .collect();
-
-      // Compute reachable splittable roots.
-      let mut reachable: Vec<AssetKey> = bs
-        .ones()
-        .map(|i| reachability.roots[i])
-        .filter(|r| !self.entry_like_roots.contains(r))
-        .collect();
-
-      sort_and_dedup(&mut reachable);
+      let reaching_entry_like_is_empty = classification.entry_like.is_empty();
+      // Clone splittable since Phase 9 mutates the eligible list
+      let reachable: Vec<AssetKey> = classification.splittable.clone();
 
       // Availability filtering (JS Insert Or Share semantics):
       // roots where the asset is already available via `ancestor_assets[root]` are removed.
@@ -2102,7 +2142,7 @@ impl IdealGraphBuilder {
           // If the asset was already placed in entry-like bundles, it's truly handled upstream.
           // Otherwise, place it in the first reachable root as a co-load fallback to avoid
           // leaving assets unplaced (parallel sibling availability can be circular).
-          if reaching_entry_like.is_empty() && !reachable.is_empty() {
+          if reaching_entry_like_is_empty && !reachable.is_empty() {
             let root = reachable[0];
             let bundle_id = &root_bundle_ids[&root];
             let target_bundle_id =
@@ -2144,7 +2184,7 @@ impl IdealGraphBuilder {
 
           // If this asset was duplicated into one or more entry-like bundles, we must not
           // "move" it here (which would remove it from the canonical entry-like bundle).
-          if reaching_entry_like.is_empty() {
+          if reaching_entry_like_is_empty {
             ideal.move_asset_to_bundle(asset_key, &target_bundle_id)?;
           }
 
