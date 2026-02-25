@@ -257,20 +257,11 @@ impl Bundler for IdealGraphBundler {
       // Create a bundle group only for async boundary bundles (not shared bundles, and not
       // sync type-change bundles).
       //
-      // A bundle gets its own bundle group if:
-      // 1. The builder assigned it (bundle_group_root == self), OR
-      // 2. It's an async boundary root that wasn't covered by the builder
-      //    (fallback for bundles created during materialization).
+      // A bundle gets its own bundle group if the builder assigned it
+      // (bundle_group_root == self). This is set during build_bundle_edges for
+      // entries, lazy/conditional targets, and isolated bundles.
       let ideal_bundle_asset_key = ideal_bundle_id.as_asset_key();
-      let builder_assigned_own_group =
-        ideal_bundle.bundle_group_root == Some(ideal_bundle_asset_key);
-      let is_async_fallback = ideal_bundle.bundle_group_root.is_none()
-        && ideal_bundle.root_asset_id.as_deref().is_some_and(|id| {
-          non_sync_deps_by_target_asset_id
-            .get(id)
-            .is_some_and(|deps| !deps.is_empty())
-        });
-      let has_own_bundle_group = builder_assigned_own_group || is_async_fallback;
+      let has_own_bundle_group = ideal_bundle.bundle_group_root == Some(ideal_bundle_asset_key);
 
       if let Some(root_asset_id) = &ideal_bundle.root_asset_id
         && has_own_bundle_group
