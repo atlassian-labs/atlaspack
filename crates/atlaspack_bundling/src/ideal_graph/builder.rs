@@ -47,12 +47,26 @@ fn skip_unused_dependencies() -> bool {
     .unwrap_or(true)
 }
 
+fn sort_and_dedup(v: &mut Vec<AssetKey>) {
+  v.sort();
+  v.dedup();
+}
+
+fn mask_propagate_bits(mut bits: FixedBitSet, mask: Option<&FixedBitSet>) -> FixedBitSet {
+  if let Some(mask) = mask {
+    bits.intersect_with(mask);
+  }
+  bits
+}
+
 /// Intermediate state for building an [`IdealGraph`].
 ///
 /// This mirrors the phase-based design in `bundler-rust-rewrite-research.md`.
 #[derive(Debug, Default)]
 pub struct IdealGraphBuilder {
   pub options: IdealGraphBuildOptions,
+
+  skip_unused_deps: bool,
 
   // Decision log is always-on: cheap, allocation-free payloads.
   decisions: super::types::DecisionLog,
@@ -111,6 +125,7 @@ impl IdealGraphBuilder {
   pub fn new(options: IdealGraphBuildOptions) -> Self {
     Self {
       options,
+      skip_unused_deps: skip_unused_dependencies(),
       decisions: super::types::DecisionLog::default(),
       type_change_siblings: HashMap::new(),
       bundle_behavior_sync_nodes: HashMap::new(),
@@ -275,7 +290,7 @@ impl IdealGraphBuilder {
 
         // Match JS `skipUnusedDependencies: true`.
         let state = asset_graph.get_dependency_state(&dep_node_id);
-        if skip_unused_dependencies()
+        if self.skip_unused_deps
           && matches!(state, DependencyState::Deferred | DependencyState::Excluded)
         {
           continue;
@@ -345,7 +360,7 @@ impl IdealGraphBuilder {
 
         // Match JS `skipUnusedDependencies: true`.
         let state = asset_graph.get_dependency_state(&dep_node_id);
-        if skip_unused_dependencies()
+        if self.skip_unused_deps
           && matches!(state, DependencyState::Deferred | DependencyState::Excluded)
         {
           continue;
@@ -501,7 +516,7 @@ impl IdealGraphBuilder {
 
         // Match JS `skipUnusedDependencies: true`.
         let state = asset_graph.get_dependency_state(&dep_node_id);
-        if skip_unused_dependencies()
+        if self.skip_unused_deps
           && matches!(state, DependencyState::Deferred | DependencyState::Excluded)
         {
           continue;
@@ -970,7 +985,7 @@ impl IdealGraphBuilder {
         if let Some(dep) = asset_graph.get_dependency(&node_id) {
           // JS `skipUnusedDependencies: true`
           let state = asset_graph.get_dependency_state(&node_id);
-          if skip_unused_dependencies()
+          if self.skip_unused_deps
             && matches!(state, DependencyState::Deferred | DependencyState::Excluded)
           {
             continue;
@@ -1504,13 +1519,11 @@ impl IdealGraphBuilder {
         // to its children (it IS a bundle root with its own seeded bit).
         let propagate_bits = if let Some(asset_key) = self.bundle_behavior_sync_nodes.get(&node) {
           // Only propagate this node's own root bit, not inherited upstream bits.
-          let mut own_bits = FixedBitSet::with_capacity(num_roots);
+          let mut own_mask = FixedBitSet::with_capacity(num_roots);
           if let Some(&root_bit) = root_to_bit.get(asset_key) {
-            if bits.contains(root_bit) {
-              own_bits.insert(root_bit);
-            }
+            own_mask.insert(root_bit);
           }
-          own_bits
+          mask_propagate_bits(bits, Some(&own_mask))
         } else {
           bits
         };
@@ -1609,13 +1622,7 @@ impl IdealGraphBuilder {
         }
 
         // Apply bundleBehavior mask: only propagate own root bits from this SCC.
-        let propagate_bits = if let Some(mask) = &scc_propagate_mask[scc_idx] {
-          let mut masked = bits;
-          masked.intersect_with(mask);
-          masked
-        } else {
-          bits
-        };
+        let propagate_bits = mask_propagate_bits(bits, scc_propagate_mask[scc_idx].as_ref());
 
         if propagate_bits.is_empty() {
           continue;
@@ -2068,8 +2075,7 @@ impl IdealGraphBuilder {
         .filter(|r| !self.entry_like_roots.contains(r))
         .collect();
 
-      reachable.sort();
-      reachable.dedup();
+      sort_and_dedup(&mut reachable);
 
       // Availability filtering (JS Insert Or Share semantics):
       // roots where the asset is already available via `ancestor_assets[root]` are removed.
@@ -2084,8 +2090,7 @@ impl IdealGraphBuilder {
         })
         .collect();
 
-      eligible.sort();
-      eligible.dedup();
+      sort_and_dedup(&mut eligible);
 
       // Subgraph reuse filtering (matches JS Insert Or Share "subgraph absorption"):
       // If an eligible root A can sync-reach another eligible root B, then A doesn't
@@ -2253,8 +2258,7 @@ impl IdealGraphBuilder {
       .collect();
 
     for ((mut roots, file_type), assets) in assets_by_root_set_and_type {
-      roots.sort();
-      roots.dedup();
+      sort_and_dedup(&mut roots);
 
       let shared_name = format!(
         "@@shared:{file_type}:{}",
