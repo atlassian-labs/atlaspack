@@ -1,5 +1,4 @@
 use fixedbitset::FixedBitSet;
-use roaring::RoaringBitmap;
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use super::dense_bitset::DenseBitset;
@@ -668,7 +667,7 @@ impl IdealGraphBuilder {
         bundle_type: asset.file_type.clone(),
         needs_stable_name,
         behavior: asset.bundle_behavior,
-        ancestor_assets: RoaringBitmap::new(),
+        ancestor_assets: DenseBitset::new(),
       })?;
 
       ideal.move_asset_to_bundle(root_key, &bundle_id)?;
@@ -1393,7 +1392,6 @@ impl IdealGraphBuilder {
       if let Some(b) = ideal.get_bundle_mut(&bundle_id) {
         b.ancestor_assets = availability_by_node[node.index()]
           .take()
-          .map(|db| db.to_roaring())
           .unwrap_or_default();
 
         self.decision(
@@ -2048,7 +2046,7 @@ impl IdealGraphBuilder {
       bundle_type: file_type,
       needs_stable_name: false,
       behavior: None,
-      ancestor_assets: RoaringBitmap::new(),
+      ancestor_assets: DenseBitset::new(),
     })?;
 
     // Add a sync edge from the parent bundle to the sibling.
@@ -2320,7 +2318,7 @@ impl IdealGraphBuilder {
         bundle_type,
         needs_stable_name: false,
         behavior: None,
-        ancestor_assets: RoaringBitmap::new(),
+        ancestor_assets: DenseBitset::new(),
       })?;
 
       self.decision(

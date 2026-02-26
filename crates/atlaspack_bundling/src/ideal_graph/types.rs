@@ -14,12 +14,12 @@ fn vec_set_len<T>(v: &mut Vec<Option<T>>, new_len: usize) {
   }
 }
 
+use super::dense_bitset::DenseBitset;
 use atlaspack_core::{
   asset_graph::AssetGraph,
   types::{MaybeBundleBehavior, Priority},
 };
 use fixedbitset::FixedBitSet;
-use roaring::RoaringBitmap;
 
 /// Configuration knobs for the ideal graph build/analysis.
 ///
@@ -300,14 +300,14 @@ pub struct IdealBundle {
   /// In the doc, this is computed using the *intersection* rule across parent paths.
   ///
   /// Indexed by `AssetKey.0 as usize`.
-  pub ancestor_assets: RoaringBitmap,
+  pub ancestor_assets: DenseBitset,
 }
 
 impl IdealBundle {
   /// Convenience: assets available at runtime when this bundle loads.
   ///
   /// In the doc this can include additional sets (e.g. bundle-group/parallel bundles).
-  pub fn all_assets_available_from_here(&self) -> RoaringBitmap {
+  pub fn all_assets_available_from_here(&self) -> DenseBitset {
     let mut result = self.ancestor_assets.clone();
     for idx in self.assets.ones() {
       result.insert(idx as u32);
