@@ -68,7 +68,6 @@ type RunInput = {
 // TODO: Rename to BundleGraphRequestResult
 export type BundleGraphResult = {
   bundleGraph: InternalBundleGraph;
-  assetGraphBundlingVersion: number;
   changedAssets: Map<string, Asset>;
   assetRequests: Array<AssetGroup>;
   didIncrementallyBundle: boolean;
@@ -456,7 +455,6 @@ class BundlerRunner {
         this.api.storeResult(
           {
             bundleGraph: internalBundleGraph,
-            assetGraphBundlingVersion: 0,
             changedAssets: new Map(),
             assetRequests: [],
             didIncrementallyBundle,
@@ -543,7 +541,6 @@ class BundlerRunner {
     this.api.storeResult(
       {
         bundleGraph: internalBundleGraph,
-        assetGraphBundlingVersion: 0,
         changedAssets: new Map(),
         assetRequests: [],
         didIncrementallyBundle,
@@ -553,7 +550,6 @@ class BundlerRunner {
 
     return {
       bundleGraph: internalBundleGraph,
-      assetGraphBundlingVersion: 0,
       changedAssets: changedRuntimes,
       assetRequests,
       didIncrementallyBundle,

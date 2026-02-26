@@ -181,8 +181,6 @@ export default function createBundleGraphRequestRust(
 
       return {
         bundleGraph,
-        // Not accurate yet — ok for now.
-        assetGraphBundlingVersion: 0,
         changedAssets: changedRuntimes,
         assetRequests: [],
         didIncrementallyBundle: false,
