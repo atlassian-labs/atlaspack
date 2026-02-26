@@ -156,7 +156,7 @@ impl SymbolTracker {
   /// This combines the work of `track_symbols` (registering requirements and
   /// satisfying them) with the propagation logic from `propagate_requested_symbols`
   /// (forwarding symbol requests to outgoing dependencies and signaling un-deferral).
-  pub fn track_symbols_new(
+  pub fn track_symbols(
     &mut self,
     asset_graph: &AssetGraph,
     asset: &Arc<Asset>,
@@ -172,29 +172,6 @@ impl SymbolTracker {
 
     // Returns a Vec of the dependencies that now need to be processed
     self.propagate_to_outgoing_dependencies(asset_graph, asset, dependencies)
-  }
-  /// Handles the tracking of symbols for a given asset.
-  ///
-  /// This looks at both the dependencies this asset has, to register symbols
-  /// that it needs to find, and the symbols that this asset provides, to
-  /// satisfy any outstanding requirements from above.
-  pub fn track_symbols(
-    &mut self,
-    asset_graph: &AssetGraph,
-    asset: &Arc<Asset>,
-    dependencies: &[Dependency],
-    // TODO: This should actually return a list of the new requests that need to
-    // be kicked off, what `propagate_requested_symbols` does at the moment
-  ) -> anyhow::Result<()> {
-    // Collect symbols requested from this asset by incoming dependencies
-    let incoming_requested_symbols = self.get_incoming_requested_symbols(asset_graph, asset);
-
-    // Track all of the symbols that are being requested by deps of this asset
-    for dep in dependencies {
-      self.track_dependency_symbols(asset, &incoming_requested_symbols, dep)?;
-    }
-
-    self.satisfy_provided_symbols(asset_graph, asset)
   }
 
   fn track_dependency_symbols(
@@ -1556,7 +1533,7 @@ mod tests {
 
     let mut tracker = SymbolTracker::default();
     let undeferred = tracker
-      .track_symbols_new(&graph, &entry_asset, &[dep_a.clone()])
+      .track_symbols(&graph, &entry_asset, &[dep_a.clone()])
       .unwrap();
 
     assert_eq!(undeferred, vec![dep_a.id()]);
@@ -1587,7 +1564,7 @@ mod tests {
 
     let mut tracker = SymbolTracker::default();
     let undeferred = tracker
-      .track_symbols_new(&graph, &entry_asset, &[dep_a])
+      .track_symbols(&graph, &entry_asset, &[dep_a])
       .unwrap();
 
     assert!(
@@ -1616,7 +1593,7 @@ mod tests {
 
     let mut tracker = SymbolTracker::default();
     let undeferred = tracker
-      .track_symbols_new(&graph, &entry_asset, &[dep_setup])
+      .track_symbols(&graph, &entry_asset, &[dep_setup])
       .unwrap();
 
     assert!(
@@ -1656,11 +1633,9 @@ mod tests {
     // Run with track_symbols_new
     let mut tracker_new = SymbolTracker::default();
     tracker_new
-      .track_symbols_new(&graph, &entry_asset, &[dep_a.clone()])
+      .track_symbols(&graph, &entry_asset, &[dep_a.clone()])
       .unwrap();
-    tracker_new
-      .track_symbols_new(&graph, &asset_a, &[])
-      .unwrap();
+    tracker_new.track_symbols(&graph, &asset_a, &[]).unwrap();
 
     // Both should have the same requirements
     assert_eq!(
