@@ -1601,46 +1601,4 @@ mod tests {
       "Should not undefer deps with no symbol requirements"
     );
   }
-
-  #[test]
-  fn track_symbols_produces_same_results_as_track_symbols() {
-    // Verify that track_symbols produces the same symbol tracking
-    // results as track_symbols (the existing method).
-    let mut graph = AssetGraph::new();
-
-    let entry_dep = make_entry_dependency();
-    let entry_dep_node = graph.add_entry_dependency(entry_dep, false);
-
-    let entry_asset = make_asset("index.js", vec![]);
-    let entry_asset_node = graph.add_asset(entry_asset.clone(), false);
-    graph.add_edge(&entry_dep_node, &entry_asset_node);
-
-    let dep_a = make_dependency(&entry_asset, "./a.js", vec![("a", "a", false)]);
-    let dep_a_node = graph.add_dependency(dep_a.clone(), false);
-    graph.add_edge(&entry_asset_node, &dep_a_node);
-
-    let asset_a = make_asset("a.js", vec![("a", "a", false)]);
-    let asset_a_node = graph.add_asset(asset_a.clone(), false);
-    graph.add_edge(&dep_a_node, &asset_a_node);
-
-    // Run with track_symbols (old method)
-    let mut tracker_old = SymbolTracker::default();
-    tracker_old
-      .track_symbols(&graph, &entry_asset, std::slice::from_ref(&dep_a))
-      .unwrap();
-    tracker_old.track_symbols(&graph, &asset_a, &[]).unwrap();
-
-    // Run with track_symbols
-    let mut tracker_new = SymbolTracker::default();
-    tracker_new
-      .track_symbols(&graph, &entry_asset, std::slice::from_ref(&dep_a))
-      .unwrap();
-    tracker_new.track_symbols(&graph, &asset_a, &[]).unwrap();
-
-    // Both should have the same requirements
-    assert_eq!(
-      tracker_old.requirements_by_dep, tracker_new.requirements_by_dep,
-      "track_symbols should produce identical results to track_symbols"
-    );
-  }
 }
