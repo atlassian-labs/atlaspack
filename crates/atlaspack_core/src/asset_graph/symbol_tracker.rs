@@ -1476,7 +1476,7 @@ mod tests {
   }
 
   // ============================================================
-  // track_symbols_new tests
+  // track_symbols tests
   // ============================================================
 
   #[test]
@@ -1513,10 +1513,10 @@ mod tests {
   }
 
   #[test]
-  fn track_symbols_new_returns_undeferred_for_unresolved_deps() {
+  fn track_symbols_returns_undeferred_for_unresolved_deps() {
     // Build a graph where index.js imports "a" from ./a.js,
     // but ./a.js has NO resolved asset (no outgoing edge from dep node).
-    // track_symbols_new should signal that this dep needs un-deferral.
+    // track_symbols should signal that this dep needs un-deferral.
     let mut graph = AssetGraph::new();
 
     let entry_dep = make_entry_dependency();
@@ -1533,17 +1533,17 @@ mod tests {
 
     let mut tracker = SymbolTracker::default();
     let undeferred = tracker
-      .track_symbols(&graph, &entry_asset, &[dep_a.clone()])
+      .track_symbols(&graph, &entry_asset, std::slice::from_ref(&dep_a))
       .unwrap();
 
     assert_eq!(undeferred, vec![dep_a.id()]);
   }
 
   #[test]
-  fn track_symbols_new_does_not_undefer_resolved_deps() {
+  fn track_symbols_does_not_undefer_resolved_deps() {
     // Build a graph where index.js imports "a" from ./a.js,
     // and ./a.js IS resolved (has an outgoing edge to an asset).
-    // track_symbols_new should NOT signal un-deferral.
+    // track_symbols should NOT signal un-deferral.
     let mut graph = AssetGraph::new();
 
     let entry_dep = make_entry_dependency();
@@ -1574,7 +1574,7 @@ mod tests {
   }
 
   #[test]
-  fn track_symbols_new_does_not_undefer_deps_without_requirements() {
+  fn track_symbols_does_not_undefer_deps_without_requirements() {
     // A dep with no symbols (e.g., side-effect import `import './setup'`)
     // should never be un-deferred by the symbol tracker.
     let mut graph = AssetGraph::new();
@@ -1603,8 +1603,8 @@ mod tests {
   }
 
   #[test]
-  fn track_symbols_new_produces_same_results_as_track_symbols() {
-    // Verify that track_symbols_new produces the same symbol tracking
+  fn track_symbols_produces_same_results_as_track_symbols() {
+    // Verify that track_symbols produces the same symbol tracking
     // results as track_symbols (the existing method).
     let mut graph = AssetGraph::new();
 
@@ -1626,21 +1626,21 @@ mod tests {
     // Run with track_symbols (old method)
     let mut tracker_old = SymbolTracker::default();
     tracker_old
-      .track_symbols(&graph, &entry_asset, &[dep_a.clone()])
+      .track_symbols(&graph, &entry_asset, std::slice::from_ref(&dep_a))
       .unwrap();
     tracker_old.track_symbols(&graph, &asset_a, &[]).unwrap();
 
-    // Run with track_symbols_new
+    // Run with track_symbols
     let mut tracker_new = SymbolTracker::default();
     tracker_new
-      .track_symbols(&graph, &entry_asset, &[dep_a.clone()])
+      .track_symbols(&graph, &entry_asset, std::slice::from_ref(&dep_a))
       .unwrap();
     tracker_new.track_symbols(&graph, &asset_a, &[]).unwrap();
 
     // Both should have the same requirements
     assert_eq!(
       tracker_old.requirements_by_dep, tracker_new.requirements_by_dep,
-      "track_symbols_new should produce identical results to track_symbols"
+      "track_symbols should produce identical results to track_symbols"
     );
   }
 }
