@@ -688,7 +688,7 @@ impl AssetGraphBuilder {
   ) {
     let undeferred = match self
       .symbol_tracker
-      .track_symbols_new(&self.graph, asset, dependencies)
+      .track_symbols(&self.graph, asset, dependencies)
     {
       Ok(undeferred) => undeferred,
       Err(err) => {
