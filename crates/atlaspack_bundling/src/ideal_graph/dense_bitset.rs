@@ -183,24 +183,6 @@ impl DenseBitset {
     }
     self.cached_len.set(None);
   }
-
-  /// Converts this bitset to a [`roaring::RoaringBitmap`].
-  ///
-  /// Used at the Phase 6 boundary to convert internal `DenseBitset` availability
-  /// back to `RoaringBitmap` for storage on `IdealBundle.ancestor_assets`.
-  /// Runs once per bundle root (~7,225 times), not in any hot loop.
-  pub fn to_roaring(&self) -> roaring::RoaringBitmap {
-    let mut rb = roaring::RoaringBitmap::new();
-    for (word_idx, &word) in self.words.iter().enumerate() {
-      let mut w = word;
-      while w != 0 {
-        let bit = w.trailing_zeros();
-        rb.insert((word_idx as u32) * 64 + bit);
-        w &= w - 1;
-      }
-    }
-    rb
-  }
 }
 
 impl Default for DenseBitset {
@@ -456,38 +438,6 @@ mod tests {
     assert_eq!(b.len(), 2);
     assert!(b.contains(42));
     assert!(b.contains(100));
-  }
-
-  #[test]
-  fn test_to_roaring_roundtrip() {
-    let mut bs = DenseBitset::with_capacity(1000);
-    let values: Vec<u32> = vec![0, 1, 63, 64, 65, 127, 128, 500, 999];
-    for &v in &values {
-      bs.insert(v);
-    }
-
-    let rb = bs.to_roaring();
-    assert_eq!(rb.len(), values.len() as u64);
-    for &v in &values {
-      assert!(rb.contains(v), "RoaringBitmap should contain {v}");
-    }
-  }
-
-  #[test]
-  fn test_to_roaring_large_universe() {
-    // Test with values beyond 65,536 (Jira scale)
-    let mut bs = DenseBitset::new();
-    bs.insert(0);
-    bs.insert(65_535);
-    bs.insert(65_536);
-    bs.insert(120_000);
-
-    let rb = bs.to_roaring();
-    assert_eq!(rb.len(), 4);
-    assert!(rb.contains(0));
-    assert!(rb.contains(65_535));
-    assert!(rb.contains(65_536));
-    assert!(rb.contains(120_000));
   }
 
   #[test]

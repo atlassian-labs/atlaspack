@@ -7,7 +7,6 @@ edition = "2024"
 anyhow = { workspace = true }
 atlaspack_core = { path = "../atlaspack_core" }
 fixedbitset = "0.5"
-roaring = "0.10"
 serde_json = { workspace = true }
 petgraph = { workspace = true }
 tracing = { workspace = true }
