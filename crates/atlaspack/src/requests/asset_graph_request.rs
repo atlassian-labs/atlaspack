@@ -17,7 +17,7 @@ use atlaspack_core::asset_graph::{
   AssetGraph, AssetGraphNode, DependencyState, FinalizedSymbolTracker, SymbolTracker,
   propagate_requested_symbols,
 };
-use atlaspack_core::types::{AssetWithDependencies, Dependency};
+use atlaspack_core::types::{AssetWithDependencies, Dependency, DependencyId};
 
 use super::RequestResult;
 use super::asset_request::{AssetRequest, AssetRequestOutput};
@@ -337,7 +337,20 @@ impl AssetGraphBuilder {
     let existing_edges = self.graph.get_outgoing_neighbors(&existing_dep_id);
     for edge in existing_edges {
       self.graph.add_edge(&new_dep_id, &edge);
-      self.propagate_requested_symbols(edge, new_dep_id);
+
+      if self.enable_symbol_tracker {
+        if let Some(AssetGraphNode::Asset(asset)) = self.graph.get_node(&edge) {
+          let asset = asset.clone();
+          let dep_node_ids = self.graph.get_outgoing_neighbors(&edge);
+          let deps: Vec<Dependency> = dep_node_ids
+            .iter()
+            .filter_map(|nid| self.graph.get_dependency(nid).map(|d| d.as_ref().clone()))
+            .collect();
+          self.track_and_propagate_symbols(&asset, &deps);
+        }
+      } else {
+        self.propagate_requested_symbols(edge, new_dep_id);
+      }
     }
   }
 
@@ -348,8 +361,12 @@ impl AssetGraphBuilder {
       .expect("Missing node index for request id {request_id}");
 
     let dependency = self.graph.get_dependency(&dependency_id).unwrap();
-    let requested_symbols = self.graph.get_requested_symbols(&dependency_id);
-    let has_requested_symbols = requested_symbols.is_some_and(|s| !s.is_empty());
+    let has_requested_symbols = if self.enable_symbol_tracker {
+      self.symbol_tracker.has_requested_symbols(&dependency.id())
+    } else {
+      let requested_symbols = self.graph.get_requested_symbols(&dependency_id);
+      requested_symbols.is_some_and(|s| !s.is_empty())
+    };
 
     let asset_request = match result {
       PathRequestOutput::Resolved {
@@ -504,22 +521,11 @@ impl AssetGraphBuilder {
         cached,
       );
 
-      if self.enable_symbol_tracker
-        && let Err(err) =
-          self
-            .symbol_tracker
-            .track_symbols(&self.graph, &new_asset, &discovered_asset.dependencies)
-      {
-        panic!(
-          "Error tracking symbols for discovered asset {}: {}",
-          discovered_asset.asset.file_path.display(),
-          err
-        );
+      if self.enable_symbol_tracker {
+        self.track_and_propagate_symbols(&new_asset, &discovered_asset.dependencies);
+      } else {
+        self.propagate_requested_symbols(asset_id, incoming_dependency_id);
       }
-
-      // TODO: Once track_symbols is set up properly, this will need to go in an
-      // else block of the feature flag
-      self.propagate_requested_symbols(asset_id, incoming_dependency_id);
     }
 
     self.add_asset_dependencies(
@@ -532,19 +538,11 @@ impl AssetGraphBuilder {
       cached,
     );
 
-    if self.enable_symbol_tracker
-      && let Err(err) = self
-        .symbol_tracker
-        .track_symbols(&self.graph, &new_asset, dependencies)
-    {
-      panic!(
-        "Error tracking symbols for asset {}: {}",
-        new_asset.file_path.display(),
-        err
-      );
+    if self.enable_symbol_tracker {
+      self.track_and_propagate_symbols(&new_asset, dependencies);
+    } else {
+      self.propagate_requested_symbols(asset_id, incoming_dependency_id);
     }
-
-    self.propagate_requested_symbols(asset_id, incoming_dependency_id);
 
     // Connect any previously discovered Dependencies that were waiting
     // for this AssetNode to be created
@@ -653,20 +651,11 @@ impl AssetGraphBuilder {
             cached,
           );
 
-          if self.enable_symbol_tracker
-            && let Err(err) =
-              self
-                .symbol_tracker
-                .track_symbols(&self.graph, &new_asset, dependencies)
-          {
-            panic!(
-              "Error tracking symbols for asset {}: {}",
-              new_asset.file_path.display(),
-              err
-            );
+          if self.enable_symbol_tracker {
+            self.track_and_propagate_symbols(&new_asset, dependencies);
+          } else {
+            self.propagate_requested_symbols(asset_id, dependency_id);
           }
-
-          self.propagate_requested_symbols(asset_id, dependency_id);
         }
       }
     }
@@ -688,6 +677,55 @@ impl AssetGraphBuilder {
         );
       },
     );
+  }
+
+  /// Combined track + propagate using the new SymbolTracker approach.
+  /// Replaces the separate `track_symbols` + `propagate_requested_symbols` calls.
+  fn track_and_propagate_symbols(
+    &mut self,
+    asset: &Arc<atlaspack_core::types::Asset>,
+    dependencies: &[Dependency],
+  ) {
+    let undeferred = match self
+      .symbol_tracker
+      .track_symbols_new(&self.graph, asset, dependencies)
+    {
+      Ok(undeferred) => undeferred,
+      Err(err) => {
+        panic!(
+          "Error tracking symbols for asset {}: {}",
+          asset.file_path.display(),
+          err
+        );
+      }
+    };
+
+    self.process_undeferred_dependencies(undeferred);
+  }
+
+  /// Processes dependencies that were un-deferred by the SymbolTracker.
+  /// Looks up the graph NodeId for each dependency and queues a PathRequest.
+  fn process_undeferred_dependencies(&mut self, undeferred: Vec<DependencyId>) {
+    for dep_id in undeferred {
+      let Some(dep_node_id) = self.graph.get_node_id_by_content_key(&dep_id) else {
+        tracing::warn!("Could not find node ID for undeferred dependency {dep_id}");
+        continue;
+      };
+
+      let Some(dependency) = self.graph.get_dependency(dep_node_id) else {
+        tracing::warn!("Could not find dependency for node ID {dep_node_id}");
+        continue;
+      };
+
+      Self::on_undeferred(
+        &mut self.request_id_to_dependency_id,
+        &mut self.work_count,
+        &mut self.request_context,
+        &self.sender,
+        *dep_node_id,
+        dependency,
+      );
+    }
   }
 
   fn handle_target_request_result(&mut self, result: &TargetRequestOutput, cached: bool) {
