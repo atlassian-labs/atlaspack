@@ -209,7 +209,6 @@ export default function createBundleGraphRequest(
 
       if (subRequestsInvalid) {
         assetGraph.safeToIncrementallyBundle = false;
-        assetGraph.setNeedsBundling();
       }
 
       let configResult = nullthrows(
@@ -340,14 +339,10 @@ class BundlerRunner {
     const previousBundleGraphResult: BundleGraphResult | null | undefined =
       await this.api.getPreviousResult();
     const canIncrementallyBundle =
-      previousBundleGraphResult?.assetGraphBundlingVersion != null &&
-      graph.canIncrementallyBundle(
-        previousBundleGraphResult.assetGraphBundlingVersion,
-      );
+      previousBundleGraphResult != null && graph.canIncrementallyBundle();
 
     if (graph.safeToIncrementallyBundle && previousBundleGraphResult == null) {
       graph.safeToIncrementallyBundle = false;
-      graph.setNeedsBundling();
     }
 
     let internalBundleGraph;
@@ -461,7 +456,7 @@ class BundlerRunner {
         this.api.storeResult(
           {
             bundleGraph: internalBundleGraph,
-            assetGraphBundlingVersion: graph.getBundlingVersion(),
+            assetGraphBundlingVersion: 0,
             changedAssets: new Map(),
             assetRequests: [],
             didIncrementallyBundle,
@@ -548,7 +543,7 @@ class BundlerRunner {
     this.api.storeResult(
       {
         bundleGraph: internalBundleGraph,
-        assetGraphBundlingVersion: graph.getBundlingVersion(),
+        assetGraphBundlingVersion: 0,
         changedAssets: new Map(),
         assetRequests: [],
         didIncrementallyBundle,
@@ -558,7 +553,7 @@ class BundlerRunner {
 
     return {
       bundleGraph: internalBundleGraph,
-      assetGraphBundlingVersion: graph.getBundlingVersion(),
+      assetGraphBundlingVersion: 0,
       changedAssets: changedRuntimes,
       assetRequests,
       didIncrementallyBundle,

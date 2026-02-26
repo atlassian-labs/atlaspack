@@ -186,15 +186,6 @@ export const DEFAULT_FEATURE_FLAGS = {
   condbDevFallbackProd: false,
 
   /**
-   * Enable the new incremental bundling versioning logic which determines whether
-   * a full bundling pass is required based on the AssetGraph's bundlingVersion.
-   *
-   * @author Pedro Tacla Yamada <pyamada@atlassian.com>
-   * @since 2025-07-08
-   */
-  incrementalBundlingVersioning: process.env.ATLASPACK_BUILD_ENV === 'test',
-
-  /**
    * Remove redundant shared bundles that are no longer required after merging
    * async bundles.
    *
