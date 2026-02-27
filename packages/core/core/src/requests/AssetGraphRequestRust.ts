@@ -238,7 +238,32 @@ export function getAssetGraph(
     return envId;
   };
 
-  function updateNode(newNode: AssetGraphNode, isUpdateNode: boolean) {
+  function describeNode(node: AssetGraphNode): Record<string, unknown> {
+    const base = {type: node.type, id: node.id};
+    if (node.type === 'asset') {
+      return {
+        ...base,
+        filePath: node.value.filePath,
+        fileType: node.value.type,
+        pipeline: node.value.pipeline,
+      };
+    } else if (node.type === 'dependency') {
+      return {
+        ...base,
+        specifier: node.value.specifier,
+        specifierType: node.value.specifierType,
+        sourceAssetId: node.value.sourceAssetId,
+        sourcePath: node.value.sourcePath,
+      };
+    }
+    return base;
+  }
+
+  function updateNode(
+    newNode: AssetGraphNode,
+    isUpdateNode: boolean,
+    index: number,
+  ) {
     if (isUpdateNode) {
       let existingNode = graph.getNodeByContentKey(newNode.id);
 
@@ -246,7 +271,34 @@ export function getAssetGraph(
 
       Object.assign(existingNode, newNode);
     } else {
-      graph.addNodeByContentKey(newNode.id, newNode);
+      try {
+        graph.addNodeByContentKey(newNode.id, newNode);
+      } catch (e) {
+        if (
+          e instanceof Error &&
+          e.message.includes('already has content key')
+        ) {
+          let existingNode = graph.getNodeByContentKey(newNode.id);
+          let diagnostics = {
+            contentKey: newNode.id,
+            newNode: describeNode(newNode),
+            existingNode: existingNode ? describeNode(existingNode) : null,
+            iterationIndex: index,
+            totalSerializedNodes: nodesCount,
+            newNodesCount: serializedGraph.nodes.length,
+            updatesCount: serializedGraph.updates.length,
+            edgesCount: serializedGraph.edges.length,
+            hadPreviousGraph: !!prevAssetGraph,
+            safeToSkipBundling: serializedGraph.safeToSkipBundling,
+            graphNodeCount: graph._contentKeyToNodeId.size,
+          };
+
+          throw new Error(
+            `Graph already has content key '${newNode.id}'. Diagnostics: ${JSON.stringify(diagnostics, null, 2)}`,
+          );
+        }
+        throw e;
+      }
     }
   }
 
@@ -305,7 +357,7 @@ export function getAssetGraph(
         usedSymbolsUpDirty: true,
         value: asset,
       };
-      updateNode(assetNode, isUpdateNode);
+      updateNode(assetNode, isUpdateNode, index);
     } else if (node.type === 'dependency') {
       let {dependency, id} = node.value;
 
@@ -355,7 +407,7 @@ export function getAssetGraph(
         value: dependency,
       };
 
-      updateNode(depNode, isUpdateNode);
+      updateNode(depNode, isUpdateNode, index);
     }
   }
 
