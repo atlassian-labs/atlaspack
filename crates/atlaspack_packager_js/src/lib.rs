@@ -21,5 +21,6 @@ pub struct JsPackager<B: BundleGraph + Send + Sync> {
   bundle_graph: Arc<RwLock<B>>,
 }
 
+pub mod inline_requires;
 pub mod js_packager;
 pub mod process_asset;

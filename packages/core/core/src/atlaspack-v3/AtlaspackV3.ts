@@ -11,6 +11,7 @@ import {
   Lmdb,
   AtlaspackNapiOptions,
   CacheStats,
+  PackageOptions,
 } from '@atlaspack/rust';
 import {NapiWorkerPool} from './NapiWorkerPool';
 import ThrowableDiagnostic, {Diagnostic} from '@atlaspack/diagnostic';
@@ -133,10 +134,13 @@ export class AtlaspackV3 {
 
   package(
     bundleId: string,
+    options?: PackageOptions,
   ): Promise<[RunPackagerRunnerResult, Diagnostic | null]> {
-    return atlaspackNapiPackage(this._atlaspack_napi, bundleId) as Promise<
-      [RunPackagerRunnerResult, Diagnostic | null]
-    >;
+    return atlaspackNapiPackage(
+      this._atlaspack_napi,
+      bundleId,
+      options,
+    ) as Promise<[RunPackagerRunnerResult, Diagnostic | null]>;
   }
 
   async respondToFsEvents(events: Array<Event>): Promise<boolean> {

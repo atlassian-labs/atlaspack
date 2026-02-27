@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use oxc_allocator::Allocator;
 use oxc_ast::AstBuilder;
@@ -8,22 +8,29 @@ use oxc_codegen::Codegen;
 use oxc_parser::Parser;
 use oxc_span::{SPAN, SourceType};
 
+use crate::inline_requires::inline_requires as run_inline_requires;
+
 /// Rewrites asset code by replacing require() calls with resolved public IDs.
 ///
 /// This function:
 /// 1. Parses the JavaScript code to an AST
 /// 2. Traverses the AST, replacing require() specifiers with resolved public IDs
-/// 3. Generates JavaScript code back from the modified AST
+/// 3. Optionally inlines top-level `require()` variable declarations at their use sites
+/// 4. Generates JavaScript code back from the modified AST
 ///
 /// # Arguments
 /// * `code` - The JavaScript code to transform
 /// * `deps` - Map of specifiers to their resolved public IDs (None means skipped dependency)
+/// * `inline_requires` - When true, `const x = require("id")` declarations are removed and
+///   usages are replaced with `(0, require("id"))` at each call site
 ///
 /// # Returns
 /// The transformed code as a String
 pub fn rewrite_asset_code(
   code: String,
   deps: &HashMap<String, Option<String>>,
+  inline_requires: bool,
+  side_effect_public_ids: &HashSet<String>,
 ) -> anyhow::Result<String> {
   let allocator = Allocator::default();
   let source_type = SourceType::default().with_module(true);
@@ -39,11 +46,16 @@ pub fn rewrite_asset_code(
   }
 
   let mut program = parser_return.program;
-
-  // Apply the visitor in a single pass
   let ast_builder = AstBuilder::new(&allocator);
+
+  // First pass: rewrite require() specifiers to resolved public IDs
   let mut visitor = AssetCodeVisitor::new(&ast_builder, deps);
   visitor.visit_program(&mut program);
+
+  // Second pass (optional): inline require() variable declarations at use sites
+  if inline_requires {
+    run_inline_requires(&allocator, &mut program, side_effect_public_ids);
+  }
 
   // Generate code back from the AST
   let codegen = Codegen::new();
@@ -120,7 +132,7 @@ mod tests {
 
   /// Helper: run rewrite_asset_code
   fn rewrite(code: &str, deps: &HashMap<String, Option<String>>) -> String {
-    rewrite_asset_code(code.to_string(), deps).unwrap()
+    rewrite_asset_code(code.to_string(), deps, false, &Default::default()).unwrap()
   }
 
   #[test]

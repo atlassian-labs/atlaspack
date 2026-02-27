@@ -1,4 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+  collections::{HashMap, HashSet},
+  sync::Arc,
+};
 
 use atlaspack_core::{
   bundle_graph::bundle_graph::BundleGraph,
@@ -33,6 +36,22 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
 
     let assets = graph.get_bundle_assets(bundle)?;
 
+    let inline_requires = bundle.target.inline_requires;
+
+    // When inline requires is enabled, collect the public IDs of all assets in this bundle
+    // that have side effects. require() calls for these assets must not be inlined because
+    // their top-level code must run eagerly (e.g. polyfills, CSS-in-JS, global registrations).
+    let side_effect_public_ids: HashSet<String> = if inline_requires {
+      assets
+        .iter()
+        .filter(|asset| asset.side_effects)
+        .filter_map(|asset| graph.get_public_asset_id(&asset.id).map(str::to_string))
+        .collect()
+    } else {
+      HashSet::new()
+    };
+    let side_effect_public_ids = Arc::new(side_effect_public_ids);
+
     let span = tracing::trace_span!("process_assets", bundle_id = bundle_id).entered();
     let contents = assets
       .par_iter()
@@ -52,7 +71,13 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
           String::from_utf8_lossy(&code.ok_or(anyhow::anyhow!("Unable to read asset code"))?)
             .to_string();
         self
-          .process_asset(bundle, asset, asset_code)
+          .process_asset(
+            bundle,
+            asset,
+            asset_code,
+            inline_requires,
+            &side_effect_public_ids,
+          )
           .map(|content| (*asset, content))
       })
       .collect::<anyhow::Result<Vec<(&Asset, String)>>>()?;
@@ -98,11 +123,27 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
     })
   }
 
-  #[tracing::instrument(level = "trace", skip_all)]
-  fn process_asset(&self, bundle: &Bundle, asset: &Asset, code: String) -> anyhow::Result<String> {
+  #[tracing::instrument(
+    level = "trace",
+    skip_all,
+    fields(
+      asset = %diff_paths(&asset.file_path, &self.context.project_root)
+        .unwrap_or_else(|| asset.file_path.clone())
+        .display()
+        .to_string()
+    )
+  )]
+  fn process_asset(
+    &self,
+    bundle: &Bundle,
+    asset: &Asset,
+    code: String,
+    inline_requires: bool,
+    side_effect_public_ids: &HashSet<String>,
+  ) -> anyhow::Result<String> {
     // Get dependency map for this asset
     let deps = self.get_asset_dependency_map(bundle, asset)?;
-    let code = rewrite_asset_code(code, &deps)?;
+    let code = rewrite_asset_code(code, &deps, inline_requires, side_effect_public_ids)?;
 
     // All assets are wrapped, including entry assets. Entry assets will be explicitly
     // required at the bottom of the bundle to ensure they execute in order.

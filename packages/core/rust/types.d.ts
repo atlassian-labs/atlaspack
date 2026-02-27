@@ -343,6 +343,15 @@ export interface NativeMemoryStats {
   sampleCount: number;
 }
 
+export interface PackageOptions {
+  /**
+   * When true, top-level `require()` variable declarations are removed and their
+   * usages are replaced with inline `(0, require("id"))` calls, deferring module
+   * initialisation to first use and improving startup performance.
+   */
+  inlineRequires?: boolean;
+}
+
 export type JsSourceMap = SourceMap;
 export class SourceMap {
   constructor(projectRoot: string, buffer?: Buffer | undefined | null);
@@ -388,6 +397,7 @@ export class SourceMap {
 export declare function atlaspackNapiPackage(
   atlaspackNapi: AtlaspackNapi,
   bundleId: string,
+  options?: PackageOptions,
 ): Promise<[RunPackagerRunnerResult, AtlaspackNapiError]>;
 export interface CompiledCssInJsConfigPlugin {
   configPath?: string;

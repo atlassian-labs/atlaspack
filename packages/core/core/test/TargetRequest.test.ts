@@ -122,6 +122,7 @@ describe('TargetResolver', () => {
         {
           name: 'customA',
           publicUrl: '/',
+          inlineRequires: false,
           distDir: normalizeSeparators(path.resolve('customA')),
           env: createEnvironment({
             context: 'browser',
@@ -142,6 +143,7 @@ describe('TargetResolver', () => {
         {
           name: 'customB',
           publicUrl: '/',
+          inlineRequires: false,
           distEntry: 'b.js',
           distDir: normalizeSeparators(path.resolve('customB')),
           env: createEnvironment({
@@ -175,6 +177,7 @@ describe('TargetResolver', () => {
           distDir: 'fixtures/common-targets/dist/main',
           distEntry: 'index.js',
           publicUrl: '/',
+          inlineRequires: false,
           env: createEnvironment({
             context: 'node',
             engines: {
@@ -209,6 +212,7 @@ describe('TargetResolver', () => {
           distDir: 'fixtures/common-targets/dist/module',
           distEntry: 'index.js',
           publicUrl: '/',
+          inlineRequires: false,
           env: createEnvironment({
             context: 'browser',
             engines: {
@@ -245,6 +249,7 @@ describe('TargetResolver', () => {
           distDir: 'fixtures/common-targets/dist/browser',
           distEntry: 'index.js',
           publicUrl: '/assets',
+          inlineRequires: false,
           env: createEnvironment({
             context: 'browser',
             engines: {
@@ -291,6 +296,7 @@ describe('TargetResolver', () => {
           ),
           distEntry: 'index.js',
           publicUrl: '/',
+          inlineRequires: false,
           env: createEnvironment({
             context: 'node',
             engines: {
@@ -334,6 +340,7 @@ describe('TargetResolver', () => {
           distDir: 'fixtures/custom-targets/dist/main',
           distEntry: 'index.js',
           publicUrl: '/',
+          inlineRequires: false,
           env: createEnvironment({
             context: 'node',
             engines: {
@@ -368,6 +375,7 @@ describe('TargetResolver', () => {
           distDir: 'fixtures/custom-targets/dist/browserModern',
           distEntry: 'index.js',
           publicUrl: '/',
+          inlineRequires: false,
           env: createEnvironment({
             context: 'browser',
             engines: {
@@ -405,6 +413,7 @@ describe('TargetResolver', () => {
           distDir: 'fixtures/custom-targets/dist/browserLegacy',
           distEntry: 'index.js',
           publicUrl: '/',
+          inlineRequires: false,
           env: createEnvironment({
             context: 'browser',
             engines: {
@@ -459,6 +468,7 @@ describe('TargetResolver', () => {
           distDir: 'fixtures/custom-targets/dist/main',
           distEntry: 'index.js',
           publicUrl: '/',
+          inlineRequires: false,
           env: createEnvironment({
             context: 'node',
             engines: {
@@ -493,6 +503,7 @@ describe('TargetResolver', () => {
           distDir: 'fixtures/custom-targets/dist/browserModern',
           distEntry: 'index.js',
           publicUrl: '/',
+          inlineRequires: false,
           env: createEnvironment({
             context: 'browser',
             engines: {
@@ -530,6 +541,7 @@ describe('TargetResolver', () => {
           distDir: 'fixtures/custom-targets/dist/browserLegacy',
           distEntry: 'index.js',
           publicUrl: '/',
+          inlineRequires: false,
           env: createEnvironment({
             context: 'browser',
             engines: {
@@ -576,6 +588,7 @@ describe('TargetResolver', () => {
           distDir: 'fixtures/custom-targets-distdir/www',
           distEntry: undefined,
           publicUrl: 'www',
+          inlineRequires: false,
           env: createEnvironment({
             context: 'browser',
             engines: {
@@ -631,6 +644,7 @@ describe('TargetResolver', () => {
           name: 'customB',
           distDir: normalizeSeparators(path.resolve('customB')),
           publicUrl: '/',
+          inlineRequires: false,
           env: createEnvironment({
             context: 'browser',
             engines: {
@@ -673,6 +687,7 @@ describe('TargetResolver', () => {
           name: 'customA',
           distDir: normalizeSeparators(path.resolve('customA')),
           publicUrl: '/',
+          inlineRequires: false,
           env: createEnvironment({
             context: 'browser',
             engines: {
@@ -702,6 +717,7 @@ describe('TargetResolver', () => {
         distDir: 'fixtures/context/dist/main',
         distEntry: 'index.js',
         publicUrl: '/',
+        inlineRequires: false,
         env: createEnvironment({
           context: 'node',
           engines: {
@@ -1073,6 +1089,7 @@ describe('TargetResolver', () => {
         distDir: relative(path.join(fixture, 'dist')),
         distEntry: 'index.mjs',
         publicUrl: '/',
+        inlineRequires: false,
         env: createEnvironment({
           context: 'browser',
           engines: {
@@ -1118,6 +1135,7 @@ describe('TargetResolver', () => {
         distDir: relative(path.join(fixture, 'dist')),
         distEntry: 'index.js',
         publicUrl: '/',
+        inlineRequires: false,
         env: createEnvironment({
           context: 'browser',
           engines: {
@@ -1167,6 +1185,7 @@ describe('TargetResolver', () => {
           distDir: 'fixtures/common-targets/dist/main',
           distEntry: 'index.js',
           publicUrl: '/',
+          inlineRequires: false,
           env: createEnvironment({
             context: 'node',
             engines: {
@@ -1201,6 +1220,7 @@ describe('TargetResolver', () => {
           distDir: 'fixtures/common-targets/dist/browser',
           distEntry: 'index.js',
           publicUrl: '/assets',
+          inlineRequires: false,
           env: createEnvironment({
             context: 'browser',
             engines: {
@@ -1249,6 +1269,7 @@ describe('TargetResolver', () => {
           name: 'default',
           distDir: serveDistDir,
           publicUrl: '/',
+          inlineRequires: false,
           env: createEnvironment({
             context: 'browser',
             engines: {
@@ -1286,6 +1307,7 @@ describe('TargetResolver', () => {
             path.join(DEFAULT_DISTPATH_FIXTURE_PATHS.none, 'dist'),
           ),
           publicUrl: '/',
+          inlineRequires: false,
           env: createEnvironment({
             context: 'browser',
             engines: {
@@ -1319,6 +1341,7 @@ describe('TargetResolver', () => {
           ),
           distEntry: undefined,
           publicUrl: '/',
+          inlineRequires: false,
           env: createEnvironment({
             context: 'browser',
             engines: {
@@ -1369,6 +1392,7 @@ describe('TargetResolver', () => {
           ),
           distEntry: undefined,
           publicUrl: '/',
+          inlineRequires: false,
           env: createEnvironment({
             context: 'browser',
             engines: {
@@ -1409,6 +1433,7 @@ describe('TargetResolver', () => {
           ),
           distEntry: undefined,
           publicUrl: '/',
+          inlineRequires: false,
           env: createEnvironment({
             context: 'browser',
             engines: {
