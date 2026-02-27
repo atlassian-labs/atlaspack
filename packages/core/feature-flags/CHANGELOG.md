@@ -1,5 +1,13 @@
 # @atlaspack/feature-flags
 
+## 2.30.1
+
+### Patch Changes
+
+- [#1044](https://github.com/atlassian-labs/atlaspack/pull/1044) [`ad3c822`](https://github.com/atlassian-labs/atlaspack/commit/ad3c8223ab1abce9e8da81239cc56f27d37c7cad) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - cleanup incrementalBundlingVersioning flag
+
+- [#1035](https://github.com/atlassian-labs/atlaspack/pull/1035) [`936209f`](https://github.com/atlassian-labs/atlaspack/commit/936209f3c6c201288720dd62b61e1f538368268c) Thanks [@marcins](https://github.com/marcins)! - Remove `cachePerformanceImprovements` feature flag
+
 ## 2.30.0
 
 ### Minor Changes
