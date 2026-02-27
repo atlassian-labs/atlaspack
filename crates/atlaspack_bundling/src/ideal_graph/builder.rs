@@ -43,8 +43,9 @@ use petgraph::{
 use tracing::{debug, instrument};
 
 use super::types::{
-  AssetKey, BundleRootEdgeType, IdealBundle, IdealBundleId, IdealEdgeType, IdealGraph,
-  IdealGraphBuildOptions, IdealGraphBuildStats,
+  AssetKey, BundleReason, BundleReport, BundleRootEdgeType, BundlingReport, DecisionKind,
+  IdealBundle, IdealBundleId, IdealEdgeType, IdealGraph, IdealGraphBuildOptions,
+  IdealGraphBuildStats,
 };
 
 /// When true, the bundler skips dependencies marked as Deferred or Excluded by symbol propagation.
@@ -149,12 +150,112 @@ impl IdealGraphBuilder {
     }
   }
 
+  #[instrument(level = "debug", skip_all)]
+  fn build_report(&self, ideal: &IdealGraph) -> BundlingReport {
+    let mut bundles: Vec<BundleReport> = Vec::new();
+
+    for (bundle_id, ideal_bundle) in ideal.bundles_iter() {
+      let root_key = bundle_id.as_asset_key();
+      let root_id = ideal.assets.id_for(root_key);
+
+      let reason = if self.entry_roots.contains(&root_key) {
+        BundleReason::EntryPoint
+      } else if ideal_bundle.root_asset_id.is_none() && root_id.starts_with("@@shared:") {
+        BundleReason::SharedAssets
+      } else if ideal_bundle.root_asset_id.is_none() && root_id.starts_with("@@typechange:") {
+        BundleReason::TypeChange
+      } else if matches!(
+        ideal_bundle.behavior,
+        Some(BundleBehavior::Isolated) | Some(BundleBehavior::InlineIsolated)
+      ) {
+        BundleReason::Isolated
+      } else {
+        // Check BoundaryCreated decisions for priority/type-change info.
+        let boundary = self.decisions.decisions.iter().find_map(|d| match d.kind {
+          DecisionKind::BoundaryCreated {
+            asset,
+            priority,
+            type_change,
+            ..
+          } if asset == root_key => Some((priority, type_change)),
+          _ => None,
+        });
+
+        match boundary {
+          Some((priority, type_change)) if type_change => BundleReason::TypeChange,
+          Some((Priority::Parallel, _)) => BundleReason::Parallel,
+          Some((Priority::Lazy, _)) => BundleReason::LazyImport,
+          _ => BundleReason::LazyImport,
+        }
+      };
+
+      let root_asset_file_path = Some(ideal.assets.file_path_for(root_key).to_string());
+
+      // For shared bundles, find the source bundle roots from decision log.
+      let source_bundles = if matches!(reason, BundleReason::SharedAssets) {
+        let mut sources: Vec<AssetKey> = self
+          .decisions
+          .decisions
+          .iter()
+          .filter_map(|d| match d.kind {
+            DecisionKind::AssetMovedToSharedBundle {
+              from_bundle_root,
+              shared_bundle_root,
+              ..
+            } if shared_bundle_root == root_key => Some(from_bundle_root),
+            _ => None,
+          })
+          .collect();
+        sources.sort();
+        sources.dedup();
+        sources
+          .iter()
+          .map(|k| ideal.assets.file_path_for(*k).to_string())
+          .collect()
+      } else {
+        Vec::new()
+      };
+
+      bundles.push(BundleReport {
+        bundle_id: *bundle_id,
+        reason,
+        bundle_type: format!("{:?}", ideal_bundle.bundle_type),
+        root_asset_file_path,
+        asset_count: ideal_bundle.assets.count_ones(..),
+        source_bundles,
+      });
+    }
+
+    // Summary stats.
+    let mut all_assets = FixedBitSet::with_capacity(ideal.assets.len());
+    all_assets.grow(ideal.assets.len());
+    for (_bundle_id, ideal_bundle) in ideal.bundles_iter() {
+      all_assets.union_with(&ideal_bundle.assets);
+    }
+
+    BundlingReport {
+      bundles,
+      total_assets: all_assets.count_ones(..),
+      total_bundles: ideal.bundle_count(),
+      total_shared_bundles: ideal
+        .bundles_iter()
+        .filter(|(id, _)| {
+          ideal
+            .assets
+            .id_for(id.as_asset_key())
+            .starts_with("@@shared:")
+        })
+        .count(),
+      internalized_bundle_count: ideal.internalized_bundles.len(),
+    }
+  }
+
   /// Full pipeline entrypoint.
   #[instrument(level = "debug", skip_all)]
   pub fn build(
     mut self,
     asset_graph: &AssetGraph,
-  ) -> anyhow::Result<(IdealGraph, IdealGraphBuildStats)> {
+  ) -> anyhow::Result<(IdealGraph, IdealGraphBuildStats, BundlingReport)> {
     self.assets = super::types::AssetInterner::from_asset_graph(asset_graph);
     for asset in asset_graph.get_assets() {
       if let Some(key) = self.assets.key_for(&asset.id) {
@@ -222,13 +323,15 @@ impl IdealGraphBuilder {
     // Phase 9: extract shared bundles for multi-root assets.
     self.create_shared_bundles(&reachability, &mut ideal)?;
 
+    let report = self.build_report(&ideal);
+
     // Always attach debug info. Decision payloads are compact and avoid String cloning.
     ideal.debug = Some(super::types::IdealGraphDebug {
       decisions: std::mem::take(&mut self.decisions),
       asset_ids: ideal.assets.ids_cloned(),
     });
 
-    Ok((ideal, stats))
+    Ok((ideal, stats, report))
   }
 
   // ----------------------------
@@ -425,7 +528,6 @@ impl IdealGraphBuilder {
                 super::types::DecisionKind::BoundaryCreated {
                   asset: target_key,
                   from_asset: from_key,
-                  dependency_id: dep.id.clone(),
                   priority: dep.priority,
                   type_change,
                   isolated,
@@ -671,13 +773,6 @@ impl IdealGraphBuilder {
       })?;
 
       ideal.move_asset_to_bundle(root_key, &bundle_id)?;
-
-      self.decision(
-        "placement",
-        super::types::DecisionKind::BundleRootCreated {
-          root_asset: root_key,
-        },
-      );
     }
 
     debug!(
@@ -1217,10 +1312,8 @@ impl IdealGraphBuilder {
 
         for bit in bs.ones() {
           // Skip bundleBehavior assets for OTHER roots (matches JS exclusion).
-          if has_bundle_behavior {
-            if own_bit != Some(bit) {
-              continue;
-            }
+          if has_bundle_behavior && own_bit != Some(bit) {
+            continue;
           }
 
           if let Some(slot) = per_root.get_mut(bit) {
@@ -1367,7 +1460,7 @@ impl IdealGraphBuilder {
       } else {
         availability_by_node[node.index()]
           .clone()
-          .unwrap_or_else(DenseBitset::new)
+          .unwrap_or_default()
       };
 
       // Bundle-group co-load: union in reachable assets from ALL bundles in this node's bundle group.
@@ -1393,14 +1486,6 @@ impl IdealGraphBuilder {
         b.ancestor_assets = availability_by_node[node.index()]
           .take()
           .unwrap_or_default();
-
-        self.decision(
-          "availability",
-          super::types::DecisionKind::AvailabilityComputed {
-            bundle_root: bundle_id.as_asset_key(),
-            ancestor_assets_len: b.ancestor_assets.len() as usize,
-          },
-        );
       }
 
       // Propagate to children.
@@ -1625,10 +1710,10 @@ impl IdealGraphBuilder {
           // Only propagate own root bits of bundleBehavior members in this SCC.
           let mut own_bits = FixedBitSet::with_capacity(num_roots);
           for &n in nodes {
-            if let Some(asset_key) = self.bundle_behavior_sync_nodes.get(&n) {
-              if let Some(&root_bit) = root_to_bit.get(asset_key) {
-                own_bits.insert(root_bit);
-              }
+            if let Some(asset_key) = self.bundle_behavior_sync_nodes.get(&n)
+              && let Some(&root_bit) = root_to_bit.get(asset_key)
+            {
+              own_bits.insert(root_bit);
             }
           }
           scc_propagate_mask[scc_idx] = Some(own_bits);
@@ -1834,10 +1919,10 @@ impl IdealGraphBuilder {
         if asset_key != root && self.bundle_roots.contains(&asset_key) {
           let asset_ft = self.asset_file_types.get(&asset_key);
           let parent_bundle = ideal.get_bundle(bundle_id);
-          if let (Some(aft), Some(pb)) = (asset_ft, parent_bundle) {
-            if *aft != pb.bundle_type {
-              continue;
-            }
+          if let (Some(aft), Some(pb)) = (asset_ft, parent_bundle)
+            && *aft != pb.bundle_type
+          {
+            continue;
           }
         }
 
@@ -1851,15 +1936,6 @@ impl IdealGraphBuilder {
           .get_bundle_mut(&target_bundle_id)
           .context("bundle missing for entry-like duplication")?;
         bundle.assets.insert(asset_key.0 as usize);
-
-        self.decision(
-          "placement",
-          super::types::DecisionKind::AssetAssignedToBundle {
-            asset: asset_key,
-            bundle_root: root,
-            reason: super::types::AssetAssignmentReason::SingleEligibleRoot,
-          },
-        );
       }
 
       // Track canonical bundle assignment (smallest *placed* entry-like for determinism).
@@ -1934,15 +2010,6 @@ impl IdealGraphBuilder {
         if reaching_entry_like.is_empty() {
           ideal.move_asset_to_bundle(asset_key, &target_bundle_id)?;
         }
-
-        self.decision(
-          "placement",
-          super::types::DecisionKind::AssetAssignedToBundle {
-            asset: asset_key,
-            bundle_root: root,
-            reason: super::types::AssetAssignmentReason::DominatorSubtree,
-          },
-        );
       } else if eligible_splittable_roots.len() == 1 {
         // Single eligible splittable root after availability filtering -> place directly.
         // If file types differ, redirect to a type-change sibling bundle.
@@ -1963,15 +2030,6 @@ impl IdealGraphBuilder {
         if reaching_entry_like.is_empty() {
           ideal.move_asset_to_bundle(asset_key, &target_bundle_id)?;
         }
-
-        self.decision(
-          "placement",
-          super::types::DecisionKind::AssetAssignedToBundle {
-            asset: asset_key,
-            bundle_root: root,
-            reason: super::types::AssetAssignmentReason::DominatorSubtree,
-          },
-        );
       }
     }
 
@@ -2235,15 +2293,6 @@ impl IdealGraphBuilder {
             ideal.move_asset_to_bundle(asset_key, &target_bundle_id)?;
           }
 
-          self.decision(
-            "placement",
-            super::types::DecisionKind::AssetAssignedToBundle {
-              asset: asset_key,
-              bundle_root: root,
-              reason: super::types::AssetAssignmentReason::SingleEligibleRoot,
-            },
-          );
-
           continue;
         }
         _ => {}
@@ -2321,15 +2370,6 @@ impl IdealGraphBuilder {
         ancestor_assets: DenseBitset::new(),
       })?;
 
-      self.decision(
-        "shared",
-        super::types::DecisionKind::SharedBundleCreated {
-          shared_bundle_root: shared_key,
-          source_bundle_roots: roots.clone(),
-          asset_count: assets.len(),
-        },
-      );
-
       for asset in assets {
         let prev = ideal.asset_bundle(&asset);
         let was_in_entry_like = prev.is_some_and(|pid| entry_like_bundle_ids.contains(&pid));
@@ -2348,12 +2388,12 @@ impl IdealGraphBuilder {
           ideal.move_asset_to_bundle(asset, &shared_bundle_id)?;
         }
 
-        if let Some(&from_root) = roots.first() {
+        for from_root in &roots {
           self.decision(
             "shared",
             super::types::DecisionKind::AssetMovedToSharedBundle {
               asset,
-              from_bundle_root: from_root,
+              from_bundle_root: *from_root,
               shared_bundle_root: shared_key,
             },
           );
@@ -2479,13 +2519,6 @@ impl IdealGraphBuilder {
         parent_bundle_ids.sort();
         parent_bundle_ids.dedup();
         to_internalize.push((bundle_id, parent_bundle_ids, root_key));
-
-        self.decision(
-          "internalization",
-          super::types::DecisionKind::BundleInternalized {
-            bundle_root: root_key,
-          },
-        );
       }
     }
 

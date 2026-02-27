@@ -1,5 +1,16 @@
 use std::collections::{HashMap, HashSet};
 
+use serde::Serialize;
+
+fn serialize_priority<S: serde::Serializer>(p: &Priority, s: S) -> Result<S::Ok, S::Error> {
+  s.serialize_str(match p {
+    Priority::Sync => "sync",
+    Priority::Parallel => "parallel",
+    Priority::Lazy => "lazy",
+    Priority::Conditional => "conditional",
+  })
+}
+
 fn vec_get<T>(v: &[Option<T>], idx: usize) -> Option<&T> {
   v.get(idx).and_then(|o| o.as_ref())
 }
@@ -39,7 +50,7 @@ pub struct IdealGraphBuildStats {
 /// Compact numeric asset identifier used by the ideal graph algorithm.
 ///
 /// This is intended to be cheap to copy/hash and suitable for indexing.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize)]
 pub struct AssetKey(pub u32);
 
 /// Bi-directional mapping between the asset graph's string ids and compact [`AssetKey`] values.
@@ -123,79 +134,28 @@ impl AssetInterner {
 ///
 /// To extend: add new variants. As we build out phases, this becomes the "audit trail"
 /// explaining *why* the algorithm made a particular choice.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub enum DecisionKind {
   // Phase 1 (boundaries)
   BoundaryCreated {
     asset: AssetKey,
     from_asset: AssetKey,
-    dependency_id: String,
+    #[serde(serialize_with = "serialize_priority")]
     priority: Priority,
     type_change: bool,
     isolated: bool,
   },
 
-  // Phase 2 (sync graph)
-  SyncEdgeIncluded {
-    from_asset: AssetKey,
-    to_asset: AssetKey,
-  },
-  SyncEdgeSkipped {
-    from_asset: AssetKey,
-    to_asset: AssetKey,
-    reason: SyncEdgeSkipReason,
-  },
-
-  // Phase 4 (placement)
-  BundleRootCreated {
-    root_asset: AssetKey,
-  },
-  AssetAssignedToBundle {
-    asset: AssetKey,
-    bundle_root: AssetKey,
-    reason: AssetAssignmentReason,
-  },
-
-  // Phase 6 (availability)
-  AvailabilityComputed {
-    bundle_root: AssetKey,
-    ancestor_assets_len: usize,
-  },
-
   // Phase 8+ (shared bundles)
-  SharedBundleCreated {
-    shared_bundle_root: AssetKey,
-    source_bundle_roots: Vec<AssetKey>,
-    asset_count: usize,
-  },
   AssetMovedToSharedBundle {
     asset: AssetKey,
     from_bundle_root: AssetKey,
     shared_bundle_root: AssetKey,
   },
-  BundleInternalized {
-    bundle_root: AssetKey,
-  },
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AssetAssignmentReason {
-  /// Asset is dominated by exactly one bundle root in the dominator tree.
-  DominatorSubtree,
-  /// Asset is reachable from multiple roots but only one is eligible after availability filtering.
-  SingleEligibleRoot,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SyncEdgeSkipReason {
-  NonSyncPriority,
-  BoundaryTarget,
-  Isolated,
-  MissingNode,
 }
 
 /// Single decision event.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Decision {
   /// Monotonically increasing sequence number assigned by the logger.
   pub seq: u64,
@@ -209,7 +169,7 @@ pub struct Decision {
 /// A collection of decisions captured during an algorithm run.
 ///
 /// This is intended for debugging/visualization and should not be used for correctness.
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize)]
 pub struct DecisionLog {
   next_seq: u64,
   pub decisions: Vec<Decision>,
@@ -226,6 +186,43 @@ impl DecisionLog {
   pub fn is_empty(&self) -> bool {
     self.decisions.is_empty()
   }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub enum BundleReason {
+  /// Bundle exists because it's an app entry point.
+  EntryPoint,
+  /// Bundle exists due to a lazy/dynamic import boundary.
+  LazyImport,
+  /// Bundle exists due to bundleBehavior=Isolated/InlineIsolated.
+  Isolated,
+  /// Bundle exists due to a file type change (e.g. JS importing CSS).
+  TypeChange,
+  /// Bundle was created to hold assets shared between multiple bundles.
+  SharedAssets,
+  /// Bundle exists due to a parallel import.
+  Parallel,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct BundleReport {
+  pub bundle_id: IdealBundleId,
+  pub reason: BundleReason,
+  pub bundle_type: String,
+  pub root_asset_file_path: Option<String>,
+  pub asset_count: usize,
+  /// For shared bundles: the file paths of the source bundle roots that contributed assets.
+  /// Empty for non-shared bundles.
+  pub source_bundles: Vec<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct BundlingReport {
+  pub bundles: Vec<BundleReport>,
+  pub total_assets: usize,
+  pub total_bundles: usize,
+  pub total_shared_bundles: usize,
+  pub internalized_bundle_count: usize,
 }
 
 /// Bundle graph edge classification (bundle-level).
@@ -255,7 +252,7 @@ pub enum BundleRootEdgeType {
 /// - For named bundles, this is the root asset's [`AssetKey`].
 /// - For synthetic bundles (e.g. `@@shared:...`), this is the synthetic key allocated via
 ///   [`AssetInterner::insert_synthetic`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize)]
 pub struct IdealBundleId(pub u32);
 
 impl IdealBundleId {
@@ -524,7 +521,7 @@ impl IdealGraph {
   }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct IdealGraphDebug {
   pub decisions: DecisionLog,
 

@@ -78,7 +78,7 @@ impl DenseBitset {
   /// Allocates `ceil(universe_size / 64)` words (8 bytes each). For a 60k-element
   /// universe this is ~7.5KB; for 120k elements, ~15KB.
   pub fn with_capacity(universe_size: usize) -> Self {
-    let num_words = (universe_size + 63) / 64;
+    let num_words = universe_size.div_ceil(64);
     Self {
       words: vec![0u64; num_words].into_boxed_slice(),
       cached_len: Cell::new(Some(0)),

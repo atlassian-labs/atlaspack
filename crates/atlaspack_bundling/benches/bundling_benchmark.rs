@@ -743,8 +743,8 @@ fn benchmark_ideal_graph(c: &mut Criterion) {
 
     group.bench_function(BenchmarkId::new("build", name), |b| {
       b.iter(|| {
-        let (ideal, stats) = bundler.build_ideal_graph(black_box(&graph)).unwrap();
-        black_box((ideal, stats));
+        let (ideal, stats, report) = bundler.build_ideal_graph(black_box(&graph)).unwrap();
+        black_box((ideal, stats, report));
       })
     });
   }

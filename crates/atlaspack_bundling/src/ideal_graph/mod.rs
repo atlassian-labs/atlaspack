@@ -9,6 +9,7 @@
 //! - Avoid coupling to Parcel/JS implementation details so we can evolve safely.
 
 pub mod builder;
+pub mod query;
 pub mod types;
 
 mod dense_bitset;
@@ -53,7 +54,7 @@ impl IdealGraphBundler {
   pub fn build_ideal_graph(
     &self,
     asset_graph: &AssetGraph,
-  ) -> anyhow::Result<(IdealGraph, IdealGraphBuildStats)> {
+  ) -> anyhow::Result<(IdealGraph, IdealGraphBuildStats, types::BundlingReport)> {
     IdealGraphBuilder::new(self.options.clone())
       .build(asset_graph)
       .context("building IdealGraph via IdealGraphBuilder")
@@ -67,7 +68,39 @@ impl Bundler for IdealGraphBundler {
     asset_graph: &AssetGraph,
     bundle_graph: &mut NativeBundleGraph,
   ) -> anyhow::Result<()> {
-    let (ideal_graph, _stats) = self.build_ideal_graph(asset_graph)?;
+    let (ideal_graph, _stats, report) = self.build_ideal_graph(asset_graph)?;
+
+    // Dump bundling decisions to a JSON file if requested via env var.
+    if let Ok(dump_path) = std::env::var("ATLASPACK_DUMP_BUNDLER_DECISIONS") {
+      let json = serde_json::to_string_pretty(&report)
+        .unwrap_or_else(|e| format!("{{\"error\": \"{}\"}}", e));
+      let path = std::path::Path::new(&dump_path);
+      if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+      }
+      if let Err(e) = std::fs::write(path, &json) {
+        tracing::warn!("Failed to dump bundler decisions to {}: {}", dump_path, e);
+      } else {
+        tracing::info!("Dumped bundler decisions to {}", dump_path);
+      }
+    }
+
+    // Write formatted bundling report to file if requested.
+    if let Ok(report_path) = std::env::var("ATLASPACK_BUNDLER_REPORT") {
+      let t = std::time::Instant::now();
+      let formatted = query::format_full_report(&report, &ideal_graph.assets);
+      let format_ms = t.elapsed().as_secs_f64() * 1000.0;
+      let output = format!("{}\n(Report formatted in {:.1}ms)\n", formatted, format_ms);
+      let path = std::path::Path::new(&report_path);
+      if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+      }
+      if let Err(e) = std::fs::write(path, &output) {
+        tracing::warn!("Failed to write bundler report to {}: {}", report_path, e);
+      } else {
+        tracing::info!("Wrote bundler report to {}", report_path);
+      }
+    }
 
     let root_node_id = *bundle_graph
       .get_node_id_by_content_key("@@root")
@@ -99,13 +132,13 @@ impl Bundler for IdealGraphBundler {
       // JS bundler which creates bundle groups for isolated assets regardless of dep priority.
       if dep.priority == atlaspack_core::types::Priority::Sync {
         for neighbor in asset_graph.get_outgoing_neighbors(dep_node_id) {
-          if let Some(target_asset) = asset_graph.get_asset(&neighbor) {
-            if is_boundary_behavior(target_asset.bundle_behavior) {
-              boundary_deps_by_target_asset_id
-                .entry(target_asset.id.clone())
-                .or_default()
-                .push(dep);
-            }
+          if let Some(target_asset) = asset_graph.get_asset(&neighbor)
+            && is_boundary_behavior(target_asset.bundle_behavior)
+          {
+            boundary_deps_by_target_asset_id
+              .entry(target_asset.id.clone())
+              .or_default()
+              .push(dep);
           }
         }
         continue;
@@ -1492,7 +1525,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -1733,7 +1766,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -1771,7 +1804,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -1820,7 +1853,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -1849,7 +1882,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -1879,7 +1912,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -1913,7 +1946,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -1942,7 +1975,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -2511,7 +2544,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -2538,7 +2571,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -2567,7 +2600,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -2591,7 +2624,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -2621,7 +2654,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -2661,7 +2694,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -2703,7 +2736,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -2729,7 +2762,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -2767,7 +2800,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     // react.js must be in a.js's bundle (duplicated like an entry).
     // b.js is the only remaining splittable root, so react.js goes directly into b.js.
@@ -2802,7 +2835,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -2830,7 +2863,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -2892,7 +2925,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -2925,7 +2958,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -2959,7 +2992,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -2997,7 +3030,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -3036,7 +3069,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -3078,7 +3111,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
     // helpers.js should only be in the entry bundle, NOT in c.js bundle
     let c_id = types::IdealBundleId::from_asset_key(g.assets.key_for("c.js").unwrap());
     let c_bundle = g.get_bundle(&c_id).expect("c.js bundle should exist");
@@ -3117,7 +3150,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -3148,7 +3181,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -3185,7 +3218,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -3221,7 +3254,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -3249,7 +3282,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     // react.js is a named bundle (boundary from isolated dep), NOT a shared bundle.
     // The edges show react.js is only reachable from b.js, not from a.js.
@@ -3295,7 +3328,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     // shared_lib.js should be in page.js's bundle (sync-reachable from page).
     // sidebar.js should know shared_lib is available via parallel loading.
@@ -3335,7 +3368,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     // util.js placed in page.js bundle. dialog knows it's available from ancestor.
     assert_graph!(g, {
@@ -3376,7 +3409,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -3417,7 +3450,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -3472,7 +3505,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -3590,7 +3623,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     // The key assertion: no shared bundle is created for shared.js.
     // shared.js ends up in dialog.js's bundle (first splittable root after
@@ -3634,7 +3667,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     // The key assertion: shared.js should be in a shared bundle (not duplicated
     // or missing), proving that the entry's lazy children were properly discovered
@@ -3684,7 +3717,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -3719,7 +3752,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -3755,7 +3788,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     let shared_key = g
       .assets
@@ -3787,7 +3820,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -3835,7 +3868,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -3880,7 +3913,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -3935,7 +3968,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     // Key assertions:
     // - `helper.js` is duplicated into the entry-like `non-split.js` bundle
@@ -3985,7 +4018,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     // Key assertions:
     // - `lazy-target.js` has its own bundle (it's a lazy root)
@@ -4022,7 +4055,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     assert_graph!(g, {
       bundles: {
@@ -4075,7 +4108,7 @@ mod tests {
     );
 
     let bundler = IdealGraphBundler::new(IdealGraphBuildOptions::default());
-    let (g, _stats) = bundler.build_ideal_graph(&asset_graph).unwrap();
+    let (g, _stats, _report) = bundler.build_ideal_graph(&asset_graph).unwrap();
 
     // async.css must remain a real bundle root bundle.
     let async_bundle_id = types::IdealBundleId::from_asset_key(
