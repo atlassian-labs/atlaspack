@@ -495,17 +495,34 @@ impl SymbolTracker {
         if let Some(requirements) = self.requirements_by_dep.get_mut(&dep_id) {
           requirements.retain(|req| {
             // Keep if not part of this speculation group
-            req.speculation_group_id.as_ref() != Some(&group_id)
+            if req.speculation_group_id.as_ref() != Some(&group_id) {
+              return true;
+            }
+            // Keep if already satisfied — removing a satisfied requirement
+            // would break the resolution chain in multi-level star re-exports
+            req.final_location.is_some()
           });
         }
 
-        // Check if there are any speculation groups that were sourced from this dep
-        // (i.e., groups with ID starting with "{dep_id}:")
-        // These need to be cleaned up too since their source was removed
+        // Find which symbols were removed from this dep. For each removed symbol,
+        // any downstream speculation groups sourced from this dep for that symbol
+        // are now orphaned and need cleanup.
+        // Groups are keyed as "{dep_id}:{symbol}", so we can match precisely.
+        let remaining_symbols: Vec<String> = self
+          .requirements_by_dep
+          .get(&dep_id)
+          .map(|reqs| reqs.iter().map(|r| r.symbol.exported.clone()).collect())
+          .unwrap_or_default();
+
         let orphaned_groups: Vec<String> = self
           .speculation_group_locations
           .keys()
-          .filter(|g| g.starts_with(&format!("{dep_id}:")))
+          .filter(|g| {
+            // Match groups sourced from this dep
+            // Only orphan if this specific symbol is no longer required on the dep
+            g.strip_prefix(&format!("{dep_id}:"))
+              .is_some_and(|symbol| !remaining_symbols.contains(&symbol.to_string()))
+          })
           .cloned()
           .collect();
 
@@ -1464,16 +1481,16 @@ mod tests {
     // Process in order, simulating the real build
     let mut tracker = SymbolTracker::default();
     tracker
-      .track_symbols(&graph, &index, &[dep_barrel.clone()])
+      .track_symbols(&graph, &index, std::slice::from_ref(&dep_barrel))
       .unwrap();
     tracker
       .track_symbols(&graph, &barrel, &[dep_left.clone(), dep_right.clone()])
       .unwrap();
     tracker
-      .track_symbols(&graph, &left, &[dep_left_shared.clone()])
+      .track_symbols(&graph, &left, std::slice::from_ref(&dep_left_shared))
       .unwrap();
     tracker
-      .track_symbols(&graph, &right, &[dep_right_shared.clone()])
+      .track_symbols(&graph, &right, std::slice::from_ref(&dep_right_shared))
       .unwrap();
     // First call: shared.js processed via left path
     tracker.track_symbols(&graph, &shared, &[]).unwrap();
@@ -1488,6 +1505,113 @@ mod tests {
       assets,
     };
     ctx.assert_symbol_resolved("./barrel.js", "foo", "shared.js", "foo");
+    ctx.assert_finalize_ok();
+  }
+
+  #[test]
+  fn track_symbols_handles_chained_star_reexports() {
+    // index.js imports {foo, bar} from barrel
+    // barrel.js: export * from './foo'; export * from './bar'
+    // foo.js: export * from './sub-foo'; export function topLevelFoo
+    // sub-foo.js: export function foo; export function unusedFoo
+    // bar.js: export const bar; export const unusedBar
+    let mut graph = AssetGraph::new();
+    let mut deps: HashMap<String, Dependency> = HashMap::new();
+    let mut assets: HashMap<String, Arc<Asset>> = HashMap::new();
+
+    let entry_dep = make_entry_dependency();
+    let entry_dep_node = graph.add_entry_dependency(entry_dep, false);
+
+    let index = make_asset("index.js", vec![]);
+    let index_node = graph.add_asset(index.clone(), false);
+    graph.add_edge(&entry_dep_node, &index_node);
+    assets.insert("index.js".to_string(), index.clone());
+
+    // index imports foo and bar from barrel
+    let dep_barrel = make_dependency(
+      &index,
+      "./barrel.js",
+      vec![
+        ("$index$import$foo", "foo", false),
+        ("$index$import$bar", "bar", false),
+      ],
+    );
+    let dep_barrel_node = graph.add_dependency(dep_barrel.clone(), false);
+    graph.add_edge(&index_node, &dep_barrel_node);
+    deps.insert("./barrel.js".to_string(), dep_barrel.clone());
+
+    // barrel: export * (weak)
+    let barrel = make_asset("barrel.js", vec![("*", "*", true)]);
+    let barrel_node = graph.add_asset(barrel.clone(), false);
+    graph.add_edge(&dep_barrel_node, &barrel_node);
+    assets.insert("barrel.js".to_string(), barrel.clone());
+
+    // barrel -> foo.js (star)
+    let dep_foo = make_dependency(&barrel, "./foo.js", vec![("*", "*", true)]);
+    let dep_foo_node = graph.add_dependency(dep_foo.clone(), false);
+    graph.add_edge(&barrel_node, &dep_foo_node);
+    deps.insert("./foo.js".to_string(), dep_foo.clone());
+
+    // barrel -> bar.js (star)
+    let dep_bar = make_dependency(&barrel, "./bar.js", vec![("*", "*", true)]);
+    let dep_bar_node = graph.add_dependency(dep_bar.clone(), false);
+    graph.add_edge(&barrel_node, &dep_bar_node);
+    deps.insert("./bar.js".to_string(), dep_bar.clone());
+
+    // foo.js: has topLevelFoo named export AND star re-export from sub-foo
+    let foo = make_asset(
+      "foo.js",
+      vec![("topLevelFoo", "topLevelFoo", false), ("*", "*", true)],
+    );
+    let foo_node = graph.add_asset(foo.clone(), false);
+    graph.add_edge(&dep_foo_node, &foo_node);
+    assets.insert("foo.js".to_string(), foo.clone());
+
+    // foo.js -> sub-foo.js (star)
+    let dep_sub_foo = make_dependency(&foo, "./sub-foo.js", vec![("*", "*", true)]);
+    let dep_sub_foo_node = graph.add_dependency(dep_sub_foo.clone(), false);
+    graph.add_edge(&foo_node, &dep_sub_foo_node);
+    deps.insert("./sub-foo.js".to_string(), dep_sub_foo.clone());
+
+    // sub-foo.js: provides foo and unusedFoo
+    let sub_foo = make_asset(
+      "sub-foo.js",
+      vec![("foo", "foo", false), ("unusedFoo", "unusedFoo", false)],
+    );
+    let sub_foo_node = graph.add_asset(sub_foo.clone(), false);
+    graph.add_edge(&dep_sub_foo_node, &sub_foo_node);
+    assets.insert("sub-foo.js".to_string(), sub_foo.clone());
+
+    // bar.js: provides bar and unusedBar
+    let bar = make_asset(
+      "bar.js",
+      vec![("bar", "bar", false), ("unusedBar", "unusedBar", false)],
+    );
+    let bar_node = graph.add_asset(bar.clone(), false);
+    graph.add_edge(&dep_bar_node, &bar_node);
+    assets.insert("bar.js".to_string(), bar.clone());
+
+    // Process in BFS order
+    let mut tracker = SymbolTracker::default();
+    tracker
+      .track_symbols(&graph, &index, std::slice::from_ref(&dep_barrel))
+      .unwrap();
+    tracker
+      .track_symbols(&graph, &barrel, &[dep_foo.clone(), dep_bar.clone()])
+      .unwrap();
+    tracker
+      .track_symbols(&graph, &foo, std::slice::from_ref(&dep_sub_foo))
+      .unwrap();
+    tracker.track_symbols(&graph, &bar, &[]).unwrap();
+    tracker.track_symbols(&graph, &sub_foo, &[]).unwrap();
+
+    let ctx = SymbolTrackerTestCtx {
+      tracker,
+      deps,
+      assets,
+    };
+    ctx.assert_symbol_resolved("./barrel.js", "foo", "sub-foo.js", "foo");
+    ctx.assert_symbol_resolved("./barrel.js", "bar", "bar.js", "bar");
     ctx.assert_finalize_ok();
   }
 
