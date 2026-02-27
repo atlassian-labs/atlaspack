@@ -1,5 +1,14 @@
 # @atlaspack/optimizer-swc
 
+## 2.16.1
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.2.10
+  - @atlaspack/utils@3.3.7
+  - @atlaspack/plugin@2.14.55
+
 ## 2.16.0
 
 ### Minor Changes

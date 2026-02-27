@@ -1,5 +1,47 @@
 # @atlaspack/rust
 
+## 3.24.0
+
+### Minor Changes
+
+- [#1037](https://github.com/atlassian-labs/atlaspack/pull/1037) [`ecf8b79`](https://github.com/atlassian-labs/atlaspack/commit/ecf8b7931c5516df2117d525cefff5d7e1d20bee) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Improve diagnostics detail and add stack traces
+
+- [#1028](https://github.com/atlassian-labs/atlaspack/pull/1028) [`f216e22`](https://github.com/atlassian-labs/atlaspack/commit/f216e227e0aca8a3944f66267d3f75238c732802) Thanks [@marcins](https://github.com/marcins)! - In native packaging, write intermediate bundles to FS not LMDB.
+
+- [#1042](https://github.com/atlassian-labs/atlaspack/pull/1042) [`857962a`](https://github.com/atlassian-labs/atlaspack/commit/857962a352bb0aebaf74a8765e8c44d7e875a4e9) Thanks [@marcins](https://github.com/marcins)! - Implement inlineRequires in native packager, add new option to target descriptor
+
+### Patch Changes
+
+- [#1039](https://github.com/atlassian-labs/atlaspack/pull/1039) [`06bb8c1`](https://github.com/atlassian-labs/atlaspack/commit/06bb8c14657722658c55283835f23ed7e7c6ecb4) Thanks [@benjervis](https://github.com/benjervis)! - Fix duplicate `*` symbols being added to CJS assets during transformation.
+
+- [#1041](https://github.com/atlassian-labs/atlaspack/pull/1041) [`a2d8e7a`](https://github.com/atlassian-labs/atlaspack/commit/a2d8e7a2444a1d6502239de8b8ceab4227270ec7) Thanks [@benjervis](https://github.com/benjervis)! - Add support for namespace re-exports (`export * as ns from './dep'`) in the Rust symbol tracker.
+
+  This enables proper symbol propagation through barrel files that use namespace re-exports,
+  allowing tree-shaking to work correctly for these patterns. Includes support for:
+  - Basic namespace re-exports
+  - Namespace re-exports alongside named exports
+  - Namespace re-exports alongside star re-exports
+  - Multiple namespace re-exports from the same barrel
+  - Chained namespace re-exports (multiple levels deep)
+
+- [#1040](https://github.com/atlassian-labs/atlaspack/pull/1040) [`f9aec27`](https://github.com/atlassian-labs/atlaspack/commit/f9aec2736d27afa7a1f2a9701d46e29e566ab352) Thanks [@benjervis](https://github.com/benjervis)! - Add support for star re-exports (`export * from './dep'`) in the Rust symbol tracker.
+
+  This enables proper symbol propagation through barrel files that use star re-exports,
+  allowing tree-shaking to work correctly for these patterns. Includes support for:
+  - Chained star re-exports (multiple levels of `export *`)
+  - Diamond patterns (multiple paths to the same symbol through different star re-exports)
+  - Speculative requirement cleanup (efficient tracking and removal of unsatisfied paths)
+
+  Note: This does not yet handle the ambiguous re-export case where multiple star re-exports
+  provide the same symbol name. That case currently requires runtime namespace fallback and
+  will be addressed in a future update.
+
+- [#1034](https://github.com/atlassian-labs/atlaspack/pull/1034) [`93ec107`](https://github.com/atlassian-labs/atlaspack/commit/93ec10729ad5a328b4320955357339746cd472f3) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - adding incremental bundle graph update for packaging
+
+- [#1043](https://github.com/atlassian-labs/atlaspack/pull/1043) [`a2c5747`](https://github.com/atlassian-labs/atlaspack/commit/a2c574770d2e616576e817801842576ead072532) Thanks [@marcins](https://github.com/marcins)! - Implement additional metrics in native packager preludes
+
+- [#1036](https://github.com/atlassian-labs/atlaspack/pull/1036) [`e88b258`](https://github.com/atlassian-labs/atlaspack/commit/e88b25808a181fafbe98e5ca278b35bfc0197caf) Thanks [@benjervis](https://github.com/benjervis)! - Fix Rust symbol tracker to correctly handle renamed exports during symbol propagation through barrel files.
+
 ## 3.23.0
 
 ### Minor Changes

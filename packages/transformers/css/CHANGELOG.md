@@ -1,5 +1,16 @@
 # @atlaspack/transformer-css
 
+## 2.15.16
+
+### Patch Changes
+
+- Updated dependencies [[`ad3c822`](https://github.com/atlassian-labs/atlaspack/commit/ad3c8223ab1abce9e8da81239cc56f27d37c7cad), [`936209f`](https://github.com/atlassian-labs/atlaspack/commit/936209f3c6c201288720dd62b61e1f538368268c)]:
+  - @atlaspack/feature-flags@2.30.1
+  - @atlaspack/source-map@3.2.10
+  - @atlaspack/utils@3.3.7
+  - @atlaspack/plugin@2.14.55
+  - @atlaspack/types@2.15.45
+
 ## 2.15.15
 
 ### Patch Changes

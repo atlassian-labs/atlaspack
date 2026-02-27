@@ -1,5 +1,18 @@
 # @atlaspack/transformer-compiled
 
+## 0.5.0
+
+### Minor Changes
+
+- [#1037](https://github.com/atlassian-labs/atlaspack/pull/1037) [`ecf8b79`](https://github.com/atlassian-labs/atlaspack/commit/ecf8b7931c5516df2117d525cefff5d7e1d20bee) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Improve diagnostics detail and add stack traces
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.2.10
+  - @atlaspack/utils@3.3.7
+  - @atlaspack/plugin@2.14.55
+
 ## 0.4.0
 
 ### Minor Changes

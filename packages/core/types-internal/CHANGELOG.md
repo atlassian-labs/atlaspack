@@ -1,5 +1,17 @@
 # @atlaspack/types-internal
 
+## 2.24.0
+
+### Minor Changes
+
+- [#1042](https://github.com/atlassian-labs/atlaspack/pull/1042) [`857962a`](https://github.com/atlassian-labs/atlaspack/commit/857962a352bb0aebaf74a8765e8c44d7e875a4e9) Thanks [@marcins](https://github.com/marcins)! - Implement inlineRequires in native packager, add new option to target descriptor
+
+### Patch Changes
+
+- Updated dependencies [[`ad3c822`](https://github.com/atlassian-labs/atlaspack/commit/ad3c8223ab1abce9e8da81239cc56f27d37c7cad), [`936209f`](https://github.com/atlassian-labs/atlaspack/commit/936209f3c6c201288720dd62b61e1f538368268c)]:
+  - @atlaspack/feature-flags@2.30.1
+  - @atlaspack/source-map@3.2.10
+
 ## 2.23.2
 
 ### Patch Changes
