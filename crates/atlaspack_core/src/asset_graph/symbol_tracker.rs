@@ -389,13 +389,21 @@ impl SymbolTracker {
             continue;
           }
 
-          // If the requirement is already satisfied, and we have a new location that
-          // matches, we have a conflict
-          if required.final_location.is_some() {
+          // If the requirement is already satisfied, check whether it's the same
+          // location (idempotent re-processing, e.g. from replicate_existing_edges
+          // in diamond patterns) or a genuine conflict.
+          if let Some(ref existing) = required.final_location {
+            if existing == located_symbol {
+              // Same location — skip (idempotent)
+              continue;
+            }
             return Err(anyhow!(
-              "Required symbol {} for dep [{}] has already been located",
+              "Required symbol {} for dep [{}] has already been located at {:?}, \
+               but a new location was found: {:?}",
               required.symbol.exported,
-              dep.id
+              dep.id,
+              existing,
+              located_symbol
             ));
           }
 
@@ -1193,9 +1201,9 @@ mod tests {
   }
 
   #[test]
-  fn track_symbols_errors_on_duplicate_symbol_resolution() {
-    // This test needs manual setup because the macro auto-tracks,
-    // and we need to track the same asset twice
+  fn track_symbols_idempotent_when_same_asset_processed_twice() {
+    // When the same asset is processed twice (e.g. via replicate_existing_edges),
+    // the same symbol resolves to the same location — this should be a no-op.
     let mut graph = AssetGraph::new();
 
     let entry_dep = make_entry_dependency();
@@ -1219,11 +1227,54 @@ mod tests {
       .unwrap();
     tracker.track_symbols(&graph, &asset_a, &[]).unwrap();
 
-    // Trying to satisfy again should error
+    // Processing the same asset again should be idempotent (same location)
     let result = tracker.track_symbols(&graph, &asset_a, &[]);
     assert!(
+      result.is_ok(),
+      "Re-processing the same asset should be idempotent, but got: {:?}",
+      result.unwrap_err()
+    );
+  }
+
+  #[test]
+  fn track_symbols_errors_on_conflicting_symbol_resolution() {
+    // When two DIFFERENT assets provide the same symbol to the same dependency,
+    // the second resolution should error because the locations differ.
+    let mut graph = AssetGraph::new();
+
+    let entry_dep = make_entry_dependency();
+    let entry_dep_node = graph.add_entry_dependency(entry_dep, false);
+
+    let entry_asset = make_asset("entry.js", vec![]);
+    let entry_asset_node = graph.add_asset(entry_asset.clone(), false);
+    graph.add_edge(&entry_dep_node, &entry_asset_node);
+
+    let dep_a = make_dependency(&entry_asset, "./a.js", vec![("a", "a", false)]);
+    let dep_a_node = graph.add_dependency(dep_a.clone(), false);
+    graph.add_edge(&entry_asset_node, &dep_a_node);
+
+    // First asset provides "a"
+    let asset_a = make_asset("a.js", vec![("a", "a", false)]);
+    let asset_a_node = graph.add_asset(asset_a.clone(), false);
+    graph.add_edge(&dep_a_node, &asset_a_node);
+
+    // Second, different asset also provides "a" (different asset ID)
+    let asset_b = make_asset("b.js", vec![("a", "a", false)]);
+    let asset_b_node = graph.add_asset(asset_b.clone(), false);
+    graph.add_edge(&dep_a_node, &asset_b_node);
+
+    let mut tracker = SymbolTracker::default();
+    tracker
+      .track_symbols(&graph, &entry_asset, &[dep_a])
+      .unwrap();
+    // First asset satisfies the requirement
+    tracker.track_symbols(&graph, &asset_a, &[]).unwrap();
+
+    // Second, different asset tries to satisfy the same requirement — conflict!
+    let result = tracker.track_symbols(&graph, &asset_b, &[]);
+    assert!(
       result.is_err(),
-      "Should error when symbol is resolved twice"
+      "Conflicting symbol resolution should error"
     );
     assert!(
       result
@@ -1334,6 +1385,108 @@ mod tests {
       }
     };
 
+    ctx.assert_symbol_resolved("./barrel.js", "foo", "shared.js", "foo");
+    ctx.assert_finalize_ok();
+  }
+
+  #[test]
+  fn track_symbols_handles_diamond_pattern_with_replicated_edges() {
+    // Simulates what happens when replicate_existing_edges calls track_symbols
+    // a second time for the shared asset in a diamond pattern.
+    //
+    // In a real build: left.js and right.js both resolve to the same shared.js.
+    // The first path processes shared.js normally; the second path triggers
+    // replicate_existing_edges which calls track_symbols(shared.js) again.
+    let mut graph = AssetGraph::new();
+    let mut deps: HashMap<String, Dependency> = HashMap::new();
+    let mut assets: HashMap<String, Arc<Asset>> = HashMap::new();
+
+    // Build the diamond graph
+    let entry_dep = make_entry_dependency();
+    let entry_dep_node = graph.add_entry_dependency(entry_dep, false);
+
+    let index = make_asset("index.js", vec![]);
+    let index_node = graph.add_asset(index.clone(), false);
+    graph.add_edge(&entry_dep_node, &index_node);
+    assets.insert("index.js".to_string(), index.clone());
+
+    let dep_barrel = make_dependency(
+      &index,
+      "./barrel.js",
+      vec![("$index$import$foo", "foo", false)],
+    );
+    let dep_barrel_node = graph.add_dependency(dep_barrel.clone(), false);
+    graph.add_edge(&index_node, &dep_barrel_node);
+    deps.insert("./barrel.js".to_string(), dep_barrel.clone());
+
+    let barrel = make_asset("barrel.js", vec![("*", "*", true)]);
+    let barrel_node = graph.add_asset(barrel.clone(), false);
+    graph.add_edge(&dep_barrel_node, &barrel_node);
+    assets.insert("barrel.js".to_string(), barrel.clone());
+
+    let dep_left = make_dependency(&barrel, "./left.js", vec![("*", "*", true)]);
+    let dep_left_node = graph.add_dependency(dep_left.clone(), false);
+    graph.add_edge(&barrel_node, &dep_left_node);
+    deps.insert("./left.js".to_string(), dep_left.clone());
+
+    let left = make_asset("left.js", vec![("*", "*", true)]);
+    let left_node = graph.add_asset(left.clone(), false);
+    graph.add_edge(&dep_left_node, &left_node);
+    assets.insert("left.js".to_string(), left.clone());
+
+    let dep_right = make_dependency(&barrel, "./right.js", vec![("*", "*", true)]);
+    let dep_right_node = graph.add_dependency(dep_right.clone(), false);
+    graph.add_edge(&barrel_node, &dep_right_node);
+    deps.insert("./right.js".to_string(), dep_right.clone());
+
+    let right = make_asset("right.js", vec![("*", "*", true)]);
+    let right_node = graph.add_asset(right.clone(), false);
+    graph.add_edge(&dep_right_node, &right_node);
+    assets.insert("right.js".to_string(), right.clone());
+
+    // shared.js is the SAME asset, reached via two different deps
+    let shared = make_asset("shared.js", vec![("foo", "foo", false)]);
+    let shared_node = graph.add_asset(shared.clone(), false);
+    assets.insert("shared.js".to_string(), shared.clone());
+
+    let dep_left_shared = make_dependency(&left, "./left-shared.js", vec![("*", "*", true)]);
+    let dep_left_shared_node = graph.add_dependency(dep_left_shared.clone(), false);
+    graph.add_edge(&left_node, &dep_left_shared_node);
+    graph.add_edge(&dep_left_shared_node, &shared_node);
+    deps.insert("./left-shared.js".to_string(), dep_left_shared.clone());
+
+    let dep_right_shared = make_dependency(&right, "./right-shared.js", vec![("*", "*", true)]);
+    let dep_right_shared_node = graph.add_dependency(dep_right_shared.clone(), false);
+    graph.add_edge(&right_node, &dep_right_shared_node);
+    graph.add_edge(&dep_right_shared_node, &shared_node);
+    deps.insert("./right-shared.js".to_string(), dep_right_shared.clone());
+
+    // Process in order, simulating the real build
+    let mut tracker = SymbolTracker::default();
+    tracker
+      .track_symbols(&graph, &index, &[dep_barrel.clone()])
+      .unwrap();
+    tracker
+      .track_symbols(&graph, &barrel, &[dep_left.clone(), dep_right.clone()])
+      .unwrap();
+    tracker
+      .track_symbols(&graph, &left, &[dep_left_shared.clone()])
+      .unwrap();
+    tracker
+      .track_symbols(&graph, &right, &[dep_right_shared.clone()])
+      .unwrap();
+    // First call: shared.js processed via left path
+    tracker.track_symbols(&graph, &shared, &[]).unwrap();
+    // Second call: replicate_existing_edges triggers track_symbols again for shared.js
+    // This simulates what happens when the right path connects to the already-processed shared.js
+    tracker.track_symbols(&graph, &shared, &[]).unwrap();
+
+    // Should still resolve correctly
+    let ctx = SymbolTrackerTestCtx {
+      tracker,
+      deps,
+      assets,
+    };
     ctx.assert_symbol_resolved("./barrel.js", "foo", "shared.js", "foo");
     ctx.assert_finalize_ok();
   }
