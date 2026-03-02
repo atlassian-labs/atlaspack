@@ -41,11 +41,14 @@ import {PluginTracer, tracer} from '@atlaspack/profiler';
 import {requestTypes} from '../RequestTracker';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {fromEnvironmentId} from '../EnvironmentManager';
-import SourceMap from '@atlaspack/source-map';
+import SourceMap, {decodeVLQ, encodeVLQ} from '@atlaspack/source-map';
 
 const HASH_REF_PREFIX_LEN = HASH_REF_PREFIX.length;
 const BOUNDARY_LENGTH = HASH_REF_PREFIX.length + 32 - 1;
 const HASH_REF_PLACEHOLDER_LEN = HASH_REF_PREFIX_LEN + HASH_REF_HASH_LEN;
+
+// The JSON key prefix we scan for in the source map stream.
+const MAPPINGS_KEY_BUF = Buffer.from('"mappings":"');
 
 export type HashRefReplacement = {
   line: number;
@@ -187,35 +190,17 @@ async function run({input, options, api}) {
 
   const hasSourceMap = await options.cache.has(mapKey);
   if (mapKey && env.sourceMap && !env.sourceMap.inline && hasSourceMap) {
+    const mapEntry = await options.cache.getBlob(mapKey);
     let mapStream: Readable;
     if (
       getFeatureFlag('fixSourceMapHashRefs') &&
       bundleReplacements &&
       bundleReplacements.length > 0
     ) {
-      const mapEntry = await options.cache.getBlob(mapKey);
-      const mapBuffer = Buffer.isBuffer(mapEntry)
-        ? mapEntry
-        : Buffer.from(mapEntry);
-      const projectRoot =
-        typeof options.projectRoot === 'string'
-          ? options.projectRoot
-          : String(options.projectRoot);
-      const sourceMap = new SourceMap(projectRoot, mapBuffer);
-      applyReplacementsToSourceMap(sourceMap, bundleReplacements);
-      const mapJson = await sourceMap.stringify({
-        format: 'string',
-        file: name,
-        sourceRoot: computeSourceMapRoot(bundle, options),
-      });
-      mapStream = blobToStream(
-        Buffer.from(
-          typeof mapJson === 'string' ? mapJson : JSON.stringify(mapJson),
-          'utf8',
-        ),
+      mapStream = blobToStream(mapEntry).pipe(
+        new SourceMapHashRefRewriteStream(bundleReplacements),
       );
     } else {
-      const mapEntry = await options.cache.getBlob(mapKey);
       mapStream = blobToStream(mapEntry);
     }
     await writeFiles(
@@ -266,6 +251,201 @@ export function applyReplacementsToSourceMap(
         sourceMap.offsetColumns(line1Based, offsetStartColumn, delta);
       }
     }
+  }
+}
+
+/**
+ * Applies hash-ref replacement column offsets directly to a VLQ mappings
+ * string without deserializing the full source map into a native struct.
+ *
+ * Each replacement r describes a hash-ref that was substituted in the output
+ * file.  r.column is in the progressively-shifted post-replacement coordinate
+ * space (matching the already-shifted source map state after all previous
+ * offsetColumns calls), so thresholds are applied sequentially against the
+ * running absCol values exactly as the native offsetColumns implementation does.
+ */
+export function applyReplacementsToVLQMappings(
+  mappings: string,
+  replacements: HashRefReplacement[],
+): string {
+  if (replacements.length === 0) return mappings;
+
+  // Group replacements by line (0-indexed), sorted by column ascending.
+  const byLine = new Map<number, HashRefReplacement[]>();
+  for (const r of replacements) {
+    let arr = byLine.get(r.line);
+    if (!arr) {
+      arr = [];
+      byLine.set(r.line, arr);
+    }
+    arr.push(r);
+  }
+  for (const arr of byLine.values()) {
+    arr.sort((a, b) => a.column - b.column);
+  }
+
+  const lines = mappings.split(';');
+  const resultLines: string[] = [];
+
+  for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+    const lineReps = byLine.get(lineIdx);
+    if (!lineReps || lineReps.length === 0) {
+      resultLines.push(lines[lineIdx]);
+      continue;
+    }
+
+    const line = lines[lineIdx];
+    if (!line) {
+      resultLines.push('');
+      continue;
+    }
+
+    // Decode segment column deltas to absolute columns.
+    const segments = line.split(',');
+    const colVlqEnds: number[] = [];
+    const absCols: number[] = [];
+    let absCol = 0;
+    for (const seg of segments) {
+      const {value: colDelta, nextPos} = decodeVLQ(seg, 0);
+      absCol += colDelta;
+      colVlqEnds.push(nextPos);
+      absCols.push(absCol);
+    }
+
+    // Apply each replacement's column shift sequentially against the
+    // current absCol values (which have already been adjusted by previous
+    // replacements on this line), mirroring the sequential offsetColumns calls.
+    for (const r of lineReps) {
+      const delta = r.newLength - r.originalLength;
+      if (delta === 0) continue;
+      const threshold = r.column + r.originalLength;
+      for (let i = 0; i < absCols.length; i++) {
+        if (absCols[i] >= threshold) {
+          absCols[i] += delta;
+        }
+      }
+    }
+
+    // Re-encode with updated absolute columns; only the leading column VLQ
+    // field of each segment changes – the tail bytes are sliced unchanged.
+    const resultSegments: string[] = [];
+    let prevAbsCol = 0;
+    for (let i = 0; i < segments.length; i++) {
+      const newDelta = absCols[i] - prevAbsCol;
+      prevAbsCol = absCols[i];
+      resultSegments.push(
+        encodeVLQ(newDelta) + segments[i].slice(colVlqEnds[i]),
+      );
+    }
+
+    resultLines.push(resultSegments.join(','));
+  }
+
+  return resultLines.join(';');
+}
+
+type StreamState = 'scanning' | 'buffering' | 'passthrough';
+
+/**
+ * A Transform stream that rewrites the "mappings" VLQ field of a source map
+ * JSON to account for hash-ref replacements, without ever loading the full
+ * JSON object or the native Rust SourceMapInner into memory.
+ *
+ * Field order in cached source maps (from partialVlqMapToSourceMap / toVLQ):
+ *   mappings → sources → sourcesContent → names → version → file → sourceRoot
+ *
+ * "mappings" is the very first field, so we scan only a tiny header before
+ * switching to zero-copy passthrough for the bulk sourcesContent bytes.
+ */
+export class SourceMapHashRefRewriteStream extends Transform {
+  private replacements: HashRefReplacement[];
+  private state: StreamState;
+  private scanBuf: Buffer;
+  private mappingsBufs: Buffer[];
+
+  constructor(replacements: HashRefReplacement[]) {
+    super();
+    this.replacements = replacements;
+    this.state = 'scanning';
+    this.scanBuf = Buffer.alloc(0);
+    this.mappingsBufs = [];
+  }
+
+  // @ts-expect-error TS7006
+  _transform(chunk: Buffer, _encoding: string, cb): void {
+    if (this.state === 'passthrough') {
+      this.push(chunk);
+      cb();
+      return;
+    }
+
+    if (this.state === 'scanning') {
+      const combined = Buffer.concat([this.scanBuf, chunk]);
+      const idx = combined.indexOf(MAPPINGS_KEY_BUF);
+
+      if (idx === -1) {
+        // Key not yet found – hold back enough bytes to handle a split key.
+        const keepLen = Math.min(combined.length, MAPPINGS_KEY_BUF.length - 1);
+        if (combined.length > keepLen) {
+          this.push(combined.slice(0, combined.length - keepLen));
+        }
+        this.scanBuf = combined.slice(combined.length - keepLen);
+        cb();
+        return;
+      }
+
+      // Emit everything up to and including the key.
+      const keyEnd = idx + MAPPINGS_KEY_BUF.length;
+      this.push(combined.slice(0, keyEnd));
+      this.scanBuf = Buffer.alloc(0);
+      this.state = 'buffering';
+      this._bufferingTransform(combined.slice(keyEnd), cb);
+      return;
+    }
+
+    // state === 'buffering'
+    this._bufferingTransform(chunk, cb);
+  }
+
+  // @ts-expect-error TS7006
+  private _bufferingTransform(chunk: Buffer, cb): void {
+    // Mappings values contain only base64 chars, ';', and ',' – no escaping –
+    // so scanning for the closing '"' (0x22) is safe.
+    const closeIdx = chunk.indexOf(0x22);
+
+    if (closeIdx === -1) {
+      this.mappingsBufs.push(chunk);
+      cb();
+      return;
+    }
+
+    this.mappingsBufs.push(chunk.slice(0, closeIdx));
+
+    // VLQ chars are all ASCII (<128), so latin1 round-trips without loss.
+    const mappingsStr = Buffer.concat(this.mappingsBufs).toString('latin1');
+    const rewritten = applyReplacementsToVLQMappings(
+      mappingsStr,
+      this.replacements,
+    );
+    this.push(Buffer.from(rewritten, 'latin1'));
+
+    // Emit the closing '"' and everything remaining in one push.
+    this.push(chunk.slice(closeIdx));
+
+    this.state = 'passthrough';
+    this.mappingsBufs = [];
+    cb();
+  }
+
+  // @ts-expect-error TS7006
+  _flush(cb): void {
+    if (this.state === 'scanning' && this.scanBuf.length > 0) {
+      this.push(this.scanBuf);
+    } else if (this.state === 'buffering') {
+      // Malformed JSON – flush whatever we buffered as-is.
+      this.push(Buffer.concat(this.mappingsBufs));
+    }
+    cb();
   }
 }
 
