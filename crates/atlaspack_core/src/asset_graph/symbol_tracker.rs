@@ -1217,6 +1217,8 @@ mod tests {
     ctx.assert_finalize_panics("was not satisfied");
   }
 
+  // NOTE: Manual graph construction required — this test calls track_symbols on the
+  // same asset twice to verify idempotent re-processing, which the macro cannot express.
   #[test]
   fn track_symbols_idempotent_when_same_asset_processed_twice() {
     // When the same asset is processed twice (e.g. via replicate_existing_edges),
@@ -1253,6 +1255,8 @@ mod tests {
     );
   }
 
+  // NOTE: Manual graph construction required — this test links two different assets
+  // to the same dependency node to test conflict detection, which the macro cannot express.
   #[test]
   fn track_symbols_errors_on_conflicting_symbol_resolution() {
     // When two DIFFERENT assets provide the same symbol to the same dependency,
@@ -1406,6 +1410,9 @@ mod tests {
     ctx.assert_finalize_ok();
   }
 
+  // NOTE: Manual graph construction required — this test calls track_symbols on
+  // the shared asset twice to simulate replicate_existing_edges, which the macro
+  // cannot express (it processes each asset exactly once).
   #[test]
   fn track_symbols_handles_diamond_pattern_with_replicated_edges() {
     // Simulates what happens when replicate_existing_edges calls track_symbols
@@ -1673,7 +1680,10 @@ mod tests {
   }
 
   // ============================================================
-  // track_symbols tests
+  // has_requested_symbols unit tests
+  //
+  // NOTE: Manual construction required — these test SymbolTracker
+  // internals directly without an asset graph.
   // ============================================================
 
   #[test]
@@ -1709,6 +1719,9 @@ mod tests {
     assert!(tracker.has_requested_symbols(&"dep1".to_string()));
   }
 
+  // NOTE: Manual graph construction required — this test intentionally leaves a
+  // dependency without a resolved asset to test un-deferral signaling, which the
+  // macro cannot express (it always creates an asset for each dependency).
   #[test]
   fn track_symbols_returns_undeferred_for_unresolved_deps() {
     // Build a graph where index.js imports "a" from ./a.js,
