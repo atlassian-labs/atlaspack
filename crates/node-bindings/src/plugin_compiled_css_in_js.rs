@@ -1,12 +1,12 @@
 use anyhow::{Context, Result, anyhow};
+use atlaspack_core::types::Diagnostic as AtlaspackDiagnostic;
 use atlaspack_js_swc_core::{
   Config, SourceType, emit, parse,
   utils::{
     CodeHighlight, Diagnostic, DiagnosticSeverity, ErrorBuffer, SourceLocation,
-    error_buffer_to_diagnostics, transform_errors_to_diagnostics,
+    error_buffer_to_diagnostics,
   },
 };
-use atlassian_swc_compiled_css::TransformError;
 use atlassian_swc_compiled_css_strip_runtime as strip_runtime;
 use napi::{Env, Error as NapiError, JsObject, bindgen_prelude::Buffer};
 use napi_derive::napi;
@@ -45,7 +45,7 @@ pub struct CompiledCssInJsConfigPlugin {
   pub config_path: Option<String>,
   pub import_react: Option<bool>,
   pub nonce: Option<String>,
-  pub import_sources: Option<Vec<String>>,
+  pub import_sources: Vec<String>,
   pub optimize_css: Option<bool>,
   pub extensions: Option<Vec<String>>,
   pub add_component_name: Option<bool>,
@@ -175,31 +175,48 @@ fn strip_jsx_pragma_comment_from_source(source: &str) -> String {
   result
 }
 
-fn map_transform_errors_to_diagnostics(
-  errors: Vec<TransformError>,
-  source_map: &SourceMap,
+fn map_atlaspack_diagnostics_to_js_diagnostics(
+  diagnostics: Vec<AtlaspackDiagnostic>,
 ) -> Vec<Diagnostic> {
-  errors
+  diagnostics
     .into_iter()
-    .map(|error| {
-      let code_highlights = error.span.and_then(|span| {
-        if span.lo().is_dummy() || span.hi().is_dummy() {
+    .map(|diagnostic| {
+      // Convert atlaspack_core::CodeFrame to JS transformer's CodeHighlight format
+      let code_highlights = if diagnostic.code_frames.is_empty() {
+        None
+      } else {
+        let highlights: Vec<CodeHighlight> = diagnostic
+          .code_frames
+          .iter()
+          .flat_map(|frame| &frame.code_highlights)
+          .map(|highlight| CodeHighlight {
+            message: highlight.message.clone(),
+            loc: SourceLocation {
+              start_line: highlight.start.line,
+              start_col: highlight.start.column,
+              end_line: highlight.end.line,
+              end_col: highlight.end.column,
+            },
+          })
+          .collect();
+        if highlights.is_empty() {
           None
         } else {
-          Some(vec![CodeHighlight {
-            message: None,
-            loc: SourceLocation::from(source_map, span),
-          }])
+          Some(highlights)
         }
-      });
+      };
 
       Diagnostic {
-        message: error.message,
+        message: diagnostic.message,
         code_highlights,
-        hints: None,
+        hints: if diagnostic.hints.is_empty() {
+          None
+        } else {
+          Some(diagnostic.hints)
+        },
         show_environment: false,
         severity: DiagnosticSeverity::Error,
-        documentation_url: None,
+        documentation_url: diagnostic.documentation_url,
       }
     })
     .collect()
@@ -355,10 +372,14 @@ fn process_compiled_css_in_js(
       atlassian_swc_compiled_css::transform_with_file(program, transform_file, options)
     });
 
-    let (mut transformed_program, mut style_rules) = match transform_output {
-      Ok(output) => (output.program, output.metadata.style_rules),
+    let (mut transformed_program, mut style_rules, metadata_diagnostics) = match transform_output {
+      Ok(output) => (
+        output.program,
+        output.metadata.style_rules,
+        output.metadata.diagnostics,
+      ),
       Err(errors) => {
-        let diagnostics = convert_diagnostics(transform_errors_to_diagnostics(errors, &source_map));
+        let diagnostics = convert_diagnostics(map_atlaspack_diagnostics_to_js_diagnostics(errors));
         return Ok(CompiledCssInJsPluginResult {
           code: code.to_string(),
           map: None,
@@ -395,7 +416,7 @@ fn process_compiled_css_in_js(
         }
         Err(errors) => {
           let diagnostics =
-            convert_diagnostics(transform_errors_to_diagnostics(errors, &source_map));
+            convert_diagnostics(map_atlaspack_diagnostics_to_js_diagnostics(errors));
           return Ok(CompiledCssInJsPluginResult {
             code: code.to_string(),
             map: None,
@@ -459,11 +480,15 @@ fn process_compiled_css_in_js(
 
     let code = append_transformed_asset_marker(code);
 
+    let diagnostics = convert_diagnostics(map_atlaspack_diagnostics_to_js_diagnostics(
+      metadata_diagnostics,
+    ));
+
     Ok(CompiledCssInJsPluginResult {
       code,
       map: map_json,
       style_rules,
-      diagnostics: Vec::new(),
+      diagnostics,
       bail_out: false,
     })
   })
@@ -520,18 +545,18 @@ pub fn apply_compiled_css_in_js_plugin(
 fn config_to_plugin_options(
   config: &atlassian_swc_compiled_css::CompiledCssInJsTransformConfig,
 ) -> atlassian_swc_compiled_css::PluginOptions {
-  // Ensure @compiled/react is in import_sources
-  let mut import_sources = config.import_sources.clone();
-  if !import_sources.contains(&"@compiled/react".to_string()) {
-    import_sources.push("@compiled/react".to_string());
-  }
+  let import_sources = atlassian_swc_compiled_css::DEFAULT_IMPORT_SOURCES
+    .iter()
+    .map(|s| s.to_string())
+    .chain(config.import_sources.clone())
+    .collect();
 
   atlassian_swc_compiled_css::PluginOptions {
     cache: None,
     max_size: None,
     import_react: Some(config.import_react),
     nonce: config.nonce.clone(),
-    import_sources: Some(import_sources),
+    import_sources,
     on_included_files: None,
     optimize_css: Some(config.optimize_css),
     resolver: None,
@@ -569,7 +594,7 @@ mod tests {
         unsafe_skip_pattern: None,
         import_react: Some(true),
         nonce: None,
-        import_sources: Some(vec!["@compiled/react".into(), "@atlaskit/css".into()]),
+        import_sources: vec!["@compiled/react".into(), "@atlaskit/css".into()],
         optimize_css: Some(true),
         extensions: None,
         add_component_name: Some(false),
@@ -2952,7 +2977,7 @@ export function CompassNotProvisionedEmptyState({ onCompassSignup }: Props) {
 
     let code = indoc! {r#"
       import { css } from '@compiled/react';
-      
+
       const complexStyles = css({
         '@media (max-width: 768px)': {
           color: 'blue',
@@ -2965,7 +2990,7 @@ export function CompassNotProvisionedEmptyState({ onCompassSignup }: Props) {
           display: 'block',
         }
       });
-      
+
       export const ComplexComponent = () => (
         <div css={complexStyles}>Complex Styles</div>
       );

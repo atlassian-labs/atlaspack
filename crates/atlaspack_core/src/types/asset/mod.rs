@@ -260,6 +260,10 @@ pub struct Asset {
   pub config_path: Option<String>,
   pub config_key_path: Option<String>,
 
+  /// The key used to retrieve the asset's content from the cache.
+  /// This is set by the JS side when assets are committed to the cache.
+  pub content_key: Option<String>,
+
   /// Tells the packager whether to insert a hashbang, and what that hashbang is.
   pub interpreter: Option<String>,
 

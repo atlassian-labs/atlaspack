@@ -1,5 +1,70 @@
 # @atlaspack/transformer-css
 
+## 2.15.16
+
+### Patch Changes
+
+- Updated dependencies [[`ad3c822`](https://github.com/atlassian-labs/atlaspack/commit/ad3c8223ab1abce9e8da81239cc56f27d37c7cad), [`936209f`](https://github.com/atlassian-labs/atlaspack/commit/936209f3c6c201288720dd62b61e1f538368268c)]:
+  - @atlaspack/feature-flags@2.30.1
+  - @atlaspack/source-map@3.2.10
+  - @atlaspack/utils@3.3.7
+  - @atlaspack/plugin@2.14.55
+  - @atlaspack/types@2.15.45
+
+## 2.15.15
+
+### Patch Changes
+
+- Updated dependencies [[`d8e984b`](https://github.com/atlassian-labs/atlaspack/commit/d8e984b7f6d04fa03707fa299bfd8b8bf9f58280), [`45a0dc5`](https://github.com/atlassian-labs/atlaspack/commit/45a0dc530fd9472dbfdebcbb05f1aad812ab3b23)]:
+  - @atlaspack/feature-flags@2.30.0
+  - @atlaspack/utils@3.3.6
+  - @atlaspack/source-map@3.2.9
+  - @atlaspack/plugin@2.14.54
+  - @atlaspack/types@2.15.44
+
+## 2.15.14
+
+### Patch Changes
+
+- Updated dependencies [[`1815c2c`](https://github.com/atlassian-labs/atlaspack/commit/1815c2ce48e32f4df97ccdd668fd650fc79d1051)]:
+  - @atlaspack/feature-flags@2.29.1
+  - @atlaspack/source-map@3.2.8
+  - @atlaspack/utils@3.3.5
+  - @atlaspack/plugin@2.14.53
+  - @atlaspack/types@2.15.43
+
+## 2.15.13
+
+### Patch Changes
+
+- Updated dependencies [[`349b19c`](https://github.com/atlassian-labs/atlaspack/commit/349b19c3aca2ccb1ffb5cdcdc74890f4b62228be)]:
+  - @atlaspack/feature-flags@2.29.0
+  - @atlaspack/plugin@2.14.52
+  - @atlaspack/types@2.15.42
+  - @atlaspack/utils@3.3.4
+  - @atlaspack/source-map@3.2.7
+
+## 2.15.12
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.2.6
+  - @atlaspack/utils@3.3.3
+  - @atlaspack/types@2.15.41
+  - @atlaspack/plugin@2.14.51
+
+## 2.15.11
+
+### Patch Changes
+
+- Updated dependencies [[`8826fd0`](https://github.com/atlassian-labs/atlaspack/commit/8826fd02c29c9c67cf0c80da41f424257fbdef93)]:
+  - @atlaspack/feature-flags@2.28.0
+  - @atlaspack/source-map@3.2.5
+  - @atlaspack/utils@3.3.2
+  - @atlaspack/plugin@2.14.50
+  - @atlaspack/types@2.15.40
+
 ## 2.15.10
 
 ### Patch Changes

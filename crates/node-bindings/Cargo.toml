@@ -41,6 +41,7 @@ regex = { workspace = true }
 rkyv = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
+petgraph = { workspace = true }
 toml = { workspace = true }
 tokio = { workspace = true, features = ["rt"] }
 tracing = { workspace = true }
@@ -81,6 +82,7 @@ mimalloc = { workspace = true }
 [dev-dependencies]
 indoc = { workspace = true }
 tempfile = { workspace = true }
+pretty_assertions = { workspace = true }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 jemallocator = { workspace = true, features = ["disable_initial_exec_tls"]}

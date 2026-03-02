@@ -99,7 +99,12 @@ pub fn minify_value_whitespace(input: &str) -> String {
     }
     i += 1;
   }
-  out.trim().to_string()
+  // Trim whitespace and trailing commas to match Babel's behavior
+  let mut result = out.trim().to_string();
+  while result.ends_with(',') {
+    result.pop();
+  }
+  result
 }
 
 #[cfg(test)]
@@ -118,5 +123,17 @@ mod tests {
   fn preserves_calc_spacing() {
     let value = "calc(100vh - var(--topNavigationHeight, 0px) - var(--bannerHeight, 0px))";
     assert_eq!(minify_value_whitespace(value), value);
+  }
+
+  #[test]
+  fn strips_trailing_comma() {
+    // Babel strips trailing commas from CSS values, SWC should too
+    assert_eq!(
+      minify_value_whitespace("background-color .1s linear,color .1s linear,"),
+      "background-color .1s linear,color .1s linear"
+    );
+    assert_eq!(minify_value_whitespace("a, b, c,"), "a,b,c");
+    // Multiple trailing commas
+    assert_eq!(minify_value_whitespace("a, b,,"), "a,b");
   }
 }

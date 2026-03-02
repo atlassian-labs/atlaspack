@@ -1,5 +1,47 @@
 # @atlaspack/codeframe
 
+## 2.13.37
+
+### Patch Changes
+
+- Updated dependencies [[`857962a`](https://github.com/atlassian-labs/atlaspack/commit/857962a352bb0aebaf74a8765e8c44d7e875a4e9)]:
+  - @atlaspack/types-internal@2.24.0
+
+## 2.13.36
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.23.2
+
+## 2.13.35
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.23.1
+
+## 2.13.34
+
+### Patch Changes
+
+- Updated dependencies [[`e058f0e`](https://github.com/atlassian-labs/atlaspack/commit/e058f0e7a0423ba9373e85a7dbd5c1dd43b47916)]:
+  - @atlaspack/types-internal@2.23.0
+
+## 2.13.33
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.22.8
+
+## 2.13.32
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.22.7
+
 ## 2.13.31
 
 ### Patch Changes

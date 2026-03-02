@@ -107,6 +107,43 @@ impl FileSystem for InMemoryFileSystem {
     Ok(())
   }
 
+  fn create_dir_all(&self, path: &Path) -> std::io::Result<()> {
+    let path = self.canonicalize_impl(path);
+    let mut files = self.files.write();
+    files.insert(path.clone(), InMemoryFileSystemEntry::Directory);
+
+    // Create all parent directories
+    let mut dir = path.parent();
+    while let Some(p) = dir {
+      files.insert(p.to_path_buf(), InMemoryFileSystemEntry::Directory);
+      dir = p.parent();
+    }
+    Ok(())
+  }
+
+  fn write(&self, path: &Path, contents: &[u8]) -> std::io::Result<()> {
+    let path = self.canonicalize_impl(path);
+    let contents_str = String::from_utf8(contents.to_vec())
+      .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid UTF-8"))?;
+
+    let mut files = self.files.write();
+
+    // Create parent directories first
+    let mut dir = path.parent();
+    while let Some(p) = dir {
+      files.insert(p.to_path_buf(), InMemoryFileSystemEntry::Directory);
+      dir = p.parent();
+    }
+
+    files.insert(
+      path,
+      InMemoryFileSystemEntry::File {
+        contents: contents_str,
+      },
+    );
+    Ok(())
+  }
+
   fn read(&self, path: &Path) -> std::io::Result<Vec<u8>> {
     let str = self.read_to_string(path)?;
     Ok(str.as_bytes().to_vec())

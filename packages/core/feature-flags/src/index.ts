@@ -22,6 +22,16 @@ export const DEFAULT_FEATURE_FLAGS = {
   atlaspackV3: false,
 
   /**
+   * Enable Rust symbol tracker results in the AssetGraphRequest.
+   *
+   * This is used to gate the new Rust-side symbol tracking work.
+   *
+   * @author Ben Jervis <bjervis@atlassian.com>
+   * @since 2026-02-05
+   */
+  rustSymbolTracker: false,
+
+  /**
    * Use node.js implementation of @parcel/watcher watchman backend
    *
    * @author Pedro Tacla Yamada <pyamada@atlassian.com>
@@ -65,17 +75,6 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2025-02-04
    */
   vcsMode: 'OLD' as ConsistencyCheckFeatureFlagValue,
-
-  /**
-   * Refactor cache to:
-   * - Split writes into multiple entries
-   * - Remove "large file blob" writes
-   * - Reduce size of the caches by deduplicating data
-   *
-   * @author Pedro Tacla Yamada <pyamada@atlassian.com>
-   * @since 2025-05-13
-   */
-  cachePerformanceImprovements: process.env.ATLASPACK_BUILD_ENV === 'test',
 
   /**
    * Deduplicates environments across cache / memory entities
@@ -185,15 +184,6 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2025-07-08
    */
   condbDevFallbackProd: false,
-
-  /**
-   * Enable the new incremental bundling versioning logic which determines whether
-   * a full bundling pass is required based on the AssetGraph's bundlingVersion.
-   *
-   * @author Pedro Tacla Yamada <pyamada@atlassian.com>
-   * @since 2025-07-08
-   */
-  incrementalBundlingVersioning: process.env.ATLASPACK_BUILD_ENV === 'test',
 
   /**
    * Remove redundant shared bundles that are no longer required after merging
@@ -370,13 +360,6 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2026-01-16
    */
   useLargeMapInBuildCache: process.env.ATLASPACK_BUILD_ENV === 'test',
-  /*
-   * Enable the skipping of server file check in TesseractResolver
-   *
-   * @author Vy Kim Nguyen <vnguyen4@atlassian.com>
-   * @since 2026-01-19
-   */
-  skipServerFileCheck: process.env.ATLASPACK_BUILD_ENV === 'test',
 
   /**
    * Enables native packaging. By itself, this feature flag will only ensure that
@@ -395,6 +378,25 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2026-01-21
    */
   nativePackagerSSRDev: false,
+
+  /**
+   * Enables native bundling. When enabled, the bundle graph is built in Rust
+   * instead of JavaScript.
+   *
+   * @author Matt Jones <mjones4@atlassian.com>
+   * @since 2026-01-27
+   */
+  nativeBundling: false,
+
+  /**
+   * When enabled, tracks HASH_REF replacements during bundle write and adjusts
+   * the source map column offsets so mappings remain correct after placeholder
+   * replacement.
+   *
+   * @since 2025-02-10
+   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
+   */
+  fixSourceMapHashRefs: process.env.ATLASPACK_BUILD_ENV === 'test',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;

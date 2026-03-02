@@ -132,7 +132,7 @@ export function prettyDiagnosticSync(
     }
   }
 
-  if (stack != null) {
+  if (stack != null && !diagnostic.meta?.sentryOnly) {
     result.stack = stack;
   }
 

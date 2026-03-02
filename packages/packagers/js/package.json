@@ -18,6 +18,7 @@
   "dependencies": {
     "@atlaspack/diagnostic": "workspace:*",
     "@atlaspack/feature-flags": "workspace:*",
+    "@atlaspack/logger": "workspace:*",
     "@atlaspack/plugin": "workspace:*",
     "@atlaspack/rust": "workspace:*",
     "@atlaspack/source-map": "workspace:*",

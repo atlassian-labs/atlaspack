@@ -22,6 +22,7 @@ import type {
   BundleNode,
   Dependency,
   DependencyNode,
+  Environment,
   InternalSourceLocation,
   Target,
   Condition,
@@ -75,7 +76,7 @@ export const bundleGraphEdgeTypes = {
   internal_async: 5,
   // This type is used to mark an edge between a bundle and a conditional bundle.
   // This allows efficient discovery of conditional bundles in packaging
-  conditional: 5,
+  conditional: 6,
 } as const;
 
 export type BundleGraphEdgeType =
@@ -574,11 +575,13 @@ export default class BundleGraph {
 
   /**
    * Serialize the bundle graph for efficient transfer to native Rust code.
-   * Returns a JSON string of nodes and an array of edges.
+   * Returns a JSON string of nodes, an array of edges, and a map of asset IDs to public IDs.
    */
   serializeForNative(): {
     nodesJson: string;
     edges: [number, number, BundleGraphEdgeType][];
+    publicIdByAssetId: Record<string, string>;
+    environmentsJson: string;
   } {
     const start = performance.now();
 
@@ -593,18 +596,101 @@ export default class BundleGraph {
       next = edgeIterator.next();
     }
 
+    // Extract and deduplicate environments
+    const environmentMap = new Map<string, Environment>();
+    const extractEnvironment = (envRef: EnvironmentRef): string => {
+      const env = fromEnvironmentId(envRef);
+      const envId = env.id;
+      if (!environmentMap.has(envId)) {
+        environmentMap.set(envId, env);
+      }
+      return envId;
+    };
+
+    // Replace env objects with env IDs in nodes
+    const processedNodes = nodes.map((node) => {
+      const processedNode = {...node};
+      if (node.type === 'asset' && node.value?.env) {
+        processedNode.value = {
+          ...node.value,
+          env: extractEnvironment(node.value.env),
+        };
+      } else if (node.type === 'dependency' && node.value?.env) {
+        processedNode.value = {
+          ...node.value,
+          env: extractEnvironment(node.value.env),
+        };
+      } else if (node.type === 'bundle' && node.value?.env) {
+        processedNode.value = {
+          ...node.value,
+          env: extractEnvironment(node.value.env),
+        };
+      }
+      return processedNode;
+    });
+
     // Optimize nodes by omitting null/undefined values to reduce JSON size
+    const optimizedNodes = processedNodes.map((node) => this._omitNulls(node));
+    const nodesJson = JSON.stringify(optimizedNodes);
+
+    // Serialize environments as array
+    const environments = Array.from(environmentMap.values());
+    const environmentsJson = JSON.stringify(environments);
+
+    // Convert Map to plain object for serialization
+    const publicIdByAssetId: Record<string, string> = {};
+    for (const [assetId, publicId] of this._publicIdByAssetId) {
+      publicIdByAssetId[assetId] = publicId;
+    }
+
+    const duration = performance.now() - start;
+    const nodesSizeMB = (nodesJson.length / (1024 * 1024)).toFixed(2);
+    const envsSizeMB = (environmentsJson.length / (1024 * 1024)).toFixed(2);
+    logger.verbose({
+      origin: '@atlaspack/core',
+      message: `serializeForNative: ${duration.toFixed(1)}ms, ${nodesSizeMB}MB nodes, ${envsSizeMB}MB envs (${environmentMap.size} unique), ${nodes.length} nodes, ${edges.length} edges`,
+    });
+
+    return {nodesJson, edges, publicIdByAssetId, environmentsJson};
+  }
+
+  /**
+   * Serialize only the given asset nodes for native incremental update.
+   * Same node shape and env/omit logic as serializeForNative.
+   */
+  serializeAssetNodesForNative(assetIds: Array<string>): string {
+    const start = performance.now();
+
+    if (assetIds.length === 0) {
+      return '[]';
+    }
+
+    const nodes: Array<BundleGraphNode> = [];
+    for (const assetId of assetIds) {
+      const node = this._graph.getNodeByContentKey(assetId);
+      if (node?.type !== 'asset') {
+        continue;
+      }
+      const processedNode = {...node};
+      if (node.value?.env) {
+        processedNode.value = {
+          ...node.value,
+          env: fromEnvironmentId(node.value.env).id,
+        };
+      }
+      nodes.push(processedNode);
+    }
     const optimizedNodes = nodes.map((node) => this._omitNulls(node));
     const nodesJson = JSON.stringify(optimizedNodes);
 
     const duration = performance.now() - start;
-    const sizeMB = (nodesJson.length / (1024 * 1024)).toFixed(2);
+    const nodesSizeMB = (nodesJson.length / (1024 * 1024)).toFixed(2);
+
     logger.verbose({
       origin: '@atlaspack/core',
-      message: `serializeForNative: ${duration.toFixed(1)}ms, ${sizeMB}MB JSON, ${nodes.length} nodes, ${edges.length} edges`,
+      message: `serializeAssetNodesForNative: ${duration.toFixed(1)}ms, ${nodesSizeMB}MB nodes, ${nodes.length} nodes`,
     });
-
-    return {nodesJson, edges};
+    return nodesJson;
   }
 
   /**
@@ -1773,8 +1859,36 @@ export default class BundleGraph {
   }
 
   /**
-   * TODO: Document why this works like this & why visitor order matters
-   * on these use-cases.
+   * Performs a depth-first traversal of all assets and dependencies contained
+   * within a bundle. Only visits nodes that are directly contained in the bundle
+   * (connected via a `contains` edge).
+   *
+   * Entry Asset Ordering:
+   * The traversal guarantees that entry assets are visited in the exact order they
+   * appear in `bundle.entryAssetIds`. This ordering is critical for several reasons:
+   *
+   * 1. **Code Execution Order in Packagers**: Packagers (ScopeHoistingPackager,
+   *    DevPackager) use this traversal to concatenate assets into the final bundle.
+   *    The traversal order determines the execution order of code in the output.
+   *    Entry assets must be processed in their defined order to ensure correct
+   *    initialization sequences.
+   *
+   * 2. **Runtime Injection**: Runtime assets (HMR, bundle manifests) are prepended
+   *    to `entryAssetIds` via `unshift()` in `applyRuntimes.ts`. By honoring the
+   *    array order, runtimes are guaranteed to be visited (and thus output) before
+   *    application entry points, ensuring the runtime infrastructure is available
+   *    when application code executes.
+   *
+   * 3. **Deterministic Builds**: Consistent traversal order ensures reproducible
+   *    bundle output, which is essential for caching and build verification.
+   *
+   * The sorting only applies at the first traversal level (direct children of the
+   * start node). Subsequent levels follow standard DFS order based on the graph's
+   * edge structure.
+   *
+   * @param bundle - The bundle to traverse
+   * @param visit - Visitor callback receiving asset or dependency nodes
+   * @param startAsset - Optional asset to start traversal from (defaults to bundle root)
    */
   traverseBundle<TContext>(
     bundle: Bundle,

@@ -1,5 +1,89 @@
 # @atlaspack/packager-js
 
+## 2.25.1
+
+### Patch Changes
+
+- Updated dependencies [[`06bb8c1`](https://github.com/atlassian-labs/atlaspack/commit/06bb8c14657722658c55283835f23ed7e7c6ecb4), [`a2d8e7a`](https://github.com/atlassian-labs/atlaspack/commit/a2d8e7a2444a1d6502239de8b8ceab4227270ec7), [`f9aec27`](https://github.com/atlassian-labs/atlaspack/commit/f9aec2736d27afa7a1f2a9701d46e29e566ab352), [`ecf8b79`](https://github.com/atlassian-labs/atlaspack/commit/ecf8b7931c5516df2117d525cefff5d7e1d20bee), [`93ec107`](https://github.com/atlassian-labs/atlaspack/commit/93ec10729ad5a328b4320955357339746cd472f3), [`a2c5747`](https://github.com/atlassian-labs/atlaspack/commit/a2c574770d2e616576e817801842576ead072532), [`f216e22`](https://github.com/atlassian-labs/atlaspack/commit/f216e227e0aca8a3944f66267d3f75238c732802), [`e88b258`](https://github.com/atlassian-labs/atlaspack/commit/e88b25808a181fafbe98e5ca278b35bfc0197caf), [`ad3c822`](https://github.com/atlassian-labs/atlaspack/commit/ad3c8223ab1abce9e8da81239cc56f27d37c7cad), [`936209f`](https://github.com/atlassian-labs/atlaspack/commit/936209f3c6c201288720dd62b61e1f538368268c), [`857962a`](https://github.com/atlassian-labs/atlaspack/commit/857962a352bb0aebaf74a8765e8c44d7e875a4e9)]:
+  - @atlaspack/rust@3.24.0
+  - @atlaspack/feature-flags@2.30.1
+  - @atlaspack/logger@2.14.47
+  - @atlaspack/source-map@3.2.10
+  - @atlaspack/utils@3.3.7
+  - @atlaspack/plugin@2.14.55
+  - @atlaspack/types@2.15.45
+
+## 2.25.0
+
+### Minor Changes
+
+- [#1027](https://github.com/atlassian-labs/atlaspack/pull/1027) [`d8e984b`](https://github.com/atlassian-labs/atlaspack/commit/d8e984b7f6d04fa03707fa299bfd8b8bf9f58280) Thanks [@marcins](https://github.com/marcins)! - Improve source map quality through various accuracy fixes.
+
+### Patch Changes
+
+- [#1026](https://github.com/atlassian-labs/atlaspack/pull/1026) [`4c1f39a`](https://github.com/atlassian-labs/atlaspack/commit/4c1f39a911acaefd630d877af1ae5a039931662f) Thanks [@marcins](https://github.com/marcins)! - Support logging levels for js_span traces
+
+- Updated dependencies [[`c4082ba`](https://github.com/atlassian-labs/atlaspack/commit/c4082ba3fc1a9328a2e5f23195d5972fbc5d10c8), [`d8e984b`](https://github.com/atlassian-labs/atlaspack/commit/d8e984b7f6d04fa03707fa299bfd8b8bf9f58280), [`ca78e1d`](https://github.com/atlassian-labs/atlaspack/commit/ca78e1d2007bfecd267b283d66a73f3695da4234), [`94e1a58`](https://github.com/atlassian-labs/atlaspack/commit/94e1a58a1a8ed5a4e329745d8a7e6a9530b5cb11), [`4c1f39a`](https://github.com/atlassian-labs/atlaspack/commit/4c1f39a911acaefd630d877af1ae5a039931662f), [`fcf7ec5`](https://github.com/atlassian-labs/atlaspack/commit/fcf7ec56fea644e21f7a67d649e6efd1f03c4a6e), [`45a0dc5`](https://github.com/atlassian-labs/atlaspack/commit/45a0dc530fd9472dbfdebcbb05f1aad812ab3b23)]:
+  - @atlaspack/rust@3.23.0
+  - @atlaspack/feature-flags@2.30.0
+  - @atlaspack/utils@3.3.6
+  - @atlaspack/logger@2.14.46
+  - @atlaspack/source-map@3.2.9
+  - @atlaspack/plugin@2.14.54
+  - @atlaspack/types@2.15.44
+
+## 2.24.14
+
+### Patch Changes
+
+- Updated dependencies [[`95914a7`](https://github.com/atlassian-labs/atlaspack/commit/95914a7f33f9370cdb0c8a3fd6845c042911af59), [`883c107`](https://github.com/atlassian-labs/atlaspack/commit/883c107e60dab2f459e27342017c54e3a7db8bc5), [`1815c2c`](https://github.com/atlassian-labs/atlaspack/commit/1815c2ce48e32f4df97ccdd668fd650fc79d1051)]:
+  - @atlaspack/rust@3.22.1
+  - @atlaspack/feature-flags@2.29.1
+  - @atlaspack/logger@2.14.45
+  - @atlaspack/source-map@3.2.8
+  - @atlaspack/utils@3.3.5
+  - @atlaspack/plugin@2.14.53
+  - @atlaspack/types@2.15.43
+
+## 2.24.13
+
+### Patch Changes
+
+- Updated dependencies [[`e058f0e`](https://github.com/atlassian-labs/atlaspack/commit/e058f0e7a0423ba9373e85a7dbd5c1dd43b47916), [`053e375`](https://github.com/atlassian-labs/atlaspack/commit/053e3754c08c5b5dc239e9f7267df289cbbf31ab), [`25c976e`](https://github.com/atlassian-labs/atlaspack/commit/25c976e01c30e536fb1027eab5b17594c604efff), [`1a86b65`](https://github.com/atlassian-labs/atlaspack/commit/1a86b657868ee881ca5acc68661cca208ac37779), [`349b19c`](https://github.com/atlassian-labs/atlaspack/commit/349b19c3aca2ccb1ffb5cdcdc74890f4b62228be), [`9959efe`](https://github.com/atlassian-labs/atlaspack/commit/9959efe30699a2de3b69275be7ecb47afe81c0b6)]:
+  - @atlaspack/rust@3.22.0
+  - @atlaspack/feature-flags@2.29.0
+  - @atlaspack/logger@2.14.44
+  - @atlaspack/plugin@2.14.52
+  - @atlaspack/types@2.15.42
+  - @atlaspack/utils@3.3.4
+  - @atlaspack/source-map@3.2.7
+
+## 2.24.12
+
+### Patch Changes
+
+- [#988](https://github.com/atlassian-labs/atlaspack/pull/988) [`a631dcd`](https://github.com/atlassian-labs/atlaspack/commit/a631dcd961112db072b0f8de0831efd178f355a7) Thanks [@marcins](https://github.com/marcins)! - Implement a basic package() method for the native packager
+
+- Updated dependencies [[`a631dcd`](https://github.com/atlassian-labs/atlaspack/commit/a631dcd961112db072b0f8de0831efd178f355a7), [`e9dce31`](https://github.com/atlassian-labs/atlaspack/commit/e9dce3168a8e6727a994bf2a6ac6041eb29f6027), [`59e1345`](https://github.com/atlassian-labs/atlaspack/commit/59e1345f84f43e0632d434ab42c06bf748241985), [`783118c`](https://github.com/atlassian-labs/atlaspack/commit/783118c772f45a0cf6a3b6b447fb9a0e225b25a6), [`fcaf517`](https://github.com/atlassian-labs/atlaspack/commit/fcaf517010d15c9300393bcad3f9b465689d9d16)]:
+  - @atlaspack/rust@3.21.0
+  - @atlaspack/logger@2.14.43
+  - @atlaspack/source-map@3.2.6
+  - @atlaspack/utils@3.3.3
+  - @atlaspack/types@2.15.41
+  - @atlaspack/plugin@2.14.51
+
+## 2.24.11
+
+### Patch Changes
+
+- Updated dependencies [[`e8ea59b`](https://github.com/atlassian-labs/atlaspack/commit/e8ea59beabb4b4fef647dc9ebea3519b6d56d7b5), [`3753cb1`](https://github.com/atlassian-labs/atlaspack/commit/3753cb1bf9155eaf3a1a8f952886864682738647), [`8826fd0`](https://github.com/atlassian-labs/atlaspack/commit/8826fd02c29c9c67cf0c80da41f424257fbdef93), [`225683f`](https://github.com/atlassian-labs/atlaspack/commit/225683f7c59355da53b7004d2b8596701ce3af41), [`43adda0`](https://github.com/atlassian-labs/atlaspack/commit/43adda06bf3b6a404b54f8ba2a3b810d92e61d75), [`dbcaabb`](https://github.com/atlassian-labs/atlaspack/commit/dbcaabbf15d4fbc8ecd9c0be58cf7b2317eebfc4)]:
+  - @atlaspack/rust@3.20.0
+  - @atlaspack/feature-flags@2.28.0
+  - @atlaspack/source-map@3.2.5
+  - @atlaspack/utils@3.3.2
+  - @atlaspack/plugin@2.14.50
+  - @atlaspack/types@2.15.40
+
 ## 2.24.10
 
 ### Patch Changes

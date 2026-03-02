@@ -1,11 +1,10 @@
-import type {Async, Bundle as IBundle, Namer} from '@atlaspack/types';
+import type {Async} from '@atlaspack/types';
 import type {SharedReference} from '@atlaspack/workers';
 import type {AtlaspackConfig, LoadedPlugin} from '../AtlaspackConfig';
 import type {StaticRunOpts, RunAPI} from '../RequestTracker';
 import type {
   Asset,
   AssetGroup,
-  Bundle as InternalBundle,
   Config,
   DevDepRequest,
   AtlaspackOptions,
@@ -15,19 +14,15 @@ import type {ConfigAndCachePath} from './AtlaspackConfigRequest';
 
 import fs from 'fs';
 import invariant from 'assert';
-import assert from 'assert';
 import nullthrows from 'nullthrows';
 import {instrumentAsync, PluginLogger} from '@atlaspack/logger';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
 import AssetGraph from '../AssetGraph';
-import BundleGraph from '../public/BundleGraph';
 import InternalBundleGraph, {bundleGraphEdgeTypes} from '../BundleGraph';
 import MutableBundleGraph from '../public/MutableBundleGraph';
-import {Bundle, NamedBundle} from '../public/Bundle';
 import {report} from '../ReporterRunner';
 import dumpGraphToGraphViz from '../dumpGraphToGraphViz';
-import {unique, setSymmetricDifference} from '@atlaspack/utils';
 import {hashString} from '@atlaspack/rust';
 import PluginOptions from '../public/PluginOptions';
 import applyRuntimes from '../applyRuntimes';
@@ -40,19 +35,15 @@ import {
   createDevDependency,
   getDevDepRequests,
   invalidateDevDeps,
-  runDevDepRequest,
 } from './DevDepRequest';
-import {createConfig} from '../InternalConfig';
+import {PluginWithLoadConfig} from './ConfigRequest';
+import {fromProjectPathRelative} from '../projectPath';
 import {
-  loadPluginConfig,
-  runConfigRequest,
-  PluginWithLoadConfig,
-} from './ConfigRequest';
-import {
-  joinProjectPath,
-  fromProjectPathRelative,
-  toProjectPathUnsafe,
-} from '../projectPath';
+  validateBundles,
+  nameBundle,
+  loadPluginConfigWithDevDeps,
+  runDevDepRequest as runDevDepRequestShared,
+} from './BundleGraphRequestUtils';
 import createAssetGraphRequestJS from './AssetGraphRequest';
 import {createAssetGraphRequestRust} from './AssetGraphRequestRust';
 import {tracer, PluginTracer} from '@atlaspack/profiler';
@@ -77,9 +68,9 @@ type RunInput = {
 // TODO: Rename to BundleGraphRequestResult
 export type BundleGraphResult = {
   bundleGraph: InternalBundleGraph;
-  assetGraphBundlingVersion: number;
   changedAssets: Map<string, Asset>;
   assetRequests: Array<AssetGroup>;
+  didIncrementallyBundle: boolean;
 };
 
 type BundleGraphRequest = {
@@ -154,6 +145,7 @@ export default function createBundleGraphRequest(
         lazyIncludes: options.lazyIncludes,
         lazyExcludes: options.lazyExcludes,
         requestedAssetIds,
+        skipSymbolProp: getFeatureFlag('rustSymbolTracker'),
       });
 
       let {assetGraph, changedAssets, assetRequests} = await instrumentAsync(
@@ -216,7 +208,6 @@ export default function createBundleGraphRequest(
 
       if (subRequestsInvalid) {
         assetGraph.safeToIncrementallyBundle = false;
-        assetGraph.setNeedsBundling();
       }
 
       let configResult = nullthrows(
@@ -285,21 +276,12 @@ class BundlerRunner {
     this.pluginOptions = new PluginOptions(
       optionsProxy(this.options, api.invalidateOnOptionChange),
     );
-    if (getFeatureFlag('cachePerformanceImprovements')) {
-      const key = hashString(
+    this.cacheKey =
+      hashString(
         `${ATLASPACK_VERSION}:BundleGraph:${
           JSON.stringify(options.entries) ?? ''
         }${options.mode}${options.shouldBuildLazily ? 'lazy' : 'eager'}`,
-      );
-      this.cacheKey = `BundleGraph/${ATLASPACK_VERSION}/${options.mode}/${key}`;
-    } else {
-      this.cacheKey =
-        hashString(
-          `${ATLASPACK_VERSION}:BundleGraph:${
-            JSON.stringify(options.entries) ?? ''
-          }${options.mode}${options.shouldBuildLazily ? 'lazy' : 'eager'}`,
-        ) + '-BundleGraph';
-    }
+      ) + '-BundleGraph';
   }
 
   async loadConfigs() {
@@ -319,30 +301,18 @@ class BundlerRunner {
   }
 
   async loadConfig<T extends PluginWithLoadConfig>(plugin: LoadedPlugin<T>) {
-    let config = createConfig({
-      plugin: plugin.name,
-      searchPath: toProjectPathUnsafe('index'),
-    });
-
-    await loadPluginConfig(plugin, config, this.options);
-    await runConfigRequest(this.api, config);
-    for (let devDep of config.devDeps) {
-      let devDepRequest = await createDevDependency(
-        devDep,
-        this.previousDevDeps,
-        this.options,
-      );
-      await this.runDevDepRequest(devDepRequest);
-    }
-
-    this.configs.set(plugin.name, config);
+    await loadPluginConfigWithDevDeps(
+      plugin,
+      this.options,
+      this.api,
+      this.previousDevDeps,
+      this.devDepRequests,
+      this.configs,
+    );
   }
 
   async runDevDepRequest(devDepRequest: DevDepRequest | DevDepRequestRef) {
-    let {specifier, resolveFrom} = devDepRequest;
-    let key = `${specifier}:${fromProjectPathRelative(resolveFrom)}`;
-    this.devDepRequests.set(key, devDepRequest);
-    await runDevDepRequest(this.api, devDepRequest);
+    await runDevDepRequestShared(this.api, devDepRequest, this.devDepRequests);
   }
 
   async bundle({
@@ -358,7 +328,7 @@ class BundlerRunner {
       type: 'buildProgress',
       phase: 'bundling',
     });
-
+    let didIncrementallyBundle = false;
     await this.loadConfigs();
 
     let plugin = await this.config.getBundler();
@@ -368,14 +338,10 @@ class BundlerRunner {
     const previousBundleGraphResult: BundleGraphResult | null | undefined =
       await this.api.getPreviousResult();
     const canIncrementallyBundle =
-      previousBundleGraphResult?.assetGraphBundlingVersion != null &&
-      graph.canIncrementallyBundle(
-        previousBundleGraphResult.assetGraphBundlingVersion,
-      );
+      previousBundleGraphResult != null && graph.canIncrementallyBundle();
 
     if (graph.safeToIncrementallyBundle && previousBundleGraphResult == null) {
       graph.safeToIncrementallyBundle = false;
-      graph.setNeedsBundling();
     }
 
     let internalBundleGraph;
@@ -396,6 +362,7 @@ class BundlerRunner {
           invariant(changedAssetNode.type === 'asset');
           internalBundleGraph.updateAsset(changedAssetNode);
         }
+        didIncrementallyBundle = true;
       } else {
         internalBundleGraph = InternalBundleGraph.fromAssetGraph(
           graph,
@@ -488,9 +455,9 @@ class BundlerRunner {
         this.api.storeResult(
           {
             bundleGraph: internalBundleGraph,
-            assetGraphBundlingVersion: graph.getBundlingVersion(),
             changedAssets: new Map(),
             assetRequests: [],
+            didIncrementallyBundle,
           },
           this.cacheKey,
         );
@@ -520,7 +487,14 @@ class BundlerRunner {
       let bundles = internalBundleGraph.getBundles({includeInline: true});
       await Promise.all(
         bundles.map((bundle) =>
-          this.nameBundle(namers, bundle, internalBundleGraph),
+          nameBundle(
+            namers,
+            bundle,
+            internalBundleGraph,
+            this.options,
+            this.pluginOptions,
+            this.configs,
+          ),
         ),
       );
 
@@ -551,7 +525,7 @@ class BundlerRunner {
         await this.runDevDepRequest(devDepRequest);
       }
 
-      this.validateBundles(internalBundleGraph);
+      validateBundles(internalBundleGraph);
 
       // Pre-compute the hashes for each bundle so they are only computed once and shared between workers.
       internalBundleGraph.getBundleGraphHash();
@@ -567,85 +541,18 @@ class BundlerRunner {
     this.api.storeResult(
       {
         bundleGraph: internalBundleGraph,
-        assetGraphBundlingVersion: graph.getBundlingVersion(),
         changedAssets: new Map(),
         assetRequests: [],
+        didIncrementallyBundle,
       },
       this.cacheKey,
     );
 
     return {
       bundleGraph: internalBundleGraph,
-      assetGraphBundlingVersion: graph.getBundlingVersion(),
       changedAssets: changedRuntimes,
       assetRequests,
+      didIncrementallyBundle,
     };
-  }
-
-  validateBundles(bundleGraph: InternalBundleGraph): void {
-    let bundles = bundleGraph.getBundles();
-
-    let bundleNames = bundles.map((b) =>
-      joinProjectPath(b.target.distDir, nullthrows(b.name)),
-    );
-    assert.deepEqual(
-      bundleNames,
-      unique(bundleNames),
-      'Bundles must have unique name. Conflicting names: ' +
-        [
-          ...setSymmetricDifference(
-            new Set(bundleNames),
-            new Set(unique(bundleNames)),
-          ),
-        ].join(),
-    );
-  }
-
-  async nameBundle(
-    namers: Array<LoadedPlugin<Namer<unknown>>>,
-    internalBundle: InternalBundle,
-    internalBundleGraph: InternalBundleGraph,
-  ): Promise<void> {
-    let bundle = Bundle.get(internalBundle, internalBundleGraph, this.options);
-    let bundleGraph = new BundleGraph<IBundle>(
-      internalBundleGraph,
-      NamedBundle.get.bind(NamedBundle),
-      this.options,
-    );
-
-    for (let namer of namers) {
-      let measurement;
-      try {
-        measurement = tracer.createMeasurement(namer.name, 'namer', bundle.id);
-        let name = await namer.plugin.name({
-          bundle,
-          bundleGraph,
-          config: this.configs.get(namer.name)?.result,
-          options: this.pluginOptions,
-          logger: new PluginLogger({origin: namer.name}),
-          tracer: new PluginTracer({origin: namer.name, category: 'namer'}),
-        });
-
-        if (name != null) {
-          internalBundle.name = name;
-          let {hashReference} = internalBundle;
-          internalBundle.displayName = name.includes(hashReference)
-            ? name.replace(hashReference, '[hash]')
-            : name;
-
-          return;
-        }
-      } catch (e: any) {
-        throw new ThrowableDiagnostic({
-          diagnostic: errorToDiagnostic(e, {
-            origin: namer.name,
-          }),
-        });
-      } finally {
-        measurement && measurement.end();
-      }
-    }
-
-    throw new Error('Unable to name bundle');
   }
 }

@@ -1,41 +1,34 @@
-use swc_core::common::{DUMMY_SP, Span, SyntaxContext};
+use swc_core::common::{DUMMY_SP, SyntaxContext};
 use swc_core::ecma::ast::{
   ArrowExpr, BlockStmt, BlockStmtOrExpr, CallExpr, Callee, Expr, Function,
 };
 
-use crate::errors::set_transform_span;
-use crate::types::Metadata;
-
-/// Formats a diagnostic message that mirrors Babel's `buildCodeFrameError` helper.
-///
-/// The message mirrors the original behaviour by appending ` (line:column).` to the
-/// provided error when a span is available. When no span is available the message is
-/// returned unchanged with a trailing period.
-pub fn build_code_frame_error(message: &str, span: Option<Span>, meta: &Metadata) -> String {
-  let resolved_span = span.or(meta.own_span).or(meta.parent_span);
-  if let Some(span) = resolved_span {
-    // Capture span for panic diagnostics so TransformError::from_panic can attach it.
-    set_transform_span(span);
-  }
-
-  format!("{message}.")
-}
-
 /// Wraps the provided block or expression in an IIFE.
 pub fn wrap_node_in_iife(body: BlockStmtOrExpr) -> Expr {
+  use swc_core::ecma::ast::ParenExpr;
+
+  // Create the arrow function
+  let arrow = Expr::Arrow(ArrowExpr {
+    span: DUMMY_SP,
+    ctxt: SyntaxContext::empty(),
+    params: Vec::new(),
+    body: Box::new(body),
+    is_generator: false,
+    is_async: false,
+    type_params: None,
+    return_type: None,
+  });
+
+  // Wrap in parentheses so SWC emits (() => ...)() instead of () => ...()
+  let paren_arrow = Expr::Paren(ParenExpr {
+    span: DUMMY_SP,
+    expr: Box::new(arrow),
+  });
+
   Expr::Call(CallExpr {
     span: DUMMY_SP,
     ctxt: SyntaxContext::empty(),
-    callee: Callee::Expr(Box::new(Expr::Arrow(ArrowExpr {
-      span: DUMMY_SP,
-      ctxt: SyntaxContext::empty(),
-      params: Vec::new(),
-      body: Box::new(body),
-      is_generator: false,
-      is_async: false,
-      type_params: None,
-      return_type: None,
-    }))),
+    callee: Callee::Expr(Box::new(paren_arrow)),
     args: Vec::new(),
     type_args: None,
   })
@@ -92,14 +85,14 @@ pub fn pick_function_body(expr: &Expr) -> Expr {
 
 #[cfg(test)]
 mod tests {
-  use super::{build_code_frame_error, pick_function_body, wrap_node_in_iife};
+  use super::{pick_function_body, wrap_node_in_iife};
   use crate::types::{
     Metadata, PluginOptions, TransformFile, TransformFileOptions, TransformState,
   };
   use std::cell::RefCell;
   use std::rc::Rc;
   use swc_core::common::sync::Lrc;
-  use swc_core::common::{BytePos, DUMMY_SP, FileName, SourceMap, Span, SyntaxContext};
+  use swc_core::common::{DUMMY_SP, SourceMap, SyntaxContext};
   use swc_core::ecma::ast::{
     ArrowExpr, BlockStmt, BlockStmtOrExpr, CallExpr, Callee, Expr, FnExpr, Function, Ident,
     ReturnStmt, Stmt,
@@ -145,17 +138,22 @@ mod tests {
       SyntaxContext::empty(),
     )))));
 
+    // The IIFE should be: (()=>a)()
+    // Structure: Call { callee: Paren { expr: Arrow { body: Expr(Ident("a")) } } }
     match expr {
       Expr::Call(CallExpr {
         callee: Callee::Expr(callee),
         ..
       }) => match *callee {
-        Expr::Arrow(ArrowExpr { body, .. }) => match *body {
-          BlockStmtOrExpr::Expr(inner) => match *inner {
-            Expr::Ident(Ident { sym, .. }) => assert_eq!(sym.as_ref(), "a"),
-            other => panic!("unexpected inner expression: {other:?}"),
+        Expr::Paren(paren) => match *paren.expr {
+          Expr::Arrow(ArrowExpr { body, .. }) => match *body {
+            BlockStmtOrExpr::Expr(inner) => match *inner {
+              Expr::Ident(Ident { sym, .. }) => assert_eq!(sym.as_ref(), "a"),
+              other => panic!("unexpected inner expression: {other:?}"),
+            },
+            other => panic!("unexpected IIFE body: {other:?}"),
           },
-          other => panic!("unexpected IIFE body: {other:?}"),
+          other => panic!("unexpected paren inner: {other:?}"),
         },
         other => panic!("unexpected callee: {other:?}"),
       },
@@ -195,16 +193,21 @@ mod tests {
     let expr = arrow_expr(BlockStmtOrExpr::BlockStmt(block.clone()));
     let result = pick_function_body(&expr);
 
+    // The IIFE should be: (()=>{ return value; })()
+    // Structure: Call { callee: Paren { expr: Arrow { body: BlockStmt } } }
     match result {
       Expr::Call(CallExpr {
         callee: Callee::Expr(callee),
         ..
       }) => match *callee {
-        Expr::Arrow(ArrowExpr { body, .. }) => match *body {
-          BlockStmtOrExpr::BlockStmt(inner_block) => {
-            assert_eq!(inner_block.stmts.len(), 1);
-          }
-          other => panic!("unexpected body: {other:?}"),
+        Expr::Paren(paren) => match *paren.expr {
+          Expr::Arrow(ArrowExpr { body, .. }) => match *body {
+            BlockStmtOrExpr::BlockStmt(inner_block) => {
+              assert_eq!(inner_block.stmts.len(), 1);
+            }
+            other => panic!("unexpected body: {other:?}"),
+          },
+          other => panic!("unexpected paren inner: {other:?}"),
         },
         other => panic!("unexpected callee: {other:?}"),
       },
@@ -242,37 +245,25 @@ mod tests {
 
     let result = pick_function_body(&function);
 
+    // The IIFE should be: (()=>{ return a; })()
+    // Structure: Call { callee: Paren { expr: Arrow { body: BlockStmt } } }
     match result {
       Expr::Call(CallExpr {
         callee: Callee::Expr(callee),
         ..
       }) => match *callee {
-        Expr::Arrow(ArrowExpr { body, .. }) => match *body {
-          BlockStmtOrExpr::BlockStmt(block) => {
-            assert_eq!(block.stmts.len(), 1);
-          }
-          other => panic!("unexpected body: {other:?}"),
+        Expr::Paren(paren) => match *paren.expr {
+          Expr::Arrow(ArrowExpr { body, .. }) => match *body {
+            BlockStmtOrExpr::BlockStmt(block) => {
+              assert_eq!(block.stmts.len(), 1);
+            }
+            other => panic!("unexpected body: {other:?}"),
+          },
+          other => panic!("unexpected paren inner: {other:?}"),
         },
         other => panic!("unexpected callee: {other:?}"),
       },
       other => panic!("unexpected result: {other:?}"),
     }
-  }
-
-  #[test]
-  fn build_code_frame_error_formats_location() {
-    let meta = create_metadata_with_file();
-    let state = meta.state();
-    let sm = &state.file().source_map;
-    let file = sm.new_source_file(
-      Lrc::new(FileName::Custom("virtual.tsx".into())),
-      "let x = 1;".to_string(),
-    );
-    drop(state);
-
-    let span = Span::new(file.start_pos, file.start_pos + BytePos(3));
-    let message = build_code_frame_error("Example error", Some(span), &meta);
-
-    assert_eq!(message, "Example error.");
   }
 }

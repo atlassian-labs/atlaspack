@@ -88,7 +88,10 @@ export default new Transformer({
         },
       }) as Promise<TokensPluginResult>
     ).catch((error) => {
-      // Re-throw with context about which file failed
+      // Re-throw with context about which file failed.
+      // Note: parse errors are handled via the diagnostic path (returned as
+      // Ok with diagnostics from Rust), so this catch only covers unexpected
+      // internal errors (e.g. emit failures, NAPI errors).
       throw new Error(
         `Failed to transform tokens in ${asset.filePath}: ${error.message || error}`,
       );

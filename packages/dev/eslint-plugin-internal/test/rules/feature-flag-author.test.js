@@ -7,6 +7,21 @@ const rule = require('../../src/rules/feature-flag-author');
 process.env.ESLINT_TEST_USER_NAME = 'Test User';
 process.env.ESLINT_TEST_USER_EMAIL = 'test.user@atlassian.com';
 
+// Mock Date to return a consistent date for testing
+const MOCK_DATE = '2000-01-01';
+const mockTime = new Date(MOCK_DATE).getTime();
+global.Date = new Proxy(Date, {
+  construct(target, args) {
+    return args.length === 0 ? new target(mockTime) : new target(...args);
+  },
+  get(target, prop) {
+    if (prop === 'now') {
+      return () => mockTime;
+    }
+    return Reflect.get(target, prop);
+  },
+});
+
 const ruleTester = new RuleTester({
   parserOptions: {
     ecmaVersion: 2018,
@@ -93,7 +108,7 @@ ruleTester.run('feature-flag-author', rule, {
         export const DEFAULT_FEATURE_FLAGS = {
           /**
            * @author Test User <test.user@atlassian.com>
-           * @since ${new Date().toISOString().split('T')[0]}
+           * @since ${MOCK_DATE}
            */
           testFeature: false,
         };
@@ -120,7 +135,7 @@ ruleTester.run('feature-flag-author', rule, {
           /**
            * This is a feature flag description
            * @author Test User <test.user@atlassian.com>
-           * @since ${new Date().toISOString().split('T')[0]}
+           * @since ${MOCK_DATE}
            */
           testFeatureWithComment: false,
         };
@@ -146,7 +161,7 @@ ruleTester.run('feature-flag-author', rule, {
         export const DEFAULT_FEATURE_FLAGS = {
           /**
            * @author Test User <test.user@atlassian.com>
-           * @since ${new Date().toISOString().split('T')[0]}
+           * @since ${MOCK_DATE}
            */
           testFeature: false,
         };
@@ -172,7 +187,7 @@ ruleTester.run('feature-flag-author', rule, {
         export const DEFAULT_FEATURE_FLAGS = {
           /**
            * @author Test User <test.user@atlassian.com>
-           * @since ${new Date().toISOString().split('T')[0]}
+           * @since ${MOCK_DATE}
            */
           testFeature: false,
         };
@@ -198,7 +213,7 @@ ruleTester.run('feature-flag-author', rule, {
         export const DEFAULT_FEATURE_FLAGS = {
           /**
            * @author Test User <test.user@atlassian.com>
-           * @since ${new Date().toISOString().split('T')[0]}
+           * @since ${MOCK_DATE}
            */
           testFeature: false,
         };
@@ -233,7 +248,7 @@ ruleTester.run('feature-flag-author', rule, {
           correctFlag: true,
           /**
            * @author Test User <test.user@atlassian.com>
-           * @since ${new Date().toISOString().split('T')[0]}
+           * @since ${MOCK_DATE}
            */
           incorrectFlag: false,
         };
@@ -261,7 +276,7 @@ ruleTester.run('feature-flag-author', rule, {
           /**
            * Feature with only author
            * @author John Doe <jdoe@atlassian.com>
-           * @since ${new Date().toISOString().split('T')[0]}
+           * @since ${MOCK_DATE}
            */
           testFeature: false,
         };
@@ -290,7 +305,7 @@ ruleTester.run('feature-flag-author', rule, {
           /**
            * Feature with invalid date
            * @author John Doe <jdoe@atlassian.com>
-           * @since ${new Date().toISOString().split('T')[0]}
+           * @since ${MOCK_DATE}
            */
           testFeature: false,
         };
@@ -319,7 +334,7 @@ ruleTester.run('feature-flag-author', rule, {
           /**
            * Feature with impossible date
            * @author John Doe <jdoe@atlassian.com>
-           * @since ${new Date().toISOString().split('T')[0]}
+           * @since ${MOCK_DATE}
            */
           testFeature: false,
         };

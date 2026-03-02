@@ -14,6 +14,7 @@ type DebugTools = {
   ['simple-cli-reporter']: boolean;
   ['bundle-stats']: boolean;
   ['scope-hoisting-stats']: boolean;
+  ['debug-prelude']: boolean; // Native packager only, here to avoid warnings
 };
 
 export let debugTools: DebugTools = {
@@ -21,6 +22,7 @@ export let debugTools: DebugTools = {
   'simple-cli-reporter': false,
   'bundle-stats': false,
   'scope-hoisting-stats': false,
+  'debug-prelude': false,
 };
 
 const envVarValue = process.env.ATLASPACK_DEBUG_TOOLS ?? '';

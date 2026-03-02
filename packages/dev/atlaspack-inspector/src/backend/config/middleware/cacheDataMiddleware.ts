@@ -27,7 +27,7 @@ export const getCache = (res: Response): LMDBLiteCache =>
   getCacheDataKey(res, 'cache');
 
 let missingErrorHelp = `
-Please make sure to run "atlaspack build --feature-flag cachePerformanceImprovements=true" before running the inspector.
+Please make sure to run "atlaspack build" before running the inspector.
 Or your application's build command.
 `.trim();
 

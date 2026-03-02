@@ -27,9 +27,6 @@ test.describe('Atlaspack Inspector E2E tests', () => {
       entries: [path.join(__dirname, 'mock-project', 'index.js')],
       defaultConfig: require.resolve('@atlaspack/config-default'),
       cacheDir: path.join(__dirname, 'mock-project', '.atlaspack-cache'),
-      featureFlags: {
-        cachePerformanceImprovements: true,
-      },
     });
     await atlaspack.run();
 

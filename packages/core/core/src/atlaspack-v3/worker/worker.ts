@@ -424,6 +424,7 @@ export class AtlaspackWorker {
         conditions: setupResult?.conditions,
         config,
         env: allowedEnv,
+        disableCache: setupResult?.disableCache,
       };
     }
 

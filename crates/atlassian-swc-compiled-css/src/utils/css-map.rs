@@ -41,10 +41,15 @@ pub enum ErrorMessages {
   NoSpreadElement,
   NoObjectMethod,
   StaticVariantObject,
+  StaticVariantObjectWithVariables,
+  StaticVariantObjectWithToken,
+  StaticVariantObjectMultipleClasses,
   DuplicateAtRule,
   DuplicateSelector,
   DuplicateSelectorsBlock,
   StaticPropertyKey,
+  StaticAtRuleKey,
+  StaticSelectorKey,
   SelectorBlockWrongPlace,
   UseSelectorsWithAmpersand,
   UseVariantOfCssMap,
@@ -64,19 +69,89 @@ impl ErrorMessages {
       ErrorMessages::NoSpreadElement => "Spread element is not supported in CSS Map.",
       ErrorMessages::NoObjectMethod => "Object method is not supported in CSS Map.",
       ErrorMessages::StaticVariantObject => "The variant object must be statically defined.",
+      ErrorMessages::StaticVariantObjectWithVariables => {
+        "The variant object must be statically defined. CSS variables are not allowed in cssMap variants."
+      }
+      ErrorMessages::StaticVariantObjectWithToken => {
+        "The variant object must be statically defined. Ensure `token()` is imported from `@atlaskit/tokens`."
+      }
+      ErrorMessages::StaticVariantObjectMultipleClasses => {
+        "The variant object must be statically defined. Each variant should resolve to a single class name."
+      }
       ErrorMessages::DuplicateAtRule => "Cannot declare an at-rule more than once in CSS Map.",
       ErrorMessages::DuplicateSelector => "Cannot declare a selector more than once in CSS Map.",
       ErrorMessages::DuplicateSelectorsBlock => {
         "Duplicate `selectors` key found in cssMap; expected either zero `selectors` keys or one."
       }
       ErrorMessages::StaticPropertyKey => "Property key may only be a static string.",
-      ErrorMessages::SelectorBlockWrongPlace => "`selector` key was defined in the wrong place.",
+      ErrorMessages::StaticAtRuleKey => {
+        "At-rule property keys must be static strings. Dynamic keys are not supported inside at-rules."
+      }
+      ErrorMessages::StaticSelectorKey => {
+        "Selector property keys must be static strings. Use a string literal like `'&:hover'` instead of a variable."
+      }
+      ErrorMessages::SelectorBlockWrongPlace => "`selectors` key was defined in the wrong place.",
       ErrorMessages::UseSelectorsWithAmpersand => {
         "This selector is applied to the parent element, and so you need to specify the ampersand symbol (&) directly before it. For example, `:hover` should be written as `&:hover`."
       }
       ErrorMessages::UseVariantOfCssMap => {
-        "You must use the variant of a CSS Map object (eg. `styles.root`), not the root object itself, eg. `styles`."
+        "You must use the variant of a CSS Map object (e.g. `styles.root`), not the root object itself (e.g. `styles`)."
       }
+    }
+  }
+
+  /// Returns helpful hints for fixing the error, if available.
+  pub fn hints(&self) -> Option<Vec<String>> {
+    match self {
+      ErrorMessages::StaticAtRuleKey => Some(vec![
+        "Replace dynamic keys like `[myVariable]` with static strings like `'screen and (min-width: 768px)'`.".to_string(),
+      ]),
+      ErrorMessages::StaticSelectorKey => Some(vec![
+        "Change `[dynamicKey]: { ... }` to `'&:hover': { ... }`.".to_string(),
+        "Selector keys must be string literals, not variables or computed properties.".to_string(),
+      ]),
+      ErrorMessages::StaticVariantObjectWithVariables => Some(vec![
+        "Remove CSS variable usage from the variant object.".to_string(),
+        "For dynamic styles, use `css()` instead of `cssMap()`.".to_string(),
+      ]),
+      ErrorMessages::StaticVariantObjectWithToken => Some(vec![
+        "Ensure the `token()` function is imported from `@atlaskit/tokens`.".to_string(),
+        "Example: `import { token } from '@atlaskit/tokens';`".to_string(),
+      ]),
+      ErrorMessages::StaticVariantObjectMultipleClasses => Some(vec![
+        "Simplify the variant to generate a single class.".to_string(),
+        "Consider splitting complex styles into separate variants.".to_string(),
+      ]),
+      ErrorMessages::NoSpreadElement => Some(vec![
+        "Replace `...otherStyles` with explicit property declarations.".to_string(),
+        "cssMap requires all properties to be statically defined.".to_string(),
+      ]),
+      ErrorMessages::NoObjectMethod => Some(vec![
+        "Replace object method syntax `color() { }` with a property like `color: 'value'`.".to_string(),
+      ]),
+      ErrorMessages::UseSelectorsWithAmpersand => Some(vec![
+        "Change `:hover` to `'&:hover'`.".to_string(),
+        "Change `:focus` to `'&:focus'`.".to_string(),
+        "The `&` symbol represents the parent element.".to_string(),
+      ]),
+      ErrorMessages::DuplicateSelector => Some(vec![
+        "Remove or merge the duplicate selector declaration.".to_string(),
+        "Each selector can only be defined once per variant.".to_string(),
+      ]),
+      ErrorMessages::DuplicateAtRule => Some(vec![
+        "Remove or merge the duplicate at-rule declaration.".to_string(),
+        "Each at-rule can only be defined once per variant.".to_string(),
+      ]),
+      ErrorMessages::NoTaggedTemplate => Some(vec![
+        "Change `cssMap`text`` to `cssMap({ ... })`.".to_string(),
+      ]),
+      ErrorMessages::NumberOfArgument => Some(vec![
+        "cssMap expects exactly one argument: `cssMap({ variant: { ... } })`.".to_string(),
+      ]),
+      ErrorMessages::ArgumentType => Some(vec![
+        "Pass an object literal: `cssMap({ variant: { color: 'red' } })`.".to_string(),
+      ]),
+      _ => None,
     }
   }
 }
@@ -107,6 +182,16 @@ pub fn object_key_is_literal_value(key: &PropName) -> bool {
 }
 
 /// Returns the string value of an identifier or string literal key.
+///
+/// # Panics
+///
+/// This function panics if the key is not a valid literal value. Callers should
+/// first validate using `object_key_is_literal_value()` to avoid panics.
+///
+/// # Safety Note
+///
+/// In production, this function should only be called after validation. The panic
+/// messages provide debugging information if validation is somehow bypassed.
 pub fn get_key_value(key: &PropName) -> String {
   match key {
     PropName::Ident(ident) => ident.sym.as_ref().to_string(),
@@ -114,17 +199,31 @@ pub fn get_key_value(key: &PropName) -> String {
     PropName::Computed(comp) => match comp.expr.as_ref() {
       Expr::Ident(ident) => ident.sym.as_ref().to_string(),
       Expr::Lit(Lit::Str(str)) => str.value.as_ref().to_string(),
-      _ => panic!("Expected an identifier or a string literal, got computed expression"),
+      _ => {
+        // This should never happen if object_key_is_literal_value was called first.
+        // Log for debugging but provide a fallback value to prevent crashes.
+        eprintln!(
+          "[compiled-css] Warning: get_key_value called on non-literal computed expression. \
+           This indicates a validation bug. Returning placeholder value."
+        );
+        "<invalid-computed-key>".to_string()
+      }
     },
-    _ => panic!(
-      "Expected an identifier or a string literal, got type {}",
-      match key {
+    _ => {
+      // This should never happen if object_key_is_literal_value was called first.
+      let key_type = match key {
         PropName::Num(_) => "NumericLiteral",
         PropName::Computed(_) => "Computed",
         PropName::BigInt(_) => "BigIntLiteral",
         PropName::Ident(_) | PropName::Str(_) => unreachable!("handled above"),
-      }
-    ),
+      };
+      eprintln!(
+        "[compiled-css] Warning: get_key_value called on non-literal key type: {}. \
+         This indicates a validation bug. Returning placeholder value.",
+        key_type
+      );
+      format!("<invalid-{}-key>", key_type.to_lowercase())
+    }
   }
 }
 
@@ -162,34 +261,62 @@ pub fn error_if_not_valid_object_property(property: &PropOrSpread, meta: &Metada
   match property {
     PropOrSpread::Prop(prop) => match &**prop {
       Prop::Method(_) | Prop::Getter(_) | Prop::Setter(_) => {
-        report_css_map_error(meta, prop.span(), ErrorMessages::NoObjectMethod.message());
+        report_css_map_error_with_hints(meta, prop.span(), ErrorMessages::NoObjectMethod);
         return true;
       }
       _ => {}
     },
     PropOrSpread::Spread(spread) => {
-      report_css_map_error(
-        meta,
-        spread.expr.span(),
-        ErrorMessages::NoSpreadElement.message(),
-      );
+      report_css_map_error_with_hints(meta, spread.expr.span(), ErrorMessages::NoSpreadElement);
       return true;
     }
   }
   false
 }
 
-pub fn report_css_map_error(_meta: &Metadata, span: Span, message: impl AsRef<str>) {
-  use crate::errors::set_transform_span;
+/// Reports a cssMap error as a diagnostic with proper error message formatting.
+/// The error message will include the documentation URL automatically.
+pub fn report_css_map_error(meta: &Metadata, span: Span, message: impl fmt::Display) {
+  let msg = create_error_message(message.to_string());
+  let source_map = meta.state.borrow().file.source_map.clone();
+  let diagnostic =
+    crate::errors::create_diagnostic(msg, module_path!(), Some(span), Some(&source_map));
+  meta.add_diagnostic(diagnostic);
+}
 
-  // Set span context before panicking so the panic diagnostic includes source location
-  // We use set_transform_span directly instead of TransformSpanGuard to avoid the guard
-  // being dropped and clearing the span during unwinding. The span will persist in
-  // thread-local storage so it can be captured by from_panic() during exception handling.
-  set_transform_span(span);
+/// Reports a cssMap error with hints and source location as a diagnostic.
+pub fn report_css_map_error_with_hints(meta: &Metadata, span: Span, error_type: ErrorMessages) {
+  let msg = create_error_message(error_type.message());
+  let source_map = meta.state.borrow().file.source_map.clone();
+  let mut diagnostic =
+    crate::errors::create_diagnostic(msg, module_path!(), Some(span), Some(&source_map));
 
-  let msg = create_error_message(message);
-  panic!("{}", msg);
+  if let Some(hints) = error_type.hints() {
+    diagnostic.hints = hints;
+  }
+
+  meta.add_diagnostic(diagnostic);
+}
+
+/// Helper to create a cssMap diagnostic without a span.
+/// Use this when the error doesn't have a specific source location.
+pub fn create_css_map_diagnostic(message: impl fmt::Display) -> atlaspack_core::types::Diagnostic {
+  let msg = create_error_message(message.to_string());
+  crate::errors::create_diagnostic(msg, module_path!(), None, None)
+}
+
+/// Helper to create a cssMap diagnostic with hints.
+pub fn create_css_map_diagnostic_with_hints(
+  error_type: ErrorMessages,
+) -> atlaspack_core::types::Diagnostic {
+  let msg = create_error_message(error_type.message());
+  let mut diagnostic = crate::errors::create_diagnostic(msg, module_path!(), None, None);
+
+  if let Some(hints) = error_type.hints() {
+    diagnostic.hints = hints;
+  }
+
+  diagnostic
 }
 
 #[cfg(test)]
@@ -258,11 +385,11 @@ mod tests {
   }
 
   #[test]
-  #[should_panic(expected = "Expected an identifier or a string literal")]
-  fn get_key_value_panics_on_non_literal_key() {
+  fn get_key_value_returns_placeholder_on_invalid_key() {
     use swc_core::ecma::ast::ComputedPropName;
 
-    let key = PropName::Computed(ComputedPropName {
+    // Test computed expression with non-literal value
+    let computed_key = PropName::Computed(ComputedPropName {
       span: DUMMY_SP,
       expr: Box::new(Expr::Lit(Lit::Num(Number {
         span: DUMMY_SP,
@@ -271,7 +398,18 @@ mod tests {
       }))),
     });
 
-    get_key_value(&key);
+    let result = get_key_value(&computed_key);
+    assert_eq!(result, "<invalid-computed-key>");
+
+    // Test numeric literal key
+    let num_key = PropName::Num(Number {
+      span: DUMMY_SP,
+      value: 42.0,
+      raw: None,
+    });
+
+    let result = get_key_value(&num_key);
+    assert_eq!(result, "<invalid-numericliteral-key>");
   }
 
   #[test]
@@ -315,7 +453,6 @@ mod tests {
   }
 
   #[test]
-  #[should_panic(expected = "Object method is not supported in CSS Map.")]
   fn error_if_not_valid_object_property_panics_on_methods() {
     use swc_core::ecma::ast::{BlockStmt, MethodProp};
 
@@ -341,11 +478,19 @@ mod tests {
     let property = PropOrSpread::Prop(Box::new(method));
     let meta = create_metadata();
 
-    error_if_not_valid_object_property(&property, &meta);
+    let has_error = error_if_not_valid_object_property(&property, &meta);
+
+    assert!(has_error);
+    let diagnostics = meta.state().diagnostics.clone();
+    assert_eq!(diagnostics.len(), 1);
+    assert!(
+      diagnostics[0]
+        .message
+        .contains("Object method is not supported in CSS Map.")
+    );
   }
 
   #[test]
-  #[should_panic(expected = "Spread element is not supported in CSS Map.")]
   fn error_if_not_valid_object_property_panics_on_spread() {
     let property = PropOrSpread::Spread(SpreadElement {
       dot3_token: DUMMY_SP,
@@ -358,6 +503,15 @@ mod tests {
 
     let meta = create_metadata();
 
-    error_if_not_valid_object_property(&property, &meta);
+    let has_error = error_if_not_valid_object_property(&property, &meta);
+
+    assert!(has_error);
+    let diagnostics = meta.state().diagnostics.clone();
+    assert_eq!(diagnostics.len(), 1);
+    assert!(
+      diagnostics[0]
+        .message
+        .contains("Spread element is not supported in CSS Map.")
+    );
   }
 }

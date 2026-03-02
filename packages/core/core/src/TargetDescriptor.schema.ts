@@ -121,6 +121,9 @@ export const PACKAGE_DESCRIPTOR_SCHEMA: SchemaObject = {
         type: 'string',
       },
     },
+    inlineRequires: {
+      type: 'boolean',
+    },
   },
   additionalProperties: false,
 };

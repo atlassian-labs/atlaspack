@@ -54,6 +54,16 @@ pub trait FileSystem: std::fmt::Debug {
     Err(std::io::Error::other("Not implemented"))
   }
 
+  /// Create a directory and all missing parent directories
+  fn create_dir_all(&self, _path: &Path) -> std::io::Result<()> {
+    Err(std::io::Error::other("Not implemented"))
+  }
+
+  /// Write data to a file, creating it if it doesn't exist
+  fn write(&self, _path: &Path, _contents: &[u8]) -> std::io::Result<()> {
+    Err(std::io::Error::other("Not implemented"))
+  }
+
   fn read(&self, path: &Path) -> std::io::Result<Vec<u8>>;
   fn read_dir(&self, path: &Path) -> std::io::Result<std::fs::ReadDir>;
   fn read_to_string(&self, path: &Path) -> std::io::Result<String>;

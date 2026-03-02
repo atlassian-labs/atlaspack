@@ -3,12 +3,14 @@ use swc_core::common::comments::Comment;
 use swc_core::ecma::visit::VisitMutWith;
 use swc_core::{common::comments::SingleThreadedComments, ecma::ast::Program};
 
+use crate::DEFAULT_IMPORT_SOURCES;
 pub use crate::babel_plugin::CompiledCssInJsTransform;
-pub use crate::errors::{TransformError, init_panic_suppression};
+use crate::errors::{diagnostic_from_panic, init_panic_suppression};
 #[allow(unused_imports)]
 pub use crate::types::{
   CacheBehavior, PluginOptions, ResolverOption, TransformFile, TransformMetadata, TransformOutput,
 };
+use atlaspack_core::types::Diagnostic;
 
 /// Entry point mirroring `packages/babel-plugin/src/index.ts`.
 ///
@@ -18,7 +20,7 @@ pub use crate::types::{
 pub fn transform(
   program: Program,
   options: PluginOptions,
-) -> Result<TransformOutput, Vec<TransformError>> {
+) -> Result<TransformOutput, Vec<Diagnostic>> {
   // Suppress panic output so errors are only reported as diagnostics
   init_panic_suppression();
 
@@ -31,7 +33,7 @@ pub fn transform(
 
     TransformOutput { program, metadata }
   }))
-  .map_err(|panic_payload| vec![TransformError::from_panic(panic_payload)])
+  .map_err(|panic_payload| vec![diagnostic_from_panic(panic_payload)])
 }
 
 /// Entry point that allows callers to provide file metadata before running the transform.
@@ -43,7 +45,7 @@ pub fn transform_with_file(
   program: Program,
   file: TransformFile,
   options: PluginOptions,
-) -> Result<TransformOutput, Vec<TransformError>> {
+) -> Result<TransformOutput, Vec<Diagnostic>> {
   // Suppress panic output so errors are only reported as diagnostics
   init_panic_suppression();
 
@@ -63,23 +65,16 @@ pub fn transform_with_file(
 
     TransformOutput { program, metadata }
   }))
-  .map_err(|panic_payload| vec![TransformError::from_panic(panic_payload)])
+  .map_err(|panic_payload| vec![diagnostic_from_panic(panic_payload)])
 }
 
-const DEFAULT_IMPORT_SOURCES: &[&str] = &["@compiled/react", "@atlaskit/css"];
-
 pub fn should_run_compiled_css_in_js_transform(code: &str, options: PluginOptions) -> bool {
-  let has_import_source = if let Some(import_sources) = options.import_sources {
-    import_sources.iter().any(|source| {
-      code.contains(source.as_str()) && !code.contains(&format!("{}/runtime", source))
-    })
-  } else {
-    DEFAULT_IMPORT_SOURCES
-      .iter()
-      .any(|source| code.contains(source) && !code.contains(&format!("{}/runtime", source)))
-  };
-
-  has_import_source
+  options
+    .import_sources
+    .iter()
+    .map(|s| s.as_str())
+    .chain(DEFAULT_IMPORT_SOURCES.iter().copied())
+    .any(|source| code.contains(source))
 }
 
 pub fn remove_jsx_pragma_comments(comments: &SingleThreadedComments) -> bool {
@@ -121,13 +116,6 @@ mod tests {
     let code = "import { css } from '@compiled/react';";
     let options = PluginOptions::default();
     assert!(should_run_compiled_css_in_js_transform(code, options));
-  }
-
-  #[test]
-  fn test_should_run_compiled_css_in_js_transform_with_runtime() {
-    let code = "import { css } from '@compiled/react/runtime';";
-    let options = PluginOptions::default();
-    assert!(!should_run_compiled_css_in_js_transform(code, options));
   }
 
   #[test]
@@ -197,13 +185,21 @@ mod tests {
 
   #[test]
   fn test_panic_payload_conversion_to_error() {
-    // This test verifies that panic payloads are properly converted to TransformError
+    // This test verifies that panic payloads are properly converted to Diagnostic
 
     // Test with a String panic payload
     let panic_str = "test panic message".to_string();
     let payload: Box<dyn std::any::Any + Send> = Box::new(panic_str);
-    let error = TransformError::from_panic(payload);
+    let diagnostic = diagnostic_from_panic(payload);
 
-    assert!(error.message.contains("test panic message"));
+    assert!(diagnostic.message.contains("test panic message"));
+    assert_eq!(
+      diagnostic.kind,
+      atlaspack_core::types::ErrorKind::ParseError
+    );
+    assert_eq!(diagnostic.origin, Some("compiled-css".to_string()));
+    // Verify backtrace is included in hints
+    assert!(!diagnostic.hints.is_empty());
+    assert!(diagnostic.hints[0].contains("Stack trace:"));
   }
 }

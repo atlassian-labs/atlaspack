@@ -7,7 +7,7 @@ use swc_core::ecma::visit::{Visit, VisitWith, noop_visit_type};
 
 use crate::postcss::plugins::extract_stylesheets::normalize_block_value_spacing;
 use crate::types::Metadata;
-use crate::utils_ast::build_code_frame_error;
+
 use crate::utils_build_compiled_component::compiled_template;
 use crate::utils_css_builders::{
   build_css as build_css_from_expr, generate_cache_for_css_map_with_builder,
@@ -103,14 +103,9 @@ fn expression_is_static(expr: &Expr) -> bool {
   }
 }
 
-fn static_object_invariant(expr: &Expr, meta: &Metadata) {
+fn static_object_invariant(expr: &Expr, _meta: &Metadata) {
   if !expression_is_static(expr) {
-    let error = build_code_frame_error(
-      "Object given to the xcss prop must be static",
-      Some(expr.span()),
-      meta,
-    );
-    panic!("{error}");
+    panic!("Object given to the xcss prop must be static.");
   }
 }
 
@@ -252,12 +247,7 @@ where
           (Some(class_name), None) => class_name,
           (None, _) => undefined_expr(),
           _ => {
-            let error = build_code_frame_error(
-              "Unexpected count of class names please raise an issue on Github",
-              Some(attr.span),
-              meta,
-            );
-            panic!("{error}");
+            panic!("Unexpected count of class names please raise an issue on Github.");
           }
         };
 

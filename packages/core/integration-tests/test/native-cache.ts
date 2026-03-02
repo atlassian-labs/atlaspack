@@ -261,4 +261,64 @@ describe.v3('Native cache', function () {
     let output = await run(buildOne.bundleGraph);
     assert.equal(output.default, 'should not true');
   });
+
+  it.v3('should not cache when disableCache is set in setup', async () => {
+    await fsFixture(inputFS, dir)`
+        package.json:
+          {
+            "name": "cache-money"
+          }
+
+        yarn.lock:
+
+        index.js:
+          export default 'should not fail';
+
+        .parcelrc:
+          {
+            "extends": "@atlaspack/config-default",
+            "transformers": {
+              "*.js": ["./transformer-plugin-disable-cache.ts", "..."]
+            }
+          }
+
+        transformer-plugin-disable-cache.ts:
+          import { Transformer } from '@atlaspack/plugin';
+
+          export default new Transformer({
+            async setup() {
+              return {
+                config: { replaceValue: 'cache' },
+                disableCache: true,
+              };
+            },
+            async transform({ asset, config }) {
+              const code = await asset.getCode();
+              asset.setCode(code.replace('fail', config.replaceValue));
+              return [asset];
+            }
+          });
+
+      `;
+
+    let instance = bundler(path.join(dir, 'index.js'), {
+      inputFS,
+      featureFlags: {
+        v3Caching: true,
+      },
+    });
+
+    let buildOne = await instance.run();
+
+    // Transformer explicitly disabled caching via disableCache: true
+    assert.equal(buildOne.nativeCacheStats.uncacheables, 2);
+
+    let output = await run(buildOne.bundleGraph);
+    assert.equal(output.default, 'should not cache');
+
+    // Second build should also be uncacheable (no cache hits)
+    let buildTwo = await instance.run();
+    assert.equal(buildTwo.nativeCacheStats.uncacheables, 2);
+    assert.equal(buildTwo.nativeCacheStats.hits, 0);
+  });
 });

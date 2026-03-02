@@ -1,5 +1,65 @@
 # @atlaspack/validator-typescript
 
+## 2.14.55
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.3.7
+  - @atlaspack/plugin@2.14.55
+  - @atlaspack/types@2.15.45
+  - @atlaspack/ts-utils@2.14.34
+
+## 2.14.54
+
+### Patch Changes
+
+- Updated dependencies [[`d8e984b`](https://github.com/atlassian-labs/atlaspack/commit/d8e984b7f6d04fa03707fa299bfd8b8bf9f58280)]:
+  - @atlaspack/utils@3.3.6
+  - @atlaspack/plugin@2.14.54
+  - @atlaspack/types@2.15.44
+  - @atlaspack/ts-utils@2.14.33
+
+## 2.14.53
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.3.5
+  - @atlaspack/plugin@2.14.53
+  - @atlaspack/types@2.15.43
+  - @atlaspack/ts-utils@2.14.32
+
+## 2.14.52
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.52
+  - @atlaspack/types@2.15.42
+  - @atlaspack/utils@3.3.4
+  - @atlaspack/ts-utils@2.14.31
+
+## 2.14.51
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.3.3
+  - @atlaspack/types@2.15.41
+  - @atlaspack/plugin@2.14.51
+  - @atlaspack/ts-utils@2.14.30
+
+## 2.14.50
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.3.2
+  - @atlaspack/plugin@2.14.50
+  - @atlaspack/types@2.15.40
+  - @atlaspack/ts-utils@2.14.29
+
 ## 2.14.49
 
 ### Patch Changes

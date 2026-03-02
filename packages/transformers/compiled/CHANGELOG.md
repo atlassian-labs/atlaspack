@@ -1,5 +1,73 @@
 # @atlaspack/transformer-compiled
 
+## 0.5.0
+
+### Minor Changes
+
+- [#1037](https://github.com/atlassian-labs/atlaspack/pull/1037) [`ecf8b79`](https://github.com/atlassian-labs/atlaspack/commit/ecf8b7931c5516df2117d525cefff5d7e1d20bee) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Improve diagnostics detail and add stack traces
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.2.10
+  - @atlaspack/utils@3.3.7
+  - @atlaspack/plugin@2.14.55
+
+## 0.4.0
+
+### Minor Changes
+
+- [#1016](https://github.com/atlassian-labs/atlaspack/pull/1016) [`47658d4`](https://github.com/atlassian-labs/atlaspack/commit/47658d4d250edfa8c45db8048778547025c673a3) Thanks [@matt-koko](https://github.com/matt-koko)! - read browserslist from project config only once during transformer setup() rather than reading package.json on every transform() call.
+
+### Patch Changes
+
+- [#1027](https://github.com/atlassian-labs/atlaspack/pull/1027) [`d8e984b`](https://github.com/atlassian-labs/atlaspack/commit/d8e984b7f6d04fa03707fa299bfd8b8bf9f58280) Thanks [@marcins](https://github.com/marcins)! - Improve source map quality through various accuracy fixes.
+
+- Updated dependencies [[`d8e984b`](https://github.com/atlassian-labs/atlaspack/commit/d8e984b7f6d04fa03707fa299bfd8b8bf9f58280)]:
+  - @atlaspack/utils@3.3.6
+  - @atlaspack/source-map@3.2.9
+  - @atlaspack/plugin@2.14.54
+
+## 0.3.1
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.2.8
+  - @atlaspack/utils@3.3.5
+  - @atlaspack/plugin@2.14.53
+
+## 0.3.0
+
+### Minor Changes
+
+- [#993](https://github.com/atlassian-labs/atlaspack/pull/993) [`e058f0e`](https://github.com/atlassian-labs/atlaspack/commit/e058f0e7a0423ba9373e85a7dbd5c1dd43b47916) Thanks [@matt-koko](https://github.com/matt-koko)! - Add disableCache option to TransformerSetup API
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.52
+  - @atlaspack/utils@3.3.4
+  - @atlaspack/source-map@3.2.7
+
+## 0.2.5
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.2.6
+  - @atlaspack/utils@3.3.3
+  - @atlaspack/plugin@2.14.51
+
+## 0.2.4
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.2.5
+  - @atlaspack/utils@3.3.2
+  - @atlaspack/plugin@2.14.50
+
 ## 0.2.3
 
 ### Patch Changes

@@ -374,6 +374,8 @@ export async function loadCompiledCssInJsConfig(
   config: Config,
   options: PluginOptions,
 ): Promise<CompiledCssInJsConfigPlugin> {
+  const DEFAULT_IMPORT_SOURCES = ['@compiled/react', '@atlaskit/css'];
+
   const conf = await config.getConfigFrom<CompiledCssInJsConfigPlugin>(
     join(options.projectRoot, 'index'),
     ['.compiledcssrc', '.compiledcssrc.json'],
@@ -383,17 +385,13 @@ export async function loadCompiledCssInJsConfig(
   );
 
   const contents: CompiledCssInJsConfigPlugin = {
-    configPath: conf?.filePath,
-    importSources: ['@compiled/react', '@atlaskit/css'],
+    ...conf?.contents,
+    importSources: [
+      ...DEFAULT_IMPORT_SOURCES,
+      ...(conf?.contents.importSources ?? []),
+    ],
+    extract: conf?.contents.extract && options.mode !== 'development',
   };
-
-  Object.assign(contents, conf?.contents);
-
-  if (!contents.importSources?.includes('@compiled/react')) {
-    contents.importSources?.push('@compiled/react');
-  }
-
-  contents.extract = contents.extract && options.mode !== 'development';
 
   return contents;
 }
@@ -506,6 +504,7 @@ export default new Transformer({
       | {
           entrypoint_filepath_suffix: string;
           actual_require_paths: string[];
+          activate_reject_on_unresolved_imports?: boolean;
         }
       | undefined;
 
@@ -520,6 +519,10 @@ export default new Transformer({
 
           invariant(typeof config?.entrypoint_filepath_suffix === 'string');
           invariant(Array.isArray(config.actual_require_paths));
+          invariant(
+            typeof (config.activate_reject_on_unresolved_imports ?? false) ===
+              'boolean',
+          );
 
           configCache.set('SYNC_DYNAMIC_IMPORT_CONFIG', config);
         }
@@ -534,6 +537,7 @@ export default new Transformer({
         const fallback = {
           entrypoint_filepath_suffix: '__NO_MATCH__',
           actual_require_paths: [],
+          activate_reject_on_unresolved_imports: false,
         };
 
         // Set cache to fallback so we don't keep trying to parse.
@@ -590,8 +594,8 @@ export default new Transformer({
       enableReactAsyncImportLift,
       reactAsyncLiftByDefault,
       reactAsyncLiftReportLevel,
-      tokensConfig: tokensConfig,
-      compiledCssInJsConfig: compiledCssInJsConfig,
+      tokensConfig,
+      compiledCssInJsConfig,
     };
   },
   async transform({asset, config, options, logger}) {

@@ -20,7 +20,6 @@ sizes and reasons why certain files are included in bundles.
 
 - this will only work with a cache that is built with the same version of `atlaspack/*` packages
   the inspector is using
-- the `cachePerformanceImprovements` feature-flag must have been enabled when building the cache
 
 ```
 atlaspack-inspector --target ./my-project-directory

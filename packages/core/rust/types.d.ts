@@ -59,6 +59,9 @@ export declare function atlaspackNapiCreate(
 export declare function atlaspackNapiBuildAssetGraph(
   atlaspackNapi: AtlaspackNapi,
 ): object;
+export declare function atlaspackNapiBuildBundleGraph(
+  atlaspackNapi: AtlaspackNapi,
+): object;
 export declare function atlaspackNapiRespondToFsEvents(
   atlaspackNapi: AtlaspackNapi,
   options: object,
@@ -232,8 +235,12 @@ export class Hash {
 }
 export class AtlaspackTracer {
   constructor();
-  enter(label: string): SpanId;
+  enter(
+    label: string,
+    level?: 'error' | 'warn' | 'info' | 'debug' | 'trace' | null,
+  ): SpanId;
   exit(id: SpanId): void;
+  record(id: SpanId, data?: any | undefined | null): void;
 }
 export class Resolver {
   constructor(projectRoot: string, options: FileSystem);
@@ -336,6 +343,15 @@ export interface NativeMemoryStats {
   sampleCount: number;
 }
 
+export interface PackageOptions {
+  /**
+   * When true, top-level `require()` variable declarations are removed and their
+   * usages are replaced with inline `(0, require("id"))` calls, deferring module
+   * initialisation to first use and improving startup performance.
+   */
+  inlineRequires?: boolean;
+}
+
 export type JsSourceMap = SourceMap;
 export class SourceMap {
   constructor(projectRoot: string, buffer?: Buffer | undefined | null);
@@ -380,12 +396,14 @@ export class SourceMap {
 
 export declare function atlaspackNapiPackage(
   atlaspackNapi: AtlaspackNapi,
-): object;
+  bundleId: string,
+  options?: PackageOptions,
+): Promise<[RunPackagerRunnerResult, AtlaspackNapiError]>;
 export interface CompiledCssInJsConfigPlugin {
   configPath?: string;
   importReact?: boolean;
   nonce?: string;
-  importSources?: Array<string>;
+  importSources: Array<string>;
   optimizeCss?: boolean;
   extensions?: Array<string>;
   addComponentName?: boolean;
@@ -418,4 +436,11 @@ export declare function atlaspackNapiLoadBundleGraph(
   atlaspackNapi: AtlaspackNapi,
   nodes: string,
   edges: Array<[number, number, number]>,
+  publicIdByAssetId: Record<string, string>,
+  environments: string,
+): object;
+
+export declare function atlaspackNapiUpdateBundleGraph(
+  atlaspackNapi: AtlaspackNapi,
+  assets: string,
 ): object;

@@ -1,0 +1,3 @@
+# We _do_ want to commit the built preludes to avoid introducing a build dependecy
+# for the Rust code
+!lib/prelude.*.js

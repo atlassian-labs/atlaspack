@@ -9,6 +9,7 @@ import type BundleGraph from '../BundleGraph';
 import createBundleGraphRequest, {
   BundleGraphResult,
 } from './BundleGraphRequest';
+import createBundleGraphRequestRust from './BundleGraphRequestRust';
 import createWriteBundlesRequest from './WriteBundlesRequest';
 import {assertSignalNotAborted} from '../utils';
 import dumpGraphToGraphViz from '../dumpGraphToGraphViz';
@@ -22,7 +23,6 @@ import {tracer} from '@atlaspack/profiler';
 import {requestTypes} from '../RequestTracker';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {fromEnvironmentId} from '../EnvironmentManager';
-import invariant from 'assert';
 
 type AtlaspackBuildRequestInput = {
   optionsRef: SharedReference;
@@ -73,18 +73,29 @@ async function run({
 }: RunInput<AtlaspackBuildRequestResult>) {
   let {optionsRef, requestedAssetIds, signal} = input;
 
-  let bundleGraphRequest = createBundleGraphRequest({
-    optionsRef,
-    requestedAssetIds,
-    signal,
-  });
+  let bundleGraphRequest =
+    getFeatureFlag('nativeBundling') && rustAtlaspack
+      ? createBundleGraphRequestRust({
+          optionsRef,
+          requestedAssetIds,
+          signal,
+        })
+      : createBundleGraphRequest({
+          optionsRef,
+          requestedAssetIds,
+          signal,
+        });
 
-  let {bundleGraph, changedAssets, assetRequests}: BundleGraphResult =
-    await api.runRequest(bundleGraphRequest, {
-      force:
-        Boolean(rustAtlaspack) ||
-        (options.shouldBuildLazily && requestedAssetIds.size > 0),
-    });
+  let {
+    bundleGraph,
+    changedAssets,
+    assetRequests,
+    didIncrementallyBundle,
+  }: BundleGraphResult = await api.runRequest(bundleGraphRequest, {
+    force:
+      Boolean(rustAtlaspack) ||
+      (options.shouldBuildLazily && requestedAssetIds.size > 0),
+  });
 
   if (
     getFeatureFlag('nativePackager') &&
@@ -102,7 +113,12 @@ async function run({
       }
     });
     if (hasSupportedTarget) {
-      await rustAtlaspack.loadBundleGraph(bundleGraph);
+      if (didIncrementallyBundle) {
+        const changedAssetIds = Array.from(changedAssets.keys());
+        await rustAtlaspack.updateBundleGraph(bundleGraph, changedAssetIds);
+      } else {
+        await rustAtlaspack.loadBundleGraph(bundleGraph);
+      }
     }
   }
 

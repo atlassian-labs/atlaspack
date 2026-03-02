@@ -10,6 +10,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 anyhow = { workspace = true }
+atlaspack_core = { path = "../atlaspack_core" }
 oxc_resolver = { workspace = true }
 parking_lot = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
@@ -51,3 +52,4 @@ napi = ["dep:napi", "dep:napi-derive"]
 [dev-dependencies]
 insta = "1.39.0"
 tempfile = "3.10.1"
+pretty_assertions = { workspace = true }

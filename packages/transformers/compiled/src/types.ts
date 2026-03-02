@@ -4,13 +4,15 @@ import type {ResolveOptions} from 'enhanced-resolve';
 
 type BabelPluginOpts = Omit<
   PluginOptions,
-  'cache' | 'onIncludedFiles' | 'resolver'
+  'cache' | 'onIncludedFiles' | 'resolver' | 'importSource'
 >;
 
 export interface CompiledTransformerOpts extends BabelPluginOpts {
   extract?: boolean;
   extractFromDistributedCode?: boolean;
   stylesheetPath?: string;
+
+  importSources: string[];
 
   /**
    * List of transformer babel plugins to be applied to evaluated files
@@ -78,4 +80,15 @@ export interface CompiledTransformerOpts extends BabelPluginOpts {
    * This will throw an error if used alongside extraction or `extract: true`.
    */
   classHashPrefix?: string;
+
+  /**
+   * Browserslist configuration for Babel's target resolution.
+   * If not specified, the transformer will try to read it from the nearest package.json.
+   *
+   * This can be a string array of browser queries, or an object mapping environment names
+   * to query arrays (e.g., { production: ["..."], development: ["..."] }).
+   *
+   * Example: ["last 2 Chrome versions", "last 2 Firefox versions"]
+   */
+  browserslist?: string[] | {[env: string]: string[]};
 }

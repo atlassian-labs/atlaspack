@@ -4,7 +4,7 @@
 import fs from 'node:fs';
 import url from 'node:url';
 import path from 'node:path';
-import glob from 'glob';
+import glob from 'fast-glob';
 import pkg from 'json5';
 import {parse as astParse} from '@ast-grep/napi';
 
@@ -119,9 +119,11 @@ function getAllPackages(frozen = false) {
   let validationErrors = 0;
   let validationFixes = 0;
 
-  for (const packageJsonPathRel of glob.sync('packages/**/*/package.json', {
+  const packageJsonPaths = glob.sync('packages/**/*/package.json', {
     cwd: __root,
-  })) {
+  });
+  packageJsonPaths.push('crates/atlaspack_packager_js/prelude/package.json');
+  for (const packageJsonPathRel of packageJsonPaths) {
     if (
       IGNORED_PATTERNS.some((pattern) => packageJsonPathRel.includes(pattern))
     ) {

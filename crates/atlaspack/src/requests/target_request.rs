@@ -756,7 +756,7 @@ impl TargetRequest {
         // Strip the leading "./" if present
         .map(|dir| dir.strip_prefix("./").ok().unwrap_or(dir))
         .and_then(|dir| {
-          if dir == PathBuf::from("") {
+          if dir == Path::new("") {
             None
           } else {
             Some(dir)

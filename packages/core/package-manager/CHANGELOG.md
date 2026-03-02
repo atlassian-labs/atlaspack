@@ -1,5 +1,84 @@
 # @atlaspack/package-manager
 
+## 2.14.55
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/fs@2.15.50
+  - @atlaspack/logger@2.14.47
+  - @atlaspack/utils@3.3.7
+  - @atlaspack/node-resolver-core@3.7.26
+  - @atlaspack/build-cache@2.13.13
+  - @atlaspack/types@2.15.45
+  - @atlaspack/workers@2.14.55
+
+## 2.14.54
+
+### Patch Changes
+
+- [#1027](https://github.com/atlassian-labs/atlaspack/pull/1027) [`d8e984b`](https://github.com/atlassian-labs/atlaspack/commit/d8e984b7f6d04fa03707fa299bfd8b8bf9f58280) Thanks [@marcins](https://github.com/marcins)! - Improve source map quality through various accuracy fixes.
+
+- Updated dependencies [[`d8e984b`](https://github.com/atlassian-labs/atlaspack/commit/d8e984b7f6d04fa03707fa299bfd8b8bf9f58280)]:
+  - @atlaspack/utils@3.3.6
+  - @atlaspack/fs@2.15.49
+  - @atlaspack/logger@2.14.46
+  - @atlaspack/node-resolver-core@3.7.25
+  - @atlaspack/build-cache@2.13.12
+  - @atlaspack/workers@2.14.54
+  - @atlaspack/types@2.15.44
+
+## 2.14.53
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/fs@2.15.48
+  - @atlaspack/logger@2.14.45
+  - @atlaspack/utils@3.3.5
+  - @atlaspack/node-resolver-core@3.7.24
+  - @atlaspack/build-cache@2.13.11
+  - @atlaspack/workers@2.14.53
+  - @atlaspack/types@2.15.43
+
+## 2.14.52
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/fs@2.15.47
+  - @atlaspack/logger@2.14.44
+  - @atlaspack/types@2.15.42
+  - @atlaspack/utils@3.3.4
+  - @atlaspack/workers@2.14.52
+  - @atlaspack/node-resolver-core@3.7.23
+  - @atlaspack/build-cache@2.13.10
+
+## 2.14.51
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/fs@2.15.46
+  - @atlaspack/logger@2.14.43
+  - @atlaspack/utils@3.3.3
+  - @atlaspack/node-resolver-core@3.7.22
+  - @atlaspack/workers@2.14.51
+  - @atlaspack/types@2.15.41
+
+## 2.14.50
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/fs@2.15.45
+  - @atlaspack/logger@2.14.42
+  - @atlaspack/utils@3.3.2
+  - @atlaspack/node-resolver-core@3.7.21
+  - @atlaspack/build-cache@2.13.9
+  - @atlaspack/workers@2.14.50
+  - @atlaspack/types@2.15.40
+
 ## 2.14.49
 
 ### Patch Changes

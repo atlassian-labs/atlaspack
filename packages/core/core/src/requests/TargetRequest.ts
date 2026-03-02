@@ -332,6 +332,7 @@ export class TargetResolver {
               publicUrl:
                 descriptor.publicUrl ??
                 this.options.defaultTargetOptions.publicUrl,
+              inlineRequires: descriptor.inlineRequires ?? false,
               env: createEnvironment({
                 engines: descriptor.engines,
                 context: descriptor.context,
@@ -426,6 +427,7 @@ export class TargetResolver {
               this.options.serveOptions.distDir,
             ),
             publicUrl: this.options.defaultTargetOptions.publicUrl ?? '/',
+            inlineRequires: false,
             env: createEnvironment({
               context: 'browser',
               engines: {
@@ -930,6 +932,7 @@ export class TargetResolver {
           distEntry,
           publicUrl:
             descriptor.publicUrl ?? this.options.defaultTargetOptions.publicUrl,
+          inlineRequires: descriptor.inlineRequires ?? false,
           env: createEnvironment({
             engines: descriptor.engines ?? pkgEngines,
             // @ts-expect-error TS2322
@@ -1131,6 +1134,7 @@ export class TargetResolver {
           distEntry,
           publicUrl:
             descriptor.publicUrl ?? this.options.defaultTargetOptions.publicUrl,
+          inlineRequires: descriptor.inlineRequires ?? false,
           env: createEnvironment({
             engines: descriptor.engines ?? pkgEngines,
             context: descriptor.context,
@@ -1205,6 +1209,7 @@ export class TargetResolver {
             path.join(pkgDir, DEFAULT_DIST_DIRNAME),
           ),
         publicUrl: this.options.defaultTargetOptions.publicUrl,
+        inlineRequires: false,
         env: createEnvironment({
           engines: pkgEngines,
           // @ts-expect-error TS2322

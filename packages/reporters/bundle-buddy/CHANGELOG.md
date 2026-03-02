@@ -1,5 +1,53 @@
 # @atlaspack/reporter-bundle-buddy
 
+## 2.14.55
+
+### Patch Changes
+
+- Updated dependencies [[`857962a`](https://github.com/atlassian-labs/atlaspack/commit/857962a352bb0aebaf74a8765e8c44d7e875a4e9)]:
+  - @atlaspack/types-internal@2.24.0
+  - @atlaspack/plugin@2.14.55
+
+## 2.14.54
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.23.2
+  - @atlaspack/plugin@2.14.54
+
+## 2.14.53
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.23.1
+  - @atlaspack/plugin@2.14.53
+
+## 2.14.52
+
+### Patch Changes
+
+- Updated dependencies [[`e058f0e`](https://github.com/atlassian-labs/atlaspack/commit/e058f0e7a0423ba9373e85a7dbd5c1dd43b47916)]:
+  - @atlaspack/types-internal@2.23.0
+  - @atlaspack/plugin@2.14.52
+
+## 2.14.51
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.22.8
+  - @atlaspack/plugin@2.14.51
+
+## 2.14.50
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.22.7
+  - @atlaspack/plugin@2.14.50
+
 ## 2.14.49
 
 ### Patch Changes

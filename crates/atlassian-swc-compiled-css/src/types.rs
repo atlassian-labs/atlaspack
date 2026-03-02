@@ -22,7 +22,7 @@ use swc_core::ecma::ast::{Expr, Ident, Program};
 
 use oxc_resolver::Resolver;
 
-use crate::constants::DEFAULT_IMPORT_SOURCES;
+use crate::DEFAULT_IMPORT_SOURCES;
 use crate::utils_cache::{Cache, CacheOptions};
 use crate::utils_types::PartialBindingWithMeta;
 
@@ -141,7 +141,7 @@ pub struct PluginOptions {
   pub max_size: Option<usize>,
   pub import_react: Option<bool>,
   pub nonce: Option<String>,
-  pub import_sources: Option<Vec<String>>,
+  pub import_sources: Vec<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub on_included_files: Option<Value>,
   pub optimize_css: Option<bool>,
@@ -165,7 +165,7 @@ impl Default for PluginOptions {
       max_size: None,
       import_react: None,
       nonce: None,
-      import_sources: None,
+      import_sources: Default::default(),
       on_included_files: None,
       optimize_css: None,
       resolver: None,
@@ -214,6 +214,8 @@ impl From<&crate::config::CompiledCssInJsConfig> for PluginOptions {
 pub struct TransformMetadata {
   pub included_files: Vec<String>,
   pub style_rules: Vec<String>,
+  #[serde(skip_serializing_if = "Vec::is_empty", default)]
+  pub diagnostics: Vec<atlaspack_core::types::Diagnostic>,
 }
 
 /// Result of a transform run containing the mutated program and collected metadata.
@@ -409,6 +411,7 @@ pub struct TransformState {
   pub cwd: PathBuf,
   pub root: PathBuf,
   pub handler: Lrc<Handler>,
+  pub diagnostics: Vec<atlaspack_core::types::Diagnostic>,
 }
 
 impl fmt::Debug for TransformState {
@@ -496,6 +499,7 @@ impl TransformState {
       cwd,
       root,
       handler,
+      diagnostics: Vec::new(),
     }
   }
 
@@ -524,23 +528,20 @@ impl TransformState {
   }
 
   fn resolve_import_sources(file: &TransformFile, opts: &PluginOptions) -> Vec<String> {
-    let mut sources: Vec<String> = DEFAULT_IMPORT_SOURCES
-      .iter()
-      .map(|source| source.to_string())
-      .collect();
-
-    if let Some(additional) = &opts.import_sources {
-      for origin in additional {
-        if origin.starts_with('.') {
-          let joined = normalized_join(&file.root, origin);
-          sources.push(joined.to_string_lossy().into_owned());
-        } else {
-          sources.push(origin.clone());
-        }
+    let resolved_sources = opts.import_sources.iter().map(|origin| {
+      if origin.starts_with('.') {
+        let joined = normalized_join(&file.root, origin.as_str());
+        joined.to_string_lossy().into_owned()
+      } else {
+        origin.clone()
       }
-    }
+    });
 
-    sources
+    DEFAULT_IMPORT_SOURCES
+      .iter()
+      .map(|s| s.to_string())
+      .chain(resolved_sources)
+      .collect()
   }
 
   pub fn enqueue_cleanup(&mut self, action: CleanupAction, span: Span) {
@@ -676,6 +677,10 @@ impl Metadata {
     self.parent_scope.borrow_mut().insert(name.into(), binding);
   }
 
+  pub fn add_diagnostic(&self, diagnostic: atlaspack_core::types::Diagnostic) {
+    self.state.borrow_mut().diagnostics.push(diagnostic);
+  }
+
   pub fn insert_own_binding(&self, name: impl Into<String>, binding: PartialBindingWithMeta) {
     if let Some(scope) = &self.own_scope {
       scope.borrow_mut().insert(name.into(), binding);
@@ -732,16 +737,13 @@ mod tests {
     );
 
     let options = PluginOptions {
-      import_sources: Some(vec!["./relative/module".into(), "@scope/package".into()]),
+      import_sources: vec!["./relative/module".into(), "@scope/package".into()],
       ..PluginOptions::default()
     };
 
     let state = TransformState::new(file, options);
 
-    let mut expected = DEFAULT_IMPORT_SOURCES
-      .iter()
-      .map(|source| source.to_string())
-      .collect::<Vec<_>>();
+    let mut expected = vec!["@compiled/react".to_string(), "@atlaskit/css".to_string()];
     expected.push(root.join("relative/module").to_string_lossy().into_owned());
     expected.push("@scope/package".into());
 
@@ -800,7 +802,7 @@ mod tests {
     );
 
     let options = PluginOptions {
-      import_sources: Some(vec!["./relative/module".into()]),
+      import_sources: vec!["./relative/module".into()],
       resolver: Some(ResolverOption::Module("./custom/resolver.js".into())),
       ..PluginOptions::default()
     };

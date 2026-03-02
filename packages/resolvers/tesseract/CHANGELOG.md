@@ -1,5 +1,60 @@
 # Changelog
 
+## 2.15.28
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/node-resolver-core@3.7.26
+  - @atlaspack/plugin@2.14.55
+
+## 2.15.27
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/node-resolver-core@3.7.25
+  - @atlaspack/plugin@2.14.54
+
+## 2.15.26
+
+### Patch Changes
+
+- [#1004](https://github.com/atlassian-labs/atlaspack/pull/1004) [`1815c2c`](https://github.com/atlassian-labs/atlaspack/commit/1815c2ce48e32f4df97ccdd668fd650fc79d1051) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - cleanup server file check in tesseract resolver
+
+- Updated dependencies []:
+  - @atlaspack/node-resolver-core@3.7.24
+  - @atlaspack/plugin@2.14.53
+
+## 2.15.25
+
+### Patch Changes
+
+- Updated dependencies [[`e058f0e`](https://github.com/atlassian-labs/atlaspack/commit/e058f0e7a0423ba9373e85a7dbd5c1dd43b47916), [`349b19c`](https://github.com/atlassian-labs/atlaspack/commit/349b19c3aca2ccb1ffb5cdcdc74890f4b62228be)]:
+  - @atlaspack/types-internal@2.23.0
+  - @atlaspack/feature-flags@2.29.0
+  - @atlaspack/plugin@2.14.52
+  - @atlaspack/node-resolver-core@3.7.23
+
+## 2.15.24
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/node-resolver-core@3.7.22
+  - @atlaspack/types-internal@2.22.8
+  - @atlaspack/plugin@2.14.51
+
+## 2.15.23
+
+### Patch Changes
+
+- Updated dependencies [[`8826fd0`](https://github.com/atlassian-labs/atlaspack/commit/8826fd02c29c9c67cf0c80da41f424257fbdef93)]:
+  - @atlaspack/feature-flags@2.28.0
+  - @atlaspack/node-resolver-core@3.7.21
+  - @atlaspack/types-internal@2.22.7
+  - @atlaspack/plugin@2.14.50
+
 ## 2.15.22
 
 ### Patch Changes

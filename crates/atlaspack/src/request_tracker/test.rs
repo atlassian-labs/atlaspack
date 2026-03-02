@@ -467,3 +467,169 @@ async fn test_execute_request() {
     _ => panic!("Unexpected result type"),
   }
 }
+
+/// A child request whose Hash (and thus request ID) changes between the first
+/// and subsequent runs. On the first run it hashes as "child-v1", on the second
+/// as "child-v2". This simulates the real-world bug where `try_reuse_asset_graph`
+/// reconstructs an `AssetRequest` with different field values (e.g. `side_effects`)
+/// than the original, producing a different request ID.
+#[derive(Clone, Debug)]
+struct TestChildRequestWithChangingId {
+  runs: Arc<AtomicUsize>,
+  watched_file: PathBuf,
+}
+
+impl TestChildRequestWithChangingId {
+  fn new(watched_file: &str) -> Self {
+    Self {
+      runs: Arc::new(AtomicUsize::new(0)),
+      watched_file: PathBuf::from(watched_file),
+    }
+  }
+
+  fn run_count(&self) -> usize {
+    self.runs.load(Ordering::Relaxed)
+  }
+}
+
+impl std::hash::Hash for TestChildRequestWithChangingId {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    let run_count = self.runs.load(Ordering::Relaxed);
+    if run_count == 0 {
+      "child-v1".hash(state);
+    } else {
+      "child-v2".hash(state);
+    }
+  }
+}
+
+#[async_trait]
+impl Request for TestChildRequestWithChangingId {
+  async fn run(
+    &self,
+    _request_context: RunRequestContext,
+  ) -> Result<ResultAndInvalidations, RunRequestError> {
+    self.runs.fetch_add(1, Ordering::Relaxed);
+    Ok(ResultAndInvalidations {
+      result: RequestResult::TestSub("child".to_string()),
+      invalidations: vec![Invalidation::FileChange(self.watched_file.clone())],
+    })
+  }
+}
+
+/// A parent request that uses execute_request to run a child whose ID changes
+/// between runs. This simulates AssetGraphRequest calling try_reuse_asset_graph
+/// which reconstructs AssetRequests with different field values.
+#[derive(Clone, Debug)]
+struct TestParentWithChangingChild {
+  runs: Arc<AtomicUsize>,
+  child: TestChildRequestWithChangingId,
+}
+
+impl TestParentWithChangingChild {
+  fn new(child: TestChildRequestWithChangingId) -> Self {
+    Self {
+      runs: Arc::new(AtomicUsize::new(0)),
+      child,
+    }
+  }
+
+  fn run_count(&self) -> usize {
+    self.runs.load(Ordering::Relaxed)
+  }
+}
+
+impl std::hash::Hash for TestParentWithChangingChild {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    "parent-with-changing-child".hash(state);
+  }
+}
+
+#[async_trait]
+impl Request for TestParentWithChangingChild {
+  async fn run(
+    &self,
+    mut request_context: RunRequestContext,
+  ) -> Result<ResultAndInvalidations, RunRequestError> {
+    self.runs.fetch_add(1, Ordering::Relaxed);
+
+    let (_result, _request_id, _cached) =
+      request_context.execute_request(self.child.clone()).await?;
+
+    Ok(ResultAndInvalidations {
+      result: RequestResult::TestSub("parent".to_string()),
+      invalidations: vec![],
+    })
+  }
+}
+
+/// Regression test for the infinite incremental rebuild loop bug.
+///
+/// When a parent request (like AssetGraphRequest) re-runs a child request
+/// (like AssetRequest) with a different ID after file invalidation, the
+/// original child's node becomes permanently orphaned in `invalid_nodes`.
+/// This causes `respond_to_fs_events` to always return `true`, even for
+/// unrelated file events, creating an infinite rebuild loop.
+///
+/// Real-world scenario: The resolver sets `side_effects=false` (from package.json),
+/// but a transformer overrides it to `true`. On incremental rebuild,
+/// `try_reuse_asset_graph` reads the transformer's output (`side_effects=true`)
+/// and creates a new AssetRequest with a different hash/ID. The original
+/// invalidated AssetRequest node is never cleared from `invalid_nodes`.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_orphaned_invalid_node_causes_perpetual_rebuild() {
+  let mut rt = request_tracker(Default::default());
+
+  let child = TestChildRequestWithChangingId::new("watched.txt");
+  let parent = TestParentWithChangingChild::new(child.clone());
+
+  // Step 1: Initial build. The child runs as "child-v1" and registers
+  // a file invalidation on "watched.txt".
+  let result = rt.run_request(parent.clone()).await.unwrap();
+  assert!(matches!(result.as_ref(), RequestResult::TestSub(_)));
+  assert_eq!(parent.run_count(), 1);
+  assert_eq!(child.run_count(), 1);
+
+  // Step 2: Simulate a file change to "watched.txt". This should invalidate
+  // both the parent and the child ("child-v1") nodes.
+  let events = vec![WatchEvent::Update(PathBuf::from("watched.txt"))];
+  let should_rebuild = rt.respond_to_fs_events(events);
+  assert!(should_rebuild, "File change should trigger rebuild");
+
+  // Step 3: Run the parent again. Now the child hashes as "child-v2"
+  // (different ID), simulating the side_effects mismatch.
+  let result = rt.run_request(parent.clone()).await.unwrap();
+  assert!(matches!(result.as_ref(), RequestResult::TestSub(_)));
+  assert_eq!(parent.run_count(), 2);
+  assert_eq!(child.run_count(), 2);
+
+  // Step 4: At the RequestTracker level, the orphaned node still exists.
+  // The child was re-run under "child-v2", but the original "child-v1"
+  // node remains in invalid_nodes because prepare_request only removes
+  // the node for the request ID that is actually re-run.
+  let orphaned_count = rt.get_invalid_nodes().count();
+  assert_eq!(
+    orphaned_count, 1,
+    "Expected 1 orphaned invalid node after rebuild with changed request ID, \
+     found {}.",
+    orphaned_count
+  );
+
+  // Step 5: The fix — build_asset_graph() calls clear_invalid_nodes()
+  // after a successful top-level build to remove orphans.
+  rt.clear_invalid_nodes();
+  assert_eq!(
+    rt.get_invalid_nodes().count(),
+    0,
+    "clear_invalid_nodes should remove all orphaned entries"
+  );
+
+  // Step 6: After clearing, unrelated file events should NOT trigger
+  // a rebuild.
+  let unrelated_events = vec![WatchEvent::Update(PathBuf::from("unrelated.txt"))];
+  let should_rebuild_again = rt.respond_to_fs_events(unrelated_events);
+  assert!(
+    !should_rebuild_again,
+    "Unrelated file events should NOT trigger a rebuild after clearing invalid nodes."
+  );
+}

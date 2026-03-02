@@ -49,6 +49,16 @@ impl FileSystem for FileSystemNapi {
       .map_err(io::Error::other)
   }
 
+  fn create_dir_all(&self, _path: &Path) -> std::io::Result<()> {
+    Err(io::Error::other(
+      "FileSystemNapi::create_dir_all is not implemented",
+    ))
+  }
+
+  fn write(&self, _path: &Path, _contents: &[u8]) -> std::io::Result<()> {
+    Err(io::Error::other("FileSystemNapi::write is not implemented"))
+  }
+
   fn cwd(&self) -> io::Result<PathBuf> {
     self
       .cwd_fn

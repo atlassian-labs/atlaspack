@@ -14,13 +14,17 @@ import type {
   PluginOptions as BabelStripRuntimePluginOptions,
   BabelFileMetadata,
 } from '@compiled/babel-plugin-strip-runtime';
-import {DEFAULT_IMPORT_SOURCES, toBoolean} from '@compiled/utils';
 import {Transformer} from '@atlaspack/plugin';
 import SourceMap from '@atlaspack/source-map';
 import {relativeUrl} from '@atlaspack/utils';
+import browserslist from 'browserslist';
 
 import type {CompiledTransformerOpts} from './types';
-import {createDefaultResolver} from './utils';
+import {
+  createDefaultResolver,
+  DEFAULT_IMPORT_SOURCES,
+  toBoolean,
+} from './utils';
 import {BuildMode} from '@atlaspack/types';
 import CompiledBabelPlugin from '@compiled/babel-plugin';
 import CompiledBabelPluginStripRuntime from '@compiled/babel-plugin-strip-runtime';
@@ -44,6 +48,11 @@ interface Config {
   compiledConfig: CompiledTransformerOpts;
   mode: BuildMode;
   projectRoot: string;
+  browserslist?:
+    | Array<string>
+    | {
+        [key: string]: Array<string>;
+      };
 }
 
 /**
@@ -63,7 +72,17 @@ export default new Transformer<Config>({
       extract: false,
       importReact: true,
       ssr: false,
+      importSources: DEFAULT_IMPORT_SOURCES,
     };
+
+    // Pre-load the browserslist config during setup().
+    // If we don't do this, calling transformAsync() will cause Babel's
+    // @babel/helper-compilation-targets to walk up the directory
+    // tree reading package.json files on every transform, causing
+    // cache bailouts for every file.
+    let browserslistConfig: string[] | undefined = browserslist.loadConfig({
+      path: options.projectRoot,
+    });
 
     if (conf) {
       if (conf.filePath.endsWith('.js')) {
@@ -94,21 +113,29 @@ export default new Transformer<Config>({
       }
 
       Object.assign(contents, conf.contents);
+
+      contents.importSources = [
+        ...DEFAULT_IMPORT_SOURCES,
+        ...(contents.importSources ?? []),
+      ];
     }
 
-    let importSourceMatches = [
-      ...DEFAULT_IMPORT_SOURCES,
-      ...(contents.importSources || []),
-    ];
+    // When transformerBabelPlugins is configured, we cannot cache transformer results
+    // because these plugins are loaded dynamically by string name and the dev dep scanner
+    // cannot track their dependencies for cache invalidation.
+    const hasExternalBabelPlugins =
+      contents.transformerBabelPlugins &&
+      contents.transformerBabelPlugins.length > 0;
 
     return {
       config: {
         compiledConfig: contents,
         mode: options.mode,
         projectRoot: options.projectRoot,
+        browserslist: browserslistConfig,
       },
       conditions: {
-        codeMatch: importSourceMatches,
+        codeMatch: contents.importSources,
       },
       env: [
         // TODO revisit this list, since we may have added variables in here that were actually enumarated rather than accessed directly
@@ -130,7 +157,9 @@ export default new Transformer<Config>({
         'NODE_DEBUG',
         'CI',
         'COLORTERM',
+        'TERM',
       ],
+      disableCache: hasExternalBabelPlugins,
     };
   },
 
@@ -155,10 +184,9 @@ export default new Transformer<Config>({
     const code = await asset.getCode();
     if (
       // If neither Compiled (default) nor any of the additional import sources are found in the code, we bail out.
-      [
-        ...DEFAULT_IMPORT_SOURCES,
-        ...(config.compiledConfig.importSources || []),
-      ].every((importSource) => !code.includes(importSource))
+      config.compiledConfig.importSources.every(
+        (importSource) => !code.includes(importSource),
+      )
     ) {
       // We only want to parse files that are actually using Compiled.
       // For everything else we bail out.
@@ -179,15 +207,21 @@ export default new Transformer<Config>({
       filename: asset.filePath,
       babelrc: false,
       configFile: false,
+      // Disable browserslistConfigFile because we pass the browserslist config via the targets option
+      // to prevent FS reads while resolving browserslist config.
+      browserslistConfigFile: false,
+      targets: config.browserslist ?? {},
       sourceMaps: !!asset.env.sourceMap,
       compact: false,
       plugins: [
         BabelPluginSyntaxJsx,
         [BabelPluginSyntaxTypescript, {isTSX: true}],
+        ...(config.compiledConfig.transformerBabelPlugins ?? []),
         asset.isSource && [
           CompiledBabelPlugin,
           {
-            ...config,
+            ...config.compiledConfig,
+            importSources: config.compiledConfig.importSources,
             classNameCompressionMap:
               config.compiledConfig.extract &&
               config.compiledConfig.classNameCompressionMap,
@@ -236,7 +270,7 @@ export default new Transformer<Config>({
 
     assert(result?.ast, 'Babel transform returned no AST');
 
-    const {code: generatedCode, rawMappings} = generate(result.ast.program, {
+    let {code: generatedCode, rawMappings} = generate(result.ast.program, {
       sourceFileName,
       sourceMaps: !!asset.env.sourceMap,
       comments: true,
@@ -258,15 +292,13 @@ export default new Transformer<Config>({
     }
 
     if (originalSourceMap) {
-      // The babel AST already contains the correct mappings, but not the source contents.
-      // We need to copy over the source contents from the original map.
-      const sourcesContent = originalSourceMap.getSourcesContentMap();
-      for (const filePath in sourcesContent) {
-        const content = sourcesContent[filePath];
-        if (content != null) {
-          map.setSourceContent(filePath, content);
-        }
-      }
+      // Compose the new mappings (generated → intermediate) with the previous map
+      // (intermediate → original) so the final map traces back to the original source.
+      map.extends(originalSourceMap);
+    }
+
+    if (asset.env.sourceMap) {
+      asset.setMap(map);
     }
 
     return [asset];

@@ -160,6 +160,8 @@ export interface Target {
   readonly publicUrl: string;
   /** The location that created this Target, e.g. `package.json#main`*/
   readonly loc: SourceLocation | null | undefined;
+  /** Whether require() declarations should be inlined at their use sites */
+  readonly inlineRequires?: boolean;
 }
 
 /** In which environment the output should run (influces e.g. bundle loaders) */
@@ -195,6 +197,7 @@ export type PackageTargetDescriptor = {
   readonly isLibrary?: boolean;
   readonly optimize?: boolean;
   readonly scopeHoist?: boolean;
+  readonly inlineRequires?: boolean;
   readonly source?: FilePath | Array<FilePath>;
   readonly env?: EnvMap;
   readonly __unstable_singleFileOutput?: boolean;
@@ -1235,6 +1238,14 @@ export interface TransformerSetup<Config> {
    * cached.
    * */
   env?: Array<string>;
+  /**
+   * When set to true, disables caching for this transformer entirely.
+   *
+   * For example - use this when the transformer depends on external resources
+   * that cannot be tracked by the dev dependency scanner, such as dynamically
+   * loaded Babel plugins specified by string name.
+   */
+  disableCache?: boolean;
 }
 
 /**

@@ -1,5 +1,128 @@
 # @atlaspack/rust
 
+## 3.24.0
+
+### Minor Changes
+
+- [#1037](https://github.com/atlassian-labs/atlaspack/pull/1037) [`ecf8b79`](https://github.com/atlassian-labs/atlaspack/commit/ecf8b7931c5516df2117d525cefff5d7e1d20bee) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Improve diagnostics detail and add stack traces
+
+- [#1028](https://github.com/atlassian-labs/atlaspack/pull/1028) [`f216e22`](https://github.com/atlassian-labs/atlaspack/commit/f216e227e0aca8a3944f66267d3f75238c732802) Thanks [@marcins](https://github.com/marcins)! - In native packaging, write intermediate bundles to FS not LMDB.
+
+- [#1042](https://github.com/atlassian-labs/atlaspack/pull/1042) [`857962a`](https://github.com/atlassian-labs/atlaspack/commit/857962a352bb0aebaf74a8765e8c44d7e875a4e9) Thanks [@marcins](https://github.com/marcins)! - Implement inlineRequires in native packager, add new option to target descriptor
+
+### Patch Changes
+
+- [#1039](https://github.com/atlassian-labs/atlaspack/pull/1039) [`06bb8c1`](https://github.com/atlassian-labs/atlaspack/commit/06bb8c14657722658c55283835f23ed7e7c6ecb4) Thanks [@benjervis](https://github.com/benjervis)! - Fix duplicate `*` symbols being added to CJS assets during transformation.
+
+- [#1041](https://github.com/atlassian-labs/atlaspack/pull/1041) [`a2d8e7a`](https://github.com/atlassian-labs/atlaspack/commit/a2d8e7a2444a1d6502239de8b8ceab4227270ec7) Thanks [@benjervis](https://github.com/benjervis)! - Add support for namespace re-exports (`export * as ns from './dep'`) in the Rust symbol tracker.
+
+  This enables proper symbol propagation through barrel files that use namespace re-exports,
+  allowing tree-shaking to work correctly for these patterns. Includes support for:
+  - Basic namespace re-exports
+  - Namespace re-exports alongside named exports
+  - Namespace re-exports alongside star re-exports
+  - Multiple namespace re-exports from the same barrel
+  - Chained namespace re-exports (multiple levels deep)
+
+- [#1040](https://github.com/atlassian-labs/atlaspack/pull/1040) [`f9aec27`](https://github.com/atlassian-labs/atlaspack/commit/f9aec2736d27afa7a1f2a9701d46e29e566ab352) Thanks [@benjervis](https://github.com/benjervis)! - Add support for star re-exports (`export * from './dep'`) in the Rust symbol tracker.
+
+  This enables proper symbol propagation through barrel files that use star re-exports,
+  allowing tree-shaking to work correctly for these patterns. Includes support for:
+  - Chained star re-exports (multiple levels of `export *`)
+  - Diamond patterns (multiple paths to the same symbol through different star re-exports)
+  - Speculative requirement cleanup (efficient tracking and removal of unsatisfied paths)
+
+  Note: This does not yet handle the ambiguous re-export case where multiple star re-exports
+  provide the same symbol name. That case currently requires runtime namespace fallback and
+  will be addressed in a future update.
+
+- [#1034](https://github.com/atlassian-labs/atlaspack/pull/1034) [`93ec107`](https://github.com/atlassian-labs/atlaspack/commit/93ec10729ad5a328b4320955357339746cd472f3) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - adding incremental bundle graph update for packaging
+
+- [#1043](https://github.com/atlassian-labs/atlaspack/pull/1043) [`a2c5747`](https://github.com/atlassian-labs/atlaspack/commit/a2c574770d2e616576e817801842576ead072532) Thanks [@marcins](https://github.com/marcins)! - Implement additional metrics in native packager preludes
+
+- [#1036](https://github.com/atlassian-labs/atlaspack/pull/1036) [`e88b258`](https://github.com/atlassian-labs/atlaspack/commit/e88b25808a181fafbe98e5ca278b35bfc0197caf) Thanks [@benjervis](https://github.com/benjervis)! - Fix Rust symbol tracker to correctly handle renamed exports during symbol propagation through barrel files.
+
+## 3.23.0
+
+### Minor Changes
+
+- [#1032](https://github.com/atlassian-labs/atlaspack/pull/1032) [`94e1a58`](https://github.com/atlassian-labs/atlaspack/commit/94e1a58a1a8ed5a4e329745d8a7e6a9530b5cb11) Thanks [@matt-koko](https://github.com/matt-koko)! - Bugfix. Fix scenario where a invalidates nodes are orphaned in `invalid_nodes` array, leading to infinite incremental rebuilds.
+
+- [#1010](https://github.com/atlassian-labs/atlaspack/pull/1010) [`45a0dc5`](https://github.com/atlassian-labs/atlaspack/commit/45a0dc530fd9472dbfdebcbb05f1aad812ab3b23) Thanks [@benjervis](https://github.com/benjervis)! - Add initial implementation of native symbol propagation
+
+### Patch Changes
+
+- [#1031](https://github.com/atlassian-labs/atlaspack/pull/1031) [`c4082ba`](https://github.com/atlassian-labs/atlaspack/commit/c4082ba3fc1a9328a2e5f23195d5972fbc5d10c8) Thanks [@marcins](https://github.com/marcins)! - Fix error handling for parse errors in tokens transformer
+
+- [#1027](https://github.com/atlassian-labs/atlaspack/pull/1027) [`d8e984b`](https://github.com/atlassian-labs/atlaspack/commit/d8e984b7f6d04fa03707fa299bfd8b8bf9f58280) Thanks [@marcins](https://github.com/marcins)! - Improve source map quality through various accuracy fixes.
+
+- [#1006](https://github.com/atlassian-labs/atlaspack/pull/1006) [`ca78e1d`](https://github.com/atlassian-labs/atlaspack/commit/ca78e1d2007bfecd267b283d66a73f3695da4234) Thanks [@marcins](https://github.com/marcins)! - Switch to AST (OXC) based asset packaging in native packager
+
+- [#1026](https://github.com/atlassian-labs/atlaspack/pull/1026) [`4c1f39a`](https://github.com/atlassian-labs/atlaspack/commit/4c1f39a911acaefd630d877af1ae5a039931662f) Thanks [@marcins](https://github.com/marcins)! - Support logging levels for js_span traces
+
+- [#1023](https://github.com/atlassian-labs/atlaspack/pull/1023) [`fcf7ec5`](https://github.com/atlassian-labs/atlaspack/commit/fcf7ec56fea644e21f7a67d649e6efd1f03c4a6e) Thanks [@marcins](https://github.com/marcins)! - Debug prelude and asset filename debug output fixes
+
+## 3.22.1
+
+### Patch Changes
+
+- [#1001](https://github.com/atlassian-labs/atlaspack/pull/1001) [`95914a7`](https://github.com/atlassian-labs/atlaspack/commit/95914a7f33f9370cdb0c8a3fd6845c042911af59) Thanks [@marcins](https://github.com/marcins)! - Use a compiled prelude for the new packager
+
+- [#1008](https://github.com/atlassian-labs/atlaspack/pull/1008) [`883c107`](https://github.com/atlassian-labs/atlaspack/commit/883c107e60dab2f459e27342017c54e3a7db8bc5) Thanks [@nickrobson](https://github.com/nickrobson)! - Reverting faulty change in context of Jira SSR
+
+## 3.22.0
+
+### Minor Changes
+
+- [#993](https://github.com/atlassian-labs/atlaspack/pull/993) [`e058f0e`](https://github.com/atlassian-labs/atlaspack/commit/e058f0e7a0423ba9373e85a7dbd5c1dd43b47916) Thanks [@matt-koko](https://github.com/matt-koko)! - Add disableCache option to TransformerSetup API
+
+- [#1005](https://github.com/atlassian-labs/atlaspack/pull/1005) [`053e375`](https://github.com/atlassian-labs/atlaspack/commit/053e3754c08c5b5dc239e9f7267df289cbbf31ab) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Bump `csscolorparser` dependency for fix
+
+- [#1003](https://github.com/atlassian-labs/atlaspack/pull/1003) [`25c976e`](https://github.com/atlassian-labs/atlaspack/commit/25c976e01c30e536fb1027eab5b17594c604efff) Thanks [@marcins](https://github.com/marcins)! - Bump Rust to 1.93.0
+
+- [#999](https://github.com/atlassian-labs/atlaspack/pull/999) [`9959efe`](https://github.com/atlassian-labs/atlaspack/commit/9959efe30699a2de3b69275be7ecb47afe81c0b6) Thanks [@JakeLane](https://github.com/JakeLane)! - Update Compiled SWC transformer to support a lot more files
+
+### Patch Changes
+
+- [#996](https://github.com/atlassian-labs/atlaspack/pull/996) [`1a86b65`](https://github.com/atlassian-labs/atlaspack/commit/1a86b657868ee881ca5acc68661cca208ac37779) Thanks [@nickrobson](https://github.com/nickrobson)! - Make entrypoint_filepath_suffix option on sync_dynamic_import case-insensitive
+
+- [#998](https://github.com/atlassian-labs/atlaspack/pull/998) [`349b19c`](https://github.com/atlassian-labs/atlaspack/commit/349b19c3aca2ccb1ffb5cdcdc74890f4b62228be) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add initial native bundler boilerplate and single file bundler
+
+## 3.21.0
+
+### Minor Changes
+
+- [#981](https://github.com/atlassian-labs/atlaspack/pull/981) [`783118c`](https://github.com/atlassian-labs/atlaspack/commit/783118c772f45a0cf6a3b6b447fb9a0e225b25a6) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Fix errant file content exclusions from native Compiled
+  Small refactor for some external Compiled dependencies to insourced
+
+### Patch Changes
+
+- [#988](https://github.com/atlassian-labs/atlaspack/pull/988) [`a631dcd`](https://github.com/atlassian-labs/atlaspack/commit/a631dcd961112db072b0f8de0831efd178f355a7) Thanks [@marcins](https://github.com/marcins)! - Implement a basic package() method for the native packager
+
+- [#986](https://github.com/atlassian-labs/atlaspack/pull/986) [`e9dce31`](https://github.com/atlassian-labs/atlaspack/commit/e9dce3168a8e6727a994bf2a6ac6041eb29f6027) Thanks [@OliverWessels](https://github.com/OliverWessels)! - Add `activate_reject_on_unresolved_imports` config option to `sync-dynamic-import` transformer to create a rejecting promise for unresolved imports if `globalThis.__SSR_TEMP_THROW_ON_UNRESOLVED_DYNAMIC_IMPORT` is set.
+
+- [#978](https://github.com/atlassian-labs/atlaspack/pull/978) [`59e1345`](https://github.com/atlassian-labs/atlaspack/commit/59e1345f84f43e0632d434ab42c06bf748241985) Thanks [@JakeLane](https://github.com/JakeLane)! - Fix group normalisation in Compiled CSS-in-JS SWC plugin
+
+- [#987](https://github.com/atlassian-labs/atlaspack/pull/987) [`fcaf517`](https://github.com/atlassian-labs/atlaspack/commit/fcaf517010d15c9300393bcad3f9b465689d9d16) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - add get_bundle_assets
+
+## 3.20.0
+
+### Minor Changes
+
+- [#976](https://github.com/atlassian-labs/atlaspack/pull/976) [`e8ea59b`](https://github.com/atlassian-labs/atlaspack/commit/e8ea59beabb4b4fef647dc9ebea3519b6d56d7b5) Thanks [@marcins](https://github.com/marcins)! - Initial implementation of loadBundleGraph to deserialise JS -> Rust BundleGraph.
+
+- [#970](https://github.com/atlassian-labs/atlaspack/pull/970) [`8826fd0`](https://github.com/atlassian-labs/atlaspack/commit/8826fd02c29c9c67cf0c80da41f424257fbdef93) Thanks [@marcins](https://github.com/marcins)! - Add initial plumbing for native packaging to core and Atlaspack V3 code
+
+- [#969](https://github.com/atlassian-labs/atlaspack/pull/969) [`225683f`](https://github.com/atlassian-labs/atlaspack/commit/225683f7c59355da53b7004d2b8596701ce3af41) Thanks [@marcins](https://github.com/marcins)! - Bump browserslist-rs from 0.17.0 -> 0.19.0
+
+### Patch Changes
+
+- [#980](https://github.com/atlassian-labs/atlaspack/pull/980) [`3753cb1`](https://github.com/atlassian-labs/atlaspack/commit/3753cb1bf9155eaf3a1a8f952886864682738647) Thanks [@marcins](https://github.com/marcins)! - Replace serde_yaml and serde_yml with serde_yaml_ng (drop-in)
+
+- [#974](https://github.com/atlassian-labs/atlaspack/pull/974) [`43adda0`](https://github.com/atlassian-labs/atlaspack/commit/43adda06bf3b6a404b54f8ba2a3b810d92e61d75) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Fix Compiled sheet hoisting indices
+
+- [#984](https://github.com/atlassian-labs/atlaspack/pull/984) [`dbcaabb`](https://github.com/atlassian-labs/atlaspack/commit/dbcaabbf15d4fbc8ecd9c0be58cf7b2317eebfc4) Thanks [@marcins](https://github.com/marcins)! - Serialise to JSON on the JS side before sending bundle graph nodes to Rust for performance.
+
 ## 3.19.0
 
 ### Minor Changes

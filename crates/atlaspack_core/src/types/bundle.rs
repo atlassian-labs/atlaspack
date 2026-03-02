@@ -7,7 +7,7 @@ use super::environment::Environment;
 use super::file_type::FileType;
 use super::target::Target;
 
-#[derive(Clone, Debug, Deserialize, Hash, Serialize)]
+#[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Bundle {
   /// Controls the behavior of the bundle to determine when the bundle loads

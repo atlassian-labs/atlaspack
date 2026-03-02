@@ -1,5 +1,63 @@
 # @atlaspack/optimizer-swc
 
+## 2.16.1
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.2.10
+  - @atlaspack/utils@3.3.7
+  - @atlaspack/plugin@2.14.55
+
+## 2.16.0
+
+### Minor Changes
+
+- [#1027](https://github.com/atlassian-labs/atlaspack/pull/1027) [`d8e984b`](https://github.com/atlassian-labs/atlaspack/commit/d8e984b7f6d04fa03707fa299bfd8b8bf9f58280) Thanks [@marcins](https://github.com/marcins)! - Improve source map quality through various accuracy fixes.
+
+### Patch Changes
+
+- Updated dependencies [[`d8e984b`](https://github.com/atlassian-labs/atlaspack/commit/d8e984b7f6d04fa03707fa299bfd8b8bf9f58280)]:
+  - @atlaspack/utils@3.3.6
+  - @atlaspack/source-map@3.2.9
+  - @atlaspack/plugin@2.14.54
+
+## 2.15.14
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.2.8
+  - @atlaspack/utils@3.3.5
+  - @atlaspack/plugin@2.14.53
+
+## 2.15.13
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.52
+  - @atlaspack/utils@3.3.4
+  - @atlaspack/source-map@3.2.7
+
+## 2.15.12
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.2.6
+  - @atlaspack/utils@3.3.3
+  - @atlaspack/plugin@2.14.51
+
+## 2.15.11
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.2.5
+  - @atlaspack/utils@3.3.2
+  - @atlaspack/plugin@2.14.50
+
 ## 2.15.10
 
 ### Patch Changes

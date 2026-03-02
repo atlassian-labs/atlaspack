@@ -6,16 +6,19 @@ use swc_core::common::{DUMMY_SP, SourceMap, SourceMapper, Spanned, SyntaxContext
 use swc_core::ecma::ast::{
   ArrayLit, ArrowExpr, BinExpr, BinaryOp, BlockStmt, BlockStmtOrExpr, CallExpr, Callee, CondExpr,
   Expr, ExprOrSpread, Ident, KeyValueProp, Lit, MemberExpr, MemberProp, ObjectLit, OptChainBase,
-  Pat, Prop, PropName, PropOrSpread, ReturnStmt, SpreadElement, Stmt, TaggedTpl, Tpl, TplElement,
-  TsType, UnaryExpr, UnaryOp,
+  ParenExpr, Pat, Prop, PropName, PropOrSpread, ReturnStmt, SpreadElement, Stmt, TaggedTpl, Tpl,
+  TplElement, TsType, UnaryExpr, UnaryOp,
 };
 use swc_core::ecma::codegen::text_writer::JsWriter;
 use swc_core::ecma::codegen::{Config, Emitter, Node};
 use swc_core::ecma::utils::ExprExt;
 
 use crate::css_map::{CssMapUsage, visit_css_map_path_with_builder};
+use crate::postcss::plugins::sort_shorthand_declarations::{
+  parent_shorthand_for, shorthand_bucket,
+};
 use crate::types::{Metadata, MetadataContext};
-use crate::utils_ast::build_code_frame_error;
+
 use crate::utils_create_result_pair::create_result_pair;
 use crate::utils_css::{CssValue, add_unit_if_needed, css_affix_interpolation, kebab_case};
 use crate::utils_css_map::{ErrorMessages, create_error_message};
@@ -152,9 +155,7 @@ fn babel_like_code_for_hash(expr: &Expr) -> String {
         if let Prop::KeyValue(kv) = p.as_ref() {
           let key = match &kv.key {
             PropName::Ident(i) => i.sym.as_ref().to_string(),
-            PropName::Str(s) => {
-              format!("'{}'", escape_string(s.value.as_ref(), '\''))
-            }
+            PropName::Str(s) => format!("'{}'", escape_string(s.value.as_ref(), '\'')),
             PropName::Num(n) => {
               let mut s = n.value.to_string();
               if s.ends_with(".0") {
@@ -653,7 +654,11 @@ fn is_custom_property_name(value: &str) -> bool {
 
 fn get_variable_declarator_value_for_parent_expr(expr: &Expr, meta: &Metadata) -> (Expr, String) {
   let mut expression = expr.clone();
-  let mut variable_name = babel_like_expression(expr, meta);
+  let mut hash_expr = expr.clone();
+  if !matches!(meta.context, MetadataContext::Keyframes { .. }) {
+    normalize_props_usage(&mut hash_expr);
+  }
+  let mut variable_name = babel_like_expression(&hash_expr, meta);
 
   if let Expr::Ident(ident) = expr {
     let base_name = ident.sym.as_ref();
@@ -664,7 +669,14 @@ fn get_variable_declarator_value_for_parent_expr(expr: &Expr, meta: &Metadata) -
 
     if let Some(binding) = resolve_binding(base_name, meta.clone(), evaluate_expression) {
       if let Some(node) = &binding.node {
-        expression = node.clone();
+        if !matches!(binding.source, BindingSource::Import) {
+          expression = node.clone();
+          if !matches!(meta.context, MetadataContext::Keyframes { .. }) {
+            let mut normalized = node.clone();
+            normalize_props_usage(&mut normalized);
+            variable_name = babel_like_expression(&normalized, &binding.meta);
+          }
+        }
       }
     }
   }
@@ -676,6 +688,12 @@ fn get_variable_declarator_value_for_parent_expr(expr: &Expr, meta: &Metadata) -
 /// any sheet entries. This mirrors the behaviour of the Babel helper and is
 /// relied upon when normalising conditional CSS branches.
 pub fn merge_subsequent_unconditional_css_items(items: Vec<CssItem>) -> Vec<CssItem> {
+  fn needs_unconditional_separator(prev: &str, next: &str) -> bool {
+    let prev_trimmed = prev.trim_end();
+    let next_trimmed = next.trim_start();
+    !prev_trimmed.is_empty() && prev_trimmed.ends_with('}') && next_trimmed.starts_with('@')
+  }
+
   let mut merged: Vec<CssItem> = Vec::new();
   let mut sheets: Vec<CssItem> = Vec::new();
 
@@ -704,7 +722,11 @@ pub fn merge_subsequent_unconditional_css_items(items: Vec<CssItem>) -> Vec<CssI
         while lookahead < items.len() {
           match &items[lookahead] {
             CssItem::Unconditional(_) => {
-              css.push_str(&get_item_css(&items[lookahead]));
+              let next_css = get_item_css(&items[lookahead]);
+              if needs_unconditional_separator(&css, &next_css) {
+                css.push('\n');
+              }
+              css.push_str(&next_css);
               last_index = lookahead;
             }
             CssItem::Sheet(_) => sheets.push(items[lookahead].clone()),
@@ -830,18 +852,13 @@ fn callback_if_file_included(meta: &Metadata, next: &Metadata) {
 }
 
 fn assert_no_imported_css_variables(
-  reference: &Expr,
-  meta: &Metadata,
+  _reference: &Expr,
+  _meta: &Metadata,
   binding: &PartialBindingWithMeta,
   result: &CssOutput,
 ) {
   if binding.source == BindingSource::Import && !result.variables.is_empty() {
-    let error = build_code_frame_error(
-      "Identifier contains values that can't be statically evaluated",
-      Some(reference.span()),
-      meta,
-    );
-    panic!("{error}");
+    panic!("Identifier contains values that can't be statically evaluated.");
   }
 }
 
@@ -858,7 +875,36 @@ fn logical_items_from_conditional_expression(
   css
     .into_iter()
     .map(|item| match item {
-      CssItem::Conditional(_) => item,
+      CssItem::Conditional(mut conditional) => {
+        // When a nested conditional is inside a single-sided conditional, we need to
+        // preserve the outer test as a guard. For example:
+        //   outer_test ? (inner_test ? value1 : value2) : undefined
+        // should produce: outer_test && (inner_test ? class1 : class2)
+        let guard_expr = match branch {
+          ConditionalBranch::Consequent => (*node.test).clone(),
+          ConditionalBranch::Alternate => Expr::Unary(UnaryExpr {
+            span: DUMMY_SP,
+            op: UnaryOp::Bang,
+            arg: Box::new(Expr::Paren(ParenExpr {
+              span: DUMMY_SP,
+              expr: Box::new((*node.test).clone()),
+            })),
+          }),
+        };
+
+        // Combine with any existing guard using &&
+        conditional.guard = Some(match conditional.guard.take() {
+          Some(existing) => Expr::Bin(BinExpr {
+            span: DUMMY_SP,
+            op: BinaryOp::LogicalAnd,
+            left: Box::new(guard_expr),
+            right: Box::new(existing),
+          }),
+          None => guard_expr,
+        });
+
+        CssItem::Conditional(conditional)
+      }
       CssItem::Logical(logical) => {
         let mut span = logical.expression.span();
         if span == DUMMY_SP {
@@ -879,13 +925,24 @@ fn logical_items_from_conditional_expression(
         })
       }
       _ => {
+        let test_clone = (*node.test).clone();
         let expression = match branch {
-          ConditionalBranch::Consequent => (*node.test).clone(),
-          ConditionalBranch::Alternate => Expr::Unary(UnaryExpr {
-            span: node.test.span(),
-            op: UnaryOp::Bang,
-            arg: Box::new((*node.test).clone()),
-          }),
+          ConditionalBranch::Consequent => test_clone,
+          ConditionalBranch::Alternate => {
+            // For the alternate branch, we need to negate the test.
+            // To match Babel's output exactly, we always use !(test) pattern
+            // by wrapping the test in parentheses before negating.
+            // This produces !(a === b) instead of a !== b, which is important
+            // for hash consistency with the Babel plugin.
+            Expr::Unary(UnaryExpr {
+              span: DUMMY_SP,
+              op: UnaryOp::Bang,
+              arg: Box::new(Expr::Paren(ParenExpr {
+                span: DUMMY_SP,
+                expr: Box::new(test_clone),
+              })),
+            })
+          }
         };
 
         CssItem::Logical(LogicalCssItem {
@@ -1396,8 +1453,17 @@ where
       continue;
     }
 
-    let (mut variable_expression, variable_name) =
-      get_variable_declarator_value_for_parent_expr(node_expression, meta);
+    let (mut variable_expression, variable_name) = match node_expression {
+      Expr::Ident(ident) => {
+        let base_name = ident.sym.as_ref().to_string();
+        let name = match &meta.context {
+          MetadataContext::Keyframes { keyframe } => format!("{keyframe}:{base_name}"),
+          _ => base_name,
+        };
+        (Expr::Ident(ident.clone()), name)
+      }
+      _ => get_variable_declarator_value_for_parent_expr(node_expression, meta),
+    };
     normalize_props_usage(&mut variable_expression);
     let Some(next_quasi) = template.quasis.get_mut(index + 1) else {
       panic!("Template literal missing trailing quasi for interpolation");
@@ -1549,16 +1615,21 @@ where
    -> Option<CssItem> {
     let mut css_output: Option<CssOutput> = None;
 
+    // COMPAT: Babel only treats string literals as CSS if they contain a colon,
+    // indicating they're CSS declarations (e.g., 'color: red'). String literals
+    // without colons (e.g., '104px') are values that should flow through the
+    // CSS variable path, not be treated as CSS declarations.
     if let Expr::Lit(Lit::Str(str_lit)) = expr {
-      css_output = Some(CssOutput {
-        css: vec![CssItem::unconditional(str_lit.value.as_ref())],
-        variables: Vec::new(),
-      });
-    } else if let Expr::Lit(Lit::Num(num_lit)) = expr {
-      css_output = Some(CssOutput {
-        css: vec![CssItem::unconditional(&num_lit.value.to_string())],
-        variables: Vec::new(),
-      });
+      if str_lit.value.contains(':') {
+        css_output = Some(CssOutput {
+          css: vec![CssItem::unconditional(str_lit.value.as_ref())],
+          variables: Vec::new(),
+        });
+      }
+    } else if let Expr::Lit(Lit::Num(_)) = expr {
+      // COMPAT: Numeric literals in conditional branches should also flow through
+      // the CSS variable path, not be treated as complete CSS declarations.
+      // This matches Babel's behavior where value-only expressions become variables.
     } else {
       let looks_like_css_literal = if matches!(expr, Expr::Object(_)) {
         true
@@ -1620,12 +1691,7 @@ where
       let merged = merge_subsequent_unconditional_css_items(output.css);
 
       if merged.len() > 1 {
-        let error = build_code_frame_error(
-          "Conditional branch contains unexpected expression",
-          Some(expr.span()),
-          meta,
-        );
-        panic!("{error}");
+        panic!("Conditional branch contains unexpected expression.");
       }
 
       return merged.into_iter().next();
@@ -1698,6 +1764,7 @@ where
         test: (*node.test).clone(),
         consequent: Box::new(consequent),
         alternate: Box::new(alternate),
+        guard: None,
       }));
     }
     (Some(consequent), None) => css.extend(logical_items_from_conditional_expression(
@@ -1769,12 +1836,7 @@ where
     .iter()
     .any(|item| !matches!(item, CssItem::Unconditional(_)))
   {
-    let error = build_code_frame_error(
-      "Keyframes contains unexpected CSS",
-      Some(expression.span()),
-      meta,
-    );
-    panic!("{error}");
+    panic!("Keyframes contains unexpected CSS.");
   }
 
   let sheet_css = wrapped
@@ -1802,6 +1864,18 @@ fn css_property_name(key: &str) -> String {
   }
 }
 
+fn normalize_keyframe_selector_key(key: &str) -> String {
+  let trimmed = key.trim();
+  let lower = trimmed.to_ascii_lowercase();
+  if lower == "from" {
+    "0%".to_string()
+  } else if lower == "100%" {
+    "to".to_string()
+  } else {
+    trimmed.to_string()
+  }
+}
+
 pub fn extract_array_with_builder<F>(
   array: &ArrayLit,
   meta: &Metadata,
@@ -1815,18 +1889,11 @@ where
 
   for element in &array.elems {
     let Some(element) = element else {
-      let message = "undefined isn't a supported CSS type - try using an object or string";
-      let error = build_code_frame_error(message, Some(array.span), meta);
-      panic!("{error}");
+      panic!("undefined isn't a supported CSS type - try using an object or string.");
     };
 
     if element.spread.is_some() {
-      let error = build_code_frame_error(
-        "SpreadElement isn't a supported CSS type - try using an object or string",
-        Some(element.expr.span()),
-        meta,
-      );
-      panic!("{error}");
+      panic!("SpreadElement isn't a supported CSS type - try using an object or string.");
     }
 
     let expr = element.expr.as_ref();
@@ -1852,10 +1919,87 @@ pub fn extract_object_expression_with_builder<F>(
 where
   F: FnMut(&Expr, &Metadata) -> CssOutput,
 {
+  fn shorthand_bucket_for_prop(prop: &PropOrSpread, meta: &Metadata) -> Option<u32> {
+    match prop {
+      PropOrSpread::Prop(prop) => match prop.as_ref() {
+        Prop::KeyValue(key_value) => {
+          let key = object_property_to_string(key_value, meta.clone());
+          shorthand_bucket(&key).or_else(|| parent_shorthand_for(&key).and_then(shorthand_bucket))
+        }
+        Prop::Shorthand(ident) => {
+          let key = ident.sym.as_ref();
+          shorthand_bucket(key).or_else(|| parent_shorthand_for(key).and_then(shorthand_bucket))
+        }
+        _ => None,
+      },
+      _ => None,
+    }
+  }
+
+  fn ordered_keyframe_props<'a>(
+    props: &'a [PropOrSpread],
+    meta: &Metadata,
+  ) -> Vec<&'a PropOrSpread> {
+    let mut indexed: Vec<(usize, &PropOrSpread)> = props.iter().enumerate().collect();
+    indexed.sort_by(|(ia, a), (ib, b)| {
+      let bucket_a = shorthand_bucket_for_prop(a, meta);
+      let bucket_b = shorthand_bucket_for_prop(b, meta);
+      match (bucket_a, bucket_b) {
+        (Some(a_bucket), Some(b_bucket)) => a_bucket.cmp(&b_bucket).then_with(|| ia.cmp(ib)),
+        (Some(_), None) => std::cmp::Ordering::Less,
+        (None, Some(_)) => std::cmp::Ordering::Greater,
+        (None, None) => ia.cmp(ib),
+      }
+    });
+    indexed.into_iter().map(|(_, prop)| prop).collect()
+  }
+
+  fn sort_keyframe_props_in_place(props: &mut Vec<PropOrSpread>, meta: &Metadata) {
+    let mut indexed: Vec<(usize, PropOrSpread, Option<u32>)> = props
+      .iter()
+      .enumerate()
+      .map(|(idx, prop)| (idx, prop.clone(), shorthand_bucket_for_prop(prop, meta)))
+      .collect();
+    indexed.sort_by(|(ia, _a, ba), (ib, _b, bb)| match (ba, bb) {
+      (Some(a_bucket), Some(b_bucket)) => a_bucket.cmp(b_bucket).then_with(|| ia.cmp(ib)),
+      (Some(_), None) => std::cmp::Ordering::Less,
+      (None, Some(_)) => std::cmp::Ordering::Greater,
+      (None, None) => ia.cmp(ib),
+    });
+    *props = indexed.into_iter().map(|(_, prop, _)| prop).collect();
+  }
+
+  fn sort_keyframe_declarations_in_object(object: &mut ObjectLit, meta: &Metadata) {
+    for prop in &mut object.props {
+      let PropOrSpread::Prop(prop) = prop else {
+        continue;
+      };
+      let Prop::KeyValue(key_value) = prop.as_mut() else {
+        continue;
+      };
+      if let Expr::Object(inner) = key_value.value.as_mut() {
+        sort_keyframe_props_in_place(&mut inner.props, meta);
+        sort_keyframe_declarations_in_object(inner, meta);
+      }
+    }
+  }
+
   let mut css: Vec<CssItem> = Vec::new();
   let mut variables: Vec<Variable> = Vec::new();
 
-  for property in &object.props {
+  let mut normalized_object = object.clone();
+  if matches!(meta.context, MetadataContext::Keyframes { .. }) {
+    sort_keyframe_declarations_in_object(&mut normalized_object, meta);
+  }
+
+  let ordered_props: Vec<&PropOrSpread> =
+    if matches!(meta.context, MetadataContext::Keyframes { .. }) {
+      ordered_keyframe_props(&normalized_object.props, meta)
+    } else {
+      normalized_object.props.iter().collect()
+    };
+
+  for property in ordered_props {
     match property {
       PropOrSpread::Prop(prop) => {
         let mut synthesized: Option<KeyValueProp> = None;
@@ -1868,7 +2012,10 @@ where
           _ => continue,
         };
 
-        let key = object_property_to_string(key_value, meta.clone());
+        let mut key = object_property_to_string(key_value, meta.clone());
+        if matches!(meta.context, MetadataContext::Keyframes { .. }) {
+          key = normalize_keyframe_selector_key(&key);
+        }
         let evaluated = evaluate_expression(key_value.value.as_ref(), meta.clone());
         let mut prop_value = evaluated.value;
         let updated_meta = evaluated.meta;
@@ -1981,6 +2128,11 @@ where
         );
 
         if matches!(prop_value, Expr::Object(_)) || logical_expression {
+          if key.starts_with("@keyframes") {
+            if let Expr::Object(obj) = &mut prop_value {
+              sort_keyframe_declarations_in_object(obj, &updated_meta);
+            }
+          }
           let result = build_css(&prop_value, &updated_meta);
           let mapped = if logical_expression {
             to_css_rule(&key, &result)
@@ -1996,11 +2148,14 @@ where
           let result = if template.exprs.len() == 1 {
             if let Some(first_expr) = template.exprs.first() {
               if let Expr::Arrow(arrow) = first_expr.as_ref() {
-                if matches!(
+                // Check if the body is a conditional expression, stripping parentheses first
+                // to handle cases like: `minHeight: \`${(props) => (props.isLoading ? '0' : '200px')}\``
+                let is_conditional_body = matches!(
                     arrow.body.as_ref(),
                     BlockStmtOrExpr::Expr(body)
-                        if matches!(**body, Expr::Cond(_))
-                ) {
+                        if matches!(strip_parentheses_expr(body), Expr::Cond(_))
+                );
+                if is_conditional_body {
                   let mut optimized = template.clone();
                   recompose_template_literal(
                     &mut optimized,
@@ -2094,6 +2249,25 @@ where
           fn literal_return_value(arrow: &ArrowExpr) -> Option<Expr> {
             match arrow.body.as_ref() {
               BlockStmtOrExpr::BlockStmt(block) => {
+                // If there are any control flow statements, the function may return
+                // different values depending on conditions, so we can't treat it as
+                // a static literal return.
+                let has_control_flow = block.stmts.iter().any(|stmt| {
+                  matches!(
+                    stmt,
+                    Stmt::If(_)
+                      | Stmt::Switch(_)
+                      | Stmt::For(_)
+                      | Stmt::ForIn(_)
+                      | Stmt::ForOf(_)
+                      | Stmt::While(_)
+                      | Stmt::DoWhile(_)
+                  )
+                });
+                if has_control_flow {
+                  return None;
+                }
+
                 for stmt in &block.stmts {
                   if let Some(found) = literal_from_stmt(stmt) {
                     return Some(found);
@@ -2114,6 +2288,25 @@ where
               Expr::Arrow(arrow) => literal_return_value(arrow),
               Expr::Fn(fn_expr) => {
                 if let Some(body) = &fn_expr.function.body {
+                  // If there are any control flow statements, the function may return
+                  // different values depending on conditions, so we can't treat it as
+                  // a static literal return.
+                  let has_control_flow = body.stmts.iter().any(|stmt| {
+                    matches!(
+                      stmt,
+                      Stmt::If(_)
+                        | Stmt::Switch(_)
+                        | Stmt::For(_)
+                        | Stmt::ForIn(_)
+                        | Stmt::ForOf(_)
+                        | Stmt::While(_)
+                        | Stmt::DoWhile(_)
+                    )
+                  });
+                  if has_control_flow {
+                    return None;
+                  }
+
                   for stmt in &body.stmts {
                     if let Stmt::Return(ReturnStmt { arg: Some(arg), .. }) = stmt {
                       match arg.as_ref() {
@@ -2332,7 +2525,11 @@ where
         }
 
         let (mut variable_expression, variable_name) =
-          get_variable_declarator_value_for_parent_expr(&prop_value, &updated_meta);
+          if matches!(key_value.value.as_ref(), Expr::Ident(_)) {
+            get_variable_declarator_value_for_parent_expr(key_value.value.as_ref(), meta)
+          } else {
+            get_variable_declarator_value_for_parent_expr(&prop_value, &updated_meta)
+          };
         normalize_props_usage(&mut variable_expression);
         let name = format!("--_{}", hash(&variable_name));
         if let Ok(label) = std::env::var("DEBUG_CSS_FIXTURE") {
@@ -2362,9 +2559,7 @@ where
         let binding = if let Expr::Ident(identifier) = expr.as_ref() {
           resolve_binding(identifier.sym.as_ref(), meta.clone(), evaluate_expression).or_else(
             || {
-              let error =
-                build_code_frame_error("Variable could not be found", Some(identifier.span), meta);
-              panic!("{error}");
+              panic!("Variable could not be found.");
             },
           )
         } else {
@@ -2402,6 +2597,7 @@ fn to_css_rule_internal(selector: &str, item: &CssItem) -> CssItem {
       test: conditional.test.clone(),
       consequent: Box::new(to_css_rule_internal(selector, &conditional.consequent)),
       alternate: Box::new(to_css_rule_internal(selector, &conditional.alternate)),
+      guard: conditional.guard.clone(),
     }),
     CssItem::Unconditional(unconditional) => CssItem::Unconditional(UnconditionalCssItem {
       css: wrap_with_selector(selector, unconditional.css.clone()),
@@ -2449,6 +2645,7 @@ fn to_css_declaration_internal(key: &str, item: &CssItem) -> CssItem {
       test: conditional.test.clone(),
       consequent: Box::new(to_css_declaration_internal(key, &conditional.consequent)),
       alternate: Box::new(to_css_declaration_internal(key, &conditional.alternate)),
+      guard: conditional.guard.clone(),
     }),
     CssItem::Unconditional(unconditional) => CssItem::Unconditional(UnconditionalCssItem {
       css: declaration_css(key, unconditional.css.clone()),
@@ -2665,23 +2862,18 @@ fn build_css_internal(node: &Expr, meta: &Metadata) -> CssOutput {
 
     let binding = resolve_binding(identifier.sym.as_ref(), meta.clone(), evaluate_expression)
       .unwrap_or_else(|| {
-        let error =
-          build_code_frame_error("Variable could not be found", Some(identifier.span), meta);
-        panic!("{error}");
+        panic!("Variable could not be found.");
       });
 
     let binding_node = binding.node.clone().unwrap_or_else(|| {
-      let error =
-        build_code_frame_error("Variable could not be found", Some(identifier.span), meta);
-      panic!("{error}");
+      panic!("Variable could not be found.");
     });
 
     {
       let state = meta.state();
       if state.css_map.contains_key(identifier.sym.as_ref()) {
         let message = create_error_message(ErrorMessages::UseVariantOfCssMap.to_string());
-        let error = build_code_frame_error(&message, Some(identifier.span), meta);
-        panic!("{error}");
+        panic!("{message}.");
       }
     }
 
@@ -2792,8 +2984,7 @@ fn build_css_internal(node: &Expr, meta: &Metadata) -> CssOutput {
     expression_type(node),
     error_message
   );
-  let error = build_code_frame_error(&message, Some(node.span()), meta);
-  panic!("{error}");
+  panic!("{message}.");
 }
 
 static INVALID_DYNAMIC_INDIRECT_SELECTOR_REGEX: Lazy<Regex> = Lazy::new(|| {
@@ -2809,12 +3000,9 @@ pub fn build_css(node: &Expr, meta: &Metadata) -> CssOutput {
   });
 
   if has_invalid_selector {
-    let error = build_code_frame_error(
-      "Found a mix of an indirect selector and a dynamic variable which is unsupported with Compiled.  See: https://compiledcssinjs.com/docs/limitations#mixing-dynamic-styles-and-indirect-selectors",
-      None,
-      meta,
+    panic!(
+      "Found a mix of an indirect selector and a dynamic variable which is unsupported with Compiled.  See: https://compiledcssinjs.com/docs/limitations#mixing-dynamic-styles-and-indirect-selectors."
     );
-    panic!("{error}");
   }
 
   output
@@ -2822,13 +3010,15 @@ pub fn build_css(node: &Expr, meta: &Metadata) -> CssOutput {
 
 #[cfg(test)]
 mod tests {
+  use super::normalize_props_usage;
   use super::{
-    assert_no_imported_css_variables, build_css_internal, callback_if_file_included,
-    extract_conditional_expression_with_builder, extract_keyframes_with_builder,
-    extract_logical_expression_with_builder, extract_member_expression_with_builder,
-    extract_template_literal_with_builder, find_binding_identifier,
-    generate_cache_for_css_map_with_builder, get_item_css,
-    merge_subsequent_unconditional_css_items, print_expression, to_css_declaration, to_css_rule,
+    assert_no_imported_css_variables, babel_like_expression, build_css_internal,
+    callback_if_file_included, extract_conditional_expression_with_builder,
+    extract_keyframes_with_builder, extract_logical_expression_with_builder,
+    extract_member_expression_with_builder, extract_template_literal_with_builder,
+    find_binding_identifier, generate_cache_for_css_map_with_builder, get_item_css,
+    get_variable_declarator_value_for_parent_expr, merge_subsequent_unconditional_css_items,
+    print_expression, to_css_declaration, to_css_rule,
   };
   use crate::types::{
     CompiledImports, Metadata, MetadataContext, PluginOptions, TransformFile, TransformFileOptions,
@@ -2844,8 +3034,8 @@ mod tests {
   use swc_core::common::sync::Lrc;
   use swc_core::common::{DUMMY_SP, FileName, SourceMap, SyntaxContext};
   use swc_core::ecma::ast::{
-    CallExpr, Callee, Expr, ExprOrSpread, Ident, KeyValueProp, ObjectLit, Prop, PropName,
-    PropOrSpread,
+    BinExpr, BinaryOp, CallExpr, Callee, CondExpr, Expr, ExprOrSpread, Ident, KeyValueProp, Lit,
+    Number, ObjectLit, Prop, PropName, PropOrSpread, Str,
   };
   use swc_core::ecma::parser::{Parser, StringInput, Syntax, lexer::Lexer};
 
@@ -3010,6 +3200,25 @@ mod tests {
   }
 
   #[test]
+  fn keyframes_sort_shorthand_declarations_in_blocks() {
+    let metadata = create_metadata();
+    let expr = parse_expression(
+      "keyframes({ from: { transform: 'rotate(0deg)', background: 'red' }, to: { transform: 'rotate(360deg)', background: 'red' } })",
+    );
+    let mut build_css = |value: &Expr, meta: &Metadata| super::build_css_internal(value, meta);
+    let output =
+      extract_keyframes_with_builder(&expr, &metadata, "animation: ", ";", &mut build_css);
+
+    let sheet = match &output.css[0] {
+      CssItem::Sheet(SheetCssItem { css }) => css,
+      other => panic!("expected sheet css, found {other:?}"),
+    };
+    let normalized: String = sheet.chars().filter(|ch| !ch.is_whitespace()).collect();
+    assert!(normalized.contains("0%{background:red;transform:rotate(0deg);}"));
+    assert!(normalized.contains("to{background:red;transform:rotate(360deg);}"));
+  }
+
+  #[test]
   fn extract_keyframes_from_tagged_template() {
     let metadata = create_metadata();
     let expr = parse_expression("keyframes`from { opacity: 1; } to { opacity: 0; }`");
@@ -3137,6 +3346,34 @@ mod tests {
   }
 
   #[test]
+  fn extract_template_literal_keeps_identifier_expression_for_hashing() {
+    let metadata = create_metadata();
+    let binding_meta = create_metadata();
+    let binding_expr = parse_expression("(props) => props.size === 'small' ? 16 : 24");
+    let binding = PartialBindingWithMeta::new(
+      Some(binding_expr),
+      None,
+      true,
+      binding_meta,
+      BindingSource::Module,
+    );
+    metadata.insert_parent_binding("getIconSize", binding);
+
+    let expr = parse_expression("`width: ${getIconSize}px;`");
+    let Expr::Tpl(template) = expr else {
+      panic!("expected template literal expression");
+    };
+
+    let mut build_css = |_value: &Expr, _meta: &Metadata| CssOutput::new();
+    let output = extract_template_literal_with_builder(&template, &metadata, &mut build_css);
+
+    assert_eq!(output.variables.len(), 1);
+    let variable = &output.variables[0];
+    assert!(matches!(variable.expression, Expr::Ident(_)));
+    assert_eq!(variable.name, format!("--_{}", hash("getIconSize")));
+  }
+
+  #[test]
   fn extract_object_expression_builds_template_literal_arrow_branch() {
     let metadata = create_metadata();
     let object =
@@ -3170,6 +3407,46 @@ mod tests {
         assert_eq!(unconditional.css, ";");
       }
       other => panic!("expected trailing unconditional item, found {other:?}"),
+    }
+  }
+
+  #[test]
+  fn extract_object_expression_builds_template_literal_with_parenthesized_conditional() {
+    // Tests the case where the conditional expression is wrapped in parentheses:
+    // minHeight: `${(props) => (props.isLoading ? '0' : '200px')}`
+    let metadata = create_metadata();
+    let object =
+      parse_object_literal("({ minHeight: `${(props) => (props.isLoading ? '0' : '200px')}` })");
+    let mut build_css = |expr: &Expr, meta: &Metadata| super::build_css_internal(expr, meta);
+
+    let output = super::extract_object_expression_with_builder(&object, &metadata, &mut build_css);
+
+    assert!(
+      output.variables.is_empty(),
+      "expected no variables for parenthesized conditional, found {:?}",
+      output.variables
+    );
+
+    // Should have a conditional CSS item, not a CSS variable
+    let conditional = output
+      .css
+      .iter()
+      .find_map(|item| match item {
+        CssItem::Conditional(cond) => Some(cond),
+        _ => None,
+      })
+      .expect("expected conditional css item for parenthesized conditional");
+
+    if let CssItem::Unconditional(unconditional) = conditional.consequent.as_ref() {
+      assert_eq!(unconditional.css, "min-height:0");
+    } else {
+      panic!("expected unconditional consequent");
+    }
+
+    if let CssItem::Unconditional(unconditional) = conditional.alternate.as_ref() {
+      assert_eq!(unconditional.css, "min-height:200px");
+    } else {
+      panic!("expected unconditional alternate");
     }
   }
 
@@ -3343,6 +3620,40 @@ mod tests {
   }
 
   #[test]
+  fn arrow_function_with_control_flow_creates_variable() {
+    // An arrow function with control flow (if statements) should NOT be collapsed
+    // to a static literal, but should create a CSS variable instead
+    let metadata = create_metadata();
+    let object = parse_object_literal(
+      "({ padding: (props) => { if (props.compact) { return '4px'; } return '8px 16px'; } })",
+    );
+    let mut build_css = |expr: &Expr, meta: &Metadata| super::build_css_internal(expr, meta);
+
+    let output = super::extract_object_expression_with_builder(&object, &metadata, &mut build_css);
+
+    // Should create a CSS variable since the function has control flow
+    assert_eq!(output.variables.len(), 1);
+    assert_eq!(output.css.len(), 1);
+
+    // The CSS should use var() not expanded longhands
+    match &output.css[0] {
+      CssItem::Unconditional(unconditional) => {
+        assert!(
+          unconditional.css.contains("padding: var(--_"),
+          "Expected padding with CSS variable, got: {}",
+          unconditional.css
+        );
+        // Should NOT have expanded longhands
+        assert!(
+          !unconditional.css.contains("padding-top:"),
+          "Should not have expanded longhands"
+        );
+      }
+      other => panic!("expected unconditional css item, found {other:?}"),
+    }
+  }
+
+  #[test]
   fn merges_adjacent_unconditional_items() {
     let items = vec![
       CssItem::unconditional("color: red;"),
@@ -3416,6 +3727,7 @@ mod tests {
       test: Expr::Ident(Ident::new("flag".into(), DUMMY_SP, SyntaxContext::empty())),
       consequent: Box::new(CssItem::unconditional("color: red;")),
       alternate: Box::new(CssItem::unconditional("color: blue;")),
+      guard: None,
     });
 
     let output = CssOutput {
@@ -3663,6 +3975,87 @@ mod tests {
   }
 
   #[test]
+  fn variable_name_uses_binding_initializer() {
+    let meta = create_metadata();
+    let binding_meta = create_metadata();
+    let binding_expr = parse_expression("isLoading || continueAnimation ? 'a' : 'b'");
+    let binding = PartialBindingWithMeta::new(
+      Some(binding_expr.clone()),
+      None,
+      true,
+      binding_meta.clone(),
+      BindingSource::Module,
+    );
+    meta.insert_parent_binding("bg", binding);
+
+    let (expression, variable_name) =
+      get_variable_declarator_value_for_parent_expr(&ident_expr("bg"), &meta);
+
+    assert!(matches!(expression, Expr::Cond(_)));
+    let expected = babel_like_expression(&binding_expr, &binding_meta);
+    assert_eq!(variable_name, expected);
+  }
+
+  #[test]
+  fn variable_name_skips_import_binding_initializer() {
+    let meta = create_metadata();
+    let binding_meta = create_metadata();
+    let binding_expr = parse_expression("`${borderWidth}px solid ${secondaryBorderColor}`");
+    let binding = PartialBindingWithMeta::new(
+      Some(binding_expr),
+      None,
+      true,
+      binding_meta,
+      BindingSource::Import,
+    );
+    meta.insert_parent_binding("secondaryBorder", binding);
+
+    let (expression, variable_name) =
+      get_variable_declarator_value_for_parent_expr(&ident_expr("secondaryBorder"), &meta);
+
+    assert!(matches!(expression, Expr::Ident(_)));
+    assert_eq!(variable_name, "secondaryBorder");
+  }
+
+  #[test]
+  fn variable_name_uses_normalized_props_expression() {
+    let meta = create_metadata();
+    let expr = parse_expression(
+      "({ isLoading, continueAnimation }) => isLoading || continueAnimation ? 'rotationAnimation linear 3s infinite' : ''",
+    );
+    let (_expression, variable_name) = get_variable_declarator_value_for_parent_expr(&expr, &meta);
+
+    let mut normalized = expr.clone();
+    normalize_props_usage(&mut normalized);
+    let expected = babel_like_expression(&normalized, &meta);
+    assert_eq!(variable_name, expected);
+  }
+
+  #[test]
+  fn babel_like_expression_preserves_props_identifier() {
+    let meta = create_metadata();
+    let expr = parse_expression("__cmplp.isLoading");
+    assert_eq!(babel_like_expression(&expr, &meta), "__cmplp.isLoading");
+  }
+
+  #[test]
+  fn babel_like_expression_uses_single_quotes() {
+    let meta = create_metadata();
+    let expr = parse_expression("\"rotationAnimation\"");
+    assert_eq!(babel_like_expression(&expr, &meta), "'rotationAnimation'");
+  }
+
+  #[test]
+  fn variable_name_hash_matches_babel_for_props_conditionals() {
+    let meta = create_metadata();
+    let expr = parse_expression(
+      "__cmplp.isLoading || __cmplp.continueAnimation ? 'rotationAnimation linear 3s infinite' : ''",
+    );
+    let (_expression, variable_name) = get_variable_declarator_value_for_parent_expr(&expr, &meta);
+    assert_eq!(hash(&variable_name), "1rywqsk");
+  }
+
+  #[test]
   fn extract_conditional_expression_converts_single_branch_to_logical() {
     let meta = create_metadata();
     let expr = parse_expression("flag ? { color: 'red' } : value");
@@ -3690,6 +4083,55 @@ mod tests {
         }
         _ => panic!("expected logical css item"),
       }
+    } else {
+      panic!("expected conditional expression");
+    }
+  }
+
+  #[test]
+  fn extract_conditional_expression_treats_value_strings_as_non_css() {
+    // String literals without colons (like '104px') should NOT be treated as CSS
+    // declarations. They should be treated as values that flow through the CSS
+    // variable path. This matches Babel's behavior.
+    let meta = create_metadata();
+    let expr = parse_expression("flag ? propValue : '104px'");
+
+    if let Expr::Cond(cond) = expr {
+      let result = extract_conditional_expression_with_builder(&cond, &meta, &mut |_, _| {
+        // This should NOT be called for string literals without colons
+        panic!("build_css should not be called for value-only string literals");
+      });
+
+      // Neither branch should produce CSS, so the result should be empty
+      assert!(
+        result.css.is_empty(),
+        "expected empty CSS for value-only conditional, got {:?}",
+        result.css
+      );
+    } else {
+      panic!("expected conditional expression");
+    }
+  }
+
+  #[test]
+  fn extract_conditional_expression_treats_css_strings_with_colons() {
+    // String literals WITH colons (like 'color: red') SHOULD be treated as CSS
+    let meta = create_metadata();
+    let expr = parse_expression("flag ? 'color: red' : 'color: blue'");
+    let mut call_count = 0;
+
+    if let Expr::Cond(cond) = expr {
+      let result = extract_conditional_expression_with_builder(&cond, &meta, &mut |_, _| {
+        call_count += 1;
+        CssOutput {
+          css: vec![CssItem::unconditional("mock css")],
+          variables: Vec::new(),
+        }
+      });
+
+      // Both branches have colons, so they should be treated as CSS
+      assert_eq!(result.css.len(), 1);
+      assert!(matches!(result.css[0], CssItem::Conditional(_)));
     } else {
       panic!("expected conditional expression");
     }
@@ -3891,5 +4333,270 @@ mod tests {
     assert_eq!(normalize_content_value(r#""hello""#), r#""hello""#);
     assert_eq!(normalize_content_value("plain"), r#""plain""#);
     assert_eq!(normalize_content_value(""), r#""""#);
+  }
+
+  #[test]
+  fn logical_items_negates_test_for_alternate_branch() {
+    // Test that for alternate branches, we use !(test) pattern to match Babel output.
+    // This ensures hash consistency with the Babel plugin.
+    use super::{ConditionalBranch, logical_items_from_conditional_expression};
+
+    let test_expr = Expr::Bin(BinExpr {
+      span: DUMMY_SP,
+      op: BinaryOp::EqEqEq,
+      left: Box::new(ident_expr("widthMode")),
+      right: Box::new(Expr::Lit(Lit::Str(Str {
+        span: DUMMY_SP,
+        value: "wide".into(),
+        raw: None,
+      }))),
+    });
+
+    let cond_expr = CondExpr {
+      span: DUMMY_SP,
+      test: Box::new(test_expr),
+      cons: Box::new(ident_expr("undefined")),
+      alt: Box::new(Expr::Lit(Lit::Str(Str {
+        span: DUMMY_SP,
+        value: "216px".into(),
+        raw: None,
+      }))),
+    };
+
+    let css_item = CssItem::Unconditional(UnconditionalCssItem {
+      css: "width:216px;".into(),
+    });
+
+    let result = logical_items_from_conditional_expression(
+      vec![css_item],
+      &cond_expr,
+      ConditionalBranch::Alternate,
+    );
+
+    assert_eq!(result.len(), 1);
+    match &result[0] {
+      CssItem::Logical(logical) => {
+        // The expression should be a unary ! with parenthesized test: !(widthMode === 'wide')
+        match &logical.expression {
+          Expr::Unary(unary) => {
+            assert_eq!(unary.op, swc_core::ecma::ast::UnaryOp::Bang);
+            // The argument should be a parenthesized expression
+            match unary.arg.as_ref() {
+              Expr::Paren(paren) => {
+                // Inside the parens should be the original binary expression
+                match paren.expr.as_ref() {
+                  Expr::Bin(bin) => {
+                    assert_eq!(
+                      bin.op,
+                      BinaryOp::EqEqEq,
+                      "Expected === inside parens but got {:?}",
+                      bin.op
+                    );
+                  }
+                  other => panic!("Expected binary expression inside parens, got {:?}", other),
+                }
+              }
+              other => panic!("Expected parenthesized expression, got {:?}", other),
+            }
+          }
+          other => panic!("Expected unary expression, got {:?}", other),
+        }
+        assert_eq!(logical.operator, LogicalOperator::And);
+        assert_eq!(logical.css, "width:216px;");
+      }
+      other => panic!("Expected Logical CssItem, got {:?}", other),
+    }
+  }
+
+  #[test]
+  fn logical_items_negates_inequality_for_alternate_branch() {
+    // Test that for alternate branches with !==, we use !(test) pattern to match Babel output.
+    use super::{ConditionalBranch, logical_items_from_conditional_expression};
+
+    let test_expr = Expr::Bin(BinExpr {
+      span: DUMMY_SP,
+      op: BinaryOp::NotEqEq,
+      left: Box::new(ident_expr("widthMode")),
+      right: Box::new(Expr::Lit(Lit::Str(Str {
+        span: DUMMY_SP,
+        value: "wide".into(),
+        raw: None,
+      }))),
+    });
+
+    let cond_expr = CondExpr {
+      span: DUMMY_SP,
+      test: Box::new(test_expr),
+      cons: Box::new(ident_expr("undefined")),
+      alt: Box::new(Expr::Lit(Lit::Str(Str {
+        span: DUMMY_SP,
+        value: "center".into(),
+        raw: None,
+      }))),
+    };
+
+    let css_item = CssItem::Unconditional(UnconditionalCssItem {
+      css: "align-items:center;".into(),
+    });
+
+    let result = logical_items_from_conditional_expression(
+      vec![css_item],
+      &cond_expr,
+      ConditionalBranch::Alternate,
+    );
+
+    assert_eq!(result.len(), 1);
+    match &result[0] {
+      CssItem::Logical(logical) => {
+        // The expression should be a unary ! with parenthesized test: !(widthMode !== 'wide')
+        match &logical.expression {
+          Expr::Unary(unary) => {
+            assert_eq!(unary.op, swc_core::ecma::ast::UnaryOp::Bang);
+            match unary.arg.as_ref() {
+              Expr::Paren(paren) => match paren.expr.as_ref() {
+                Expr::Bin(bin) => {
+                  assert_eq!(
+                    bin.op,
+                    BinaryOp::NotEqEq,
+                    "Expected !== inside parens but got {:?}",
+                    bin.op
+                  );
+                }
+                other => panic!("Expected binary expression inside parens, got {:?}", other),
+              },
+              other => panic!("Expected parenthesized expression, got {:?}", other),
+            }
+          }
+          other => panic!("Expected unary expression, got {:?}", other),
+        }
+      }
+      other => panic!("Expected Logical CssItem, got {:?}", other),
+    }
+  }
+
+  #[test]
+  fn logical_items_negates_non_equality_operators() {
+    // Test that for non-equality binary operators (like <, >, etc.), we use !(test) pattern
+    use super::{ConditionalBranch, logical_items_from_conditional_expression};
+
+    let test_expr = Expr::Bin(BinExpr {
+      span: DUMMY_SP,
+      op: BinaryOp::Lt, // Less than
+      left: Box::new(ident_expr("count")),
+      right: Box::new(Expr::Lit(Lit::Num(Number {
+        span: DUMMY_SP,
+        value: 10.0,
+        raw: None,
+      }))),
+    });
+
+    let cond_expr = CondExpr {
+      span: DUMMY_SP,
+      test: Box::new(test_expr),
+      cons: Box::new(ident_expr("undefined")),
+      alt: Box::new(Expr::Lit(Lit::Str(Str {
+        span: DUMMY_SP,
+        value: "red".into(),
+        raw: None,
+      }))),
+    };
+
+    let css_item = CssItem::Unconditional(UnconditionalCssItem {
+      css: "color:red;".into(),
+    });
+
+    let result = logical_items_from_conditional_expression(
+      vec![css_item],
+      &cond_expr,
+      ConditionalBranch::Alternate,
+    );
+
+    assert_eq!(result.len(), 1);
+    match &result[0] {
+      CssItem::Logical(logical) => {
+        // The expression should be a unary ! with parenthesized test: !(count < 10)
+        match &logical.expression {
+          Expr::Unary(unary) => {
+            assert_eq!(unary.op, swc_core::ecma::ast::UnaryOp::Bang);
+            match unary.arg.as_ref() {
+              Expr::Paren(paren) => match paren.expr.as_ref() {
+                Expr::Bin(bin) => {
+                  assert_eq!(
+                    bin.op,
+                    BinaryOp::Lt,
+                    "Expected < inside parens but got {:?}",
+                    bin.op
+                  );
+                }
+                other => panic!("Expected binary expression inside parens, got {:?}", other),
+              },
+              other => panic!("Expected parenthesized expression, got {:?}", other),
+            }
+          }
+          other => panic!(
+            "Expected unary expression for non-equality operator, got {:?}",
+            other
+          ),
+        }
+      }
+      other => panic!("Expected Logical CssItem, got {:?}", other),
+    }
+  }
+
+  #[test]
+  fn logical_items_preserves_test_for_consequent_branch() {
+    // Test that for consequent branches, the test expression is preserved as-is
+    use super::{ConditionalBranch, logical_items_from_conditional_expression};
+
+    let test_expr = Expr::Bin(BinExpr {
+      span: DUMMY_SP,
+      op: BinaryOp::EqEqEq,
+      left: Box::new(ident_expr("widthMode")),
+      right: Box::new(Expr::Lit(Lit::Str(Str {
+        span: DUMMY_SP,
+        value: "wide".into(),
+        raw: None,
+      }))),
+    });
+
+    let cond_expr = CondExpr {
+      span: DUMMY_SP,
+      test: Box::new(test_expr),
+      cons: Box::new(Expr::Lit(Lit::Str(Str {
+        span: DUMMY_SP,
+        value: "300px".into(),
+        raw: None,
+      }))),
+      alt: Box::new(ident_expr("undefined")),
+    };
+
+    let css_item = CssItem::Unconditional(UnconditionalCssItem {
+      css: "width:300px;".into(),
+    });
+
+    let result = logical_items_from_conditional_expression(
+      vec![css_item],
+      &cond_expr,
+      ConditionalBranch::Consequent,
+    );
+
+    assert_eq!(result.len(), 1);
+    match &result[0] {
+      CssItem::Logical(logical) => {
+        // The expression should preserve the === test
+        match &logical.expression {
+          Expr::Bin(bin) => {
+            assert_eq!(
+              bin.op,
+              BinaryOp::EqEqEq,
+              "Expected === for consequent branch but got {:?}",
+              bin.op
+            );
+          }
+          other => panic!("Expected binary expression for consequent, got {:?}", other),
+        }
+      }
+      other => panic!("Expected Logical CssItem, got {:?}", other),
+    }
   }
 }
