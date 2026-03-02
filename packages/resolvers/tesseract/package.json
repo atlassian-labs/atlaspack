@@ -16,10 +16,8 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/feature-flags": "workspace:*",
     "@atlaspack/node-resolver-core": "workspace:*",
-    "@atlaspack/plugin": "workspace:*",
-    "@atlaspack/types-internal": "workspace:*"
+    "@atlaspack/plugin": "workspace:*"
   },
   "type": "commonjs",
   "scripts": {

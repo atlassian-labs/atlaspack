@@ -11,7 +11,9 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "bin": "bin/packaging-test-harness.js",
+  "bin": {
+    "packaging-test-harness": "bin/packaging-test-harness.js"
+  },
   "main": "lib/index.js",
   "source": "src/index.ts",
   "dependencies": {

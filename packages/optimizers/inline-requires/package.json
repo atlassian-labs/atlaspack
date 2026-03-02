@@ -21,7 +21,7 @@
     "@atlaspack/rust": "workspace:*",
     "@atlaspack/source-map": "workspace:*",
     "@atlaspack/types": "workspace:*",
-    "@swc/core": "^1.10.0",
+    "@swc/core": "1.15.11",
     "nullthrows": "^1.1.1"
   },
   "type": "commonjs",

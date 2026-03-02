@@ -9,10 +9,10 @@
     "access": "public"
   },
   "scripts": {
-    "dev": "ATLASPACK_INSPECTOR_BACKEND_URL='http://localhost:3000' atlaspack serve --feature-flag cachePerformanceImprovements=true --cache-dir=.atlaspack-cache ./index.html",
+    "dev": "ATLASPACK_INSPECTOR_BACKEND_URL='http://localhost:3000' atlaspack serve --cache-dir=.atlaspack-cache ./index.html",
     "build:css-types": "rm -rf src/**/*.module.css.d.ts && tcm --namedExports ./src && prettier --write src/**/*.css.d.ts",
     "lint": "oxlint",
-    "build": "yarn build:css-types && rm -rf .atlaspack-cache && rm -rf dist && ATLASPACK_INSPECTOR_BACKEND_URL='' atlaspack build --feature-flag cachePerformanceImprovements=false --cache-dir=.atlaspack-cache ./index.html",
+    "build": "yarn build:css-types && rm -rf .atlaspack-cache && rm -rf dist && ATLASPACK_INSPECTOR_BACKEND_URL='' atlaspack build --cache-dir=.atlaspack-cache ./index.html",
     "prepack": "yarn run build",
     "test": "yarn test:unit",
     "test:unit": "jest",
