@@ -143,6 +143,15 @@ export const DEFAULT_FEATURE_FLAGS = {
   inlineConstOptimisationFix: false,
 
   /**
+   * When enabled, unresolved dynamic imports in SSR code will reject with
+   * `new Error(message)` with a `.skipSsr` property instead of a plain string.
+   *
+   * @author Oliver Wessels <owessels@atlassian.com>
+   * @since 2025-02-17
+   */
+  syncDynamicImportRejectWithError: false,
+
+  /**
    * Improves/fixes HMR behaviour by:
    * - Fixing HMR behaviour with lazy bundle edges
    * - Moving the functionality of the react-refresh runtime into the react-refresh-wrap transformer

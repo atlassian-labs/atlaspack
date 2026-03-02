@@ -504,7 +504,7 @@ export default new Transformer({
       | {
           entrypoint_filepath_suffix: string;
           actual_require_paths: string[];
-          activate_reject_on_unresolved_imports?: boolean;
+          sync_require_paths?: string[];
         }
       | undefined;
 
@@ -519,10 +519,9 @@ export default new Transformer({
 
           invariant(typeof config?.entrypoint_filepath_suffix === 'string');
           invariant(Array.isArray(config.actual_require_paths));
-          invariant(
-            typeof (config.activate_reject_on_unresolved_imports ?? false) ===
-              'boolean',
-          );
+          if (config.sync_require_paths !== undefined) {
+            invariant(Array.isArray(config.sync_require_paths));
+          }
 
           configCache.set('SYNC_DYNAMIC_IMPORT_CONFIG', config);
         }
@@ -537,7 +536,7 @@ export default new Transformer({
         const fallback = {
           entrypoint_filepath_suffix: '__NO_MATCH__',
           actual_require_paths: [],
-          activate_reject_on_unresolved_imports: false,
+          sync_require_paths: [],
         };
 
         // Set cache to fallback so we don't keep trying to parse.
@@ -796,6 +795,8 @@ export default new Transformer({
       react_async_lift_by_default: Boolean(config.reactAsyncLiftByDefault),
       react_async_lift_report_level: String(config.reactAsyncLiftReportLevel),
       sync_dynamic_import_config: config.syncDynamicImportConfig,
+      sync_dynamic_import_reject_with_error:
+        options.featureFlags.syncDynamicImportRejectWithError,
       enable_tokens_and_compiled_css_in_js_transform: getFeatureFlag(
         'coreTokensAndCompiledCssInJsTransform',
       ),
