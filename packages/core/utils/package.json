@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/utils",
-  "version": "3.3.1",
+  "version": "3.3.7",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {

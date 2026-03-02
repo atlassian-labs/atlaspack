@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/optimizer-terser",
-  "version": "2.15.10",
+  "version": "2.15.16",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"

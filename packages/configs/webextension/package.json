@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/config-webextension",
-  "version": "12.0.3",
+  "version": "16.0.0",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
   "publishConfig": {

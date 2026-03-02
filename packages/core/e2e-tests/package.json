@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/e2e-tests",
-  "version": "2.14.5",
+  "version": "2.14.10",
   "private": true,
   "license": "(MIT OR Apache-2.0)",
   "repository": {

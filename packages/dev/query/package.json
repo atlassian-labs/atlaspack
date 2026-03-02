@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/query",
-  "version": "2.14.50",
+  "version": "2.14.56",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
