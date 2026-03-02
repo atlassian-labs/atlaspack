@@ -15,6 +15,16 @@ pub struct SymbolTracker {
   /// requirements for that group. This allows efficient lookup and deletion
   /// when one member of the group is satisfied.
   speculation_group_locations: HashMap<String, Vec<String>>,
+  /// Maps each asset ID to the symbols it provides — both its own direct exports
+  /// and symbols it surfaces through re-exports. The inner map is keyed by exported
+  /// symbol name, with the value being the `FinalSymbolLocation` that ultimately
+  /// provides that symbol.
+  ///
+  /// This serves as a cache that enables instant symbol resolution higher up the
+  /// tree: when a parent asset re-exports from a child that already has entries in
+  /// `provided_symbols`, we can resolve immediately without waiting for bottom-up
+  /// propagation.
+  provided_symbols: HashMap<AssetId, HashMap<String, FinalSymbolLocation>>,
 }
 
 /*
@@ -324,33 +334,40 @@ impl SymbolTracker {
       }
     }
 
-    if let Some(provided_symbols) = &asset.symbols {
-      for incoming_dep in &incoming_deps {
-        for sym in provided_symbols {
-          // Skip star symbols on the asset - these are markers for "export *" patterns,
-          // not actual symbols that can satisfy requirements
-          if sym.exported == "*" {
-            continue;
-          }
+    if let Some(asset_symbols) = &asset.symbols {
+      for sym in asset_symbols {
+        // Skip star symbols on the asset - these are markers for "export *" patterns,
+        // not actual symbols that can satisfy requirements
+        if sym.exported == "*" {
+          continue;
+        }
 
+        // If a symbol is weak, it cannot be a final location. We still add
+        // these as requirements, so that other assets asking for the symbol
+        // can find it here, but we don't want to register this re-export as
+        // the source of truth
+        if sym.is_weak {
+          continue;
+        }
+
+        let final_location = FinalSymbolLocation {
+          local_name: sym.local.clone(),
+          imported_name: sym.exported.clone(),
+          providing_asset_id: asset.id.clone(),
+        };
+
+        // Register this asset's own strong symbols in the provided_symbols cache
+        self
+          .provided_symbols
+          .entry(asset.id.clone())
+          .or_default()
+          .insert(sym.exported.clone(), final_location.clone());
+
+        for incoming_dep in &incoming_deps {
           // If the incoming dependency does not ask for this symbol, skip it
           if !dep_has_symbol(incoming_dep, sym) {
             continue;
           }
-
-          // If a symbol is weak, it cannot be a final location. We still add
-          // these as requirements, so that other assets asking for the symbol
-          // can find it here, but we don't want to register this re-export as
-          // the source of truth
-          if sym.is_weak {
-            continue;
-          }
-
-          let final_location = FinalSymbolLocation {
-            local_name: sym.local.clone(),
-            imported_name: sym.exported.clone(),
-            providing_asset_id: asset.id.clone(),
-          };
 
           self.handle_answer_propagation(asset_graph, &final_location, incoming_dep)?;
         }
@@ -433,21 +450,30 @@ impl SymbolTracker {
         let parent_asset_dependencies =
           get_incoming_dependencies(asset_graph, parent_asset_node_id);
 
-        for parent_dep in parent_asset_dependencies {
-          // For star re-exports (local == "*"), the symbol passes through unchanged,
-          // so we use the same symbol name. For explicit re-exports, we look up the
-          // exported name via the mangled local name mapping.
-          let symbol_for_parent = if symbol_local == "*" {
-            // Star re-export: symbol name passes through unchanged
-            symbol_name_to_match.clone()
-          } else if let Some(AssetGraphNode::Asset(asset)) = parent_asset_node {
-            find_exported_name_for_local(asset, symbol_local)
-              .unwrap_or_else(|| symbol_name_to_match.clone())
-          } else {
-            symbol_name_to_match.clone()
-          };
+        // Determine the symbol name as seen from the parent asset's perspective
+        let symbol_for_parent = if symbol_local == "*" {
+          // Star re-export: symbol name passes through unchanged
+          symbol_name_to_match.clone()
+        } else if let Some(AssetGraphNode::Asset(asset)) = parent_asset_node {
+          find_exported_name_for_local(asset, symbol_local)
+            .unwrap_or_else(|| symbol_name_to_match.clone())
+        } else {
+          symbol_name_to_match.clone()
+        };
 
-          work_queue.push((parent_dep, symbol_for_parent));
+        // Register the resolved symbol in the parent asset's provided_symbols cache.
+        // The parent asset now "provides" this symbol through its re-export, even
+        // though the final location points to a downstream asset.
+        if let Some(AssetGraphNode::Asset(parent_asset)) = parent_asset_node {
+          self
+            .provided_symbols
+            .entry(parent_asset.id.clone())
+            .or_default()
+            .insert(symbol_for_parent.clone(), located_symbol.clone());
+        }
+
+        for parent_dep in parent_asset_dependencies {
+          work_queue.push((parent_dep, symbol_for_parent.clone()));
         }
       }
     }
@@ -570,6 +596,17 @@ impl SymbolTracker {
     }
 
     Ok(undeferred)
+  }
+
+  /// Returns the symbols currently known to be provided by an asset during
+  /// graph construction. This can be used for early resolution — if a symbol
+  /// is already in this cache, we know where it resolves without needing to
+  /// wait for bottom-up propagation.
+  pub fn get_provided_symbols_for_asset(
+    &self,
+    asset_id: &AssetId,
+  ) -> Option<&HashMap<String, FinalSymbolLocation>> {
+    self.provided_symbols.get(asset_id)
   }
 
   fn add_required_symbol(&mut self, dep_id: &str, question: SymbolRequirement) {
@@ -698,6 +735,7 @@ impl SymbolTracker {
 
     FinalizedSymbolTracker {
       requirements_by_dep,
+      provided_symbols: self.provided_symbols,
     }
   }
 }
@@ -717,6 +755,11 @@ pub type DependencyUsedSymbols = HashMap<Symbol, UsedSymbol>;
 #[derive(Clone, Debug, PartialEq)]
 pub struct FinalizedSymbolTracker {
   requirements_by_dep: HashMap<DependencyId, DependencyUsedSymbols>,
+  /// Maps each asset ID to the symbols it provides — both its own direct exports
+  /// and symbols it surfaces through re-exports. The inner map is keyed by exported
+  /// symbol name, with the value being the `FinalSymbolLocation` that ultimately
+  /// provides that symbol.
+  provided_symbols: HashMap<AssetId, HashMap<String, FinalSymbolLocation>>,
 }
 
 impl FinalizedSymbolTracker {
@@ -725,6 +768,17 @@ impl FinalizedSymbolTracker {
     dep_id: &DependencyId,
   ) -> Option<&DependencyUsedSymbols> {
     self.requirements_by_dep.get(dep_id)
+  }
+
+  /// Returns the symbols provided by an asset, including both its own direct
+  /// exports and symbols surfaced through re-exports. The returned map is keyed
+  /// by the exported symbol name as seen from this asset's perspective, with the
+  /// value being the `FinalSymbolLocation` that ultimately provides the symbol.
+  pub fn get_provided_symbols_for_asset(
+    &self,
+    asset_id: &AssetId,
+  ) -> Option<&HashMap<String, FinalSymbolLocation>> {
+    self.provided_symbols.get(asset_id)
   }
 }
 
@@ -919,6 +973,50 @@ mod tests {
         !has_symbol,
         "Expected dep '{}' to have no requirement for '{}', but it does",
         dep_specifier, symbol_name
+      );
+    }
+
+    /// Assert that an asset (by file path) provides a symbol with the expected
+    /// final location (providing asset path and resolved symbol name).
+    fn assert_asset_provides(
+      &self,
+      asset_path: &str,
+      symbol_name: &str,
+      expected_providing_asset_path: &str,
+      expected_resolved_name: &str,
+    ) {
+      let asset = self
+        .assets
+        .get(asset_path)
+        .unwrap_or_else(|| panic!("No asset with path '{}'", asset_path));
+      let expected_providing_asset = self
+        .assets
+        .get(expected_providing_asset_path)
+        .unwrap_or_else(|| panic!("No asset with path '{}'", expected_providing_asset_path));
+
+      let provided = self
+        .tracker
+        .get_provided_symbols_for_asset(&asset.id)
+        .unwrap_or_else(|| panic!("No provided symbols for asset '{}'", asset_path));
+
+      let loc = provided.get(symbol_name).unwrap_or_else(|| {
+        panic!(
+          "Asset '{}' does not provide symbol '{}'. Available: {:?}",
+          asset_path,
+          symbol_name,
+          provided.keys().collect::<Vec<_>>()
+        )
+      });
+
+      assert_eq!(
+        loc.providing_asset_id, expected_providing_asset.id,
+        "Asset '{}' provides '{}' from '{}', but expected from '{}'",
+        asset_path, symbol_name, loc.providing_asset_id, expected_providing_asset_path
+      );
+      assert_eq!(
+        loc.imported_name, expected_resolved_name,
+        "Asset '{}' provides '{}' with resolved name '{}', but expected '{}'",
+        asset_path, symbol_name, loc.imported_name, expected_resolved_name
       );
     }
 
@@ -1782,5 +1880,116 @@ mod tests {
       !ctx.tracker.has_requested_symbols(&dep.id),
       "Should not have requested symbols for a side-effect import"
     );
+  }
+
+  #[test]
+  fn provided_symbols_tracks_direct_exports() {
+    // a.js exports "a" directly — it should appear in provided_symbols for a.js
+    let ctx = symbol_tracker_test! {
+      entry "index.js" provides [] {
+        dep "./a.js" imports [("a", "a", false)] from "a.js" provides [("a", "a", false)] {}
+      }
+    };
+
+    ctx.assert_asset_provides("a.js", "a", "a.js", "a");
+    ctx.assert_finalize_ok();
+  }
+
+  #[test]
+  fn provided_symbols_tracks_reexports_on_barrel() {
+    // barrel.js re-exports "a" from a.js (weak symbol on barrel, strong on a.js)
+    // barrel.js should have "a" in its provided_symbols, pointing to a.js
+    let ctx = symbol_tracker_test! {
+      entry "index.js" provides [] {
+        dep "./barrel.js" imports [("a", "a", false)]
+          from "barrel.js" provides [("a", "a", true)] {
+          dep "./a.js" imports [("a", "a", false)]
+            from "a.js" provides [("a", "a", false)] {}
+        }
+      }
+    };
+
+    // a.js provides "a" directly
+    ctx.assert_asset_provides("a.js", "a", "a.js", "a");
+    // barrel.js provides "a" through re-export, pointing to a.js
+    ctx.assert_asset_provides("barrel.js", "a", "a.js", "a");
+    ctx.assert_finalize_ok();
+  }
+
+  #[test]
+  fn provided_symbols_tracks_star_reexports() {
+    // barrel.js does `export * from './foo.js'` — foo's symbols should appear
+    // in barrel's provided_symbols
+    let ctx = symbol_tracker_test! {
+      entry "index.js" provides [] {
+        dep "./barrel.js" imports [("foo", "foo", false)]
+          from "barrel.js" provides [("*", "*", true)] {
+          dep "./foo.js" imports [("*", "*", true)]
+            from "foo.js" provides [("foo", "foo", false)] {}
+        }
+      }
+    };
+
+    ctx.assert_asset_provides("foo.js", "foo", "foo.js", "foo");
+    ctx.assert_asset_provides("barrel.js", "foo", "foo.js", "foo");
+    ctx.assert_finalize_ok();
+  }
+
+  #[test]
+  fn provided_symbols_tracks_renamed_reexports() {
+    // barrel.js does `export {originalName as renamedName} from './source.js'`
+    // barrel.js should provide "renamedName" pointing to source.js's "originalName"
+    let m = "$barrel$re_export$renamedName";
+
+    let ctx = symbol_tracker_test! {
+      entry "index.js" provides [] {
+        dep "./barrel.js" imports [("$index$import$renamedName", "renamedName", false)]
+          from "barrel.js" provides [(m, "renamedName", true)] {
+          dep "./source.js" imports [(m, "originalName", true)]
+            from "source.js" provides [("originalName", "originalName", false)] {}
+        }
+      }
+    };
+
+    ctx.assert_asset_provides("source.js", "originalName", "source.js", "originalName");
+    ctx.assert_asset_provides("barrel.js", "renamedName", "source.js", "originalName");
+    ctx.assert_finalize_ok();
+  }
+
+  #[test]
+  fn provided_symbols_available_on_finalized_tracker() {
+    // Verify that provided_symbols flows through to FinalizedSymbolTracker
+    let ctx = symbol_tracker_test! {
+      entry "index.js" provides [] {
+        dep "./barrel.js" imports [("a", "a", false)]
+          from "barrel.js" provides [("a", "a", true)] {
+          dep "./a.js" imports [("a", "a", false)]
+            from "a.js" provides [("a", "a", false)] {}
+        }
+      }
+    };
+
+    let barrel_id = ctx.assets.get("barrel.js").unwrap().id.clone();
+    let a_id = ctx.assets.get("a.js").unwrap().id.clone();
+
+    let finalized = ctx.assert_finalize_ok();
+
+    // Check a.js provides "a" directly
+    let a_provided = finalized
+      .get_provided_symbols_for_asset(&a_id)
+      .expect("a.js should have provided symbols");
+    let a_loc = a_provided.get("a").expect("a.js should provide 'a'");
+    assert_eq!(a_loc.providing_asset_id, a_id);
+    assert_eq!(a_loc.imported_name, "a");
+
+    // Check barrel.js provides "a" through re-export
+    let barrel_provided = finalized
+      .get_provided_symbols_for_asset(&barrel_id)
+      .expect("barrel.js should have provided symbols");
+    let barrel_loc = barrel_provided
+      .get("a")
+      .expect("barrel.js should provide 'a'");
+    assert_eq!(barrel_loc.providing_asset_id, a_id);
+    assert_eq!(barrel_loc.imported_name, "a");
   }
 }
