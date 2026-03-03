@@ -756,6 +756,11 @@ function prepareBrowserContext(
   ctx: vm.Context;
   promises: Array<Promise<unknown>>;
 } {
+  // Capture the current overlayFS reference so that deferred callbacks
+  // (e.g. setTimeout in appendChild) use the filesystem from this test run,
+  // not a replacement created by a subsequent beforeEach hook.
+  const fs = overlayFS;
+
   // for testing dynamic imports
   const fakeElement = {
     remove() {},
@@ -778,7 +783,7 @@ function prepareBrowserContext(
 
             new vm.Script(
               // '"use strict";\n' +
-              overlayFS.readFileSync(file, 'utf8'),
+              fs.readFileSync(file, 'utf8'),
               {
                 // @ts-expect-error TS18047
                 filename: pathname.slice(1),
@@ -896,14 +901,14 @@ function prepareBrowserContext(
       fetch(url: any) {
         return Promise.resolve({
           async arrayBuffer() {
-            let readFilePromise = overlayFS.readFile(
+            let readFilePromise = fs.readFile(
               path.join(path.dirname(bundle.target.distDir), url),
             );
             promises.push(readFilePromise);
             return new Uint8Array(await readFilePromise).buffer;
           },
           text() {
-            let readFilePromise = overlayFS.readFile(
+            let readFilePromise = fs.readFile(
               path.join(path.dirname(bundle.target.distDir), url),
               'utf8',
             );
