@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use crate::{
-  asset_graph::{AssetGraph, AssetGraphNode},
+  asset_graph::{AssetGraph, AssetGraphNode, DependencyState},
   types::{Asset, AssetId, Dependency, DependencyId, Symbol},
 };
 
@@ -562,9 +562,15 @@ impl SymbolTracker {
   }
 
   /// Checks each outgoing dependency of the asset to determine if any need
-  /// to be un-deferred. A dependency needs un-deferral when:
-  /// 1. It has requirements registered on it (symbols are being requested)
-  /// 2. It has no outgoing edges in the graph (hasn't been resolved yet)
+  /// to be un-deferred. A dependency needs un-deferral when it has no outgoing
+  /// edges in the graph (hasn't been resolved yet) AND either:
+  /// 1. It has requirements registered on it (symbols are being requested), OR
+  /// 2. It is in the `New` state (must always be resolved to determine side effects)
+  ///
+  /// The second condition matches the behavior of the old `propagate_requested_symbols`
+  /// function, which always un-deferred new dependencies regardless of whether they
+  /// had requested symbols. This is important for dependencies without symbol tracking
+  /// (e.g. `import './polyfill'`, CSS imports) that still need to be resolved.
   ///
   /// Dependencies that already have resolved assets don't need un-deferral —
   /// their symbols will be propagated naturally when those assets are processed.
@@ -577,10 +583,6 @@ impl SymbolTracker {
     let mut undeferred = Vec::new();
 
     for dep in dependencies {
-      if !self.has_requested_symbols(&dep.id) {
-        continue;
-      }
-
       let Some(dep_node_id) = asset_graph.get_node_id_by_content_key(dep.id.as_str()) else {
         continue;
       };
@@ -590,7 +592,12 @@ impl SymbolTracker {
         continue;
       }
 
-      undeferred.push(dep.id.clone());
+      let has_symbols = self.has_requested_symbols(&dep.id);
+      let is_new = *asset_graph.get_dependency_state(dep_node_id) == DependencyState::New;
+
+      if has_symbols || is_new {
+        undeferred.push(dep.id.clone());
+      }
     }
 
     Ok(undeferred)
@@ -1856,9 +1863,9 @@ mod tests {
   }
 
   #[test]
-  fn track_symbols_does_not_undefer_deps_without_requirements() {
+  fn track_symbols_does_not_undefer_deps_without_requirements_when_resolved() {
     // A dep with no symbols (e.g., side-effect import `import './setup'`)
-    // should never be un-deferred by the symbol tracker.
+    // that already has a resolved asset should NOT be un-deferred.
     let ctx = symbol_tracker_test! {
       entry "index.js" provides [] {
         dep "./setup.js" imports [] from "setup.js" provides [] {}
@@ -1870,6 +1877,72 @@ mod tests {
     assert!(
       !ctx.tracker.has_requested_symbols(&dep.id),
       "Should not have requested symbols for a side-effect import"
+    );
+  }
+
+  #[test]
+  fn track_symbols_undefers_new_deps_without_symbols() {
+    // A dependency with no symbols (e.g., `import './polyfill'`) that is in the
+    // New state and has no resolved asset must still be un-deferred so it can be
+    // resolved and checked for side effects. This matches the behavior of the old
+    // `propagate_requested_symbols` function which always un-deferred New deps.
+    let mut graph = AssetGraph::new();
+
+    let entry_dep = make_entry_dependency();
+    let entry_dep_node = graph.add_entry_dependency(entry_dep, false);
+
+    let entry_asset = make_asset("index.js", vec![]);
+    let entry_asset_node = graph.add_asset(entry_asset.clone(), false);
+    graph.add_edge(&entry_dep_node, &entry_asset_node);
+
+    // Create a dependency with NO symbols (like `import './polyfill'`)
+    // and do NOT connect it to any asset — it's unresolved
+    let polyfill_dep = make_dependency(&entry_asset, "./polyfill.js", vec![]);
+    let polyfill_dep_node = graph.add_dependency(polyfill_dep.clone(), false);
+    graph.add_edge(&entry_asset_node, &polyfill_dep_node);
+
+    let mut tracker = SymbolTracker::default();
+    let undeferred = tracker
+      .track_symbols(&graph, &entry_asset, &[polyfill_dep.clone()])
+      .unwrap();
+
+    // The dependency should be un-deferred even though it has no symbols,
+    // because it's in the New state and needs to be resolved for side effects
+    assert_eq!(
+      undeferred,
+      vec![polyfill_dep.id.clone()],
+      "New dependencies without symbols should still be un-deferred"
+    );
+  }
+
+  #[test]
+  fn track_symbols_does_not_undefer_deferred_deps_without_symbols() {
+    // A dependency with no symbols that has been explicitly deferred should NOT
+    // be un-deferred by the symbol tracker — only New state deps qualify.
+    let mut graph = AssetGraph::new();
+
+    let entry_dep = make_entry_dependency();
+    let entry_dep_node = graph.add_entry_dependency(entry_dep, false);
+
+    let entry_asset = make_asset("index.js", vec![]);
+    let entry_asset_node = graph.add_asset(entry_asset.clone(), false);
+    graph.add_edge(&entry_dep_node, &entry_asset_node);
+
+    // Create a dependency with no symbols and mark it as Deferred
+    let deferred_dep = make_dependency(&entry_asset, "./deferred.js", vec![]);
+    let deferred_dep_node = graph.add_dependency(deferred_dep.clone(), false);
+    graph.add_edge(&entry_asset_node, &deferred_dep_node);
+    graph.set_dependency_state(&deferred_dep_node, DependencyState::Deferred);
+
+    let mut tracker = SymbolTracker::default();
+    let undeferred = tracker
+      .track_symbols(&graph, &entry_asset, &[deferred_dep.clone()])
+      .unwrap();
+
+    // Deferred deps without symbols should NOT be un-deferred
+    assert!(
+      undeferred.is_empty(),
+      "Deferred dependencies without symbols should not be un-deferred"
     );
   }
 
