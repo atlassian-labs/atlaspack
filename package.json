@@ -84,7 +84,7 @@
     "@types/sinon": "^17.0.4",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
     "@typescript-eslint/parser": "^8.31.1",
-    "buffer": "mischnic/buffer#b8a4fa94",
+    "buffer": "mischnic/buffer#b8a4fa94c96973a5321a95c75e0b16967f0745f3",
     "cross-env": "^7.0.0",
     "eslint": "^8.57.0",
     "glob": "^7.1.6",
