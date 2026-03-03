@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use crate::{
@@ -139,13 +139,11 @@ fn get_incoming_dependencies(asset_graph: &AssetGraph, asset_node_id: usize) -> 
 ///
 /// So we match on the mangled local name to find the exported name.
 fn find_exported_name_for_local(asset: &Asset, mangled_local: &str) -> Option<String> {
-  let symbols = asset.symbols.as_ref()?;
-  for sym in symbols {
-    if sym.local == mangled_local {
-      return Some(sym.exported.clone());
-    }
-  }
-  None
+  asset
+    .symbols
+    .as_ref()?
+    .iter()
+    .find_map(|sym| (sym.local == mangled_local).then(|| sym.exported.clone()))
 }
 
 impl SymbolTracker {
@@ -178,7 +176,7 @@ impl SymbolTracker {
       self.track_dependency_symbols(asset, &incoming_requested_symbols, dep)?;
     }
 
-    self.satisfy_provided_symbols(asset_graph, asset)?;
+    self.satisfy_requirements_from_asset(asset_graph, asset)?;
 
     // Returns a Vec of the dependencies that now need to be processed
     self.propagate_to_outgoing_dependencies(asset_graph, asset, dependencies)
@@ -187,7 +185,7 @@ impl SymbolTracker {
   fn track_dependency_symbols(
     &mut self,
     asset: &Arc<Asset>,
-    incoming_requested_symbols: &Vec<IncomingSymbolRequest>,
+    incoming_requested_symbols: &[IncomingSymbolRequest],
     dep: &Dependency,
   ) -> anyhow::Result<()> {
     let Some(symbols) = &dep.symbols else {
@@ -294,7 +292,7 @@ impl SymbolTracker {
   /// For each incoming dependency, checks if any of the asset's exported symbols
   /// match pending requirements, and propagates the resolution upward through
   /// the dependency chain. Also handles namespace re-export satisfaction.
-  fn satisfy_provided_symbols(
+  fn satisfy_requirements_from_asset(
     &mut self,
     asset_graph: &AssetGraph,
     asset: &Arc<Asset>,
@@ -389,6 +387,7 @@ impl SymbolTracker {
 
     // Reusable buffer for matched requirements to avoid repeated allocations
     let mut matched_locals: Vec<String> = Vec::new();
+
     // Track speculation groups that were satisfied so we can clean up siblings
     let mut satisfied_speculation_groups: Vec<String> = Vec::new();
 
@@ -497,14 +496,13 @@ impl SymbolTracker {
     satisfied_dep_id: &str,
   ) {
     let mut groups_to_process: Vec<String> = satisfied_groups.to_vec();
-    let mut processed_groups: Vec<String> = Vec::new();
+    let mut processed_groups: HashSet<String> = HashSet::new();
 
     while let Some(group_id) = groups_to_process.pop() {
       // Skip if already processed (avoid infinite loops)
-      if processed_groups.contains(&group_id) {
+      if !processed_groups.insert(group_id.clone()) {
         continue;
       }
-      processed_groups.push(group_id.clone());
 
       // Get the dependency IDs that contain members of this speculation group
       let Some(dep_ids) = self.speculation_group_locations.remove(&group_id) else {
@@ -553,8 +551,8 @@ impl SymbolTracker {
           .collect();
 
         for orphaned_group in orphaned_groups {
-          if !groups_to_process.contains(&orphaned_group)
-            && !processed_groups.contains(&orphaned_group)
+          if !processed_groups.contains(&orphaned_group)
+            && !groups_to_process.contains(&orphaned_group)
           {
             groups_to_process.push(orphaned_group);
           }
@@ -633,24 +631,18 @@ impl SymbolTracker {
     };
 
     let incoming_deps = get_incoming_dependencies(asset_graph, *asset_node_id);
+    let mut seen: HashSet<String> = HashSet::new();
     let mut requested_symbols: Vec<IncomingSymbolRequest> = Vec::new();
 
     for dep in incoming_deps {
       // Look at requirements that have been registered on this dependency
       if let Some(requirements) = self.requirements_by_dep.get(&dep.id) {
         for req in requirements {
-          // Skip if already satisfied
-          if req.final_location.is_some() {
+          // Skip if already satisfied or a star symbol
+          if req.final_location.is_some() || req.symbol.exported == "*" {
             continue;
           }
-          // Skip the star symbol itself
-          if req.symbol.exported == "*" {
-            continue;
-          }
-          if !requested_symbols
-            .iter()
-            .any(|r| r.symbol == req.symbol.exported)
-          {
+          if seen.insert(req.symbol.exported.clone()) {
             requested_symbols.push(IncomingSymbolRequest {
               symbol: req.symbol.exported.clone(),
               source_dep_id: dep.id.clone(),
@@ -664,11 +656,10 @@ impl SymbolTracker {
       // but its symbols are already known
       if let Some(symbols) = &dep.symbols {
         for sym in symbols {
-          // Skip the star symbol itself
           if sym.exported == "*" {
             continue;
           }
-          if !requested_symbols.iter().any(|r| r.symbol == sym.exported) {
+          if seen.insert(sym.exported.clone()) {
             requested_symbols.push(IncomingSymbolRequest {
               symbol: sym.exported.clone(),
               source_dep_id: dep.id.clone(),
@@ -945,14 +936,14 @@ mod tests {
         .get(&dep.id)
         .unwrap_or_else(|| panic!("No requirements for dep '{}'", dep_specifier));
 
-      let req = requirements
+      let is_unsatisfied = requirements
         .iter()
-        .find(|r| r.symbol.exported == symbol_name);
+        .find(|r| r.symbol.exported == symbol_name)
+        .is_some_and(|req| req.final_location.is_none());
       assert!(
-        req.is_some() && req.unwrap().final_location.is_none(),
+        is_unsatisfied,
         "Expected symbol '{}' on dep '{}' to be unsatisfied",
-        symbol_name,
-        dep_specifier
+        symbol_name, dep_specifier
       );
     }
 
