@@ -16,13 +16,13 @@ pub mod warn_once;
 pub use ast::nodes::*;
 pub use ast::{PositionByOptions, RangeByOptions};
 pub use css_syntax_error::{CssSyntaxError, ErrorInput};
-pub use from_json::{FromJsonError, FromJsonOutput, from_json, from_json_str};
+pub use from_json::{from_json, from_json_str, FromJsonError, FromJsonOutput};
 pub use list::{comma, space, split};
 pub use parse::parse;
 pub use processor::{
-  BuiltPlugin, CustomParser, CustomStringifier, IntoParser, IntoPlugin, IntoStringifier,
+  plugin, BuiltPlugin, CustomParser, CustomStringifier, IntoParser, IntoPlugin, IntoStringifier,
   LazyResult, NoWorkResult, Plugin, PluginBuilder, ProcessOptions, ProcessResult, Processor,
-  SyntaxOptions, plugin,
+  SyntaxOptions,
 };
 pub use result::{Message, ProcessorMetadata, Result, ResultOptions, Warning, WarningOptions};
 pub use stringifier::stringify;

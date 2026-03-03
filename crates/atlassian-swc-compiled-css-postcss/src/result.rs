@@ -2,7 +2,7 @@ use std::fmt;
 use std::sync::Arc;
 
 use crate::ast::nodes::{Document, NodeKind, Root, RootLike};
-use crate::ast::{NodeRef, error_on};
+use crate::ast::{error_on, NodeRef};
 use crate::processor::CustomStringifier;
 use crate::source_map::{MapGenerator, MapSetting};
 
