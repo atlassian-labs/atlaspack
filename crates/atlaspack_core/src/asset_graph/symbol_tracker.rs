@@ -183,6 +183,29 @@ impl SymbolTracker {
 
     self.satisfy_requirements_from_asset(asset_graph, asset)?;
 
+    // If this asset has incoming dependencies without symbol tracking (e.g. an HTML
+    // script tag, or the root entry dependency), add all of the asset's own
+    // exported symbols to usedSymbols. This matches the JS propagateSymbols behavior:
+    // - Root dependency (sourceAssetId == null): sets isEntry = true
+    // - Regular dep with cleared symbols (sourceAssetId != null): sets addAll = true
+    // Both cases result in adding all asset symbols to usedSymbols.
+    if let Some(asset_node_id) = asset_graph.get_node_id_by_content_key(asset.id.as_str()) {
+      let incoming_deps = get_incoming_dependencies(asset_graph, *asset_node_id);
+      let has_non_symbol_tracking_incoming = incoming_deps.iter().any(|dep| dep.symbols.is_none());
+      if (has_non_symbol_tracking_incoming || incoming_deps.is_empty())
+        && let Some(asset_symbols) = &asset.symbols
+        && !asset_symbols.is_empty()
+      {
+        let used = self
+          .used_symbols_by_asset
+          .entry(asset.id.clone())
+          .or_default();
+        for sym in asset_symbols {
+          used.insert(sym.exported.clone());
+        }
+      }
+    }
+
     // Returns a Vec of the dependencies that now need to be processed
     self.propagate_to_outgoing_dependencies(asset_graph, asset, dependencies)
   }
@@ -386,9 +409,12 @@ impl SymbolTracker {
     located_symbol: &FinalSymbolLocation,
     dep: &Dependency,
   ) -> anyhow::Result<()> {
-    // Work queue contains (dependency, symbol_name_to_match)
-    // The symbol_name_to_match is the exported name we're looking for at this level
-    let mut work_queue = vec![(dep, located_symbol.imported_name.clone())];
+    // Work queue contains (dependency, symbol_name_to_match, chain_index)
+    // chain_index points into `pending_chain` — the list of (asset_id, symbol)
+    // entries accumulated as we propagate upward. When we reach a consumer (not
+    // a re-exporter), all entries in the chain are confirmed as used.
+    let mut work_queue: Vec<(&Dependency, String, usize)> =
+      vec![(dep, located_symbol.imported_name.clone(), 0)];
 
     // Reusable buffer for matched requirements to avoid repeated allocations
     let mut matched_locals: Vec<String> = Vec::new();
@@ -396,7 +422,20 @@ impl SymbolTracker {
     // Track speculation groups that were satisfied so we can clean up siblings
     let mut satisfied_speculation_groups: Vec<String> = Vec::new();
 
-    while let Some((dep, symbol_name_to_match)) = work_queue.pop() {
+    // Pending chain of (asset_id, symbol_name) entries. When we reach a consumer
+    // (not a re-exporter), we confirm all entries from the chain_start_index onward.
+    let mut pending_chain: Vec<(AssetId, String)> = Vec::new();
+
+    // Confirmed used symbols to apply after the work queue is drained.
+    let mut confirmed_used: Vec<(AssetId, String)> = Vec::new();
+
+    // Always start with the providing asset's symbol as the first chain entry
+    pending_chain.push((
+      located_symbol.providing_asset_id.clone(),
+      located_symbol.imported_name.clone(),
+    ));
+
+    while let Some((dep, symbol_name_to_match, chain_start)) = work_queue.pop() {
       matched_locals.clear();
 
       // Process the requirements for this dependency
@@ -431,13 +470,6 @@ impl SymbolTracker {
           required.final_location = Some(located_symbol.clone());
           // Store the local name for propagation lookup
           matched_locals.push(required.symbol.local.clone());
-
-          // Track that the resolved symbol is used from the providing asset
-          self
-            .used_symbols_by_asset
-            .entry(located_symbol.providing_asset_id.clone())
-            .or_default()
-            .insert(located_symbol.imported_name.clone());
 
           // If this was a speculative requirement, track its group for cleanup
           if let Some(ref group_id) = required.speculation_group_id {
@@ -475,39 +507,57 @@ impl SymbolTracker {
         // Register the resolved symbol in the parent asset's provided_symbols cache.
         // The parent asset now "provides" this symbol through its re-export, even
         // though the final location points to a downstream asset.
-        // Also track that this symbol is used from the parent asset, but ONLY if
-        // the parent has this as a weak (re-exported) symbol. If it's a strong
-        // symbol or the parent doesn't export it, we don't add it — the parent
-        // is merely consuming the symbol, not re-exporting it.
         if let Some(AssetGraphNode::Asset(parent_asset)) = parent_asset_node {
           self
             .provided_symbols
             .entry(parent_asset.id.clone())
             .or_default()
             .insert(symbol_for_parent.clone(), located_symbol.clone());
-
-          let is_reexport = parent_asset.symbols.as_ref().is_some_and(|syms| {
-            syms.iter().any(|s| {
-              // Named weak re-export (e.g. `export {foo} from './dep'`)
-              (s.exported == symbol_for_parent && s.is_weak)
-              // Star re-export marker (e.g. `export * from './dep'`) — any symbol
-              // forwarded through a star re-export counts as used from this asset
-              || matches!(classify_symbol_export(s), SymbolExportType::Star)
-            })
-          });
-          if is_reexport {
-            self
-              .used_symbols_by_asset
-              .entry(parent_asset.id.clone())
-              .or_default()
-              .insert(symbol_for_parent.clone());
-          }
         }
+
+        // Check if the parent asset is a re-exporter (weak symbol or star export).
+        // If so, add it to the pending chain. If not, the parent is a consumer
+        // and demand is confirmed — all pending chain entries become confirmed used.
+        let parent_is_reexport =
+          if let Some(AssetGraphNode::Asset(parent_asset)) = parent_asset_node {
+            parent_asset.symbols.as_ref().is_some_and(|syms| {
+              syms.iter().any(|s| {
+                (s.exported == symbol_for_parent && s.is_weak)
+                  || matches!(classify_symbol_export(s), SymbolExportType::Star)
+              })
+            })
+          } else {
+            false
+          };
+
+        let next_chain_start = if parent_is_reexport {
+          // Add the re-exporter to the pending chain
+          if let Some(AssetGraphNode::Asset(parent_asset)) = parent_asset_node {
+            pending_chain.push((parent_asset.id.clone(), symbol_for_parent.clone()));
+          }
+          chain_start
+        } else {
+          // Parent is a consumer — confirm all pending chain entries
+          for entry in &pending_chain[chain_start..] {
+            confirmed_used.push(entry.clone());
+          }
+          // Future items start a new chain
+          pending_chain.len()
+        };
 
         for parent_dep in parent_asset_dependencies {
-          work_queue.push((parent_dep, symbol_for_parent.clone()));
+          work_queue.push((parent_dep, symbol_for_parent.clone(), next_chain_start));
         }
       }
+    }
+
+    // Apply confirmed used symbols
+    for (asset_id, symbol_name) in confirmed_used {
+      self
+        .used_symbols_by_asset
+        .entry(asset_id)
+        .or_default()
+        .insert(symbol_name);
     }
 
     // Clean up sibling speculative requirements that are now unnecessary
@@ -745,11 +795,31 @@ impl SymbolTracker {
         }
 
         let Some(final_location) = requirement.final_location else {
-          panic!(
-            "Symbol {} required by dependency [{}] was not satisfied",
-            requirement.symbol.exported, dep_id
-          );
+          // Unsatisfied requirements are expected for unused re-exports.
+          // For example, if barrel.js re-exports `bar` from lib2.js but nobody
+          // imports `bar`, the requirement stays unsatisfied. This is fine —
+          // the dependency will be marked as `excluded` during serialization
+          // when the resolved asset has `side_effects: false`.
+          //
+          // TODO: Detect genuine "missing export" errors (e.g. `import {foo} from './lib'`
+          // where lib.js doesn't export `foo`). This requires distinguishing between
+          // requirements that were demanded by an upstream consumer vs those eagerly
+          // registered by `track_dependency_symbols`.
+          continue;
         };
+
+        // Only include resolved requirements in usedSymbolsUp if the providing
+        // asset's symbol was actually demanded (appears in used_symbols_by_asset).
+        // Requirements that were eagerly registered but never demanded from
+        // upstream should not appear in usedSymbolsUp — they are exclude candidates.
+        let is_demanded = self
+          .used_symbols_by_asset
+          .get(&final_location.providing_asset_id)
+          .is_some_and(|syms| syms.contains(&final_location.imported_name));
+
+        if !is_demanded {
+          continue;
+        }
 
         used_symbols.insert(
           requirement.symbol.clone(),
@@ -1369,15 +1439,26 @@ mod tests {
   }
 
   #[test]
-  fn finalize_panics_on_unsatisfied_requirements() {
-    // lib.js has a weak symbol, so the requirement for "a" will not be satisfied
+  fn finalize_allows_unsatisfied_requirements_for_exclusion() {
+    // lib.js has a weak symbol only, so the requirement for "a" will not be
+    // satisfied (no strong export). This should NOT panic — unsatisfied
+    // requirements are exclude candidates (the dependency can be excluded
+    // if the resolved asset has side_effects: false).
     let ctx = symbol_tracker_test! {
       entry "index.js" provides [] {
         dep "./lib.js" imports [("a", "a", false)] from "lib.js" provides [("a", "a", true)] {}
       }
     };
 
-    ctx.assert_finalize_panics("was not satisfied");
+    let dep = ctx.deps.get("./lib.js").unwrap().clone();
+    let finalized = ctx.assert_finalize_ok();
+
+    // The dep should have an empty usedSymbolsUp (no resolved symbols)
+    let used = finalized.get_used_symbols_for_dependency(&dep.id);
+    assert!(
+      used.is_none() || used.unwrap().is_empty(),
+      "Unsatisfied requirements should produce empty usedSymbolsUp"
+    );
   }
 
   // NOTE: Manual graph construction required — this test calls track_symbols on the
@@ -2139,7 +2220,7 @@ mod tests {
     };
 
     ctx.assert_asset_used_symbols("provider.js", &["foo"]);
-    // index.js has no used symbols (it's the entry, nothing imports from it)
+    // index.js is an entry asset with no exports — usedSymbols is empty
     ctx.assert_asset_used_symbols("index.js", &[]);
   }
 
@@ -2275,11 +2356,52 @@ mod tests {
       "Only foo should be used from provider.js"
     );
 
-    // Entry asset has no used symbols (nothing imports from it)
+    // Entry asset has no exports, so usedSymbols is empty
     assert_eq!(
       finalized.get_used_symbols_for_asset(&index_id),
       None,
-      "index.js should have no used symbols"
+      "index.js should have no used symbols (no exports)"
+    );
+  }
+
+  #[test]
+  fn finalize_excluded_dep_has_empty_used_symbols_up() {
+    // index.js imports {f} from lib.js
+    // lib.js re-exports f from lib1.js (weak) and b from lib2.js (weak)
+    // Nobody imports b → the lib.js → lib2.js dependency should have empty usedSymbolsUp
+    // (making it an exclude candidate when lib2.js has side_effects: false)
+    let ctx = symbol_tracker_test! {
+      entry "index.js" provides [] {
+        dep "./lib.js" imports [("$lib$re_export$f", "f", false)]
+          from "lib.js" provides [("$lib$re_export$f", "f", true), ("$lib$re_export$b", "b", true)] {
+          dep "./lib1.js" imports [("$lib$re_export$f", "f", true)]
+            from "lib1.js" provides [("f", "f", false)] {}
+          dep "./lib2.js" imports [("$lib$re_export$b", "b", true)]
+            from "lib2.js" provides [("b", "b", false)] {}
+        }
+      }
+    };
+
+    // lib1.js should have f in its used symbols, lib2.js should have nothing
+    ctx.assert_asset_used_symbols("lib1.js", &["f"]);
+    ctx.assert_asset_used_symbols("lib2.js", &[]);
+
+    let dep_lib1 = ctx.deps.get("./lib1.js").unwrap().clone();
+    let dep_lib2 = ctx.deps.get("./lib2.js").unwrap().clone();
+    let finalized = ctx.assert_finalize_ok();
+
+    // lib1.js dep should have f resolved (it IS used)
+    let lib1_used = finalized.get_used_symbols_for_dependency(&dep_lib1.id);
+    assert!(
+      lib1_used.is_some_and(|u| !u.is_empty()),
+      "lib1.js dep should have resolved symbols (f is used)"
+    );
+
+    // lib2.js dep should have empty usedSymbolsUp (b is NOT used)
+    let lib2_used = finalized.get_used_symbols_for_dependency(&dep_lib2.id);
+    assert!(
+      lib2_used.is_none() || lib2_used.unwrap().is_empty(),
+      "lib2.js dep should have empty usedSymbolsUp (b is not used, exclude candidate)"
     );
   }
 }

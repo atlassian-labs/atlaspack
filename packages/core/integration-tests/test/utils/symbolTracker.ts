@@ -58,6 +58,7 @@ export type NormalizedSymbolTrackerSnapshot = {
     string,
     {
       symbols: Record<string, NormalizedSymbol> | null;
+      usedSymbols: string[];
     }
   >;
   // Keyed by `sourceAssetId|specifier` (or just `unknown|specifier` where missing).
@@ -65,6 +66,7 @@ export type NormalizedSymbolTrackerSnapshot = {
     string,
     {
       symbols: Record<string, NormalizedSymbol> | null;
+      excluded: boolean;
     }
   >;
 };
@@ -83,8 +85,14 @@ export function extractSymbolTrackerSnapshot(
   bundleGraph.traverse((node) => {
     if (node.type === 'asset') {
       let asset = node.value as Asset;
+
+      // Extract usedSymbols from the internal asset node
+      let usedSymbols = (node as any).usedSymbols as Set<string> | undefined;
+
       assets[String(asset.filePath)] = {
         symbols: normalizeSymbolsMap((asset as any).symbols),
+        // Sort for stable comparison
+        usedSymbols: usedSymbols ? [...usedSymbols].sort() : [],
       };
     }
 
@@ -102,6 +110,7 @@ export function extractSymbolTrackerSnapshot(
 
       dependencies[depKey] = {
         symbols: usedSymbolsUp ? normalizeUsedSymbolsUp(usedSymbolsUp) : null,
+        excluded: Boolean((node as any).excluded),
       };
     }
   });

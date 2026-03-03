@@ -92,6 +92,29 @@ fn serialize_asset_graph_nodes(
             .and_then(|tracker| tracker.get_used_symbols_for_dependency(&dependency.id))
             .map(|u| u.values().collect());
 
+          // A dependency is excluded when:
+          // 1. The symbol tracker is active
+          // 2. The dependency has declared symbols
+          // 3. No symbols were resolved (usedSymbolsUp is empty)
+          // 4. All resolved assets have side_effects == false
+          // A dependency is excluded when:
+          // 1. The symbol tracker is active
+          // 2. The dependency has declared symbols
+          // 3. No symbols were resolved (usedSymbolsUp is empty)
+          // 4. All resolved assets have side_effects == false
+          let excluded = symbol_tracker.is_some()
+            && dependency.symbols.is_some()
+            && used_symbols_up.as_ref().is_some_and(|syms| syms.is_empty())
+            && asset_graph
+              .get_outgoing_neighbors(dep_node_id)
+              .iter()
+              .all(|node_id| {
+                matches!(
+                  asset_graph.get_node(node_id),
+                  Some(AssetGraphNode::Asset(a)) if !a.side_effects
+                )
+              });
+
           SerializedAssetGraphNode::Dependency {
             value: SerializedDependency {
               id: dependency.id(),
@@ -99,6 +122,7 @@ fn serialize_asset_graph_nodes(
             },
             has_deferred: *dep_state == DependencyState::Deferred,
             used_symbols_up,
+            excluded,
           }
         }
       }))
@@ -139,5 +163,6 @@ enum SerializedAssetGraphNode<'a> {
     value: SerializedDependency<'a>,
     has_deferred: bool,
     used_symbols_up: Option<Vec<&'a UsedSymbol>>,
+    excluded: bool,
   },
 }
