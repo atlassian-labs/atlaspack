@@ -19,33 +19,38 @@ pub struct DebugTools {
 
 impl DebugTools {
   pub fn from_env() -> Self {
+    match std::env::var("ATLASPACK_DEBUG_TOOLS") {
+      Ok(env_value) => Self::from_value(&env_value),
+      Err(_) => Self::default(),
+    }
+  }
+
+  pub fn from_value(env_value: &str) -> Self {
     let mut tools = Self::default();
 
-    if let Ok(env_value) = std::env::var("ATLASPACK_DEBUG_TOOLS") {
-      for tool in env_value.split(',') {
-        let tool = tool.trim();
+    for tool in env_value.split(',') {
+      let tool = tool.trim();
 
-        match tool {
-          "all" => {
-            tools.asset_file_names_in_output = true;
-            tools.simple_cli_reporter = true;
-            tools.bundle_stats = true;
-            tools.scope_hoisting_stats = true;
-            tools.debug_prelude = true;
-            break;
-          }
-          "asset-file-names-in-output" => tools.asset_file_names_in_output = true,
-          "simple-cli-reporter" => tools.simple_cli_reporter = true,
-          "bundle-stats" => tools.bundle_stats = true,
-          "scope-hoisting-stats" => tools.scope_hoisting_stats = true,
-          "debug-prelude" => tools.debug_prelude = true,
-          "" => continue,
-          _ => {
-            eprintln!(
-              "Warning: Unknown debug tool option: '{}'. Valid options are: asset-file-names-in-output, simple-cli-reporter, bundle-stats, scope-hoisting-stats, debug-prelude, all",
-              tool
-            );
-          }
+      match tool {
+        "all" => {
+          tools.asset_file_names_in_output = true;
+          tools.simple_cli_reporter = true;
+          tools.bundle_stats = true;
+          tools.scope_hoisting_stats = true;
+          tools.debug_prelude = true;
+          break;
+        }
+        "asset-file-names-in-output" => tools.asset_file_names_in_output = true,
+        "simple-cli-reporter" => tools.simple_cli_reporter = true,
+        "bundle-stats" => tools.bundle_stats = true,
+        "scope-hoisting-stats" => tools.scope_hoisting_stats = true,
+        "debug-prelude" => tools.debug_prelude = true,
+        "" => continue,
+        _ => {
+          eprintln!(
+            "Warning: Unknown debug tool option: '{}'. Valid options are: asset-file-names-in-output, simple-cli-reporter, bundle-stats, scope-hoisting-stats, debug-prelude, all",
+            tool
+          );
         }
       }
     }
@@ -68,72 +73,44 @@ mod tests {
   }
 
   #[test]
-  fn test_from_env_empty() {
-    unsafe {
-      std::env::remove_var("ATLASPACK_DEBUG_TOOLS");
-    }
-    let tools = DebugTools::from_env();
+  fn test_from_value_empty() {
+    let tools = DebugTools::from_value("");
     assert!(!tools.asset_file_names_in_output);
+    assert!(!tools.simple_cli_reporter);
+    assert!(!tools.bundle_stats);
+    assert!(!tools.scope_hoisting_stats);
+    assert!(!tools.debug_prelude);
   }
 
   #[test]
-  fn test_from_env_single_tool() {
-    unsafe {
-      std::env::set_var("ATLASPACK_DEBUG_TOOLS", "asset-file-names-in-output");
-    }
-    let tools = DebugTools::from_env();
+  fn test_from_value_single_tool() {
+    let tools = DebugTools::from_value("asset-file-names-in-output");
     assert!(tools.asset_file_names_in_output);
     assert!(!tools.simple_cli_reporter);
-    unsafe {
-      std::env::remove_var("ATLASPACK_DEBUG_TOOLS");
-    }
   }
 
   #[test]
-  fn test_from_env_multiple_tools() {
-    unsafe {
-      std::env::set_var(
-        "ATLASPACK_DEBUG_TOOLS",
-        "asset-file-names-in-output,bundle-stats",
-      );
-    }
-    let tools = DebugTools::from_env();
+  fn test_from_value_multiple_tools() {
+    let tools = DebugTools::from_value("asset-file-names-in-output,bundle-stats");
     assert!(tools.asset_file_names_in_output);
     assert!(tools.bundle_stats);
     assert!(!tools.simple_cli_reporter);
-    unsafe {
-      std::env::remove_var("ATLASPACK_DEBUG_TOOLS");
-    }
   }
 
   #[test]
-  fn test_from_env_all() {
-    unsafe {
-      std::env::set_var("ATLASPACK_DEBUG_TOOLS", "all");
-    }
-    let tools = DebugTools::from_env();
+  fn test_from_value_all() {
+    let tools = DebugTools::from_value("all");
     assert!(tools.asset_file_names_in_output);
     assert!(tools.simple_cli_reporter);
     assert!(tools.bundle_stats);
     assert!(tools.scope_hoisting_stats);
-    unsafe {
-      std::env::remove_var("ATLASPACK_DEBUG_TOOLS");
-    }
+    assert!(tools.debug_prelude);
   }
 
   #[test]
-  fn test_from_env_with_spaces() {
-    unsafe {
-      std::env::set_var(
-        "ATLASPACK_DEBUG_TOOLS",
-        " asset-file-names-in-output , bundle-stats ",
-      );
-    }
-    let tools = DebugTools::from_env();
+  fn test_from_value_with_spaces() {
+    let tools = DebugTools::from_value(" asset-file-names-in-output , bundle-stats ");
     assert!(tools.asset_file_names_in_output);
     assert!(tools.bundle_stats);
-    unsafe {
-      std::env::remove_var("ATLASPACK_DEBUG_TOOLS");
-    }
   }
 }
