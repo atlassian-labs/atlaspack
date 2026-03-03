@@ -7,6 +7,9 @@ import {
   generateSyntheticApp,
   describe,
   it,
+  setupV3Flags,
+  assertBundles,
+  run,
 } from '@atlaspack/test-utils';
 
 type BundleStructure = Array<{type: string; assets: string[]}>;
@@ -96,15 +99,845 @@ async function compareBundlers(
   return {jsBundles, rustBundles};
 }
 
-describe.v3('bundler parity (js vs native)', function () {
-  it('Simple shared module: two async entry points that both import the same module', async function () {
-    const fixtureName = 'bundler-parity-simple-shared';
-    const entryFile = `${fixtureName}-index.js`;
-    const fooFile = `${fixtureName}-foo.js`;
-    const barFile = `${fixtureName}-bar.js`;
-    const sharedFile = `${fixtureName}-shared.js`;
+describe('Native bundler parity', function () {
+  describe('Basic cases', function () {
+    setupV3Flags({nativeBundling: true});
 
-    await fsFixture(overlayFS, __dirname)`
+    it('bundles and runs a simple entry', async function () {
+      await fsFixture(overlayFS, __dirname)`
+      native-bundling-smoke-simple
+        index.js:
+          export default 123;
+        package.json:
+          {}
+        yarn.lock: {}
+    `;
+
+      let b = await bundle(
+        path.join(__dirname, 'native-bundling-smoke-simple/index.js'),
+        {
+          mode: 'production',
+          defaultTargetOptions: {shouldScopeHoist: false},
+          inputFS: overlayFS,
+        },
+      );
+
+      assertBundles(b, [
+        {
+          name: 'index.js',
+          type: 'js',
+          assets: ['index.js', 'esmodule-helpers.js'],
+        },
+      ]);
+      await run(b);
+    });
+
+    it('supports dynamic import', async function () {
+      await fsFixture(overlayFS, __dirname)`
+      native-bundling-smoke-dynamic
+        index.js:
+          export default import('./async');
+        async.js:
+          export default 42;
+        package.json:
+          {}
+        yarn.lock: {}
+    `;
+
+      let b = await bundle(
+        path.join(__dirname, 'native-bundling-smoke-dynamic/index.js'),
+        {
+          mode: 'production',
+          defaultTargetOptions: {shouldScopeHoist: false},
+          inputFS: overlayFS,
+        },
+      );
+
+      assertBundles(b, [
+        {
+          name: 'index.js',
+          type: 'js',
+          assets: [
+            'index.js',
+            'esmodule-helpers.js',
+            'bundle-url.js',
+            'cacheLoader.js',
+            'js-loader.js',
+            'bundle-manifest.js',
+          ],
+        },
+        {
+          type: 'js',
+          assets: ['async.js'],
+        },
+      ]);
+      await run(b);
+    });
+
+    it('supports multiple entries', async function () {
+      await fsFixture(overlayFS, __dirname)`
+      native-bundling-smoke-multi-entry
+        a.js:
+          export default 1;
+        b.js:
+          export default 2;
+        package.json:
+          {}
+        yarn.lock: {}
+    `;
+
+      let b = await bundle(
+        [
+          path.join(__dirname, 'native-bundling-smoke-multi-entry/a.js'),
+          path.join(__dirname, 'native-bundling-smoke-multi-entry/b.js'),
+        ],
+        {
+          mode: 'production',
+          defaultTargetOptions: {shouldScopeHoist: false},
+          inputFS: overlayFS,
+        },
+      );
+
+      assertBundles(b, [
+        {
+          name: 'a.js',
+          type: 'js',
+          assets: ['a.js', 'esmodule-helpers.js'],
+        },
+        {
+          name: 'b.js',
+          type: 'js',
+          assets: ['b.js', 'esmodule-helpers.js'],
+        },
+      ]);
+      await run(b);
+    });
+
+    it('creates a shared bundle for a common dependency', async function () {
+      await fsFixture(overlayFS, __dirname)`
+      native-bundling-smoke-shared
+        index.js:
+          import('./foo');
+          import('./bar');
+          export default 1;
+        foo.js:
+          import shared from './shared';
+          export default shared + 'foo';
+        bar.js:
+          import shared from './shared';
+          export default shared + 'bar';
+        shared.js:
+          export default 'shared';
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "minBundles": 0,
+              "minBundleSize": 0,
+              "maxParallelRequests": 100
+            }
+          }
+        yarn.lock: {}
+    `;
+
+      let b = await bundle(
+        path.join(__dirname, 'native-bundling-smoke-shared/index.js'),
+        {
+          mode: 'production',
+          defaultTargetOptions: {shouldScopeHoist: false},
+          inputFS: overlayFS,
+        },
+      );
+
+      assertBundles(b, [
+        {
+          name: 'index.js',
+          type: 'js',
+          assets: [
+            'index.js',
+            'esmodule-helpers.js',
+            'bundle-url.js',
+            'cacheLoader.js',
+            'js-loader.js',
+            'bundle-manifest.js',
+          ],
+        },
+        {type: 'js', assets: ['foo.js']},
+        {type: 'js', assets: ['bar.js']},
+        {type: 'js', assets: ['shared.js']},
+      ]);
+      await run(b);
+    });
+
+    it('creates a shared bundle for multiple common dependencies', async function () {
+      await fsFixture(overlayFS, __dirname)`
+      native-bundling-smoke-shared-multi
+        index.js:
+          import('./foo');
+          import('./bar');
+          export default 1;
+        foo.js:
+          import a from './a';
+          import b from './b';
+          export default a + b + 'foo';
+        bar.js:
+          import a from './a';
+          import b from './b';
+          export default a + b + 'bar';
+        a.js:
+          export default 'a';
+        b.js:
+          export default 'b';
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "minBundles": 0,
+              "minBundleSize": 0,
+              "maxParallelRequests": 100
+            }
+          }
+        yarn.lock: {}
+    `;
+
+      let b = await bundle(
+        path.join(__dirname, 'native-bundling-smoke-shared-multi/index.js'),
+        {
+          mode: 'production',
+          defaultTargetOptions: {shouldScopeHoist: false},
+          inputFS: overlayFS,
+        },
+      );
+
+      assertBundles(b, [
+        {
+          name: 'index.js',
+          type: 'js',
+          assets: [
+            'index.js',
+            'esmodule-helpers.js',
+            'bundle-url.js',
+            'cacheLoader.js',
+            'js-loader.js',
+            'bundle-manifest.js',
+          ],
+        },
+        {type: 'js', assets: ['foo.js']},
+        {type: 'js', assets: ['bar.js']},
+        {type: 'js', assets: ['a.js', 'b.js']},
+      ]);
+      await run(b);
+    });
+
+    it('duplicates shared sync dep into all entry bundles', async function () {
+      await fsFixture(overlayFS, __dirname)`
+      native-bundling-entry-duplication
+        a.js:
+          import shared from './shared';
+          export default shared + 'a';
+        b.js:
+          import shared from './shared';
+          export default shared + 'b';
+        shared.js:
+          export default 'shared';
+        package.json:
+          {}
+        yarn.lock: {}
+    `;
+
+      let b = await bundle(
+        [
+          path.join(__dirname, 'native-bundling-entry-duplication/a.js'),
+          path.join(__dirname, 'native-bundling-entry-duplication/b.js'),
+        ],
+        {
+          mode: 'production',
+          defaultTargetOptions: {shouldScopeHoist: false},
+          inputFS: overlayFS,
+        },
+      );
+
+      // shared.js must be duplicated into both entries since either can load independently.
+      assertBundles(b, [
+        {
+          name: 'a.js',
+          type: 'js',
+          assets: ['a.js', 'shared.js', 'esmodule-helpers.js'],
+        },
+        {
+          name: 'b.js',
+          type: 'js',
+          assets: ['b.js', 'shared.js', 'esmodule-helpers.js'],
+        },
+      ]);
+      await run(b);
+    });
+
+    it('internalizes async bundle when root is already sync-available', async function () {
+      await fsFixture(overlayFS, __dirname)`
+      native-bundling-internalize
+        index.js:
+          import a from './a';
+          export default a;
+        a.js:
+          const b = import('./b');
+          import bSync from './b';
+          export default bSync;
+        b.js:
+          export default 'b';
+        package.json:
+          {}
+        yarn.lock: {}
+    `;
+
+      let b = await bundle(
+        path.join(__dirname, 'native-bundling-internalize/index.js'),
+        {
+          mode: 'production',
+          defaultTargetOptions: {shouldScopeHoist: false},
+          inputFS: overlayFS,
+        },
+      );
+
+      // b.js is both lazy-imported and sync-imported. Since it's sync-available
+      // from the entry, the async bundle for b.js should be internalized.
+      // No runtime loaders needed since the dynamic import resolves internally.
+      assertBundles(b, [
+        {
+          name: 'index.js',
+          type: 'js',
+          assets: ['index.js', 'a.js', 'b.js', 'esmodule-helpers.js'],
+        },
+      ]);
+      await run(b);
+    });
+
+    it('creates separate bundle for CSS type-change dependency', async function () {
+      await fsFixture(overlayFS, __dirname)`
+      native-bundling-type-change
+        index.js:
+          import './styles.css';
+          export default 'hello';
+        styles.css:
+          .root { color: red; }
+        package.json:
+          {}
+        yarn.lock: {}
+    `;
+
+      let b = await bundle(
+        path.join(__dirname, 'native-bundling-type-change/index.js'),
+        {
+          mode: 'production',
+          defaultTargetOptions: {shouldScopeHoist: false},
+          inputFS: overlayFS,
+        },
+      );
+
+      // CSS import creates a type-change boundary -- separate CSS bundle.
+      assertBundles(b, [
+        {
+          name: 'index.js',
+          type: 'js',
+          assets: ['index.js', 'esmodule-helpers.js'],
+        },
+        {
+          type: 'css',
+          assets: ['styles.css'],
+        },
+      ]);
+      await run(b);
+    });
+
+    it('suppresses shared extraction when asset is available from ancestor', async function () {
+      await fsFixture(overlayFS, __dirname)`
+      native-bundling-avail-suppression
+        index.js:
+          import vendor from './vendor';
+          import('./a');
+          import('./b');
+          export default vendor;
+        vendor.js:
+          export default 'vendor';
+        a.js:
+          import vendor from './vendor';
+          export default vendor + 'a';
+        b.js:
+          import vendor from './vendor';
+          export default vendor + 'b';
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "minBundles": 0,
+              "minBundleSize": 0,
+              "maxParallelRequests": 100
+            }
+          }
+        yarn.lock: {}
+    `;
+
+      let b = await bundle(
+        path.join(__dirname, 'native-bundling-avail-suppression/index.js'),
+        {
+          mode: 'production',
+          defaultTargetOptions: {shouldScopeHoist: false},
+          inputFS: overlayFS,
+        },
+      );
+
+      // vendor.js is sync-imported by entry AND both async roots. Since it's
+      // in the entry bundle, it's available to a and b via ancestry -- no shared bundle.
+      assertBundles(b, [
+        {
+          name: 'index.js',
+          type: 'js',
+          assets: [
+            'index.js',
+            'vendor.js',
+            'esmodule-helpers.js',
+            'bundle-url.js',
+            'cacheLoader.js',
+            'js-loader.js',
+            'bundle-manifest.js',
+          ],
+        },
+        {type: 'js', assets: ['a.js']},
+        {type: 'js', assets: ['b.js']},
+      ]);
+      await run(b);
+    });
+
+    it('reuses existing async bundle instead of creating shared bundle', async function () {
+      await fsFixture(overlayFS, __dirname)`
+      native-bundling-reuse
+        index.js:
+          import('./a');
+          import('./b');
+          import('./c');
+          export default 1;
+        a.js:
+          import c from './c';
+          export default c + 'a';
+        b.js:
+          import c from './c';
+          export default c + 'b';
+        c.js:
+          export default 'c';
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "minBundles": 0,
+              "minBundleSize": 0,
+              "maxParallelRequests": 100
+            }
+          }
+        yarn.lock: {}
+    `;
+
+      let b = await bundle(
+        path.join(__dirname, 'native-bundling-reuse/index.js'),
+        {
+          mode: 'production',
+          defaultTargetOptions: {shouldScopeHoist: false},
+          inputFS: overlayFS,
+        },
+      );
+
+      // c.js is lazy-imported by entry (has its own bundle) AND sync-imported
+      // by a and b. The existing c.js bundle should be reused -- no shared bundle.
+      assertBundles(b, [
+        {
+          name: 'index.js',
+          type: 'js',
+          assets: [
+            'index.js',
+            'esmodule-helpers.js',
+            'bundle-url.js',
+            'cacheLoader.js',
+            'js-loader.js',
+            'bundle-manifest.js',
+          ],
+        },
+        {type: 'js', assets: ['a.js']},
+        {type: 'js', assets: ['b.js']},
+        {type: 'js', assets: ['c.js']},
+      ]);
+      await run(b);
+    });
+
+    it('diamond async dependency creates shared bundle', async function () {
+      await fsFixture(overlayFS, __dirname)`
+      native-bundler-parity-diamond-async-shared
+        index.js:
+          import('./a');
+          import('./b');
+          export default 1;
+        a.js:
+          import shared from './shared';
+          export default shared + 'a';
+        b.js:
+          import shared from './shared';
+          export default shared + 'b';
+        shared.js:
+          export default 'shared';
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "minBundles": 0,
+              "minBundleSize": 0,
+              "maxParallelRequests": 100
+            }
+          }
+        yarn.lock: {}
+    `;
+
+      let b = await bundle(
+        path.join(
+          __dirname,
+          'native-bundler-parity-diamond-async-shared/index.js',
+        ),
+        {
+          mode: 'production',
+          defaultTargetOptions: {shouldScopeHoist: false},
+          inputFS: overlayFS,
+        },
+      );
+
+      // shared.js is used by both async bundles, so it should be extracted into its own shared bundle.
+      assertBundles(b, [
+        {
+          name: 'index.js',
+          type: 'js',
+          assets: [
+            'index.js',
+            'esmodule-helpers.js',
+            'bundle-url.js',
+            'cacheLoader.js',
+            'js-loader.js',
+            'bundle-manifest.js',
+          ],
+        },
+        {type: 'js', assets: ['a.js']},
+        {type: 'js', assets: ['b.js']},
+        {type: 'js', assets: ['shared.js']},
+      ]);
+      await run(b);
+    });
+
+    it('deep sync chain with async at leaf', async function () {
+      await fsFixture(overlayFS, __dirname)`
+      native-bundler-parity-deep-sync-chain-async-leaf
+        index.js:
+          import a from './a';
+          export default a;
+        a.js:
+          import b from './b';
+          export default b;
+        b.js:
+          export default import('./c');
+        c.js:
+          export default 123;
+        package.json:
+          {}
+        yarn.lock: {}
+    `;
+
+      let b = await bundle(
+        path.join(
+          __dirname,
+          'native-bundler-parity-deep-sync-chain-async-leaf/index.js',
+        ),
+        {
+          mode: 'production',
+          defaultTargetOptions: {shouldScopeHoist: false},
+          inputFS: overlayFS,
+        },
+      );
+
+      assertBundles(b, [
+        {
+          name: 'index.js',
+          type: 'js',
+          assets: [
+            'index.js',
+            'a.js',
+            'b.js',
+            'esmodule-helpers.js',
+            'bundle-url.js',
+            'cacheLoader.js',
+            'js-loader.js',
+            'bundle-manifest.js',
+          ],
+        },
+        {type: 'js', assets: ['c.js']},
+      ]);
+      await run(b);
+    });
+
+    it('async bundle with CSS type-change sibling', async function () {
+      await fsFixture(overlayFS, __dirname)`
+      native-bundler-parity-async-css-sibling
+        index.js:
+          export default import('./page');
+        page.js:
+          import './page.css';
+          export default 'page';
+        page.css:
+          .root { color: red; }
+        package.json:
+          {}
+        yarn.lock: {}
+    `;
+
+      let b = await bundle(
+        path.join(
+          __dirname,
+          'native-bundler-parity-async-css-sibling/index.js',
+        ),
+        {
+          mode: 'production',
+          defaultTargetOptions: {shouldScopeHoist: false},
+          inputFS: overlayFS,
+        },
+      );
+
+      assertBundles(b, [
+        {
+          name: 'index.js',
+          type: 'js',
+          assets: [
+            'index.js',
+            'esmodule-helpers.js',
+            'bundle-url.js',
+            'cacheLoader.js',
+            'js-loader.js',
+            'css-loader.js',
+            'bundle-manifest.js',
+          ],
+        },
+        {type: 'js', assets: ['page.js']},
+        {type: 'css', assets: ['page.css']},
+      ]);
+      await run(b);
+    });
+
+    it('three-way shared bundle', async function () {
+      await fsFixture(overlayFS, __dirname)`
+      native-bundler-parity-three-way-shared
+        index.js:
+          import('./a');
+          import('./b');
+          import('./c');
+          export default 1;
+        a.js:
+          import shared from './shared';
+          export default shared + 'a';
+        b.js:
+          import shared from './shared';
+          export default shared + 'b';
+        c.js:
+          import shared from './shared';
+          export default shared + 'c';
+        shared.js:
+          export default 'shared';
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "minBundles": 0,
+              "minBundleSize": 0,
+              "maxParallelRequests": 100
+            }
+          }
+        yarn.lock: {}
+    `;
+
+      let b = await bundle(
+        path.join(__dirname, 'native-bundler-parity-three-way-shared/index.js'),
+        {
+          mode: 'production',
+          defaultTargetOptions: {shouldScopeHoist: false},
+          inputFS: overlayFS,
+        },
+      );
+
+      assertBundles(b, [
+        {
+          name: 'index.js',
+          type: 'js',
+          assets: [
+            'index.js',
+            'esmodule-helpers.js',
+            'bundle-url.js',
+            'cacheLoader.js',
+            'js-loader.js',
+            'bundle-manifest.js',
+          ],
+        },
+        {type: 'js', assets: ['a.js']},
+        {type: 'js', assets: ['b.js']},
+        {type: 'js', assets: ['c.js']},
+        {type: 'js', assets: ['shared.js']},
+      ]);
+      await run(b);
+    });
+
+    it('available assets from entry not duplicated into async descendant bundles', async function () {
+      await fsFixture(overlayFS, __dirname)`
+      native-bundler-parity-available-from-entry-not-duplicated
+        index.js:
+          import shared from './shared';
+          import('./async');
+          export default shared;
+        shared.js:
+          export default 'shared';
+        async.js:
+          import shared from './shared';
+          export const value = shared + '-async';
+          export default import('./deep');
+        deep.js:
+          import shared from './shared';
+          export default shared + '-deep';
+        package.json:
+          {}
+        yarn.lock: {}
+    `;
+
+      let b = await bundle(
+        path.join(
+          __dirname,
+          'native-bundler-parity-available-from-entry-not-duplicated/index.js',
+        ),
+        {
+          mode: 'production',
+          defaultTargetOptions: {shouldScopeHoist: false},
+          inputFS: overlayFS,
+        },
+      );
+
+      // shared.js is sync-imported by the entry, and also reachable from async.js and deep.js.
+      // It should remain only in the entry bundle and be available to descendants via ancestry.
+      assertBundles(b, [
+        {
+          name: 'index.js',
+          type: 'js',
+          assets: [
+            'index.js',
+            'shared.js',
+            'esmodule-helpers.js',
+            'bundle-url.js',
+            'cacheLoader.js',
+            'js-loader.js',
+            'bundle-manifest.js',
+          ],
+        },
+        {type: 'js', assets: ['async.js']},
+        {type: 'js', assets: ['deep.js']},
+      ]);
+      await run(b);
+    });
+
+    it('bundle root is duplicated into entry-like bundles', async function () {
+      await fsFixture(overlayFS, __dirname)`
+      native-bundling-root-in-entry-like
+        index.js:
+          import('./shared-root');
+          import('./route-a');
+          import('./route-b');
+          export default 1;
+        shared-root.js:
+          export default 'shared-root';
+        route-a.js:
+          import sr from './shared-root';
+          export default sr + 'a';
+        route-b.js:
+          import sr from './shared-root';
+          export default sr + 'b';
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "minBundles": 0,
+              "minBundleSize": 0,
+              "maxParallelRequests": 100
+            }
+          }
+        yarn.lock: {}
+    `;
+
+      let b = await bundle(
+        path.join(__dirname, 'native-bundling-root-in-entry-like/index.js'),
+        {
+          mode: 'production',
+          defaultTargetOptions: {shouldScopeHoist: false},
+          inputFS: overlayFS,
+        },
+      );
+
+      // shared-root.js is a lazy import target (bundle root) AND is sync-imported by
+      // route-a and route-b. The bundler should reuse the existing shared-root bundle
+      // rather than creating a separate shared bundle.
+      assertBundles(b, [
+        {
+          name: 'index.js',
+          type: 'js',
+          assets: [
+            'index.js',
+            'esmodule-helpers.js',
+            'bundle-url.js',
+            'cacheLoader.js',
+            'js-loader.js',
+            'bundle-manifest.js',
+          ],
+        },
+        {type: 'js', assets: ['shared-root.js']},
+        {type: 'js', assets: ['route-a.js']},
+        {type: 'js', assets: ['route-b.js']},
+      ]);
+      await run(b);
+    });
+
+    it('creates sibling bundle for sync svg import', async () => {
+      let dir = path.join(__dirname, 'native-bundler-parity-image-sibling');
+      await overlayFS.mkdirp(dir);
+      await fsFixture(overlayFS, dir)`
+      index.js:
+        import icon from './icon.svg';
+        output = icon;
+
+      icon.svg:
+        <svg xmlns="http://www.w3.org/2000/svg"><circle r="1"/></svg>
+
+      yarn.lock:
+
+      .parcelrc:
+        {
+          "extends": "@atlaspack/config-default",
+          "bundler": "@atlaspack/bundler-default"
+        }
+    `;
+
+      let b = await bundle(path.join(dir, 'index.js'), {
+        inputFS: overlayFS,
+        mode: 'production',
+      });
+
+      // Both JS and SVG bundles should exist.
+      // The SVG bundle is created as a type-change sibling with Isolated behavior.
+      let bundles = b.getBundles();
+      let svgBundles = bundles.filter((b) => b.type === 'svg');
+      assert(
+        svgBundles.length >= 1,
+        `Expected at least 1 SVG bundle, got ${svgBundles.length}. Bundles: ${bundles.map((b) => `${b.type}:${b.name}`).join(', ')}`,
+      );
+    });
+  });
+
+  describe.v3('bundler parity (js vs native)', function () {
+    it('Simple shared module: two async entry points that both import the same module', async function () {
+      const fixtureName = 'bundler-parity-simple-shared';
+      const entryFile = `${fixtureName}-index.js`;
+      const fooFile = `${fixtureName}-foo.js`;
+      const barFile = `${fixtureName}-bar.js`;
+      const sharedFile = `${fixtureName}-shared.js`;
+
+      await fsFixture(overlayFS, __dirname)`
       ${fixtureName}
         ${entryFile}:
           import('./${fooFile}');
@@ -129,14 +962,14 @@ describe.v3('bundler parity (js vs native)', function () {
         yarn.lock:
     `;
 
-    await compareBundlers(fixtureName, entryFile);
-  });
+      await compareBundlers(fixtureName, entryFile);
+    });
 
-  it('Entry-reachable asset shared by async roots', async function () {
-    const fixtureName = 'bundler-parity-entry-reachable-shared-async-roots';
-    const entryFile = 'index.js';
+    it('Entry-reachable asset shared by async roots', async function () {
+      const fixtureName = 'bundler-parity-entry-reachable-shared-async-roots';
+      const entryFile = 'index.js';
 
-    await fsFixture(overlayFS, __dirname)`
+      await fsFixture(overlayFS, __dirname)`
       ${fixtureName}
         ${entryFile}:
           import shared from './shared-util.js';
@@ -166,21 +999,21 @@ describe.v3('bundler parity (js vs native)', function () {
         yarn.lock:
     `;
 
-    // Parity check: expected to FAIL today (AFB-1794): JS bundler will consider sharing
-    // `shared-util.js` across async roots even though it's sync-reachable from the entry,
-    // while the native bundler currently skips it due to an entry-reachable shortcut.
-    await compareBundlers(fixtureName, entryFile);
-  });
+      // Parity check: expected to FAIL today (AFB-1794): JS bundler will consider sharing
+      // `shared-util.js` across async roots even though it's sync-reachable from the entry,
+      // while the native bundler currently skips it due to an entry-reachable shortcut.
+      await compareBundlers(fixtureName, entryFile);
+    });
 
-  it('Diamond dependency: Entry → async A, async B → both import shared C and D', async function () {
-    const fixtureName = 'bundler-parity-diamond';
-    const entryFile = `${fixtureName}-index.js`;
-    const aFile = `${fixtureName}-a.js`;
-    const bFile = `${fixtureName}-b.js`;
-    const cFile = `${fixtureName}-c.js`;
-    const dFile = `${fixtureName}-d.js`;
+    it('Diamond dependency: Entry → async A, async B → both import shared C and D', async function () {
+      const fixtureName = 'bundler-parity-diamond';
+      const entryFile = `${fixtureName}-index.js`;
+      const aFile = `${fixtureName}-a.js`;
+      const bFile = `${fixtureName}-b.js`;
+      const cFile = `${fixtureName}-c.js`;
+      const dFile = `${fixtureName}-d.js`;
 
-    await fsFixture(overlayFS, __dirname)`
+      await fsFixture(overlayFS, __dirname)`
       ${fixtureName}
         ${entryFile}:
           import('./${aFile}');
@@ -209,17 +1042,17 @@ describe.v3('bundler parity (js vs native)', function () {
         yarn.lock:
     `;
 
-    await compareBundlers(fixtureName, entryFile);
-  });
+      await compareBundlers(fixtureName, entryFile);
+    });
 
-  it('Transitive shared: Entry → async A → sync B and Entry → async C → sync B', async function () {
-    const fixtureName = 'bundler-parity-transitive-shared';
-    const entryFile = `${fixtureName}-index.js`;
-    const aFile = `${fixtureName}-a.js`;
-    const cFile = `${fixtureName}-c.js`;
-    const bFile = `${fixtureName}-b.js`;
+    it('Transitive shared: Entry → async A → sync B and Entry → async C → sync B', async function () {
+      const fixtureName = 'bundler-parity-transitive-shared';
+      const entryFile = `${fixtureName}-index.js`;
+      const aFile = `${fixtureName}-a.js`;
+      const cFile = `${fixtureName}-c.js`;
+      const bFile = `${fixtureName}-b.js`;
 
-    await fsFixture(overlayFS, __dirname)`
+      await fsFixture(overlayFS, __dirname)`
       ${fixtureName}
         ${entryFile}:
           import('./${aFile}');
@@ -244,15 +1077,15 @@ describe.v3('bundler parity (js vs native)', function () {
         yarn.lock:
     `;
 
-    await compareBundlers(fixtureName, entryFile);
-  });
+      await compareBundlers(fixtureName, entryFile);
+    });
 
-  it('Mixed types: JS entry imports CSS', async function () {
-    const fixtureName = 'bundler-parity-mixed-types';
-    const entryFile = `${fixtureName}-index.js`;
-    const cssFile = `${fixtureName}-style.css`;
+    it('Mixed types: JS entry imports CSS', async function () {
+      const fixtureName = 'bundler-parity-mixed-types';
+      const entryFile = `${fixtureName}-index.js`;
+      const cssFile = `${fixtureName}-style.css`;
 
-    await fsFixture(overlayFS, __dirname)`
+      await fsFixture(overlayFS, __dirname)`
       ${fixtureName}
         ${entryFile}:
           import './${cssFile}';
@@ -270,18 +1103,18 @@ describe.v3('bundler parity (js vs native)', function () {
         yarn.lock:
     `;
 
-    await compareBundlers(fixtureName, entryFile);
-  });
+      await compareBundlers(fixtureName, entryFile);
+    });
 
-  it('Deep async chain: Entry → async A → async B → async C, with a module shared by A and C', async function () {
-    const fixtureName = 'bundler-parity-deep-async-chain';
-    const entryFile = `${fixtureName}-index.js`;
-    const aFile = `${fixtureName}-a.js`;
-    const bFile = `${fixtureName}-b.js`;
-    const cFile = `${fixtureName}-c.js`;
-    const sharedFile = `${fixtureName}-shared.js`;
+    it('Deep async chain: Entry → async A → async B → async C, with a module shared by A and C', async function () {
+      const fixtureName = 'bundler-parity-deep-async-chain';
+      const entryFile = `${fixtureName}-index.js`;
+      const aFile = `${fixtureName}-a.js`;
+      const bFile = `${fixtureName}-b.js`;
+      const cFile = `${fixtureName}-c.js`;
+      const sharedFile = `${fixtureName}-shared.js`;
 
-    await fsFixture(overlayFS, __dirname)`
+      await fsFixture(overlayFS, __dirname)`
       ${fixtureName}
         ${entryFile}:
           import('./${aFile}');
@@ -309,28 +1142,28 @@ describe.v3('bundler parity (js vs native)', function () {
         yarn.lock:
     `;
 
-    await compareBundlers(fixtureName, entryFile);
-  });
+      await compareBundlers(fixtureName, entryFile);
+    });
 
-  it('Many shared roots: 4+ async imports with overlapping shared subsets', async function () {
-    const fixtureName = 'bundler-parity-many-shared-roots';
-    const entryFile = `${fixtureName}-index.js`;
+    it('Many shared roots: 4+ async imports with overlapping shared subsets', async function () {
+      const fixtureName = 'bundler-parity-many-shared-roots';
+      const entryFile = `${fixtureName}-index.js`;
 
-    const aFile = `${fixtureName}-a.js`;
-    const bFile = `${fixtureName}-b.js`;
-    const cFile = `${fixtureName}-c.js`;
-    const dFile = `${fixtureName}-d.js`;
+      const aFile = `${fixtureName}-a.js`;
+      const bFile = `${fixtureName}-b.js`;
+      const cFile = `${fixtureName}-c.js`;
+      const dFile = `${fixtureName}-d.js`;
 
-    const s1File = `${fixtureName}-s1.js`;
-    const s2File = `${fixtureName}-s2.js`;
-    const s3File = `${fixtureName}-s3.js`;
-    const s4File = `${fixtureName}-s4.js`;
-    const leaf1File = `${fixtureName}-leaf1.js`;
-    const leaf2File = `${fixtureName}-leaf2.js`;
-    const leaf3File = `${fixtureName}-leaf3.js`;
-    const leaf4File = `${fixtureName}-leaf4.js`;
+      const s1File = `${fixtureName}-s1.js`;
+      const s2File = `${fixtureName}-s2.js`;
+      const s3File = `${fixtureName}-s3.js`;
+      const s4File = `${fixtureName}-s4.js`;
+      const leaf1File = `${fixtureName}-leaf1.js`;
+      const leaf2File = `${fixtureName}-leaf2.js`;
+      const leaf3File = `${fixtureName}-leaf3.js`;
+      const leaf4File = `${fixtureName}-leaf4.js`;
 
-    await fsFixture(overlayFS, __dirname)`
+      await fsFixture(overlayFS, __dirname)`
       ${fixtureName}
         ${entryFile}:
           import('./${aFile}');
@@ -396,14 +1229,14 @@ describe.v3('bundler parity (js vs native)', function () {
         yarn.lock:
     `;
 
-    await compareBundlers(fixtureName, entryFile);
-  });
+      await compareBundlers(fixtureName, entryFile);
+    });
 
-  it('Complex async graph with shared bundles should not crash during naming', async function () {
-    const fixtureName = 'bundler-parity-complex-async-shared';
-    const entryFile = 'index.js';
+    it('Complex async graph with shared bundles should not crash during naming', async function () {
+      const fixtureName = 'bundler-parity-complex-async-shared';
+      const entryFile = 'index.js';
 
-    await fsFixture(overlayFS, __dirname)`
+      await fsFixture(overlayFS, __dirname)`
       ${fixtureName}
         ${entryFile}:
           import('./page-a.js');
@@ -451,14 +1284,14 @@ describe.v3('bundler parity (js vs native)', function () {
         yarn.lock:
     `;
 
-    await compareBundlers(fixtureName, entryFile);
-  });
+      await compareBundlers(fixtureName, entryFile);
+    });
 
-  it('Async graph with type-change siblings should not crash during naming', async function () {
-    const fixtureName = 'bundler-parity-async-type-change-siblings';
-    const entryFile = 'index.js';
+    it('Async graph with type-change siblings should not crash during naming', async function () {
+      const fixtureName = 'bundler-parity-async-type-change-siblings';
+      const entryFile = 'index.js';
 
-    await fsFixture(overlayFS, __dirname)`
+      await fsFixture(overlayFS, __dirname)`
       ${fixtureName}
         ${entryFile}:
           import('./page-a.js');
@@ -520,42 +1353,42 @@ describe.v3('bundler parity (js vs native)', function () {
         yarn.lock:
     `;
 
-    await compareBundlers(fixtureName, entryFile);
-  });
+      await compareBundlers(fixtureName, entryFile);
+    });
 
-  it('Generated app: ~150 assets with realistic structure', async function () {
-    this.timeout(60000);
-    const {fixtureName, entryFile} = await generateSyntheticApp(
-      overlayFS,
-      __dirname,
-      150,
-      42,
-    );
-    await compareBundlers(fixtureName, entryFile);
-  });
+    it('Generated app: ~150 assets with realistic structure', async function () {
+      this.timeout(60000);
+      const {fixtureName, entryFile} = await generateSyntheticApp(
+        overlayFS,
+        __dirname,
+        150,
+        42,
+      );
+      await compareBundlers(fixtureName, entryFile);
+    });
 
-  it('Generated app: ~1000 assets with realistic structure', async function () {
-    this.timeout(300000);
-    const {fixtureName, entryFile} = await generateSyntheticApp(
-      overlayFS,
-      __dirname,
-      1000,
-      123,
-    );
-    await compareBundlers(fixtureName, entryFile);
-  });
+    it('Generated app: ~1000 assets with realistic structure', async function () {
+      this.timeout(300000);
+      const {fixtureName, entryFile} = await generateSyntheticApp(
+        overlayFS,
+        __dirname,
+        1000,
+        123,
+      );
+      await compareBundlers(fixtureName, entryFile);
+    });
 
-  it('async import inside shared bundle should not crash during naming', async function () {
-    // Repro for: bundle exists in a bundle group but is unreachable via traverseBundles,
-    // so it never gets named by the Namer and crashes later in JSRuntime.getLoaderForBundle.
-    const fixtureName = 'bundler-parity-async-in-shared';
-    const entryFile = `${fixtureName}-index.js`;
-    const asyncAFile = `${fixtureName}-async-a.js`;
-    const asyncBFile = `${fixtureName}-async-b.js`;
-    const sharedFile = `${fixtureName}-shared.js`;
-    const localeFile = `${fixtureName}-locale.js`;
+    it('async import inside shared bundle should not crash during naming', async function () {
+      // Repro for: bundle exists in a bundle group but is unreachable via traverseBundles,
+      // so it never gets named by the Namer and crashes later in JSRuntime.getLoaderForBundle.
+      const fixtureName = 'bundler-parity-async-in-shared';
+      const entryFile = `${fixtureName}-index.js`;
+      const asyncAFile = `${fixtureName}-async-a.js`;
+      const asyncBFile = `${fixtureName}-async-b.js`;
+      const sharedFile = `${fixtureName}-shared.js`;
+      const localeFile = `${fixtureName}-locale.js`;
 
-    await fsFixture(overlayFS, __dirname)`
+      await fsFixture(overlayFS, __dirname)`
       ${fixtureName}
         ${entryFile}:
           // Two async boundaries that both import the same shared module.
@@ -592,14 +1425,14 @@ describe.v3('bundler parity (js vs native)', function () {
         yarn.lock:
     `;
 
-    await compareBundlers(fixtureName, entryFile);
-  });
+      await compareBundlers(fixtureName, entryFile);
+    });
 
-  it('CSS sibling merging: async import with multiple CSS dependencies', async function () {
-    const fixtureName = 'bundler-parity-css-sibling-merge-async-multi';
-    const entryFile = 'index.js';
+    it('CSS sibling merging: async import with multiple CSS dependencies', async function () {
+      const fixtureName = 'bundler-parity-css-sibling-merge-async-multi';
+      const entryFile = 'index.js';
 
-    await fsFixture(overlayFS, __dirname)`
+      await fsFixture(overlayFS, __dirname)`
       ${fixtureName}
         ${entryFile}:
           import('./page-a.js');
@@ -626,21 +1459,21 @@ describe.v3('bundler parity (js vs native)', function () {
         yarn.lock:
     `;
 
-    let {jsBundles} = await compareBundlers(fixtureName, entryFile);
+      let {jsBundles} = await compareBundlers(fixtureName, entryFile);
 
-    let cssBundles = jsBundles.filter((b) => b.type === 'css');
-    assert.equal(cssBundles.length, 1);
-    assert.deepEqual(cssBundles[0].assets, ['style-a.css', 'style-b.css']);
+      let cssBundles = jsBundles.filter((b) => b.type === 'css');
+      assert.equal(cssBundles.length, 1);
+      assert.deepEqual(cssBundles[0].assets, ['style-a.css', 'style-b.css']);
 
-    // Total: JS entry + async JS + merged CSS sibling.
-    assert.equal(jsBundles.length, 3);
-  });
+      // Total: JS entry + async JS + merged CSS sibling.
+      assert.equal(jsBundles.length, 3);
+    });
 
-  it('SVG assets remain as separate isolated bundles', async function () {
-    const fixtureName = 'bundler-parity-svg-isolated-url';
-    const entryFile = 'index.js';
+    it('SVG assets remain as separate isolated bundles', async function () {
+      const fixtureName = 'bundler-parity-svg-isolated-url';
+      const entryFile = 'index.js';
 
-    await fsFixture(overlayFS, __dirname)`
+      await fsFixture(overlayFS, __dirname)`
       ${fixtureName}
         ${entryFile}:
           const url1 = new URL('./icon-a.svg', import.meta.url);
@@ -664,25 +1497,25 @@ describe.v3('bundler parity (js vs native)', function () {
         yarn.lock:
     `;
 
-    let {jsBundles} = await compareBundlers(fixtureName, entryFile);
+      let {jsBundles} = await compareBundlers(fixtureName, entryFile);
 
-    let svgBundles = jsBundles.filter((b) => b.type === 'svg');
-    assert.equal(svgBundles.length, 2);
+      let svgBundles = jsBundles.filter((b) => b.type === 'svg');
+      assert.equal(svgBundles.length, 2);
 
-    let svgAssetSets = svgBundles.map((b) => b.assets.join(','));
-    assert(svgAssetSets.includes('icon-a.svg'));
-    assert(svgAssetSets.includes('icon-b.svg'));
+      let svgAssetSets = svgBundles.map((b) => b.assets.join(','));
+      assert(svgAssetSets.includes('icon-a.svg'));
+      assert(svgAssetSets.includes('icon-b.svg'));
 
-    // Total: JS entry + 2 isolated SVG bundles.
-    assert.equal(jsBundles.length, 3);
-  });
+      // Total: JS entry + 2 isolated SVG bundles.
+      assert.equal(jsBundles.length, 3);
+    });
 
-  it('CSS shared across async entries: same CSS imported by two async JS entries', async function () {
-    this.timeout(30000);
-    const fixtureName = 'bundler-parity-css-shared-across-async-entries';
-    const entryFile = 'index.js';
+    it('CSS shared across async entries: same CSS imported by two async JS entries', async function () {
+      this.timeout(30000);
+      const fixtureName = 'bundler-parity-css-shared-across-async-entries';
+      const entryFile = 'index.js';
 
-    await fsFixture(overlayFS, __dirname)`
+      await fsFixture(overlayFS, __dirname)`
       ${fixtureName}
         ${entryFile}:
           import('./page-a.js');
@@ -710,19 +1543,19 @@ describe.v3('bundler parity (js vs native)', function () {
         yarn.lock:
     `;
 
-    let {jsBundles} = await compareBundlers(fixtureName, entryFile);
+      let {jsBundles} = await compareBundlers(fixtureName, entryFile);
 
-    let cssBundles = jsBundles.filter((b) => b.type === 'css');
-    assert.equal(cssBundles.length, 1);
-    assert.deepEqual(cssBundles[0].assets, ['shared-styles.css']);
-  });
+      let cssBundles = jsBundles.filter((b) => b.type === 'css');
+      assert.equal(cssBundles.length, 1);
+      assert.deepEqual(cssBundles[0].assets, ['shared-styles.css']);
+    });
 
-  it('CSS @import chains: CSS that imports other CSS from same JS entry', async function () {
-    this.timeout(30000);
-    const fixtureName = 'bundler-parity-css-import-chains';
-    const entryFile = 'index.js';
+    it('CSS @import chains: CSS that imports other CSS from same JS entry', async function () {
+      this.timeout(30000);
+      const fixtureName = 'bundler-parity-css-import-chains';
+      const entryFile = 'index.js';
 
-    await fsFixture(overlayFS, __dirname)`
+      await fsFixture(overlayFS, __dirname)`
       ${fixtureName}
         ${entryFile}:
           import('./page.js');
@@ -749,22 +1582,22 @@ describe.v3('bundler parity (js vs native)', function () {
         yarn.lock:
     `;
 
-    let {jsBundles} = await compareBundlers(fixtureName, entryFile);
+      let {jsBundles} = await compareBundlers(fixtureName, entryFile);
 
-    let cssBundles = jsBundles.filter((b) => b.type === 'css');
-    assert.equal(cssBundles.length, 1);
-    assert.deepEqual(cssBundles[0].assets, ['base.css', 'main.css']);
+      let cssBundles = jsBundles.filter((b) => b.type === 'css');
+      assert.equal(cssBundles.length, 1);
+      assert.deepEqual(cssBundles[0].assets, ['base.css', 'main.css']);
 
-    // Total: JS entry + async JS + merged CSS.
-    assert.equal(jsBundles.length, 3);
-  });
+      // Total: JS entry + async JS + merged CSS.
+      assert.equal(jsBundles.length, 3);
+    });
 
-  it('CSS mixed sharing: entry-specific CSS stays separate from shared CSS', async function () {
-    this.timeout(30000);
-    const fixtureName = 'bundler-parity-css-mixed-sharing';
-    const entryFile = 'index.js';
+    it('CSS mixed sharing: entry-specific CSS stays separate from shared CSS', async function () {
+      this.timeout(30000);
+      const fixtureName = 'bundler-parity-css-mixed-sharing';
+      const entryFile = 'index.js';
 
-    await fsFixture(overlayFS, __dirname)`
+      await fsFixture(overlayFS, __dirname)`
       ${fixtureName}
         ${entryFile}:
           import('./page-a.js');
@@ -800,14 +1633,15 @@ describe.v3('bundler parity (js vs native)', function () {
         yarn.lock:
     `;
 
-    let {jsBundles} = await compareBundlers(fixtureName, entryFile);
+      let {jsBundles} = await compareBundlers(fixtureName, entryFile);
 
-    let cssBundles = jsBundles.filter((b) => b.type === 'css');
-    assert.equal(cssBundles.length, 3);
+      let cssBundles = jsBundles.filter((b) => b.type === 'css');
+      assert.equal(cssBundles.length, 3);
 
-    let cssAssetSets = cssBundles.map((b) => b.assets.join(','));
-    assert(cssAssetSets.includes('shared.css'));
-    assert(cssAssetSets.includes('page-a.css'));
-    assert(cssAssetSets.includes('page-b.css'));
+      let cssAssetSets = cssBundles.map((b) => b.assets.join(','));
+      assert(cssAssetSets.includes('shared.css'));
+      assert(cssAssetSets.includes('page-a.css'));
+      assert(cssAssetSets.includes('page-b.css'));
+    });
   });
 });
