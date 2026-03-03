@@ -8,6 +8,26 @@ use crate::{
   types::{Asset, AssetId, Dependency, DependencyId, Symbol},
 };
 
+/// Tracks symbol information for a single asset: which symbols it provides
+/// (through direct exports and re-exports) and which of those are actually
+/// used by upstream consumers.
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct AssetSymbolInfo {
+  /// Symbols this asset provides — both its own direct exports and symbols
+  /// surfaced through re-exports. Keyed by exported symbol name, with the
+  /// value being the `FinalSymbolLocation` that ultimately provides the symbol.
+  ///
+  /// This serves as a cache that enables instant symbol resolution higher up the
+  /// tree: when a parent asset re-exports from a child that already has entries
+  /// here, we can resolve immediately without waiting for bottom-up propagation.
+  pub provided: HashMap<String, FinalSymbolLocation>,
+  /// The set of exported symbols that are actually used by upstream consumers.
+  /// Populated progressively as requirements are satisfied. When a requirement
+  /// on an incoming dependency is satisfied by this asset's export, that export
+  /// name is added here.
+  pub used: HashSet<String>,
+}
+
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct SymbolTracker {
   requirements_by_dep: HashMap<String, Vec<SymbolRequirement>>,
@@ -15,21 +35,8 @@ pub struct SymbolTracker {
   /// requirements for that group. This allows efficient lookup and deletion
   /// when one member of the group is satisfied.
   speculation_group_locations: HashMap<String, Vec<String>>,
-  /// Maps each asset ID to the symbols it provides — both its own direct exports
-  /// and symbols it surfaces through re-exports. The inner map is keyed by exported
-  /// symbol name, with the value being the `FinalSymbolLocation` that ultimately
-  /// provides that symbol.
-  ///
-  /// This serves as a cache that enables instant symbol resolution higher up the
-  /// tree: when a parent asset re-exports from a child that already has entries in
-  /// `provided_symbols`, we can resolve immediately without waiting for bottom-up
-  /// propagation.
-  provided_symbols: HashMap<AssetId, HashMap<String, FinalSymbolLocation>>,
-  /// Tracks which exported symbols are actually used from each asset. Populated
-  /// progressively as requirements are satisfied in `satisfy_requirements_from_asset`.
-  /// When a requirement on an incoming dependency is satisfied by an asset's export,
-  /// that export name is added to the asset's used symbols set.
-  used_symbols_by_asset: HashMap<AssetId, HashSet<String>>,
+  /// Per-asset symbol information: what the asset provides and what's used from it.
+  asset_symbols: HashMap<AssetId, AssetSymbolInfo>,
 }
 
 /*
@@ -196,12 +203,9 @@ impl SymbolTracker {
         && let Some(asset_symbols) = &asset.symbols
         && !asset_symbols.is_empty()
       {
-        let used = self
-          .used_symbols_by_asset
-          .entry(asset.id.clone())
-          .or_default();
+        let info = self.asset_symbols.entry(asset.id.clone()).or_default();
         for sym in asset_symbols {
-          used.insert(sym.exported.clone());
+          info.used.insert(sym.exported.clone());
         }
       }
     }
@@ -382,11 +386,12 @@ impl SymbolTracker {
           providing_asset_id: asset.id.clone(),
         };
 
-        // Register this asset's own strong symbols in the provided_symbols cache
+        // Register this asset's own strong symbols in the provided cache
         self
-          .provided_symbols
+          .asset_symbols
           .entry(asset.id.clone())
           .or_default()
+          .provided
           .insert(sym.exported.clone(), final_location.clone());
 
         for incoming_dep in &incoming_deps {
@@ -504,14 +509,15 @@ impl SymbolTracker {
           symbol_name_to_match.clone()
         };
 
-        // Register the resolved symbol in the parent asset's provided_symbols cache.
+        // Register the resolved symbol in the parent asset's provided cache.
         // The parent asset now "provides" this symbol through its re-export, even
         // though the final location points to a downstream asset.
         if let Some(AssetGraphNode::Asset(parent_asset)) = parent_asset_node {
           self
-            .provided_symbols
+            .asset_symbols
             .entry(parent_asset.id.clone())
             .or_default()
+            .provided
             .insert(symbol_for_parent.clone(), located_symbol.clone());
         }
 
@@ -554,9 +560,10 @@ impl SymbolTracker {
     // Apply confirmed used symbols
     for (asset_id, symbol_name) in confirmed_used {
       self
-        .used_symbols_by_asset
+        .asset_symbols
         .entry(asset_id)
         .or_default()
+        .used
         .insert(symbol_name);
     }
 
@@ -694,7 +701,7 @@ impl SymbolTracker {
     &self,
     asset_id: &AssetId,
   ) -> Option<&HashMap<String, FinalSymbolLocation>> {
-    self.provided_symbols.get(asset_id)
+    self.asset_symbols.get(asset_id).map(|info| &info.provided)
   }
 
   fn add_required_symbol(&mut self, dep_id: &str, question: SymbolRequirement) {
@@ -809,13 +816,13 @@ impl SymbolTracker {
         };
 
         // Only include resolved requirements in usedSymbolsUp if the providing
-        // asset's symbol was actually demanded (appears in used_symbols_by_asset).
+        // asset's symbol was actually demanded (appears in asset_symbols.used).
         // Requirements that were eagerly registered but never demanded from
         // upstream should not appear in usedSymbolsUp — they are exclude candidates.
         let is_demanded = self
-          .used_symbols_by_asset
+          .asset_symbols
           .get(&final_location.providing_asset_id)
-          .is_some_and(|syms| syms.contains(&final_location.imported_name));
+          .is_some_and(|info| info.used.contains(&final_location.imported_name));
 
         if !is_demanded {
           continue;
@@ -836,8 +843,7 @@ impl SymbolTracker {
 
     FinalizedSymbolTracker {
       requirements_by_dep,
-      provided_symbols: self.provided_symbols,
-      used_symbols_by_asset: self.used_symbols_by_asset,
+      asset_symbols: self.asset_symbols,
     }
   }
 }
@@ -857,14 +863,8 @@ pub type DependencyUsedSymbols = HashMap<Symbol, UsedSymbol>;
 #[derive(Clone, Debug, PartialEq)]
 pub struct FinalizedSymbolTracker {
   requirements_by_dep: HashMap<DependencyId, DependencyUsedSymbols>,
-  /// Maps each asset ID to the symbols it provides — both its own direct exports
-  /// and symbols it surfaces through re-exports. The inner map is keyed by exported
-  /// symbol name, with the value being the `FinalSymbolLocation` that ultimately
-  /// provides that symbol.
-  provided_symbols: HashMap<AssetId, HashMap<String, FinalSymbolLocation>>,
-  /// The set of exported symbols actually used from each asset. Computed
-  /// progressively during graph construction as requirements are satisfied.
-  used_symbols_by_asset: HashMap<AssetId, HashSet<String>>,
+  /// Per-asset symbol information: what each asset provides and what's used from it.
+  asset_symbols: HashMap<AssetId, AssetSymbolInfo>,
 }
 
 impl FinalizedSymbolTracker {
@@ -883,14 +883,19 @@ impl FinalizedSymbolTracker {
     &self,
     asset_id: &AssetId,
   ) -> Option<&HashMap<String, FinalSymbolLocation>> {
-    self.provided_symbols.get(asset_id)
+    self.asset_symbols.get(asset_id).map(|info| &info.provided)
   }
 
   /// Returns the set of exported symbols that are actually used from an asset.
   /// This is the Rust equivalent of `assetNode.usedSymbols` in the JS
-  /// `propagateSymbols` implementation.
+  /// `propagateSymbols` implementation. Returns `None` if the asset has no
+  /// used symbols (rather than `Some(empty_set)`).
   pub fn get_used_symbols_for_asset(&self, asset_id: &AssetId) -> Option<&HashSet<String>> {
-    self.used_symbols_by_asset.get(asset_id)
+    self
+      .asset_symbols
+      .get(asset_id)
+      .map(|info| &info.used)
+      .filter(|used| !used.is_empty())
   }
 }
 
@@ -1097,8 +1102,9 @@ mod tests {
 
       let actual = self
         .tracker
-        .used_symbols_by_asset
+        .asset_symbols
         .get(&asset.id)
+        .map(|info| &info.used)
         .cloned()
         .unwrap_or_default();
 
