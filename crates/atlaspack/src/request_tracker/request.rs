@@ -1,3 +1,6 @@
+use atlaspack_core::database_reader::DatabaseReaderRef;
+#[cfg(test)]
+use atlaspack_core::database_reader::InMemoryDatabaseReader;
 use atlaspack_memoization_cache::CacheHandler;
 use atlaspack_memoization_cache::CacheHandlerTrait;
 use atlaspack_memoization_cache::InMemoryReaderWriter;
@@ -104,6 +107,7 @@ impl Future for ExecuteRequestFuture {
 /// We want to avoid exposing internals of the request tracker to the implementations so that we
 /// can change this.
 pub struct RunRequestContext {
+  pub db: DatabaseReaderRef,
   config_loader: ConfigLoaderRef,
   file_system: FileSystemRef,
   pub cache: CacheRef,
@@ -130,6 +134,7 @@ impl RunRequestContext {
     });
 
     Self {
+      db: Arc::new(InMemoryDatabaseReader::default()),
       cache: Arc::new(DynCacheHandler::InMemory(CacheHandler::new(
         InMemoryReaderWriter::default(),
         CacheMode::Off,
@@ -148,6 +153,7 @@ impl RunRequestContext {
 impl RunRequestContext {
   #[allow(clippy::too_many_arguments)]
   pub(crate) fn new(
+    db: DatabaseReaderRef,
     config_loader: ConfigLoaderRef,
     file_system: FileSystemRef,
     options: Arc<AtlaspackOptions>,
@@ -158,6 +164,7 @@ impl RunRequestContext {
     run_request_fn: RunRequestFn,
   ) -> Self {
     Self {
+      db,
       cache,
       config_loader,
       file_system,

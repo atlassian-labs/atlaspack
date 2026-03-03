@@ -558,6 +558,7 @@ dependencies = [
  "dyn-hash",
  "mockall",
  "nodejs-semver",
+ "parking_lot",
  "petgraph",
  "pretty_assertions",
  "rayon",
@@ -683,6 +684,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "atlaspack_core",
+ "atlaspack_memoization_cache",
  "glob",
  "lmdb-js-lite",
  "oxc_allocator",

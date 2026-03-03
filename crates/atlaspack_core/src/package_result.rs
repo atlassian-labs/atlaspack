@@ -14,9 +14,11 @@ pub struct BundleInfo {
   pub total_assets: u64,
   pub hash: String,
   pub hash_references: Vec<String>,
-  pub cache_keys: CacheKeyMap,
+  pub cache_keys: Option<CacheKeyMap>,
   pub is_large_blob: bool,
   pub time: Option<u64>,
+  pub bundle_contents: Option<Vec<u8>>,
+  pub map_contents: Option<Vec<u8>>,
 }
 
 #[derive(Debug, Clone)]

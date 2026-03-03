@@ -4,6 +4,7 @@ use std::sync::Arc;
 use atlaspack_config::atlaspack_config_fixtures::default_config;
 use atlaspack_core::{
   config_loader::ConfigLoader,
+  database_reader::InMemoryDatabaseReader,
   plugin::{PluginContext, PluginLogger, PluginOptions},
   types::AtlaspackOptions,
 };
@@ -107,6 +108,7 @@ pub(crate) fn request_tracker(options: RequestTrackerTestOptions) -> RequestTrac
   let cache = create_test_cache();
 
   RequestTracker::new(
+    Arc::new(InMemoryDatabaseReader::default()),
     Arc::clone(&config_loader),
     fs,
     Arc::new(atlaspack_options),

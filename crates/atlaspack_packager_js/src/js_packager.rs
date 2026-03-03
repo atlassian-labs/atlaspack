@@ -57,15 +57,12 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       .par_iter()
       .map(|asset| {
         let span = tracing::trace_span!("read_code", asset_id = asset.id).entered();
-        let txn = self.context.db.database().read_txn()?;
-        let code = self.context.db.database().get(
-          &txn,
+        let code = self.context.db.get(
           asset
             .content_key
             .as_ref()
             .ok_or(anyhow::anyhow!("Asset content key not found"))?,
         )?;
-        txn.commit()?;
         span.exit();
         let asset_code =
           String::from_utf8_lossy(&code.ok_or(anyhow::anyhow!("Unable to read asset code"))?)
@@ -95,32 +92,53 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       atlaspack_rust_version()
     );
 
-    // Write bundle content to filesystem cache instead of LMDB.
-    // Large blobs are stored on the filesystem to avoid bloating LMDB.
-    self
-      .context
-      .cache
-      .set_large_blob(&content_cache_key, bundle_contents)?;
+    if let Some(cache) = &self.context.cache {
+      // This code path is temporary until everything is using the request tracker
 
-    Ok(PackageResult {
-      bundle_info: BundleInfo {
-        bundle_type: bundle.bundle_type.extension().to_string(),
-        size: bundle_contents.len() as u64,
-        total_assets: assets.len() as u64,
-        hash: content_hash,
-        hash_references: vec![],
-        cache_keys: CacheKeyMap {
-          content: content_cache_key,
-          map: "TODO".to_string(), // Has to exist for JS, but won't be found in LMDB
-          info: info_cache_key,
+      // Write bundle content to filesystem cache instead of LMDB.
+      // Large blobs are stored on the filesystem to avoid bloating LMDB.
+      cache.set_large_blob(&content_cache_key, bundle_contents)?;
+      let cache_keys = CacheKeyMap {
+        content: content_cache_key,
+        map: "TODO".to_string(), // Has to exist for JS, but won't be found in LMDB
+        info: info_cache_key,
+      };
+      Ok(PackageResult {
+        bundle_info: BundleInfo {
+          bundle_type: bundle.bundle_type.extension().to_string(),
+          size: bundle_contents.len() as u64,
+          total_assets: assets.len() as u64,
+          hash: content_hash,
+          hash_references: vec![],
+          cache_keys: Some(cache_keys),
+          is_large_blob: true, // Always true for native packager - content is on filesystem
+          time: Some(0),
+          bundle_contents: None,
+          map_contents: None,
         },
-        is_large_blob: true, // Always true for native packager - content is on filesystem
-        time: Some(0),
-      },
-      config_requests: vec![],
-      dev_dep_requests: vec![],
-      invalidations: vec![],
-    })
+        config_requests: vec![],
+        dev_dep_requests: vec![],
+        invalidations: vec![],
+      })
+    } else {
+      Ok(PackageResult {
+        bundle_info: BundleInfo {
+          bundle_type: bundle.bundle_type.extension().to_string(),
+          size: bundle_contents.len() as u64,
+          total_assets: assets.len() as u64,
+          hash: content_hash,
+          hash_references: vec![],
+          cache_keys: None,
+          is_large_blob: true, // Always true for native packager - content is on filesystem
+          time: Some(0),
+          bundle_contents: Some(bundle_contents.to_owned()),
+          map_contents: None,
+        },
+        config_requests: vec![],
+        dev_dep_requests: vec![],
+        invalidations: vec![],
+      })
+    }
   }
 
   #[tracing::instrument(

@@ -21,6 +21,7 @@ use tokio::runtime::Runtime;
 use tokio::sync::RwLock;
 
 use crate::WatchEvents;
+use crate::database_reader::LmdbDatabaseReader;
 use crate::plugins::{PluginsRef, config_plugins::ConfigPlugins};
 use crate::project_root::infer_project_root;
 use crate::request_tracker::{DynCacheHandler, RequestNode, RequestTracker};
@@ -156,6 +157,7 @@ impl Atlaspack {
     };
 
     let request_tracker = RequestTracker::new(
+      Arc::new(LmdbDatabaseReader(db.clone())),
       config_loader.clone(),
       fs.clone(),
       Arc::new(resolved_options.clone()),
@@ -313,13 +315,14 @@ impl Atlaspack {
   pub fn package(&self, bundle_id: String) -> anyhow::Result<PackageResult> {
     // This possibly could be persistent between pacakges? But right now with SSR builds only we're talking about a few packages at most
     // so we can worry about that refactor later.
+
     let packager = JsPackager::new(
       atlaspack_packager_js::PackagingContext {
-        db: Arc::clone(&self.db),
-        cache: Arc::new(crate::cache::LmdbCache::new(
+        db: Arc::new(LmdbDatabaseReader(Arc::clone(&self.db))),
+        cache: Some(Arc::new(crate::cache::LmdbCache::new(
           Arc::clone(&self.db),
           Arc::new(OsFileSystem),
-        )),
+        ))),
         project_root: self.project_root.clone(),
         debug_tools: self.debug_tools.clone(),
       },

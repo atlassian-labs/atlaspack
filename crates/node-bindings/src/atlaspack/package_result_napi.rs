@@ -61,7 +61,10 @@ impl From<BundleInfo> for JsBundleInfo {
       size: info.size as u32,
       hash: info.hash,
       hash_references: info.hash_references,
-      cache_keys: info.cache_keys.into(),
+      cache_keys: info
+        .cache_keys
+        .expect("Cache keys are required when serializing to JS")
+        .into(),
       is_large_blob: info.is_large_blob,
       time: info.time.map(|t| t as u32),
     }
