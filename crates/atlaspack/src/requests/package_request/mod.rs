@@ -104,26 +104,19 @@ fn apply_hash_substitution(
 }
 
 /// Derive the output filename for a bundle by substituting its own hash
-/// reference placeholder in the bundle name using `hash_ref_to_name_hash`.
-fn resolve_bundle_name(
-  bundle: &Bundle,
-  hash_ref_to_name_hash: &HashMap<String, String>,
-) -> anyhow::Result<String> {
+/// reference placeholder with the content hash produced by the packager.
+///
+/// The bundle's own hash reference is resolved from `content_hash` — the hash
+/// of this bundle's packaged output. It cannot come from `hash_ref_to_name_hash`
+/// because that map is built by the parent orchestrator *before* this bundle is
+/// packaged; the current bundle's hash does not exist until packaging completes.
+fn resolve_bundle_name(bundle: &Bundle, content_hash: &str) -> anyhow::Result<String> {
   let name = bundle
     .name
     .as_deref()
     .ok_or_else(|| anyhow!("Bundle has no name"))?;
   if !bundle.hash_reference.is_empty() && name.contains(&bundle.hash_reference) {
-    let name_hash = hash_ref_to_name_hash
-      .get(&bundle.hash_reference)
-      .ok_or_else(|| {
-        anyhow!(
-          "No hash resolution found for bundle hash reference '{}'. \
-           The parent orchestrator must resolve all hash references before running PackageRequest.",
-          bundle.hash_reference
-        )
-      })?;
-    Ok(name.replace(&bundle.hash_reference, name_hash))
+    Ok(name.replace(&bundle.hash_reference, content_hash))
   } else {
     Ok(name.to_string())
   }
@@ -171,13 +164,14 @@ impl<B: BundleGraph + Send + Sync + 'static> Request for PackageRequest<B> {
     // each PackageRequest.
     let substituted_contents = apply_hash_substitution(raw_contents, &self.hash_ref_to_name_hash)?;
 
-    // Resolve the output filename using the same map.
-    let file_name = resolve_bundle_name(&self.bundle, &self.hash_ref_to_name_hash)?;
+    // Resolve the output filename using the content hash from the packager result.
+    // The bundle's own hash reference is derived from its content hash — it cannot
+    // come from hash_ref_to_name_hash, which only contains hashes for *other* bundles
+    // that this bundle's content references (resolved via topological ordering).
+    let file_name = resolve_bundle_name(&self.bundle, &content_hash)?;
     let dist_dir = &self.bundle.target.dist_dir;
     let out_path = dist_dir.join(&file_name);
 
-    // Write to disk via the request context file system (not std::fs) so
-    // that in-memory or other FS implementations work correctly in tests.
     let fs = request_context.file_system();
     fs.create_dir_all(dist_dir)
       .map_err(|e| anyhow!("Failed to create output directory {:?}: {}", dist_dir, e))?;
@@ -280,12 +274,7 @@ mod tests {
     let mut bundle = mock_bundle(FileType::Js);
     bundle.hash_reference = "HASH_REF_abcdef1234567890".to_string();
     bundle.name = Some("index.HASH_REF_abcdef1234567890.js".to_string());
-    let mut map = HashMap::new();
-    map.insert(
-      "HASH_REF_abcdef1234567890".to_string(),
-      "deadbeef".to_string(),
-    );
-    let name = resolve_bundle_name(&bundle, &map).unwrap();
+    let name = resolve_bundle_name(&bundle, "deadbeef").unwrap();
     assert_eq!(name, "index.deadbeef.js");
   }
 
@@ -293,22 +282,7 @@ mod tests {
   fn test_resolve_bundle_name_without_hash_reference() {
     let mut bundle = mock_bundle(FileType::Js);
     bundle.name = Some("index.js".to_string());
-    let name = resolve_bundle_name(&bundle, &HashMap::new()).unwrap();
+    let name = resolve_bundle_name(&bundle, "deadbeef").unwrap();
     assert_eq!(name, "index.js");
-  }
-
-  #[test]
-  fn test_resolve_bundle_name_errors_on_missing_ref() {
-    let mut bundle = mock_bundle(FileType::Js);
-    bundle.hash_reference = "HASH_REF_abcdef1234567890".to_string();
-    bundle.name = Some("index.HASH_REF_abcdef1234567890.js".to_string());
-    let result = resolve_bundle_name(&bundle, &HashMap::new());
-    assert!(result.is_err());
-    assert!(
-      result
-        .unwrap_err()
-        .to_string()
-        .contains("HASH_REF_abcdef1234567890")
-    );
   }
 }
