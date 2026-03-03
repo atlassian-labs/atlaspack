@@ -8,6 +8,8 @@ use std::time::Instant;
 
 use anyhow::anyhow;
 use async_trait::async_trait;
+#[cfg(test)]
+use atlaspack_core::package_result::BundleInfo;
 use atlaspack_core::{
   bundle_graph::bundle_graph::BundleGraph,
   debug_tools::DebugTools,
@@ -55,6 +57,13 @@ pub struct PackageRequest<B: BundleGraph + Send + Sync + 'static> {
   /// performed a topological sort so all dependencies are resolved before
   /// this request runs.
   pub hash_ref_to_name_hash: HashMap<String, String>,
+  /// Raw bundle content returned directly by the packager when
+  /// `bundle.bundle_type` is `FileType::Other(".test")`.
+  /// Only present in test builds; allows unit tests to exercise the full
+  /// post-packaging path (hash substitution, file I/O, naming) without a
+  /// real packager.
+  #[cfg(test)]
+  pub test_content: Vec<u8>,
 }
 
 impl<B: BundleGraph + Send + Sync + 'static> std::fmt::Debug for PackageRequest<B> {
@@ -143,6 +152,31 @@ impl<B: BundleGraph + Send + Sync + 'static> Request for PackageRequest<B> {
         );
         packager.package(&self.bundle.id)
       }
+      // To be able to unit test the stuff that happens after the file type packager runs, we implement this
+      // test only file type that just returns the content it's given
+      #[cfg(test)]
+      FileType::Other(ref ext) if ext == ".test" => {
+        use atlaspack_core::hash::hash_bytes;
+        let content = self.test_content.clone();
+        let hash = hash_bytes(&content);
+        Ok(PackageResult {
+          bundle_info: BundleInfo {
+            bundle_type: ext.clone(),
+            size: content.len() as u64,
+            total_assets: 0,
+            hash,
+            hash_references: vec![],
+            cache_keys: None,
+            is_large_blob: false,
+            time: None,
+            bundle_contents: Some(content),
+            map_contents: None,
+          },
+          config_requests: vec![],
+          dev_dep_requests: vec![],
+          invalidations: vec![],
+        })
+      }
       _ => Err(anyhow!(
         "Unsupported bundle type: {:?}",
         self.bundle.bundle_type
@@ -195,10 +229,67 @@ impl<B: BundleGraph + Send + Sync + 'static> Request for PackageRequest<B> {
 
 #[cfg(test)]
 mod tests {
-  use atlaspack_core::types::{Environment, Target};
+  use std::sync::Arc;
+
+  use atlaspack_core::{
+    bundle_graph::bundle_graph::BundleGraph,
+    hash::hash_bytes,
+    types::{Asset, Bundle, Dependency, Environment, Target},
+  };
+  use atlaspack_filesystem::FileSystem;
   use pretty_assertions::assert_eq;
 
+  use crate::{
+    request_tracker::{Request, RunRequestContext},
+    requests::RequestResult,
+    test_utils::{config_plugins, make_test_plugin_context},
+  };
+
   use super::*;
+
+  // ---------------------------------------------------------------------------
+  // Minimal BundleGraph that satisfies the trait without any real data.
+  // ---------------------------------------------------------------------------
+
+  struct MockBundleGraph;
+
+  impl BundleGraph for MockBundleGraph {
+    fn get_bundles(&self) -> Vec<&Bundle> {
+      vec![]
+    }
+
+    fn get_bundle_assets(&self, _bundle: &Bundle) -> anyhow::Result<Vec<&Asset>> {
+      Ok(vec![])
+    }
+
+    fn get_bundle_by_id(&self, _id: &str) -> Option<&Bundle> {
+      None
+    }
+
+    fn get_public_asset_id(&self, _asset_id: &str) -> Option<&str> {
+      None
+    }
+
+    fn get_dependencies(&self, _asset: &Asset) -> anyhow::Result<Vec<&Dependency>> {
+      Ok(vec![])
+    }
+
+    fn get_resolved_asset(
+      &self,
+      _dependency: &Dependency,
+      _bundle: &Bundle,
+    ) -> anyhow::Result<Option<&Asset>> {
+      Ok(None)
+    }
+
+    fn is_dependency_skipped(&self, _dependency: &Dependency) -> bool {
+      false
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------------
 
   fn mock_bundle(bundle_type: FileType) -> Bundle {
     Bundle {
@@ -218,6 +309,35 @@ mod tests {
       target: Target::default(),
     }
   }
+
+  fn test_bundle_type() -> FileType {
+    FileType::Other(".test".to_string())
+  }
+
+  /// Build a `PackageRequest` using the `.test` file type with the given content
+  /// and an optional pre-populated `hash_ref_to_name_hash` map.
+  fn make_test_request(
+    bundle: Bundle,
+    content: &[u8],
+    hash_ref_to_name_hash: HashMap<String, String>,
+  ) -> PackageRequest<MockBundleGraph> {
+    PackageRequest {
+      bundle,
+      bundle_graph: Arc::new(RwLock::new(MockBundleGraph)),
+      hash_ref_to_name_hash,
+      test_content: content.to_vec(),
+    }
+  }
+
+  fn make_run_context() -> RunRequestContext {
+    let ctx = make_test_plugin_context();
+    let plugins = config_plugins(ctx);
+    RunRequestContext::new_for_testing(plugins)
+  }
+
+  // ---------------------------------------------------------------------------
+  // Unit tests for pure helper functions
+  // ---------------------------------------------------------------------------
 
   #[test]
   fn test_apply_hash_substitution_no_placeholders() {
@@ -284,5 +404,146 @@ mod tests {
     bundle.name = Some("index.js".to_string());
     let name = resolve_bundle_name(&bundle, "deadbeef").unwrap();
     assert_eq!(name, "index.js");
+  }
+
+  // ---------------------------------------------------------------------------
+  // Integration tests exercising the full PackageRequest::run() path
+  // ---------------------------------------------------------------------------
+
+  /// Run a `PackageRequest` and return the output together with the FS so the
+  /// caller can inspect files written during the run.
+  async fn run_test_request(
+    bundle: Bundle,
+    content: &[u8],
+    hash_ref_to_name_hash: HashMap<String, String>,
+  ) -> (PackageRequestOutput, Arc<dyn FileSystem>) {
+    let request = make_test_request(bundle, content, hash_ref_to_name_hash);
+    let ctx = make_run_context();
+    let fs = ctx.file_system().clone();
+    let result = request.run(ctx).await.expect("PackageRequest::run failed");
+    let output = match result.result {
+      RequestResult::Package(o) => o,
+      other => panic!("Expected RequestResult::Package, got {other:?}"),
+    };
+    (output, fs)
+  }
+
+  #[tokio::test]
+  async fn test_run_writes_bundle_to_disk() {
+    let content = b"bundle content";
+    let dist_dir = PathBuf::from("/dist");
+    let mut bundle = mock_bundle(test_bundle_type());
+    bundle.name = Some("bundle.test".to_string());
+    bundle.target = Target {
+      dist_dir: dist_dir.clone(),
+      ..Target::default()
+    };
+
+    let (output, fs) = run_test_request(bundle, content, HashMap::new()).await;
+
+    let expected_path = dist_dir.join("bundle.test");
+    assert_eq!(output.file_path, expected_path);
+    assert_eq!(output.size, content.len() as u64);
+    assert_eq!(
+      fs.read(&expected_path).unwrap(),
+      content.to_vec(),
+      "file written to disk should match raw content"
+    );
+  }
+
+  #[tokio::test]
+  async fn test_run_hash_is_content_hash_of_raw_content() {
+    let content = b"deterministic content";
+    let mut bundle = mock_bundle(test_bundle_type());
+    bundle.name = Some("out.test".to_string());
+    bundle.target = Target {
+      dist_dir: PathBuf::from("/dist"),
+      ..Target::default()
+    };
+
+    let (output, _fs) = run_test_request(bundle, content, HashMap::new()).await;
+
+    assert_eq!(output.hash, hash_bytes(content));
+  }
+
+  #[tokio::test]
+  async fn test_run_substitutes_hash_refs_from_parent_map() {
+    let placeholder = "HASH_REF_abcdef1234567890";
+    let resolved = "cafebabe12345678";
+    let content = format!("import '{placeholder}';").into_bytes();
+    let expected_written = format!("import '{resolved}';").into_bytes();
+
+    let mut map = HashMap::new();
+    map.insert(placeholder.to_string(), resolved.to_string());
+
+    let mut bundle = mock_bundle(test_bundle_type());
+    bundle.name = Some("chunk.test".to_string());
+    bundle.target = Target {
+      dist_dir: PathBuf::from("/dist"),
+      ..Target::default()
+    };
+
+    let (output, fs) = run_test_request(bundle, &content, map).await;
+
+    assert_eq!(
+      fs.read(&output.file_path).unwrap(),
+      expected_written,
+      "hash reference should be replaced in the written file"
+    );
+    assert_eq!(
+      output.size,
+      expected_written.len() as u64,
+      "reported size should reflect substituted content"
+    );
+  }
+
+  #[tokio::test]
+  async fn test_run_resolves_bundle_name_from_own_hash() {
+    let content = b"body";
+    let content_hash = hash_bytes(content);
+    let hash_ref = format!("HASH_REF_{:0<16}", "aa");
+    let name_template = format!("index.{hash_ref}.test");
+
+    let mut bundle = mock_bundle(test_bundle_type());
+    bundle.hash_reference = hash_ref.clone();
+    bundle.name = Some(name_template);
+    bundle.target = Target {
+      dist_dir: PathBuf::from("/dist"),
+      ..Target::default()
+    };
+
+    let (output, fs) = run_test_request(bundle, content, HashMap::new()).await;
+
+    let expected_name = format!("index.{content_hash}.test");
+    let expected_path = PathBuf::from("/dist").join(&expected_name);
+    assert_eq!(output.file_path, expected_path);
+    assert!(
+      fs.is_file(&expected_path),
+      "file with resolved hash name should exist on disk"
+    );
+  }
+
+  #[tokio::test]
+  async fn test_run_errors_when_hash_ref_unresolved() {
+    let content = b"HASH_REF_abcdef1234567890".to_vec();
+
+    let mut bundle = mock_bundle(test_bundle_type());
+    bundle.name = Some("out.test".to_string());
+    bundle.target = Target {
+      dist_dir: PathBuf::from("/dist"),
+      ..Target::default()
+    };
+
+    let request = make_test_request(bundle, &content, HashMap::new());
+    let ctx = make_run_context();
+    let result = request.run(ctx).await;
+
+    assert!(result.is_err());
+    assert!(
+      result
+        .unwrap_err()
+        .to_string()
+        .contains("HASH_REF_abcdef1234567890")
+    );
   }
 }
