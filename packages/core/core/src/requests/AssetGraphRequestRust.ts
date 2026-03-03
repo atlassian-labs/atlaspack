@@ -352,7 +352,7 @@ export function getAssetGraph(
       let assetNode: AssetNode = {
         id,
         type: 'asset',
-        usedSymbols: new Set(),
+        usedSymbols: node.used_symbols ? new Set(node.used_symbols) : new Set(),
         usedSymbolsDownDirty: true,
         usedSymbolsUpDirty: true,
         value: asset,

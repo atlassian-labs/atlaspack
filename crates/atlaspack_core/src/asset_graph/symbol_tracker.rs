@@ -25,6 +25,11 @@ pub struct SymbolTracker {
   /// `provided_symbols`, we can resolve immediately without waiting for bottom-up
   /// propagation.
   provided_symbols: HashMap<AssetId, HashMap<String, FinalSymbolLocation>>,
+  /// Tracks which exported symbols are actually used from each asset. Populated
+  /// progressively as requirements are satisfied in `satisfy_requirements_from_asset`.
+  /// When a requirement on an incoming dependency is satisfied by an asset's export,
+  /// that export name is added to the asset's used symbols set.
+  used_symbols_by_asset: HashMap<AssetId, HashSet<String>>,
 }
 
 /*
@@ -427,6 +432,13 @@ impl SymbolTracker {
           // Store the local name for propagation lookup
           matched_locals.push(required.symbol.local.clone());
 
+          // Track that the resolved symbol is used from the providing asset
+          self
+            .used_symbols_by_asset
+            .entry(located_symbol.providing_asset_id.clone())
+            .or_default()
+            .insert(located_symbol.imported_name.clone());
+
           // If this was a speculative requirement, track its group for cleanup
           if let Some(ref group_id) = required.speculation_group_id {
             satisfied_speculation_groups.push(group_id.clone());
@@ -463,12 +475,33 @@ impl SymbolTracker {
         // Register the resolved symbol in the parent asset's provided_symbols cache.
         // The parent asset now "provides" this symbol through its re-export, even
         // though the final location points to a downstream asset.
+        // Also track that this symbol is used from the parent asset, but ONLY if
+        // the parent has this as a weak (re-exported) symbol. If it's a strong
+        // symbol or the parent doesn't export it, we don't add it — the parent
+        // is merely consuming the symbol, not re-exporting it.
         if let Some(AssetGraphNode::Asset(parent_asset)) = parent_asset_node {
           self
             .provided_symbols
             .entry(parent_asset.id.clone())
             .or_default()
             .insert(symbol_for_parent.clone(), located_symbol.clone());
+
+          let is_reexport = parent_asset.symbols.as_ref().is_some_and(|syms| {
+            syms.iter().any(|s| {
+              // Named weak re-export (e.g. `export {foo} from './dep'`)
+              (s.exported == symbol_for_parent && s.is_weak)
+              // Star re-export marker (e.g. `export * from './dep'`) — any symbol
+              // forwarded through a star re-export counts as used from this asset
+              || matches!(classify_symbol_export(s), SymbolExportType::Star)
+            })
+          });
+          if is_reexport {
+            self
+              .used_symbols_by_asset
+              .entry(parent_asset.id.clone())
+              .or_default()
+              .insert(symbol_for_parent.clone());
+          }
         }
 
         for parent_dep in parent_asset_dependencies {
@@ -734,6 +767,7 @@ impl SymbolTracker {
     FinalizedSymbolTracker {
       requirements_by_dep,
       provided_symbols: self.provided_symbols,
+      used_symbols_by_asset: self.used_symbols_by_asset,
     }
   }
 }
@@ -758,6 +792,9 @@ pub struct FinalizedSymbolTracker {
   /// symbol name, with the value being the `FinalSymbolLocation` that ultimately
   /// provides that symbol.
   provided_symbols: HashMap<AssetId, HashMap<String, FinalSymbolLocation>>,
+  /// The set of exported symbols actually used from each asset. Computed
+  /// progressively during graph construction as requirements are satisfied.
+  used_symbols_by_asset: HashMap<AssetId, HashSet<String>>,
 }
 
 impl FinalizedSymbolTracker {
@@ -777,6 +814,13 @@ impl FinalizedSymbolTracker {
     asset_id: &AssetId,
   ) -> Option<&HashMap<String, FinalSymbolLocation>> {
     self.provided_symbols.get(asset_id)
+  }
+
+  /// Returns the set of exported symbols that are actually used from an asset.
+  /// This is the Rust equivalent of `assetNode.usedSymbols` in the JS
+  /// `propagateSymbols` implementation.
+  pub fn get_used_symbols_for_asset(&self, asset_id: &AssetId) -> Option<&HashSet<String>> {
+    self.used_symbols_by_asset.get(asset_id)
   }
 }
 
@@ -971,6 +1015,29 @@ mod tests {
         !has_symbol,
         "Expected dep '{}' to have no requirement for '{}', but it does",
         dep_specifier, symbol_name
+      );
+    }
+
+    /// Assert that an asset (by file path) has exactly the expected set of used symbols.
+    fn assert_asset_used_symbols(&self, asset_path: &str, expected: &[&str]) {
+      let asset = self
+        .assets
+        .get(asset_path)
+        .unwrap_or_else(|| panic!("No asset with path '{}'", asset_path));
+
+      let actual = self
+        .tracker
+        .used_symbols_by_asset
+        .get(&asset.id)
+        .cloned()
+        .unwrap_or_default();
+
+      let expected_set: HashSet<String> = expected.iter().map(|s| s.to_string()).collect();
+
+      assert_eq!(
+        actual, expected_set,
+        "Asset '{}' used symbols mismatch.\n  Expected: {:?}\n  Actual: {:?}",
+        asset_path, expected_set, actual
       );
     }
 
@@ -2055,5 +2122,164 @@ mod tests {
       .expect("barrel.js should provide 'a'");
     assert_eq!(barrel_loc.providing_asset_id, a_id);
     assert_eq!(barrel_loc.imported_name, "a");
+  }
+
+  // ---- used_symbols_by_asset tests ----
+
+  #[test]
+  fn used_symbols_tracks_direct_import() {
+    // index.js imports {foo} from ./provider.js
+    // provider.js exports foo (strong) and bar (strong)
+    // Only foo should be in provider's usedSymbols
+    let ctx = symbol_tracker_test! {
+      entry "index.js" provides [] {
+        dep "./provider.js" imports [("foo", "foo", false)]
+          from "provider.js" provides [("foo", "foo", false), ("bar", "bar", false)] {}
+      }
+    };
+
+    ctx.assert_asset_used_symbols("provider.js", &["foo"]);
+    // index.js has no used symbols (it's the entry, nothing imports from it)
+    ctx.assert_asset_used_symbols("index.js", &[]);
+  }
+
+  #[test]
+  fn used_symbols_tracks_multiple_imports() {
+    // index.js imports {foo, bar} from ./provider.js
+    // provider.js exports foo, bar, baz
+    // Only foo and bar should be in provider's usedSymbols
+    let ctx = symbol_tracker_test! {
+      entry "index.js" provides [] {
+        dep "./provider.js" imports [("foo", "foo", false), ("bar", "bar", false)]
+          from "provider.js" provides [("foo", "foo", false), ("bar", "bar", false), ("baz", "baz", false)] {}
+      }
+    };
+
+    ctx.assert_asset_used_symbols("provider.js", &["foo", "bar"]);
+  }
+
+  #[test]
+  fn used_symbols_tracks_through_barrel_reexport() {
+    // index.js imports {foo} from ./barrel.js
+    // barrel.js re-exports {foo} from ./provider.js (weak)
+    // provider.js exports foo (strong)
+    // Both barrel.js and provider.js should have foo in their usedSymbols
+    let ctx = symbol_tracker_test! {
+      entry "index.js" provides [] {
+        dep "./barrel.js" imports [("$barrel$re_export$foo", "foo", false)]
+          from "barrel.js" provides [("$barrel$re_export$foo", "foo", true)] {
+          dep "./provider.js" imports [("foo", "foo", true)]
+            from "provider.js" provides [("foo", "foo", false)] {}
+        }
+      }
+    };
+
+    ctx.assert_asset_used_symbols("provider.js", &["foo"]);
+    ctx.assert_asset_used_symbols("barrel.js", &["foo"]);
+  }
+
+  #[test]
+  fn used_symbols_tracks_renamed_reexport() {
+    // index.js imports {renamedFoo} from ./barrel.js
+    // barrel.js: export {foo as renamedFoo} from './provider.js'
+    // provider.js exports foo (strong)
+    // barrel.js should have renamedFoo, provider.js should have foo
+    //
+    // The dep from barrel→provider has local="$barrel$re_export$renamedFoo"
+    // which matches the barrel asset's symbol local, linking the re-export chain.
+    // The exported name on the dep is "foo" (the original name from the provider).
+    let ctx = symbol_tracker_test! {
+      entry "index.js" provides [] {
+        dep "./barrel.js" imports [("$barrel$re_export$renamedFoo", "renamedFoo", false)]
+          from "barrel.js" provides [("$barrel$re_export$renamedFoo", "renamedFoo", true)] {
+          dep "./provider.js" imports [("$barrel$re_export$renamedFoo", "foo", true)]
+            from "provider.js" provides [("foo", "foo", false)] {}
+        }
+      }
+    };
+
+    ctx.assert_asset_used_symbols("provider.js", &["foo"]);
+    ctx.assert_asset_used_symbols("barrel.js", &["renamedFoo"]);
+  }
+
+  #[test]
+  fn used_symbols_tracks_star_reexport() {
+    // index.js imports {foo} from ./barrel.js
+    // barrel.js: export * from './foo.js'; export * from './bar.js'
+    // foo.js exports foo
+    // bar.js exports bar
+    // foo.js should have {foo}, bar.js should have nothing (bar not imported)
+    // barrel.js should have {foo} (forwarded through star re-export)
+    let ctx = symbol_tracker_test! {
+      entry "index.js" provides [] {
+        dep "./barrel.js" imports [("foo", "foo", false)]
+          from "barrel.js" provides [("*", "*", true)] {
+          dep "./foo.js" imports [("*", "*", true)]
+            from "foo.js" provides [("foo", "foo", false)] {}
+          dep "./bar.js" imports [("*", "*", true)]
+            from "bar.js" provides [("bar", "bar", false)] {}
+        }
+      }
+    };
+
+    ctx.assert_asset_used_symbols("foo.js", &["foo"]);
+    ctx.assert_asset_used_symbols("bar.js", &[]);
+    ctx.assert_asset_used_symbols("barrel.js", &["foo"]);
+  }
+
+  #[test]
+  fn used_symbols_tracks_namespace_reexport() {
+    // index.js imports {ns} from ./barrel.js
+    // barrel.js: export * as ns from './provider.js'
+    // provider.js exports foo
+    // provider.js should have {*} (entire namespace used)
+    // barrel.js should have {ns}
+    //
+    // For namespace re-exports, the dep symbol has exported="*", local="ns"
+    // The tuple format is (local, exported, is_weak)
+    let ctx = symbol_tracker_test! {
+      entry "index.js" provides [] {
+        dep "./barrel.js" imports [("ns", "ns", false)]
+          from "barrel.js" provides [("ns", "ns", true)] {
+          dep "./provider.js" imports [("ns", "*", false)]
+            from "provider.js" provides [("foo", "foo", false)] {}
+        }
+      }
+    };
+
+    ctx.assert_asset_used_symbols("provider.js", &["*"]);
+    ctx.assert_asset_used_symbols("barrel.js", &["ns"]);
+  }
+
+  #[test]
+  fn used_symbols_available_on_finalized_tracker() {
+    // Verify that usedSymbols survives finalization and is accessible via the public API
+    let ctx = symbol_tracker_test! {
+      entry "index.js" provides [] {
+        dep "./provider.js" imports [("foo", "foo", false)]
+          from "provider.js" provides [("foo", "foo", false), ("bar", "bar", false)] {}
+      }
+    };
+
+    let provider_id = ctx.assets.get("provider.js").unwrap().id.clone();
+    let index_id = ctx.assets.get("index.js").unwrap().id.clone();
+
+    let finalized = ctx.assert_finalize_ok();
+
+    let provider_used = finalized
+      .get_used_symbols_for_asset(&provider_id)
+      .expect("provider.js should have used symbols");
+    assert_eq!(
+      *provider_used,
+      HashSet::from(["foo".to_string()]),
+      "Only foo should be used from provider.js"
+    );
+
+    // Entry asset has no used symbols (nothing imports from it)
+    assert_eq!(
+      finalized.get_used_symbols_for_asset(&index_id),
+      None,
+      "index.js should have no used symbols"
+    );
   }
 }

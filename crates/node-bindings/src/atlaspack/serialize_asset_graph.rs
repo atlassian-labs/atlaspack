@@ -68,9 +68,16 @@ fn serialize_asset_graph_nodes(
       Ok(serde_json::to_vec(&match item {
         AssetGraphNode::Root => SerializedAssetGraphNode::Root,
         AssetGraphNode::Entry => SerializedAssetGraphNode::Entry,
-        AssetGraphNode::Asset(asset) => SerializedAssetGraphNode::Asset {
-          value: asset.as_ref(),
-        },
+        AssetGraphNode::Asset(asset) => {
+          let used_symbols: Option<Vec<&str>> = symbol_tracker
+            .and_then(|tracker| tracker.get_used_symbols_for_asset(&asset.id))
+            .map(|syms| syms.iter().map(|s| s.as_str()).collect());
+
+          SerializedAssetGraphNode::Asset {
+            value: asset.as_ref(),
+            used_symbols,
+          }
+        }
         AssetGraphNode::Dependency(dependency) => {
           let Some(dep_node_id) = asset_graph.get_node_id_by_content_key(&dependency.id()) else {
             return Err(anyhow!(
@@ -126,6 +133,7 @@ enum SerializedAssetGraphNode<'a> {
   Entry,
   Asset {
     value: &'a Asset,
+    used_symbols: Option<Vec<&'a str>>,
   },
   Dependency {
     value: SerializedDependency<'a>,
