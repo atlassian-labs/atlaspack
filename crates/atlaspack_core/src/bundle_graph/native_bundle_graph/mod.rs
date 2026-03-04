@@ -12,7 +12,7 @@ use petgraph::visit::{EdgeRef, IntoEdgeReferences};
 
 use crate::asset_graph::{AssetGraph, AssetGraphNode};
 use crate::bundle_graph::BundleGraph;
-use crate::types::{Asset, Bundle, Dependency, Target};
+use crate::types::{Asset, Bundle, BundleBehavior, Dependency, Target};
 
 /// PetGraph-backed bundle graph, modelled similarly to `AssetGraph`.
 #[derive(Clone, Debug)]
@@ -491,5 +491,80 @@ impl BundleGraph for NativeBundleGraph {
 
   fn is_dependency_skipped(&self, _dependency: &Dependency) -> bool {
     false
+  }
+
+  fn get_bundle_hash(&self, bundle: &Bundle) -> u64 {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+    let mut state = DefaultHasher::new();
+    bundle.id.hash(&mut state);
+    // Include the IDs of all assets contained in this bundle so the hash reflects content changes.
+    if let Ok(assets) = self.get_bundle_assets(bundle) {
+      let mut asset_ids: Vec<&str> = assets.iter().map(|a| a.id.as_str()).collect();
+      // Sort for stability — asset order in the graph is not guaranteed.
+      asset_ids.sort_unstable();
+      asset_ids.hash(&mut state);
+    }
+    state.finish()
+  }
+
+  fn get_referenced_bundle_ids(&self, bundle: &Bundle) -> Vec<String> {
+    let Some(bundle_node_id) = self.get_node_id_by_content_key(&bundle.id) else {
+      return vec![];
+    };
+    let Some(bundle_node_index) = self.node_id_to_node_index.get(bundle_node_id) else {
+      return vec![];
+    };
+
+    self
+      .graph
+      .edges_directed(*bundle_node_index, Direction::Outgoing)
+      .filter_map(|e| {
+        if *e.weight() != NativeBundleGraphEdgeType::References {
+          return None;
+        }
+        let to_id = *self.graph.node_weight(e.target())?;
+        match self.nodes.get(to_id)? {
+          NativeBundleGraphNode::Bundle(b) => Some(b.id.clone()),
+          _ => None,
+        }
+      })
+      .collect()
+  }
+
+  fn get_inline_bundle_ids(&self, bundle: &Bundle) -> Vec<String> {
+    let Some(bundle_node_id) = self.get_node_id_by_content_key(&bundle.id) else {
+      return vec![];
+    };
+    let Some(bundle_node_index) = self.node_id_to_node_index.get(bundle_node_id) else {
+      return vec![];
+    };
+
+    // Inline bundles appear as neighbours via both Contains (2) and References (4) edges.
+    // Collect both to match the JS getInlineBundles() implementation.
+    self
+      .graph
+      .edges_directed(*bundle_node_index, Direction::Outgoing)
+      .filter_map(|e| {
+        let edge_type = *e.weight();
+        if edge_type != NativeBundleGraphEdgeType::Contains
+          && edge_type != NativeBundleGraphEdgeType::References
+        {
+          return None;
+        }
+        let to_id = *self.graph.node_weight(e.target())?;
+        match self.nodes.get(to_id)? {
+          NativeBundleGraphNode::Bundle(b)
+            if matches!(
+              b.bundle_behavior,
+              Some(BundleBehavior::Inline) | Some(BundleBehavior::InlineIsolated)
+            ) =>
+          {
+            Some(b.id.clone())
+          }
+          _ => None,
+        }
+      })
+      .collect()
   }
 }

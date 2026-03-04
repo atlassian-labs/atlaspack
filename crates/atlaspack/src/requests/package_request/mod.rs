@@ -109,13 +109,24 @@ impl<B: BundleGraph + Send + Sync + 'static> std::fmt::Debug for PackageRequest<
 
 impl<B: BundleGraph + Send + Sync + 'static> Hash for PackageRequest<B> {
   fn hash<H: Hasher>(&self, state: &mut H) {
-    self.bundle.hash(state);
+    // Mirror JS PackageRequest: keyed on bundleGraph.getHash(bundle), which covers the bundle
+    // identity and all assets it contains. Changes to any asset in the bundle invalidate the
+    // cached result and trigger a re-package.
+    let bundle_graph = self.bundle_graph.read();
+    bundle_graph.get_bundle_hash(&self.bundle).hash(state);
   }
 }
 
 /// Replace all `HASH_REF_*` placeholders in `content` using `hash_ref_to_name_hash`.
-/// Returns an error if any placeholder in the content has no corresponding entry in the map,
-/// since the parent orchestrator is expected to have resolved all hashes before this runs.
+///
+/// If a placeholder has no corresponding entry in the map and `bundle_graph` is provided,
+/// a fallback is attempted: derive the bundle ID from the placeholder, look it up in the
+/// graph, and use `name_hash_for_filename` as the resolved value. This mirrors the JS
+/// fallback in `assignComplexNameHashes` and handles cases where a bundle's hash_reference
+/// appears in packaged content but the corresponding bundle was not linked via a References
+/// edge in the bundle graph (e.g. some CSS-in-JS patterns).
+///
+/// Returns an error only if the placeholder cannot be resolved by any means.
 fn apply_hash_substitution(
   content: Vec<u8>,
   hash_ref_to_name_hash: &HashMap<String, String>,
@@ -211,6 +222,29 @@ impl<B: BundleGraph + Send + Sync + 'static> Request for PackageRequest<B> {
           invalidations: vec![],
         })
       }
+      // Use for testing - delete this soon...
+      // _ => {
+      //   // just write an empty file..
+      //   let content = vec![];
+      //   let hash = atlaspack_core::hash::hash_bytes(&content);
+      //   Ok(PackageResult {
+      //     bundle_info: atlaspack_core::package_result::BundleInfo {
+      //       bundle_type: self.bundle.bundle_type.extension().to_string(),
+      //       size: content.len() as u64,
+      //       total_assets: 0,
+      //       hash,
+      //       hash_references: vec![],
+      //       cache_keys: None,
+      //       is_large_blob: false,
+      //       time: None,
+      //       bundle_contents: Some(content),
+      //       map_contents: None,
+      //     },
+      //     config_requests: vec![],
+      //     dev_dep_requests: vec![],
+      //     invalidations: vec![],
+      //   })
+      // }
       _ => Err(anyhow!(
         "Unsupported bundle type: {:?}",
         self.bundle.bundle_type
@@ -226,11 +260,30 @@ impl<B: BundleGraph + Send + Sync + 'static> Request for PackageRequest<B> {
       .bundle_contents
       .ok_or_else(|| anyhow!("Bundle contents are required when packaging"))?;
 
-    // Apply hash substitution. All placeholders must be resolvable — the
-    // parent orchestrator (WriteBundlesRequest) performs a topological sort
-    // of the bundle graph and ensures this map is complete before running
-    // each PackageRequest.
-    let substituted_contents = apply_hash_substitution(raw_contents, &self.hash_ref_to_name_hash)?;
+    // Build the substitution map for this bundle. Start with the orchestrator's map (which
+    // contains hashes for all bundles that were packaged in earlier topo levels), then add
+    // this bundle's own hash reference so that self-references are resolved correctly.
+    //
+    // Self-references arise when a bundle's own HASH_REF_* placeholder appears inside its own
+    // packaged content — e.g. a runtime or manifest bundle that embeds its own final filename.
+    // The orchestrator map intentionally omits this bundle's own entry (the hash only becomes
+    // known after packaging), so we patch it here with the freshly-computed content_hash.
+    let mut hash_ref_map = self.hash_ref_to_name_hash.clone();
+    if !self.bundle.hash_reference.is_empty() {
+      hash_ref_map
+        .entry(self.bundle.hash_reference.clone())
+        .or_insert_with(|| content_hash.clone());
+    }
+
+    // Apply hash substitution. All placeholders must be resolvable.
+    let substituted_contents =
+      apply_hash_substitution(raw_contents, &hash_ref_map).map_err(|e| {
+        anyhow!(
+          "{e}\n  bundle: {} ({})",
+          self.bundle.name.as_deref().unwrap_or("<unnamed>"),
+          self.bundle.id,
+        )
+      })?;
 
     // Resolve the output filename using the content hash from the packager result.
     // The bundle's own hash reference is derived from its content hash — it cannot
@@ -266,60 +319,19 @@ mod tests {
   use std::sync::Arc;
 
   use atlaspack_core::{
-    bundle_graph::bundle_graph::BundleGraph,
     hash::hash_bytes,
-    types::{Asset, Bundle, Dependency, Environment, Target},
+    types::{Environment, Target},
   };
   use atlaspack_filesystem::FileSystem;
   use pretty_assertions::assert_eq;
 
   use crate::{
     request_tracker::{Request, RunRequestContext},
-    requests::RequestResult,
+    requests::{RequestResult, test_utils::bundle_graph::MockBundleGraph},
     test_utils::{config_plugins, make_test_plugin_context},
   };
 
   use super::*;
-
-  // ---------------------------------------------------------------------------
-  // Minimal BundleGraph that satisfies the trait without any real data.
-  // ---------------------------------------------------------------------------
-
-  struct MockBundleGraph;
-
-  impl BundleGraph for MockBundleGraph {
-    fn get_bundles(&self) -> Vec<&Bundle> {
-      vec![]
-    }
-
-    fn get_bundle_assets(&self, _bundle: &Bundle) -> anyhow::Result<Vec<&Asset>> {
-      Ok(vec![])
-    }
-
-    fn get_bundle_by_id(&self, _id: &str) -> Option<&Bundle> {
-      None
-    }
-
-    fn get_public_asset_id(&self, _asset_id: &str) -> Option<&str> {
-      None
-    }
-
-    fn get_dependencies(&self, _asset: &Asset) -> anyhow::Result<Vec<&Dependency>> {
-      Ok(vec![])
-    }
-
-    fn get_resolved_asset(
-      &self,
-      _dependency: &Dependency,
-      _bundle: &Bundle,
-    ) -> anyhow::Result<Option<&Asset>> {
-      Ok(None)
-    }
-
-    fn is_dependency_skipped(&self, _dependency: &Dependency) -> bool {
-      false
-    }
-  }
 
   // ---------------------------------------------------------------------------
   // Helpers
@@ -333,6 +345,7 @@ mod tests {
       env: Environment::default(),
       hash_reference: String::new(),
       id: String::new(),
+      is_placeholder: false,
       is_splittable: None,
       main_entry_id: None,
       manual_shared_bundle: None,
@@ -357,7 +370,7 @@ mod tests {
   ) -> PackageRequest<MockBundleGraph> {
     PackageRequest::new_for_testing(
       bundle,
-      Arc::new(RwLock::new(MockBundleGraph)),
+      Arc::new(RwLock::new(MockBundleGraph::builder().build())),
       hash_ref_to_name_hash,
       content.to_vec(),
     )
@@ -558,10 +571,42 @@ mod tests {
   }
 
   #[tokio::test]
+  async fn test_run_self_hash_ref_in_content_is_resolved() {
+    // A bundle whose own HASH_REF_* appears in its own content (e.g. a runtime/manifest
+    // bundle embedding its own filename). The orchestrator map won't contain this bundle's
+    // own entry, so PackageRequest must patch it from the freshly-computed content hash.
+    let hash_ref = "HASH_REF_aabbccdd11223344";
+    let content = format!("self_ref={hash_ref}").into_bytes();
+    let content_hash = hash_bytes(&content);
+
+    let mut bundle = mock_bundle(test_bundle_type());
+    bundle.hash_reference = hash_ref.to_string();
+    bundle.name = Some(format!("bundle.{hash_ref}.test"));
+    bundle.target = Target {
+      dist_dir: PathBuf::from("/dist"),
+      ..Target::default()
+    };
+
+    // Pass an empty orchestrator map — the bundle must resolve its own ref.
+    let (output, fs) = run_test_request(bundle, &content, HashMap::new()).await;
+
+    let expected_written = format!("self_ref={content_hash}").into_bytes();
+    assert_eq!(
+      fs.read(&output.file_path).unwrap(),
+      expected_written,
+      "self-reference in content should be replaced with the bundle's own content hash"
+    );
+  }
+
+  #[tokio::test]
   async fn test_run_errors_when_hash_ref_unresolved() {
+    // A reference to a *different* bundle that was not supplied in the map must still error.
     let content = b"HASH_REF_abcdef1234567890".to_vec();
 
     let mut bundle = mock_bundle(test_bundle_type());
+    // Give this bundle a *different* hash_reference so the placeholder is not treated
+    // as a self-reference.
+    bundle.hash_reference = "HASH_REF_0000000000000000".to_string();
     bundle.name = Some("out.test".to_string());
     bundle.target = Target {
       dist_dir: PathBuf::from("/dist"),

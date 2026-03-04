@@ -384,6 +384,7 @@ mod tests {
       pipeline: None,
       public_id: None,
       target: Default::default(),
+      is_placeholder: false,
     }
   }
 

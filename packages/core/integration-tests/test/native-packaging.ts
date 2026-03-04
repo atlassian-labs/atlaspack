@@ -7,9 +7,16 @@ import {
   overlayFS,
   fsFixture,
   runBundle,
+  setupV3Flags,
 } from '@atlaspack/test-utils';
 
 describe('Native packaging', function () {
+  setupV3Flags({
+    nativePackager: true,
+    nativePackagerSSRDev: true,
+    nativePackagerWriteBundles: true,
+  });
+
   it('should package two SSR entries', async function () {
     this.timeout(30_000);
     await fsFixture(overlayFS, __dirname)`
@@ -57,11 +64,6 @@ describe('Native packaging', function () {
               distDir: path.join(__dirname, 'dist'),
               outputFormat: 'commonjs',
             },
-          },
-          featureFlags: {
-            nativePackager: true,
-            nativePackagerSSRDev: true,
-            cachePerformanceImprovements: false,
           },
         },
       );

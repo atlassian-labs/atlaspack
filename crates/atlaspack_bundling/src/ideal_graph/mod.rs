@@ -1173,6 +1173,7 @@ fn materialize_ideal_bundle(
       ideal_bundle.needs_stable_name
     }),
     bundle_behavior: ideal_bundle.behavior,
+    is_placeholder: false,
     is_splittable,
     manual_shared_bundle: None,
     name: None,
