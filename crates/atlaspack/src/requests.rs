@@ -2,6 +2,7 @@ pub use asset_graph_request::*;
 use asset_request::AssetRequestOutput;
 pub use bundle_graph_request::*;
 use entry_request::EntryRequestOutput;
+use package_request::PackageRequestOutput;
 use path_request::PathRequestOutput;
 use target_request::TargetRequestOutput;
 
@@ -9,6 +10,7 @@ mod asset_graph_request;
 mod asset_request;
 mod bundle_graph_request;
 mod entry_request;
+mod package_request;
 mod path_request;
 mod target_request;
 
@@ -22,6 +24,7 @@ pub enum RequestResult {
   Entry(EntryRequestOutput),
   Path(PathRequestOutput),
   Target(TargetRequestOutput),
+  Package(PackageRequestOutput),
   // The following are test request types only used in the test build
   #[cfg(test)]
   TestSub(String),
@@ -40,6 +43,7 @@ impl std::fmt::Display for RequestResult {
       }
       RequestResult::Path(output) => f.write_str(&format!("Path({:?})", output)),
       RequestResult::Target(_output) => f.write_str(&format!("Target")),
+      RequestResult::Package(_output) => f.write_str(&format!("Package")),
       #[cfg(test)]
       RequestResult::TestSub(_output) => f.write_str(&format!("TestSub")),
       #[cfg(test)]
@@ -57,6 +61,7 @@ impl std::fmt::Debug for RequestResult {
       RequestResult::Entry(output) => f.debug_tuple("Entry").field(output).finish(),
       RequestResult::Path(output) => f.debug_tuple("Path").field(output).finish(),
       RequestResult::Target(output) => f.debug_tuple("Target").field(output).finish(),
+      RequestResult::Package(output) => f.debug_tuple("Package").field(output).finish(),
       #[cfg(test)]
       RequestResult::TestSub(output) => f.debug_tuple("TestSub").field(output).finish(),
       #[cfg(test)]

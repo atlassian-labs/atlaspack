@@ -43,4 +43,14 @@ impl Cache for LmdbCache {
     let file_path = get_file_key(&self.cache_dir, key);
     Ok(self.fs.read(&file_path)?)
   }
+
+  fn get(&self, key: &str) -> anyhow::Result<Vec<u8>> {
+    let read_txn = self.db.database().read_txn()?;
+    let data = self.db.database().get(&read_txn, key)?;
+    read_txn.commit()?;
+    match data {
+      Some(data) => Ok(data),
+      None => Err(anyhow::anyhow!(format!("Key {} not found in cache", key))),
+    }
+  }
 }

@@ -37,3 +37,7 @@ packaging-output/
 
 # Rovo Dev local prompts
 .rovodev/
+
+# SSR runtime meta output from testing
+tesseract-shared.lmdb
+tesseract-shared.lmdb-lock

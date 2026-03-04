@@ -61,7 +61,10 @@ impl From<BundleInfo> for JsBundleInfo {
       size: info.size as u32,
       hash: info.hash,
       hash_references: info.hash_references,
-      cache_keys: info.cache_keys.into(),
+      cache_keys: info
+        .cache_keys
+        .expect("Cache keys are required when serializing to JS")
+        .into(),
       is_large_blob: info.is_large_blob,
       time: info.time.map(|t| t as u32),
     }
@@ -130,9 +133,11 @@ mod tests {
       total_assets: 5,
       hash: "abc123".to_string(),
       hash_references: vec!["ref1".to_string()],
-      cache_keys: rust_cache_keys,
+      cache_keys: Some(rust_cache_keys),
       is_large_blob: false,
       time: Some(100),
+      bundle_contents: None,
+      map_contents: None,
     };
 
     let js_bundle_info: JsBundleInfo = rust_bundle_info.into();
@@ -161,9 +166,11 @@ mod tests {
       total_assets: 100,
       hash: "hash".to_string(),
       hash_references: vec![],
-      cache_keys: rust_cache_keys,
+      cache_keys: Some(rust_cache_keys),
       is_large_blob: true,
       time: Some(1000),
+      bundle_contents: None,
+      map_contents: None,
     };
 
     let js_bundle_info: JsBundleInfo = rust_bundle_info.into();
@@ -187,9 +194,11 @@ mod tests {
       total_assets: 2,
       hash: "def456".to_string(),
       hash_references: vec![],
-      cache_keys: rust_cache_keys,
+      cache_keys: Some(rust_cache_keys),
       is_large_blob: false,
       time: None,
+      bundle_contents: None,
+      map_contents: None,
     };
 
     let js_bundle_info: JsBundleInfo = rust_bundle_info.into();
@@ -226,9 +235,11 @@ mod tests {
       total_assets: 10,
       hash: "xyz789".to_string(),
       hash_references: vec!["ref1".to_string(), "ref2".to_string()],
-      cache_keys: rust_cache_keys,
+      cache_keys: Some(rust_cache_keys),
       is_large_blob: false,
       time: Some(200),
+      bundle_contents: None,
+      map_contents: None,
     };
 
     let rust_result = PackageResult {
@@ -262,9 +273,11 @@ mod tests {
       total_assets: 1,
       hash: "hash".to_string(),
       hash_references: vec!["ref1".to_string(), "ref2".to_string(), "ref3".to_string()],
-      cache_keys: rust_cache_keys,
+      cache_keys: Some(rust_cache_keys),
       is_large_blob: false,
       time: None,
+      bundle_contents: None,
+      map_contents: None,
     };
 
     let rust_result = PackageResult {
