@@ -98,47 +98,38 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       // Write bundle content to filesystem cache instead of LMDB.
       // Large blobs are stored on the filesystem to avoid bloating LMDB.
       cache.set_large_blob(&content_cache_key, bundle_contents)?;
-      let cache_keys = CacheKeyMap {
-        content: content_cache_key,
-        map: "TODO".to_string(), // Has to exist for JS, but won't be found in LMDB
-        info: info_cache_key,
-      };
-      Ok(PackageResult {
-        bundle_info: BundleInfo {
-          bundle_type: bundle.bundle_type.extension().to_string(),
-          size: bundle_contents.len() as u64,
-          total_assets: assets.len() as u64,
-          hash: content_hash,
-          hash_references: vec![],
-          cache_keys: Some(cache_keys),
-          is_large_blob: true, // Always true for native packager - content is on filesystem
-          time: Some(0),
-          bundle_contents: None,
-          map_contents: None,
-        },
-        config_requests: vec![],
-        dev_dep_requests: vec![],
-        invalidations: vec![],
-      })
-    } else {
-      Ok(PackageResult {
-        bundle_info: BundleInfo {
-          bundle_type: bundle.bundle_type.extension().to_string(),
-          size: bundle_contents.len() as u64,
-          total_assets: assets.len() as u64,
-          hash: content_hash,
-          hash_references: vec![],
-          cache_keys: None,
-          is_large_blob: true, // Always true for native packager - content is on filesystem
-          time: Some(0),
-          bundle_contents: Some(bundle_contents.to_owned()),
-          map_contents: None,
-        },
-        config_requests: vec![],
-        dev_dep_requests: vec![],
-        invalidations: vec![],
-      })
     }
+
+    let size = bundle_contents.len() as u64;
+    let (cache_keys, bundle_contents) = match &self.context.cache {
+      Some(_) => (
+        Some(CacheKeyMap {
+          content: content_cache_key,
+          map: "TODO".to_string(), // Has to exist for JS, but won't be found in LMDB
+          info: info_cache_key,
+        }),
+        None,
+      ),
+      None => (None, Some(bundle_contents.to_owned())),
+    };
+
+    Ok(PackageResult {
+      bundle_info: BundleInfo {
+        bundle_type: bundle.bundle_type.extension().to_string(),
+        size,
+        total_assets: assets.len() as u64,
+        hash: content_hash,
+        hash_references: vec![],
+        cache_keys,
+        is_large_blob: true, // Always true for native packager - content is on filesystem
+        time: Some(0),
+        bundle_contents,
+        map_contents: None,
+      },
+      config_requests: vec![],
+      dev_dep_requests: vec![],
+      invalidations: vec![],
+    })
   }
 
   #[tracing::instrument(

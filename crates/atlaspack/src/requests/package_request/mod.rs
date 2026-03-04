@@ -1,3 +1,4 @@
+// Temporarily required becuase currently this request type is not used anywhere
 #![allow(dead_code)]
 
 use std::collections::HashMap;
@@ -8,8 +9,6 @@ use std::time::Instant;
 
 use anyhow::anyhow;
 use async_trait::async_trait;
-#[cfg(test)]
-use atlaspack_core::package_result::BundleInfo;
 use atlaspack_core::{
   bundle_graph::bundle_graph::BundleGraph,
   debug_tools::DebugTools,
@@ -51,19 +50,53 @@ pub struct PackageRequestOutput {
 /// via topological sort of the bundle graph), and writes the result to disk.
 pub struct PackageRequest<B: BundleGraph + Send + Sync + 'static> {
   pub bundle: Bundle,
-  pub bundle_graph: Arc<RwLock<B>>,
+  bundle_graph: Arc<RwLock<B>>,
   /// Maps each `HASH_REF_*` placeholder to the resolved name hash for that
   /// bundle. Provided by the parent `WriteBundlesRequest` which has already
   /// performed a topological sort so all dependencies are resolved before
   /// this request runs.
   pub hash_ref_to_name_hash: HashMap<String, String>,
-  /// Raw bundle content returned directly by the packager when
-  /// `bundle.bundle_type` is `FileType::Other(".test")`.
-  /// Only present in test builds; allows unit tests to exercise the full
-  /// post-packaging path (hash substitution, file I/O, naming) without a
-  /// real packager.
+  /// Raw bundle content used by the `.test` packager arm. Private so the
+  /// varying struct shape is never visible outside this module.
   #[cfg(test)]
-  pub test_content: Vec<u8>,
+  test_content: Vec<u8>,
+}
+
+impl<B: BundleGraph + Send + Sync + 'static> PackageRequest<B> {
+  /// Creates a new `PackageRequest`.
+  pub fn new(
+    bundle: Bundle,
+    bundle_graph: Arc<RwLock<B>>,
+    hash_ref_to_name_hash: HashMap<String, String>,
+  ) -> Self {
+    Self {
+      bundle,
+      bundle_graph,
+      hash_ref_to_name_hash,
+      #[cfg(test)]
+      test_content: vec![],
+    }
+  }
+
+  /// Creates a `PackageRequest` for use in tests using the `.test` file type.
+  ///
+  /// `content` is returned verbatim by the packager, bypassing any real
+  /// packager implementation. This lets tests exercise hash substitution,
+  /// file I/O and bundle naming without a real bundle graph or packager.
+  #[cfg(test)]
+  pub fn new_for_testing(
+    bundle: Bundle,
+    bundle_graph: Arc<RwLock<B>>,
+    hash_ref_to_name_hash: HashMap<String, String>,
+    content: Vec<u8>,
+  ) -> Self {
+    Self {
+      bundle,
+      bundle_graph,
+      hash_ref_to_name_hash,
+      test_content: content,
+    }
+  }
 }
 
 impl<B: BundleGraph + Send + Sync + 'static> std::fmt::Debug for PackageRequest<B> {
@@ -157,6 +190,7 @@ impl<B: BundleGraph + Send + Sync + 'static> Request for PackageRequest<B> {
       #[cfg(test)]
       FileType::Other(ref ext) if ext == ".test" => {
         use atlaspack_core::hash::hash_bytes;
+        use atlaspack_core::package_result::BundleInfo;
         let content = self.test_content.clone();
         let hash = hash_bytes(&content);
         Ok(PackageResult {
@@ -321,12 +355,12 @@ mod tests {
     content: &[u8],
     hash_ref_to_name_hash: HashMap<String, String>,
   ) -> PackageRequest<MockBundleGraph> {
-    PackageRequest {
+    PackageRequest::new_for_testing(
       bundle,
-      bundle_graph: Arc::new(RwLock::new(MockBundleGraph)),
+      Arc::new(RwLock::new(MockBundleGraph)),
       hash_ref_to_name_hash,
-      test_content: content.to_vec(),
-    }
+      content.to_vec(),
+    )
   }
 
   fn make_run_context() -> RunRequestContext {

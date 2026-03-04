@@ -9,14 +9,14 @@ pub type DatabaseReaderRef = Arc<dyn DatabaseReader + Send + Sync>;
 ///
 /// The primary production implementation wraps `lmdb_js_lite::DatabaseHandle`.
 /// An in-memory implementation (`InMemoryDatabaseReader`) is provided for use in tests.
-pub trait DatabaseReader {
+pub trait DatabaseReader: std::fmt::Debug {
   fn get(&self, key: &str) -> anyhow::Result<Option<Vec<u8>>>;
 }
 
 /// An in-memory `DatabaseReader` suitable for use in tests.
 ///
 /// Use `put` to seed test data before running code under test.
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct InMemoryDatabaseReader {
   data: RwLock<HashMap<String, Vec<u8>>>,
 }
