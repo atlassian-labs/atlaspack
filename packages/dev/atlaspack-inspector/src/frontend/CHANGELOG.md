@@ -1,5 +1,14 @@
 # @atlaspack/inspector-frontend
 
+## 0.1.23
+
+### Patch Changes
+
+- Updated dependencies [[`f7878b2`](https://github.com/atlassian-labs/atlaspack/commit/f7878b2f19a0a3bbd0e79d0b4a4e1479646043b7), [`de388ff`](https://github.com/atlassian-labs/atlaspack/commit/de388ff76d39dece97ad475fcccdb6efb6283bfc)]:
+  - @atlaspack/core@2.36.0
+  - @atlaspack/cli@2.15.17
+  - @atlaspack/graph@3.6.18
+
 ## 0.1.22
 
 ### Patch Changes

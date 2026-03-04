@@ -1,5 +1,29 @@
 # @atlaspack/rust
 
+## 3.24.1
+
+### Patch Changes
+
+- [#1025](https://github.com/atlassian-labs/atlaspack/pull/1025) [`f7878b2`](https://github.com/atlassian-labs/atlaspack/commit/f7878b2f19a0a3bbd0e79d0b4a4e1479646043b7) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add native ideal graph bundling algorithm behind nativeBundling feature flag
+
+- [#1049](https://github.com/atlassian-labs/atlaspack/pull/1049) [`22bb49c`](https://github.com/atlassian-labs/atlaspack/commit/22bb49c5708798d259f98c8b5c10850b2f4f5f1b) Thanks [@marcins](https://github.com/marcins)! - Implement a basic pacakge_request for native
+
+- [#1045](https://github.com/atlassian-labs/atlaspack/pull/1045) [`bddd21a`](https://github.com/atlassian-labs/atlaspack/commit/bddd21a5313974ca333c02b2da1c6f85d1afaaea) Thanks [@benjervis](https://github.com/benjervis)! - Replace `propagate_requested_symbols` with SymbolTracker-based propagation in native symbol propagation.
+
+  The SymbolTracker now handles both symbol tracking and propagation in a single unified flow via
+  `track_symbols()`, which returns dependency IDs that need un-deferral. This replaces the separate
+  `propagate_requested_symbols` function when the `rustSymbolTracker` feature flag is enabled.
+
+  Key changes:
+  - `track_symbols()` now returns `Vec<DependencyId>` of dependencies needing un-deferral
+  - New `propagate_to_outgoing_dependencies()` method determines which deps need un-deferral
+  - New `has_requested_symbols()` method replaces graph-based deferral checks
+  - Extracted `track_dependency_symbols()` for cleaner separation of concerns
+  - Replaced `is_star_reexport_symbol`/`is_namespace_reexport_symbol` with `classify_symbol_export()` enum
+  - Feature-flagged integration in `asset_graph_request.rs` with `track_and_propagate_symbols()` helper
+
+- [#1047](https://github.com/atlassian-labs/atlaspack/pull/1047) [`de388ff`](https://github.com/atlassian-labs/atlaspack/commit/de388ff76d39dece97ad475fcccdb6efb6283bfc) Thanks [@marcins](https://github.com/marcins)! - Change approach to source map offset for hashRefs - use a streaming approach to avoid loading large sourcemaps into memory.
+
 ## 3.24.0
 
 ### Minor Changes

@@ -1,5 +1,16 @@
 # @atlaspack/utils
 
+## 3.3.8
+
+### Patch Changes
+
+- Updated dependencies [[`f7878b2`](https://github.com/atlassian-labs/atlaspack/commit/f7878b2f19a0a3bbd0e79d0b4a4e1479646043b7), [`22bb49c`](https://github.com/atlassian-labs/atlaspack/commit/22bb49c5708798d259f98c8b5c10850b2f4f5f1b), [`bddd21a`](https://github.com/atlassian-labs/atlaspack/commit/bddd21a5313974ca333c02b2da1c6f85d1afaaea), [`de388ff`](https://github.com/atlassian-labs/atlaspack/commit/de388ff76d39dece97ad475fcccdb6efb6283bfc)]:
+  - @atlaspack/rust@3.24.1
+  - @atlaspack/source-map@3.3.0
+  - @atlaspack/logger@2.14.48
+  - @atlaspack/types-internal@2.24.1
+  - @atlaspack/codeframe@2.13.38
+
 ## 3.3.7
 
 ### Patch Changes
