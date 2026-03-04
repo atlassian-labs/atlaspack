@@ -85,4 +85,15 @@ pub enum BundleBehavior {
   InlineIsolated,
 }
 
+impl BundleBehavior {
+  /// Returns true if this behavior creates a bundle boundary
+  /// (Inline, Isolated, or InlineIsolated).
+  pub fn is_boundary(&self) -> bool {
+    matches!(
+      self,
+      BundleBehavior::Inline | BundleBehavior::Isolated | BundleBehavior::InlineIsolated
+    )
+  }
+}
+
 pub type MaybeBundleBehavior = Option<BundleBehavior>;

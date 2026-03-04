@@ -43,6 +43,7 @@ import {
   nameBundle,
   loadPluginConfigWithDevDeps,
   runDevDepRequest as runDevDepRequestShared,
+  dumpBundleGraphSnapshot,
 } from './BundleGraphRequestUtils';
 import createAssetGraphRequestJS from './AssetGraphRequest';
 import {createAssetGraphRequestRust} from './AssetGraphRequestRust';
@@ -396,15 +397,19 @@ class BundlerRunner {
         }
 
         // this the normal bundle workflow (bundle, optimizing, run-times, naming)
-        await bundler.bundle({
-          bundleGraph: mutableBundleGraph,
-          config: this.configs.get(plugin.name)?.result,
-          options: this.pluginOptions,
-          logger,
-          tracer,
+        await instrumentAsync('bundle (V2)', async () => {
+          await bundler.bundle({
+            bundleGraph: mutableBundleGraph,
+            config: this.configs.get(plugin.name)?.result,
+            options: this.pluginOptions,
+            logger,
+            tracer,
+          });
         });
 
         measurement && measurement.end();
+
+        dumpBundleGraphSnapshot(internalBundleGraph, 'js');
 
         if (this.pluginOptions.mode === 'production') {
           let optimizeMeasurement;

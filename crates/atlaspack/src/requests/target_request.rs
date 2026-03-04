@@ -719,6 +719,9 @@ impl TargetRequest {
             Some(SourceMapField::Options(source_maps)) => Some(source_maps.clone()),
           },
         },
+        unstable_single_file_output: target_descriptor
+          .unstable_single_file_output
+          .unwrap_or(false),
         custom_env: target_descriptor.env.clone(),
         ..Environment::default()
       }),
@@ -802,6 +805,9 @@ fn merge_builtin_descriptors(
       scope_hoist: descriptor.scope_hoist.or(default_descriptor.scope_hoist),
       source: descriptor.source.or(default_descriptor.source),
       source_map: descriptor.source_map.or(default_descriptor.source_map),
+      unstable_single_file_output: descriptor
+        .unstable_single_file_output
+        .or(default_descriptor.unstable_single_file_output),
     });
   }
 

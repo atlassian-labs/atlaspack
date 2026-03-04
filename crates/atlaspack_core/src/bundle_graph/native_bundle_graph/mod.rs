@@ -118,8 +118,8 @@ impl NativeBundleGraph {
     }
 
     // Copy edges as Null edges
+    let nodes = asset_graph.graph.node_weights().collect::<Vec<_>>();
     for edge in asset_graph.graph.edge_references() {
-      let nodes = asset_graph.graph.node_weights().collect::<Vec<_>>();
       let from_id = *nodes[edge.source().index()];
       let to_id = *nodes[edge.target().index()];
 
@@ -163,6 +163,69 @@ impl NativeBundleGraph {
       .graph
       .neighbors_directed(self.node_id_to_node_index[node_id], Direction::Outgoing)
       .filter_map(|node_index| self.graph.node_weight(node_index).copied())
+      .collect()
+  }
+
+  pub fn get_neighbors_by_edge_type(
+    &self,
+    node_id: &NodeId,
+    edge_type: NativeBundleGraphEdgeType,
+  ) -> Vec<NodeId> {
+    let Some(node_index) = self.node_id_to_node_index.get(node_id) else {
+      return vec![];
+    };
+
+    self
+      .graph
+      .edges_directed(*node_index, Direction::Outgoing)
+      .filter_map(|e| {
+        if *e.weight() != edge_type {
+          return None;
+        }
+
+        self.graph.node_weight(e.target()).copied()
+      })
+      .collect()
+  }
+
+  pub fn has_edge(
+    &self,
+    from_id: &NodeId,
+    to_id: &NodeId,
+    edge_type: NativeBundleGraphEdgeType,
+  ) -> bool {
+    let Some(&from_index) = self.node_id_to_node_index.get(from_id) else {
+      return false;
+    };
+    let Some(&to_index) = self.node_id_to_node_index.get(to_id) else {
+      return false;
+    };
+
+    self
+      .graph
+      .edges_connecting(from_index, to_index)
+      .any(|e| *e.weight() == edge_type)
+  }
+
+  pub fn get_incoming_neighbors_by_edge_type(
+    &self,
+    node_id: &NodeId,
+    edge_type: NativeBundleGraphEdgeType,
+  ) -> Vec<NodeId> {
+    let Some(node_index) = self.node_id_to_node_index.get(node_id) else {
+      return vec![];
+    };
+
+    self
+      .graph
+      .edges_directed(*node_index, Direction::Incoming)
+      .filter_map(|e| {
+        if *e.weight() != edge_type {
+          return None;
+        }
+
+        self.graph.node_weight(e.source()).copied()
+      })
       .collect()
   }
 
@@ -211,6 +274,29 @@ impl NativeBundleGraph {
       self.node_id_to_node_index[to_id],
       edge_type,
     );
+  }
+
+  pub fn remove_edge(
+    &mut self,
+    from_id: &NodeId,
+    to_id: &NodeId,
+    edge_type: NativeBundleGraphEdgeType,
+  ) {
+    use petgraph::stable_graph::EdgeIndex;
+
+    let from_index = self.node_id_to_node_index[from_id];
+    let to_index = self.node_id_to_node_index[to_id];
+
+    let mut to_remove: Vec<EdgeIndex> = Vec::new();
+    for edge in self.graph.edges_connecting(from_index, to_index) {
+      if *edge.weight() == edge_type {
+        to_remove.push(edge.id());
+      }
+    }
+
+    for edge_id in to_remove {
+      self.graph.remove_edge(edge_id);
+    }
   }
 
   pub fn add_bundle_group(&mut self, id: String, target: Target, entry_asset_id: String) -> NodeId {
