@@ -237,6 +237,14 @@ pub trait Request: DynHash + Send + Sync + Debug + 'static {
     hasher.finish()
   }
 
+  /// Returns a short, stable name for this request type used in tracing and diagnostics.
+  ///
+  /// The default implementation uses [`std::any::type_name`], which returns the fully-qualified
+  /// Rust path. Override this to return a shorter, more readable name.
+  fn request_type(&self) -> &'static str {
+    std::any::type_name::<Self>()
+  }
+
   async fn run(
     &self,
     request_context: RunRequestContext,

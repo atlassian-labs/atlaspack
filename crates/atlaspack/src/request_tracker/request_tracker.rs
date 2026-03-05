@@ -141,16 +141,8 @@ impl RequestTracker {
           tx,
         } => {
           let request_id = request.id();
-          if tracing::enabled!(tracing::Level::TRACE) {
-            // Extract just the struct name (first word) from the Debug output,
-            // avoiding logging potentially large inner fields.
-            let request_debug = format!("{request:?}");
-            let request_type = request_debug
-              .split_whitespace()
-              .next()
-              .unwrap_or(&request_debug);
-            tracing::trace!(?request_id, ?parent_request_id, %request_type, "Run request");
-          }
+          let request_type = request.request_type();
+          tracing::trace!(?request_id, ?parent_request_id, request_type, "Run request");
 
           if let Some(previous_result) = self.prepare_request(request_id)? {
             self.link_request_to_parent(request_id, parent_request_id)?;

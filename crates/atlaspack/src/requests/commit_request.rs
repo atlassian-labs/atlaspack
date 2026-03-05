@@ -38,6 +38,9 @@ impl Hash for CommitRequest {
 
 #[async_trait]
 impl Request for CommitRequest {
+  fn request_type(&self) -> &'static str {
+    "CommitRequest"
+  }
   #[tracing::instrument(level = "info", skip_all)]
   async fn run(
     &self,

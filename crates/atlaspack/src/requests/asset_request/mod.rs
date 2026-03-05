@@ -52,6 +52,9 @@ pub struct AssetRequestOutput {
 
 #[async_trait]
 impl Request for AssetRequest {
+  fn request_type(&self) -> &'static str {
+    "AssetRequest"
+  }
   #[tracing::instrument(level = "trace", skip_all)]
   async fn run(
     &self,

@@ -26,6 +26,9 @@ pub struct BuildRequest {}
 
 #[async_trait]
 impl Request for BuildRequest {
+  fn request_type(&self) -> &'static str {
+    "BuildRequest"
+  }
   #[tracing::instrument(level = "info", skip_all)]
   async fn run(
     &self,

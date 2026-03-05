@@ -47,6 +47,9 @@ pub struct AssetGraphRequestOutput {
 
 #[async_trait]
 impl Request for AssetGraphRequest {
+  fn request_type(&self) -> &'static str {
+    "AssetGraphRequest"
+  }
   async fn run(
     &self,
     mut request_context: RunRequestContext,
