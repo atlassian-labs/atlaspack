@@ -1,5 +1,13 @@
 # @atlaspack/reporter-bundle-analyzer
 
+## 2.14.56
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.3.8
+  - @atlaspack/plugin@2.14.56
+
 ## 2.14.55
 
 ### Patch Changes
