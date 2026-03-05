@@ -16,11 +16,11 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/plugin": "2.14.55",
-    "@atlaspack/rust": "3.24.0",
-    "@atlaspack/utils": "3.3.7",
-    "@atlaspack/types-internal": "2.24.0",
+    "@atlaspack/diagnostic": "workspace:*",
+    "@atlaspack/plugin": "workspace:*",
+    "@atlaspack/rust": "workspace:*",
+    "@atlaspack/types-internal": "workspace:*",
+    "@atlaspack/utils": "workspace:*",
     "clone": "^2.1.1",
     "nullthrows": "^1.1.1",
     "postcss-value-parser": "^4.2.0",

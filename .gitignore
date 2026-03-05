@@ -32,6 +32,7 @@ debug-symbols/
 /databases
 
 mocha-cpu-profiles/
+/.yarn/install-state.gz
 *.trace
 packaging-output/
 

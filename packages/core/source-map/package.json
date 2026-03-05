@@ -21,6 +21,6 @@
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
-    "@atlaspack/rust": "3.24.0"
+    "@atlaspack/rust": "workspace:*"
   }
 }

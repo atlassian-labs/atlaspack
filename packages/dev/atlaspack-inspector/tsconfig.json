@@ -8,7 +8,8 @@
     "jsx": "react",
     "strict": true,
     "target": "es2021",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "isolatedModules": true
   },
   "exclude": ["src/frontend", "test"]
 }

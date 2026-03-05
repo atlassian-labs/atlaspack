@@ -38,19 +38,19 @@
     }
   },
   "dependencies": {
-    "@atlaspack/build-cache": "2.13.13",
-    "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/fs": "2.15.50",
-    "@atlaspack/logger": "2.14.47",
-    "@atlaspack/node-resolver-core": "3.7.26",
-    "@atlaspack/types": "2.15.45",
-    "@atlaspack/utils": "3.3.7",
-    "@atlaspack/workers": "2.14.55",
+    "@atlaspack/build-cache": "workspace:*",
+    "@atlaspack/diagnostic": "workspace:*",
+    "@atlaspack/fs": "workspace:*",
+    "@atlaspack/logger": "workspace:*",
+    "@atlaspack/node-resolver-core": "workspace:*",
+    "@atlaspack/types": "workspace:*",
+    "@atlaspack/utils": "workspace:*",
+    "@atlaspack/workers": "workspace:*",
     "@swc/core": "1.15.11",
-    "semver": "^7.5.2",
     "command-exists": "^1.2.6",
     "cross-spawn": "^6.0.4",
     "nullthrows": "^1.1.1",
+    "semver": "^7.5.2",
     "split2": "^3.1.1"
   },
   "browser": {

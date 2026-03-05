@@ -20,6 +20,6 @@
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
-    "@atlaspack/types-internal": "2.24.0"
+    "@atlaspack/types-internal": "workspace:*"
   }
 }

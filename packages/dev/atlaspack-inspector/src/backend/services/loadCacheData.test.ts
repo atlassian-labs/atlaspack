@@ -5,7 +5,18 @@ import fs from 'fs';
 import {loadCacheData} from './loadCacheData';
 import assert from 'assert';
 
-jest.mock('../config/logger');
+// Explicit mock required: Jest's automocking doesn't properly handle named const exports
+// with TypeScript's "module": "NodeNext" configuration, even with ts-jest configuration.
+// This is a known limitation that became apparent after upgrading to Yarn v4 (though the
+// issue exists regardless of Yarn version - something in the previous setup was masking it).
+jest.mock('../config/logger', () => ({
+  logger: {
+    info: jest.fn(),
+    debug: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+  },
+}));
 
 async function setupMockProject(): Promise<TemporaryDirectory> {
   const tempDir = new TemporaryDirectory();

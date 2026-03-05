@@ -21,9 +21,9 @@
     "src"
   ],
   "dependencies": {
-    "@atlaspack/plugin": "2.14.55",
-    "@atlaspack/source-map": "3.2.10",
-    "@atlaspack/utils": "3.3.7",
+    "@atlaspack/plugin": "workspace:*",
+    "@atlaspack/source-map": "workspace:*",
+    "@atlaspack/utils": "workspace:*",
     "@babel/core": "7.24.9",
     "@babel/generator": "^7.22.10",
     "@babel/plugin-syntax-jsx": "^7.27.1",
@@ -35,7 +35,7 @@
     "enhanced-resolve": "^5.18.1"
   },
   "devDependencies": {
-    "@atlaspack/types": "2.15.45"
+    "@atlaspack/types": "workspace:*"
   },
   "type": "commonjs",
   "scripts": {

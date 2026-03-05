@@ -14,8 +14,8 @@
     "test:integration:ci": "yarn run test-ci"
   },
   "devDependencies": {
-    "@atlaspack/cli": "2.15.16",
-    "@atlaspack/mocha-profiler": "*",
+    "@atlaspack/cli": "workspace:*",
+    "@atlaspack/mocha-profiler": "workspace:*",
     "@babel/core": "^7.22.11",
     "@babel/plugin-syntax-class-properties": "^7.12.13",
     "@babel/plugin-syntax-export-default-from": "^7.22.5",
@@ -31,7 +31,6 @@
     "command-exists": "^1.2.6",
     "core-js": "^3.2.1",
     "cross-env": "^7.0.0",
-    "date-fns": "^4.1.0",
     "esbuild": "^0.23.1",
     "esbuild-register": "^3.5.0",
     "exif-reader": "^1.0.3",

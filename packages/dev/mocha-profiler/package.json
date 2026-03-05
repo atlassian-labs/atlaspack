@@ -10,7 +10,6 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "dependencies": {},
   "peerDependencies": {
     "mocha": "^8.3.0"
   },
