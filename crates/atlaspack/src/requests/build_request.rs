@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
 
 use crate::{
@@ -5,7 +7,9 @@ use crate::{
   requests::packaging_request::PackagingRequest,
 };
 
-use super::{AssetGraphRequest, BundleGraphRequest, BundleGraphRequestOutput, RequestResult};
+use super::{
+  AssetGraphRequest, BundleGraphRequest, BundleGraphRequestOutput, CommitRequest, RequestResult,
+};
 
 /// Output of the full native build pipeline.
 #[derive(Clone, Debug, PartialEq)]
@@ -15,8 +19,8 @@ pub struct BuildRequestOutput {
 
 /// Top-level request that composes the full build pipeline:
 /// 1. Build asset graph
-/// 2. Build bundle graph
-/// 3. Package and write bundles (stub — will be filled in by PackagingRequest)
+/// 2. Commit asset content to DB and build bundle graph (in parallel)
+/// 3. Package and write bundles
 #[derive(Debug, Hash)]
 pub struct BuildRequest {}
 
@@ -41,12 +45,24 @@ impl Request for BuildRequest {
 
     let asset_graph = asset_graph_output.graph.clone();
 
-    // 2. Build bundle graph
-    let (bundle_graph_result, _, _) = request_context
-      .execute_request(BundleGraphRequest { asset_graph })
-      .await?;
+    // 2. Commit asset content to database and build bundle graph in parallel.
+    //    Both depend on the asset graph but not on each other.
+    let commit_future = request_context.execute_request(CommitRequest {
+      asset_graph: Arc::clone(&asset_graph),
+    });
+    let bundle_graph_future = request_context.execute_request(BundleGraphRequest {
+      asset_graph: Arc::clone(&asset_graph),
+    });
 
-    let RequestResult::BundleGraph(bundle_graph_output) = bundle_graph_result.as_ref() else {
+    // Await both — order doesn't matter, but commit must complete before packaging.
+    let (commit_result, bundle_graph_result) =
+      tokio::try_join!(commit_future, bundle_graph_future)?;
+
+    let RequestResult::Commit(_) = commit_result.0.as_ref() else {
+      anyhow::bail!("Unexpected request result from CommitRequest");
+    };
+
+    let RequestResult::BundleGraph(bundle_graph_output) = bundle_graph_result.0.as_ref() else {
       anyhow::bail!("Unexpected request result from BundleGraphRequest");
     };
 

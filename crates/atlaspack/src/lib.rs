@@ -6,7 +6,7 @@ pub use watch::*;
 
 pub mod atlaspack;
 pub(crate) mod cache;
-pub mod database_reader;
+pub mod database;
 pub(crate) mod request_tracker;
 
 mod error;

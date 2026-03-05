@@ -57,12 +57,10 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       .par_iter()
       .map(|asset| {
         let span = tracing::trace_span!("read_code", asset_id = asset.id).entered();
-        let code = self.context.db.get(
-          asset
-            .content_key
-            .as_ref()
-            .ok_or(anyhow::anyhow!("Asset content key not found"))?,
-        )?;
+        // Use content_key if the asset has one (set by the JS side during transformation),
+        // otherwise fall back to asset.id for natively-built assets.
+        let key = asset.content_key.as_deref().unwrap_or(asset.id.as_str());
+        let code = self.context.db.get(key)?;
         span.exit();
         let asset_code =
           String::from_utf8_lossy(&code.ok_or(anyhow::anyhow!("Unable to read asset code"))?)
