@@ -476,10 +476,10 @@ impl BundleGraph for BundleGraphFromJs {
             if *dep_e.weight() != BundleGraphEdgeType::References {
               continue;
             }
-            if let Some(BundleGraphNode::Bundle(b)) = self.graph.node_weight(dep_e.target()) {
-              if b.id != bundle.id {
-                result.push(b.id.clone());
-              }
+            if let Some(BundleGraphNode::Bundle(b)) = self.graph.node_weight(dep_e.target())
+              && b.id != bundle.id
+            {
+              result.push(b.id.clone());
             }
           }
         }
