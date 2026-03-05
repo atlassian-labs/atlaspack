@@ -1,5 +1,6 @@
 import {
   atlaspackNapiCreate,
+  atlaspackNapiBuild,
   atlaspackNapiBuildAssetGraph,
   atlaspackNapiBuildBundleGraph,
   atlaspackNapiRespondToFsEvents,
@@ -106,6 +107,10 @@ export class AtlaspackV3 {
 
   buildBundleGraph(): Promise<any> {
     return atlaspackNapiBuildBundleGraph(this._atlaspack_napi) as Promise<any>;
+  }
+
+  build(): Promise<any> {
+    return atlaspackNapiBuild(this._atlaspack_napi) as Promise<any>;
   }
 
   loadBundleGraph(bundleGraph: BundleGraph): Promise<void> {

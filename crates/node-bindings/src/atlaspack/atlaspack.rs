@@ -269,6 +269,40 @@ pub fn atlaspack_napi_build_bundle_graph(
   Ok(js_result)
 }
 
+#[tracing::instrument(level = "info", skip_all)]
+#[napi]
+pub fn atlaspack_napi_build(env: Env, atlaspack_napi: AtlaspackNapi) -> napi::Result<JsObject> {
+  let (deferred, promise) = env.create_deferred()?;
+
+  thread::spawn({
+    let atlaspack_ref = atlaspack_napi.clone();
+    move || {
+      let result = {
+        let atlaspack = atlaspack_ref.write();
+        atlaspack.build()
+      };
+
+      deferred.resolve(move |env| match result {
+        Ok(build_output) => {
+          let serialize_result = serialize_bundle_graph(
+            &env,
+            &build_output.bundle_graph.bundle_graph,
+            build_output.bundle_graph.had_previous_graph,
+          )?;
+
+          NapiAtlaspackResult::ok(&env, serialize_result)
+        }
+        Err(error) => {
+          let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
+          NapiAtlaspackResult::error(&env, js_object)
+        }
+      })
+    }
+  });
+
+  Ok(promise)
+}
+
 #[napi]
 pub fn atlaspack_napi_load_bundle_graph(
   env: Env,
