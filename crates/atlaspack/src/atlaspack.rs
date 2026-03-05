@@ -26,7 +26,8 @@ use crate::plugins::{PluginsRef, config_plugins::ConfigPlugins};
 use crate::project_root::infer_project_root;
 use crate::request_tracker::{DynCacheHandler, RequestNode, RequestTracker};
 use crate::requests::{
-  AssetGraphRequest, BundleGraphRequest, BundleGraphRequestOutput, RequestResult,
+  AssetGraphRequest, BuildRequest, BuildRequestOutput, BundleGraphRequest,
+  BundleGraphRequestOutput, RequestResult,
 };
 use atlaspack_core::debug_tools::DebugTools;
 pub struct AtlaspackInitOptions {
@@ -309,6 +310,21 @@ impl Atlaspack {
     })?;
 
     Ok((asset_graph, bundle_delta, had_previous_graph))
+  }
+
+  #[tracing::instrument(level = "info", skip_all)]
+  pub fn build(&self) -> anyhow::Result<BuildRequestOutput> {
+    self.runtime.block_on(async move {
+      let mut request_tracker = self.request_tracker.write().await;
+
+      let request_result = request_tracker.run_request(BuildRequest {}).await?;
+
+      let RequestResult::Build(build_output) = request_result.as_ref() else {
+        anyhow::bail!("Unexpected request result from BuildRequest");
+      };
+
+      Ok(build_output.clone())
+    })
   }
 
   #[tracing::instrument(level = "info", skip_all)]

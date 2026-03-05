@@ -56,6 +56,9 @@ export declare function atlaspackNapiCreate(
   napiOptions: AtlaspackNapiOptions,
   lmdb: LMDB,
 ): object;
+export declare function atlaspackNapiBuild(
+  atlaspackNapi: AtlaspackNapi,
+): object;
 export declare function atlaspackNapiBuildAssetGraph(
   atlaspackNapi: AtlaspackNapi,
 ): object;

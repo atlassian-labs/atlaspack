@@ -314,6 +314,7 @@ const {
   addEnvironment,
   applyCompiledCssInJsPlugin,
   applyTokensPlugin,
+  atlaspackNapiBuild,
   atlaspackNapiBuildAssetGraph,
   atlaspackNapiBuildBundleGraph,
   atlaspackNapiCompleteSession,
@@ -363,6 +364,7 @@ const {
 module.exports.addEnvironment = addEnvironment
 module.exports.applyCompiledCssInJsPlugin = applyCompiledCssInJsPlugin
 module.exports.applyTokensPlugin = applyTokensPlugin
+module.exports.atlaspackNapiBuild = atlaspackNapiBuild
 module.exports.atlaspackNapiBuildAssetGraph = atlaspackNapiBuildAssetGraph
 module.exports.atlaspackNapiBuildBundleGraph = atlaspackNapiBuildBundleGraph
 module.exports.atlaspackNapiCompleteSession = atlaspackNapiCompleteSession

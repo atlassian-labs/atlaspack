@@ -171,6 +171,7 @@ export default class Atlaspack {
     let rustAtlaspack: AtlaspackV3;
     if (
       resolvedOptions.featureFlags.atlaspackV3 ||
+      resolvedOptions.featureFlags.fullNative ||
       resolvedOptions.featureFlags.nativePackager
     ) {
       // eslint-disable-next-line no-unused-vars
@@ -433,19 +434,38 @@ export default class Atlaspack {
 
       this.#requestTracker.graph.invalidateOnBuildNodes();
 
-      let request = createAtlaspackBuildRequest({
-        optionsRef: this.#optionsRef,
-        requestedAssetIds: this.#requestedAssetIds,
-        signal,
-      });
+      let bundleGraph: any;
+      let bundleInfo: Map<any, any>;
+      let changedAssets: Map<any, any>;
+      let assetRequests: Array<any>;
+      let scopeHoistingStats: any;
 
-      let {
-        bundleGraph,
-        bundleInfo,
-        changedAssets,
-        assetRequests,
-        scopeHoistingStats,
-      } = await this.#requestTracker.runRequest(request, {force: true});
+      if (getFeatureFlag('fullNative') && this.rustAtlaspack) {
+        let [result, error] = await this.rustAtlaspack.build();
+
+        if (error) {
+          throw new ThrowableDiagnostic({diagnostic: error});
+        }
+
+        bundleGraph = result.bundleGraph;
+        bundleInfo = new Map();
+        changedAssets = result.changedAssets ?? new Map();
+        assetRequests = result.assetRequests ?? [];
+      } else {
+        let request = createAtlaspackBuildRequest({
+          optionsRef: this.#optionsRef,
+          requestedAssetIds: this.#requestedAssetIds,
+          signal,
+        });
+
+        ({
+          bundleGraph,
+          bundleInfo,
+          changedAssets,
+          assetRequests,
+          scopeHoistingStats,
+        } = await this.#requestTracker.runRequest(request, {force: true}));
+      }
 
       this.#requestedAssetIds.clear();
 

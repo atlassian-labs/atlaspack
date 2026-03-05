@@ -389,6 +389,16 @@ export const DEFAULT_FEATURE_FLAGS = {
   nativeBundling: false,
 
   /**
+   * Enables the full native build pipeline. When enabled, the entire build
+   * (asset graph, bundle graph, packaging, and writing) runs natively in Rust
+   * via a single NAPI call, bypassing the JS request tracker.
+   *
+   * @author Matt Jones <mjones4@atlassian.com>
+   * @since 2026-03-04
+   */
+  fullNative: false,
+
+  /**
    * When enabled, tracks HASH_REF replacements during bundle write and adjusts
    * the source map column offsets so mappings remain correct after placeholder
    * replacement.
