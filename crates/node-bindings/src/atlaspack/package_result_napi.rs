@@ -1,5 +1,24 @@
 use atlaspack_core::package_result::{BundleInfo, CacheKeyMap, PackageResult};
 use napi_derive::napi;
+use serde::Serialize;
+
+/// Per-bundle info returned to JS after a full native build, mirroring the JS
+/// `PackagedBundleInfo` type used to populate `bundleInfo` in `Atlaspack._build()`.
+#[napi(object)]
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JsPackagedBundleInfo {
+  /// Absolute path to the written bundle file on disk.
+  pub file_path: String,
+  /// The bundle ID (same key used in the bundleInfo map).
+  pub bundle_id: String,
+  /// The bundle type (e.g. "js", "css").
+  pub r#type: String,
+  /// File size in bytes after hash substitution.
+  pub size: u32,
+  /// Wall-clock packaging time in milliseconds.
+  pub time: u32,
+}
 
 /// NAPI-compatible BundleInfo
 #[napi(object)]

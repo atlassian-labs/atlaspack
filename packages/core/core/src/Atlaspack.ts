@@ -448,7 +448,25 @@ export default class Atlaspack {
           throw new ThrowableDiagnostic({diagnostic: error});
         }
         ({bundleGraph, changedAssets} = getBundleGraph(result));
-        bundleInfo = new Map();
+        bundleInfo = new Map(
+          (result.bundleInfo ?? []).map(
+            (info: {
+              bundleId: string;
+              filePath: string;
+              type: string;
+              size: number;
+              time: number;
+            }) => [
+              info.bundleId,
+              {
+                filePath: toProjectPath(options.projectRoot, info.filePath),
+                bundleId: info.bundleId,
+                type: info.type,
+                stats: {size: info.size, time: info.time},
+              },
+            ],
+          ),
+        );
         assetRequests = result.assetRequests ?? [];
       } else {
         let request = createAtlaspackBuildRequest({

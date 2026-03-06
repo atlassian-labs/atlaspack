@@ -41,6 +41,8 @@ pub struct PackageRequestOutput {
   pub hash: String,
   /// Packaging time in milliseconds.
   pub time: u64,
+  /// The file type of the bundle (e.g. "js", "css").
+  pub bundle_type: atlaspack_core::types::FileType,
 }
 
 /// A request that packages a single bundle: runs the packager, performs hash
@@ -313,6 +315,7 @@ impl<B: BundleGraph + Send + Sync + 'static> Request for PackageRequest<B> {
         size,
         hash: content_hash,
         time: time_ms,
+        bundle_type: self.bundle.bundle_type.clone(),
       }),
       invalidations: vec![],
     })
