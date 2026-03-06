@@ -22,7 +22,7 @@ impl Hash for BundleGraphRequest {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BundleGraphRequestOutput {
-  pub bundle_graph: NativeBundleGraph,
+  pub bundle_graph: Arc<NativeBundleGraph>,
   pub had_previous_graph: bool,
 }
 
@@ -77,8 +77,10 @@ impl Request for BundleGraphRequest {
       bundler.bundle(&self.asset_graph, &mut bundle_graph)?;
     }
 
+    bundle_graph.name_bundles();
+
     let output = BundleGraphRequestOutput {
-      bundle_graph,
+      bundle_graph: Arc::new(bundle_graph),
       had_previous_graph: false,
     };
 

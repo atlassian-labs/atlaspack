@@ -51,8 +51,9 @@ pub struct Atlaspack {
   pub request_tracker: Arc<RwLock<RequestTracker>>,
   /// The bundle graph deserialised from JS. Used temporarily until we have a native
   /// bundle graph implementation. Starts empty and is populated via `load_bundle_graph`.
-  /// Uses non-async RwLock so the packager (and any Rayon threads) can take a read lock when needed.
-  pub bundle_graph: Arc<parking_lot::RwLock<BundleGraphFromJs>>,
+  /// Writers (load_bundle_graph, update_bundle_graph) replace the inner Arc under a Mutex;
+  /// readers (package) cheaply clone the Arc without locking.
+  pub bundle_graph: parking_lot::Mutex<Arc<BundleGraphFromJs>>,
   pub debug_tools: DebugTools,
 }
 
@@ -183,7 +184,7 @@ impl Atlaspack {
       config_loader,
       plugins,
       request_tracker: Arc::new(RwLock::new(request_tracker)),
-      bundle_graph: Arc::new(parking_lot::RwLock::new(BundleGraphFromJs::default())),
+      bundle_graph: parking_lot::Mutex::new(Arc::new(BundleGraphFromJs::default())),
       debug_tools,
     })
   }
@@ -262,22 +263,36 @@ impl Atlaspack {
     public_id_by_asset_id: HashMap<String, String>,
     environments: Vec<Environment>,
   ) -> anyhow::Result<()> {
-    *self.bundle_graph.write() =
-      BundleGraphFromJs::new(nodes, edges, public_id_by_asset_id, environments);
+    *self.bundle_graph.lock() = Arc::new(BundleGraphFromJs::new(
+      nodes,
+      edges,
+      public_id_by_asset_id,
+      environments,
+    ));
     Ok(())
   }
 
   /// Returns the bundle graph's environment map
   pub fn get_bundle_graph_environments(&self) -> Vec<Arc<Environment>> {
-    self.bundle_graph.read().get_environments()
+    self.bundle_graph.lock().get_environments()
   }
 
   /// Updates existing asset nodes in the bundle graph. `nodes` are pre-deserialized
   /// at the node-bindings level using the graph's existing environment map.
   #[tracing::instrument(level = "info", skip_all, fields(node_count = nodes.len()))]
   pub fn update_bundle_graph(&self, nodes: Vec<AssetNode>) -> anyhow::Result<()> {
-    let mut graph = self.bundle_graph.write();
-    graph.update_assets(nodes)
+    // update_assets requires mutable access; since we own the Arc exclusively during
+    // the write window (no packaging runs concurrently), get_mut succeeds in practice.
+    // If it doesn't (shouldn't happen), fall back to a full clone.
+    let mut guard = self.bundle_graph.lock();
+    match Arc::get_mut(&mut *guard) {
+      Some(graph) => graph.update_assets(nodes),
+      None => {
+        // Safety fallback: shouldn't occur given the JS interop contract that packaging
+        // never runs concurrently with bundle graph updates.
+        anyhow::bail!("update_bundle_graph: bundle graph Arc has outstanding references");
+      }
+    }
   }
 
   #[tracing::instrument(level = "info", skip_all)]
@@ -332,6 +347,7 @@ impl Atlaspack {
     // This possibly could be persistent between pacakges? But right now with SSR builds only we're talking about a few packages at most
     // so we can worry about that refactor later.
 
+    let bundle_graph = Arc::clone(&*self.bundle_graph.lock());
     let packager = JsPackager::new(
       atlaspack_packager_js::PackagingContext {
         db: Arc::new(LmdbDatabase(Arc::clone(&self.db))),
@@ -342,7 +358,7 @@ impl Atlaspack {
         project_root: self.project_root.clone(),
         debug_tools: self.debug_tools.clone(),
       },
-      Arc::clone(&self.bundle_graph),
+      bundle_graph,
     );
     packager.package(&bundle_id)
   }

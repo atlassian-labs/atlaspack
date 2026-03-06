@@ -24,15 +24,13 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
+use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError};
+use crate::requests::RequestResult;
+use crate::requests::package_request::{PackageRequest, PackageRequestOutput};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use atlaspack_core::bundle_graph::BundleGraph;
 use atlaspack_core::types::{Bundle, BundleBehavior};
-use parking_lot::RwLock;
-
-use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError};
-use crate::requests::RequestResult;
-use crate::requests::package_request::{PackageRequest, PackageRequestOutput};
 use topo_sort::{name_hash_for_filename, topological_levels};
 
 // ---------------------------------------------------------------------------
@@ -66,18 +64,16 @@ pub struct PackagingRequestOutput {
 /// Returns an error if the bundle reference graph contains a cycle, or if any individual
 /// [`PackageRequest`] fails.
 pub struct PackagingRequest<B: BundleGraph + Send + Sync + 'static> {
-  bundle_graph: Arc<RwLock<B>>,
+  bundle_graph: Arc<B>,
 }
 
 impl<B: BundleGraph + Send + Sync + 'static> PackagingRequest<B> {
-  /// Creates a new `PackagingRequest` from an owned bundle graph.
+  /// Creates a new `PackagingRequest` that uses the given bundle graph by reference.
   ///
-  /// The bundle graph is wrapped in `Arc<RwLock<_>>` internally for thread-safe sharing with
-  /// the individual [`PackageRequest`] instances dispatched during packaging.
-  pub fn new(bundle_graph: B) -> Self {
-    Self {
-      bundle_graph: Arc::new(RwLock::new(bundle_graph)),
-    }
+  /// The caller retains ownership of the graph; packaging reads from it via the shared
+  /// `Arc<B>` and dispatches [`PackageRequest`] instances that hold a clone of the Arc.
+  pub fn new(bundle_graph: Arc<B>) -> Self {
+    Self { bundle_graph }
   }
 }
 
@@ -92,7 +88,7 @@ impl<B: BundleGraph + Send + Sync + 'static> Hash for PackagingRequest<B> {
     // Mirror JS WriteBundlesRequest: keyed on the hash of all bundles in the bundle graph.
     // If any bundle's content changes, the packaging request is invalidated.
     // We sort bundle hashes for stability — bundle order in the graph is not guaranteed.
-    let graph = self.bundle_graph.read();
+    let graph = &*self.bundle_graph;
     let mut bundle_hashes: Vec<u64> = graph
       .get_bundles()
       .into_iter()
@@ -114,7 +110,6 @@ impl<B: BundleGraph + Send + Sync + 'static> Request for PackagingRequest<B> {
   ) -> Result<ResultAndInvalidations, RunRequestError> {
     let bundles: Vec<Bundle> = self
       .bundle_graph
-      .read()
       .get_bundles()
       .into_iter()
       .filter(|b| {
@@ -138,7 +133,7 @@ impl<B: BundleGraph + Send + Sync + 'static> Request for PackagingRequest<B> {
       .cloned()
       .collect();
 
-    let levels = topological_levels(&bundles, &*self.bundle_graph.read())?;
+    let levels = topological_levels(&bundles, &*self.bundle_graph)?;
 
     // Pre-populate hash refs for all bundles using nameHashForFilename(bundle.id) as a stable
     // fallback. This mirrors the JS WriteBundlesRequest's assignComplexNameHashes post-pass.
@@ -156,7 +151,7 @@ impl<B: BundleGraph + Send + Sync + 'static> Request for PackagingRequest<B> {
     // Real content hashes (from packaged_hashes, accumulated level-by-level) take priority over
     // these fallbacks for bundles that are properly ordered via References edges.
     let all_bundle_fallbacks: HashMap<String, String> = {
-      let graph = self.bundle_graph.read();
+      let graph = &*self.bundle_graph;
       graph
         .get_bundles()
         .into_iter()
@@ -202,7 +197,7 @@ impl<B: BundleGraph + Send + Sync + 'static> Request for PackagingRequest<B> {
         };
         // Record this bundle's real content hash so subsequent levels can resolve it.
         let hash_ref = {
-          let graph = self.bundle_graph.read();
+          let graph = &*self.bundle_graph;
           graph
             .get_bundle_by_id(&bundle_id)
             .map(|b| b.hash_reference.clone())
@@ -231,6 +226,7 @@ impl<B: BundleGraph + Send + Sync + 'static> Request for PackagingRequest<B> {
 #[cfg(test)]
 mod tests {
   use std::collections::HashMap;
+  use std::sync::Arc;
 
   use pretty_assertions::assert_eq;
 
@@ -246,7 +242,7 @@ mod tests {
 
   async fn run_packaging_request(graph: MockBundleGraph) -> PackagingRequestOutput {
     let mut rt = request_tracker(RequestTrackerTestOptions::default());
-    let request = PackagingRequest::new(graph);
+    let request = PackagingRequest::new(Arc::new(graph));
     let result = rt.run_request(request).await.unwrap();
     match result.as_ref() {
       RequestResult::Packaging(output) => output.clone(),
