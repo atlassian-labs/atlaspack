@@ -1,3 +1,5 @@
+use async_trait::async_trait;
+use atlaspack_core::build_progress::BuildProgressEvent;
 use std::sync::Arc;
 
 use crate::{
@@ -54,6 +56,8 @@ impl Request for BuildRequest {
     let commit_future = request_context.execute_request(CommitRequest {
       asset_graph: Arc::clone(&asset_graph),
     });
+
+    request_context.report(BuildProgressEvent::Bundling);
     let bundle_graph_future = request_context.execute_request(BundleGraphRequest {
       asset_graph: Arc::clone(&asset_graph),
     });

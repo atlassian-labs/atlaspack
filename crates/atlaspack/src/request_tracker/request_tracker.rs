@@ -33,7 +33,7 @@ use super::RequestId;
 use super::RequestNode;
 use super::ResultAndInvalidations;
 use super::RunRequestError;
-use super::{RunRequestContext, RunRequestMessage};
+use super::{ReportFn, RunRequestContext, RunRequestMessage};
 
 /// [`RequestTracker`] runs atlaspack work items and constructs a graph of their dependencies.
 ///
@@ -58,6 +58,7 @@ pub struct RequestTracker {
   invalidations: HashMap<PathBuf, NodeIndex>,
   invalid_nodes: HashSet<NodeIndex>,
   pub cache: CacheRef,
+  report_fn: Option<ReportFn>,
 }
 
 impl RequestTracker {
@@ -69,6 +70,7 @@ impl RequestTracker {
     plugins: PluginsRef,
     project_root: PathBuf,
     cache: CacheRef,
+    report_fn: Option<ReportFn>,
   ) -> Self {
     let mut graph = StableDiGraph::<RequestNode, RequestEdgeType>::new();
 
@@ -86,6 +88,7 @@ impl RequestTracker {
       invalid_nodes: HashSet::new(),
       options,
       cache,
+      report_fn,
     }
   }
 
@@ -115,6 +118,10 @@ impl RequestTracker {
   ///     these will run on the main-thread, therefore it'll be simpler to implement queueing
   ///     without stalls and locks/channels
   ///   - For non-main-thread requests, do not allow enqueueing of sub-requests
+  pub fn set_report_fn(&mut self, report_fn: Option<ReportFn>) {
+    self.report_fn = report_fn;
+  }
+
   pub async fn run_request(&mut self, request: impl Request) -> anyhow::Result<Arc<RequestResult>> {
     let request_id = request.id();
     let (tx, rx) = std::sync::mpsc::channel();
@@ -173,6 +180,7 @@ impl RequestTracker {
                   .unwrap();
               }
             }),
+            self.report_fn.clone(),
           );
 
           tokio::spawn({
