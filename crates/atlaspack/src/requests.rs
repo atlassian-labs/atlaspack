@@ -2,6 +2,7 @@ pub use asset_graph_request::*;
 use asset_request::AssetRequestOutput;
 pub use build_request::*;
 pub use bundle_graph_request::*;
+pub use commit_request::*;
 use entry_request::EntryRequestOutput;
 use package_request::PackageRequestOutput;
 pub use packaging_request::PackagingRequestOutput;
@@ -12,6 +13,7 @@ mod asset_graph_request;
 mod asset_request;
 mod build_request;
 mod bundle_graph_request;
+mod commit_request;
 mod entry_request;
 mod package_request;
 pub mod packaging_request;
@@ -28,6 +30,7 @@ pub enum RequestResult {
   Asset(AssetRequestOutput),
   Build(BuildRequestOutput),
   BundleGraph(BundleGraphRequestOutput),
+  Commit(CommitRequestOutput),
   Entry(EntryRequestOutput),
   Path(PathRequestOutput),
   Target(TargetRequestOutput),
@@ -46,6 +49,7 @@ impl std::fmt::Display for RequestResult {
       RequestResult::AssetGraph(_output) => f.write_str("AssetGraph"),
       RequestResult::Build(_output) => f.write_str("Build"),
       RequestResult::BundleGraph(_output) => f.write_str("BundleGraph"),
+      RequestResult::Commit(_output) => f.write_str("Commit"),
       RequestResult::Entry(output) => f.write_str(&format!("Entry({:?})", &output.entries)),
       RequestResult::Asset(output) => {
         f.write_str(&format!("Asset({})", &output.asset.file_path.display()))
@@ -69,6 +73,7 @@ impl std::fmt::Debug for RequestResult {
       RequestResult::Asset(output) => f.debug_tuple("Asset").field(output).finish(),
       RequestResult::Build(output) => f.debug_tuple("Build").field(output).finish(),
       RequestResult::BundleGraph(output) => f.debug_tuple("BundleGraph").field(output).finish(),
+      RequestResult::Commit(output) => f.debug_tuple("Commit").field(output).finish(),
       RequestResult::Entry(output) => f.debug_tuple("Entry").field(output).finish(),
       RequestResult::Path(output) => f.debug_tuple("Path").field(output).finish(),
       RequestResult::Target(output) => f.debug_tuple("Target").field(output).finish(),

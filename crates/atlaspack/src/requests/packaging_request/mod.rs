@@ -105,6 +105,9 @@ impl<B: BundleGraph + Send + Sync + 'static> Hash for PackagingRequest<B> {
 
 #[async_trait]
 impl<B: BundleGraph + Send + Sync + 'static> Request for PackagingRequest<B> {
+  fn request_type(&self) -> &'static str {
+    "PackagingRequest"
+  }
   async fn run(
     &self,
     mut request_context: RunRequestContext,

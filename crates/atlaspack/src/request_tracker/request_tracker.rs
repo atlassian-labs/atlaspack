@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::mpsc::Sender;
 
-use atlaspack_core::database_reader::DatabaseReaderRef;
+use atlaspack_core::database::DatabaseRef;
 use atlaspack_core::types::Invalidation;
 use petgraph::graph::NodeIndex;
 use petgraph::stable_graph::StableDiGraph;
@@ -48,7 +48,7 @@ use super::{RunRequestContext, RunRequestMessage};
 /// This will be used to trigger cache invalidations.
 pub struct RequestTracker {
   config_loader: ConfigLoaderRef,
-  db: DatabaseReaderRef,
+  db: DatabaseRef,
   file_system: FileSystemRef,
   graph: RequestGraph,
   options: Arc<AtlaspackOptions>,
@@ -62,7 +62,7 @@ pub struct RequestTracker {
 
 impl RequestTracker {
   pub fn new(
-    db: DatabaseReaderRef,
+    db: DatabaseRef,
     config_loader: ConfigLoaderRef,
     file_system: FileSystemRef,
     options: Arc<AtlaspackOptions>,
@@ -141,7 +141,8 @@ impl RequestTracker {
           tx,
         } => {
           let request_id = request.id();
-          tracing::trace!(?request_id, ?parent_request_id, "Run request");
+          let request_type = request.request_type();
+          tracing::trace!(?request_id, ?parent_request_id, request_type, "Run request");
 
           if let Some(previous_result) = self.prepare_request(request_id)? {
             self.link_request_to_parent(request_id, parent_request_id)?;

@@ -177,6 +177,9 @@ fn resolve_bundle_name(bundle: &Bundle, content_hash: &str) -> anyhow::Result<St
 
 #[async_trait]
 impl<B: BundleGraph + Send + Sync + 'static> Request for PackageRequest<B> {
+  fn request_type(&self) -> &'static str {
+    "PackageRequest"
+  }
   async fn run(
     &self,
     request_context: RunRequestContext,
