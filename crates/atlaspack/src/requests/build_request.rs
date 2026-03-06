@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use atlaspack_core::build_progress::BuildProgressEvent;
 
 use crate::{
   request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError},
@@ -42,6 +43,8 @@ impl Request for BuildRequest {
     let asset_graph = asset_graph_output.graph.clone();
 
     // 2. Build bundle graph
+    request_context.report(BuildProgressEvent::Bundling);
+
     let (bundle_graph_result, _, _) = request_context
       .execute_request(BundleGraphRequest { asset_graph })
       .await?;

@@ -9,6 +9,13 @@ export function getProgressMessage(
     case 'transforming':
       return `Building ${path.basename(event.filePath)}...`;
 
+    case 'building': {
+      let completeStr = event.completeAssets.toString();
+      let totalStr = event.totalAssets.toString();
+      let displayComplete = completeStr.padStart(totalStr.length, ' ');
+      return `Building ${displayComplete}/${totalStr}...`;
+    }
+
     case 'bundling':
       return 'Bundling...';
 
