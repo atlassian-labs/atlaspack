@@ -136,7 +136,16 @@ fn resolve_commit_ok(env: Env) -> napi::Result<JsObject> {
 pub fn atlaspack_napi_build_asset_graph(
   env: Env,
   atlaspack_napi: AtlaspackNapi,
+  progress_callback: Option<JsFunction>,
 ) -> napi::Result<JsObject> {
+  let tsfn: Option<ThreadsafeFunction<String, ErrorStrategy::Fatal>> = progress_callback
+    .map(|cb| {
+      cb.create_threadsafe_function(0, |ctx: ThreadSafeCallContext<String>| {
+        Ok(vec![ctx.env.create_string(&ctx.value)?])
+      })
+    })
+    .transpose()?;
+
   let (deferred, promise) = env.create_deferred()?;
   let (second_deferred, second_promise) = env.create_deferred()?;
 
@@ -148,7 +157,15 @@ pub fn atlaspack_napi_build_asset_graph(
     let atlaspack_ref = atlaspack_napi.clone();
     move || {
       let result = {
-        let atlaspack = atlaspack_ref.write();
+        let mut atlaspack = atlaspack_ref.write();
+
+        if let Some(tsfn) = tsfn {
+          let tsfn_clone = tsfn.clone();
+          atlaspack.set_report_fn(Some(Arc::new(move |event| {
+            tsfn_clone.call(event.to_json(), ThreadsafeFunctionCallMode::NonBlocking);
+          })));
+        }
+
         atlaspack.build_asset_graph()
       };
 
@@ -226,7 +243,16 @@ pub fn atlaspack_napi_respond_to_fs_events(
 pub fn atlaspack_napi_build_bundle_graph(
   env: Env,
   atlaspack_napi: AtlaspackNapi,
+  progress_callback: Option<JsFunction>,
 ) -> napi::Result<JsObject> {
+  let tsfn: Option<ThreadsafeFunction<String, ErrorStrategy::Fatal>> = progress_callback
+    .map(|cb| {
+      cb.create_threadsafe_function(0, |ctx: ThreadSafeCallContext<String>| {
+        Ok(vec![ctx.env.create_string(&ctx.value)?])
+      })
+    })
+    .transpose()?;
+
   let (deferred, promise) = env.create_deferred()?;
   let (second_deferred, second_promise) = env.create_deferred()?;
 
@@ -238,7 +264,15 @@ pub fn atlaspack_napi_build_bundle_graph(
     let atlaspack_ref = atlaspack_napi.clone();
     move || {
       let result = {
-        let atlaspack = atlaspack_ref.write();
+        let mut atlaspack = atlaspack_ref.write();
+
+        if let Some(tsfn) = tsfn {
+          let tsfn_clone = tsfn.clone();
+          atlaspack.set_report_fn(Some(Arc::new(move |event| {
+            tsfn_clone.call(event.to_json(), ThreadsafeFunctionCallMode::NonBlocking);
+          })));
+        }
+
         atlaspack.build_bundle_graph()
       };
 
