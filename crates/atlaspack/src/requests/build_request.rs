@@ -9,11 +9,13 @@ use async_trait::async_trait;
 use super::{
   AssetGraphRequest, BundleGraphRequest, BundleGraphRequestOutput, CommitRequest, RequestResult,
 };
+use crate::requests::packaging_request::PackagingRequestOutput;
 
 /// Output of the full native build pipeline.
 #[derive(Clone, Debug, PartialEq)]
 pub struct BuildRequestOutput {
   pub bundle_graph: BundleGraphRequestOutput,
+  pub packaging: PackagingRequestOutput,
 }
 
 /// Top-level request that composes the full build pipeline:
@@ -69,15 +71,20 @@ impl Request for BuildRequest {
     };
 
     // 3. Package and write bundles (pass reference; packaging reads from the same graph)
-    request_context
+    let (packaging_result, _, _) = request_context
       .execute_request(PackagingRequest::new(
         bundle_graph_output.bundle_graph.clone(),
       ))
       .await?;
 
+    let RequestResult::Packaging(packaging_output) = packaging_result.as_ref() else {
+      anyhow::bail!("Unexpected request result from PackagingRequest");
+    };
+
     Ok(ResultAndInvalidations {
       result: RequestResult::Build(BuildRequestOutput {
         bundle_graph: bundle_graph_output.clone(),
+        packaging: packaging_output.clone(),
       }),
       invalidations: Vec::new(),
     })

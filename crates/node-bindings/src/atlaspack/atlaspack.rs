@@ -27,7 +27,7 @@ use atlaspack::rpc::nodejs::NodejsRpcFactory;
 use atlaspack_package_manager::PackageManagerRef;
 use parking_lot::RwLock;
 
-use crate::atlaspack::package_result_napi::JsPackageResult;
+use crate::atlaspack::package_result_napi::{JsPackageResult, JsPackagedBundleInfo};
 
 use super::file_system_napi::FileSystemNapi;
 use super::napi_result::NapiAtlaspackResult;
@@ -290,7 +290,23 @@ pub fn atlaspack_napi_build(env: Env, atlaspack_napi: AtlaspackNapi) -> napi::Re
             build_output.bundle_graph.had_previous_graph,
           )?;
 
-          NapiAtlaspackResult::ok(&env, serialize_result)
+          let bundle_info: Vec<JsPackagedBundleInfo> = build_output
+            .packaging
+            .bundles
+            .into_iter()
+            .map(|(bundle_id, out)| JsPackagedBundleInfo {
+              bundle_id,
+              file_path: out.file_path.to_string_lossy().into_owned(),
+              r#type: out.bundle_type.extension().to_owned(),
+              size: out.size as u32,
+              time: out.time as u32,
+            })
+            .collect();
+
+          let mut js_result = serialize_result;
+          js_result.set_named_property("bundleInfo", env.to_js_value(&bundle_info)?)?;
+
+          NapiAtlaspackResult::ok(&env, js_result)
         }
         Err(error) => {
           let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
