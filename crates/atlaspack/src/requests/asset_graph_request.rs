@@ -204,6 +204,7 @@ pub(crate) struct AssetGraphBuilder {
   graph: AssetGraph,
   visited: HashSet<u64>,
   work_count: u32,
+  completed_assets: usize,
   request_context: RunRequestContext,
   sender: RequestResultSender,
   receiver: RequestResultReceiver,
@@ -233,6 +234,7 @@ impl AssetGraphBuilder {
       graph: prev_asset_graph.map_or_else(AssetGraph::new, |prev| AssetGraph::from(&prev)),
       visited: HashSet::new(),
       work_count: 0,
+      completed_assets: 0,
       request_context,
       sender,
       receiver,
@@ -284,6 +286,13 @@ impl AssetGraphBuilder {
           tracing::debug!(
             "AssetGraphBuilder - AssetRequestOutput: {}",
             result.asset.file_path.display()
+          );
+          self.completed_assets += 1;
+          self.request_context.report(
+            atlaspack_core::build_progress::BuildProgressEvent::Building {
+              complete_assets: self.completed_assets,
+              total_assets: self.visited.len(),
+            },
           );
           self.handle_asset_result(result, request_id, cached);
         }

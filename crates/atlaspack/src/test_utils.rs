@@ -115,5 +115,6 @@ pub(crate) fn request_tracker(options: RequestTrackerTestOptions) -> RequestTrac
     plugins,
     project_root,
     cache,
+    None,
   )
 }

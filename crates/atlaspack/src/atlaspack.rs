@@ -24,6 +24,7 @@ use crate::WatchEvents;
 use crate::database_reader::LmdbDatabaseReader;
 use crate::plugins::{PluginsRef, config_plugins::ConfigPlugins};
 use crate::project_root::infer_project_root;
+use crate::request_tracker::ReportFn;
 use crate::request_tracker::{DynCacheHandler, RequestNode, RequestTracker};
 use crate::requests::{
   AssetGraphRequest, BuildRequest, BuildRequestOutput, BundleGraphRequest,
@@ -36,6 +37,7 @@ pub struct AtlaspackInitOptions {
   pub options: AtlaspackOptions,
   pub package_manager: Option<PackageManagerRef>,
   pub rpc: RpcFactoryRef,
+  pub report_fn: Option<ReportFn>,
 }
 
 pub struct Atlaspack {
@@ -49,6 +51,7 @@ pub struct Atlaspack {
   pub config_loader: Arc<ConfigLoader>,
   pub plugins: PluginsRef,
   pub request_tracker: Arc<RwLock<RequestTracker>>,
+  pub report_fn: Option<ReportFn>,
   /// The bundle graph deserialised from JS. Used temporarily until we have a native
   /// bundle graph implementation. Starts empty and is populated via `load_bundle_graph`.
   /// Uses non-async RwLock so the packager (and any Rayon threads) can take a read lock when needed.
@@ -64,6 +67,7 @@ impl Atlaspack {
       options,
       package_manager,
       rpc,
+      report_fn,
     }: AtlaspackInitOptions,
   ) -> Result<Self, anyhow::Error> {
     let fs = fs.unwrap_or_else(|| Arc::new(OsFileSystem));
@@ -168,6 +172,7 @@ impl Atlaspack {
         LmdbCacheReaderWriter::new(db.clone()),
         cache_mode,
       ))),
+      report_fn.clone(),
     );
 
     let debug_tools = DebugTools::from_env();
@@ -183,6 +188,7 @@ impl Atlaspack {
       config_loader,
       plugins,
       request_tracker: Arc::new(RwLock::new(request_tracker)),
+      report_fn,
       bundle_graph: Arc::new(parking_lot::RwLock::new(BundleGraphFromJs::default())),
       debug_tools,
     })
@@ -200,6 +206,10 @@ impl Atlaspack {
       }
 
       let mut request_tracker = self.request_tracker.write().await;
+
+      // Propagate the report_fn to the request tracker so it's available
+      // to all requests via RunRequestContext
+      request_tracker.set_report_fn(self.report_fn.clone());
 
       let prev_asset_graph = request_tracker
         .get_cached_request_result(AssetGraphRequest::default())
@@ -296,6 +306,10 @@ impl Atlaspack {
 
       let mut request_tracker = self.request_tracker.write().await;
 
+      // Propagate the report_fn to the request tracker so it's available
+      // to all requests via RunRequestContext
+      request_tracker.set_report_fn(self.report_fn.clone());
+
       let request_result = request_tracker
         .run_request(BundleGraphRequest {
           asset_graph: asset_graph_for_request,
@@ -312,10 +326,18 @@ impl Atlaspack {
     Ok((asset_graph, bundle_delta, had_previous_graph))
   }
 
+  pub fn set_report_fn(&mut self, report_fn: Option<ReportFn>) {
+    self.report_fn = report_fn;
+  }
+
   #[tracing::instrument(level = "info", skip_all)]
   pub fn build(&self) -> anyhow::Result<BuildRequestOutput> {
     self.runtime.block_on(async move {
       let mut request_tracker = self.request_tracker.write().await;
+
+      // Propagate the report_fn to the request tracker so it's available
+      // to all requests via RunRequestContext
+      request_tracker.set_report_fn(self.report_fn.clone());
 
       let request_result = request_tracker.run_request(BuildRequest {}).await?;
 
@@ -436,6 +458,7 @@ mod tests {
       options: AtlaspackOptions::default(),
       package_manager: None,
       rpc: rpc(),
+      report_fn: None,
     })?;
 
     let assets_names = ["foo", "bar", "baz"];

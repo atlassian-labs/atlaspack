@@ -7,6 +7,7 @@ import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 import AssetGraph from '../AssetGraph';
 import type {AtlaspackV3} from '../atlaspack-v3';
+import {report} from '../ReporterRunner';
 import {requestTypes, StaticRunOpts} from '../RequestTracker';
 import {propagateSymbols} from '../SymbolPropagation';
 import type {
@@ -54,7 +55,10 @@ export function createAssetGraphRequestRust(
     run: async (runInput) => {
       let options = runInput.options;
       let {assetGraphPromise, commitPromise} =
-        await rustAtlaspack.buildAssetGraph();
+        await rustAtlaspack.buildAssetGraph((eventJson: string) => {
+          let event = JSON.parse(eventJson);
+          report(event);
+        });
 
       let [serializedAssetGraph, assetGraphError] =
         (await assetGraphPromise) as [SerializedAssetGraphDelta, Error | null];
