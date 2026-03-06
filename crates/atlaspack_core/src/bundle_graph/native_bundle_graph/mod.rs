@@ -325,6 +325,50 @@ impl NativeBundleGraph {
       false,
     )
   }
+
+  // THIS IS DEFINITELY NOT PRODUCTION READY CODE!
+  #[tracing::instrument(level = "info", skip_all)]
+  pub fn name_bundles(&mut self) {
+    // Two passes: we need to read asset nodes while building names, then mutate bundle nodes.
+    let names: HashMap<String, String> = self
+      .nodes
+      .iter()
+      .filter_map(|node| {
+        let NativeBundleGraphNode::Bundle(b) = node else {
+          return None;
+        };
+        let stem = b
+          .entry_asset_ids
+          .first()
+          .and_then(|id| self.get_node_id_by_content_key(id))
+          .and_then(|nid| self.nodes.get(*nid))
+          .and_then(|n| match n {
+            NativeBundleGraphNode::Asset(asset) => asset
+              .file_path
+              .file_stem()
+              .and_then(|s| s.to_str())
+              .map(String::from),
+            _ => None,
+          })
+          .unwrap_or_else(|| "bundle".to_string());
+        let ext = b.bundle_type.extension();
+        let name = if b.needs_stable_name == Some(true) {
+          format!("{}.{}", stem, ext)
+        } else {
+          format!("{}.HASH_REF_{}.{}", stem, b.id, ext)
+        };
+        Some((b.id.clone(), name))
+      })
+      .collect();
+
+    for node in self.nodes.iter_mut() {
+      if let NativeBundleGraphNode::Bundle(b) = node
+        && let Some(name) = names.get(&b.id)
+      {
+        b.name = Some(name.clone());
+      }
+    }
+  }
 }
 
 const BASE62_ALPHABET: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";

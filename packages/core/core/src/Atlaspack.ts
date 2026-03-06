@@ -67,6 +67,7 @@ import {AtlaspackV3, FileSystemV3} from './atlaspack-v3';
 import createAssetGraphRequestJS from './requests/AssetGraphRequest';
 import {createAssetGraphRequestRust} from './requests/AssetGraphRequestRust';
 import type {AssetGraphRequestResult} from './requests/AssetGraphRequest';
+import {getBundleGraph} from './requests/BundleGraphRequestRust';
 import {loadRustWorkerThreadDylibHack} from './rustWorkerThreadDylibHack';
 
 registerCoreWithSerializer();
@@ -446,10 +447,26 @@ export default class Atlaspack {
         if (error) {
           throw new ThrowableDiagnostic({diagnostic: error});
         }
-
-        bundleGraph = result.bundleGraph;
-        bundleInfo = new Map();
-        changedAssets = result.changedAssets ?? new Map();
+        ({bundleGraph, changedAssets} = getBundleGraph(result));
+        bundleInfo = new Map(
+          (result.bundleInfo ?? []).map(
+            (info: {
+              bundleId: string;
+              filePath: string;
+              type: string;
+              size: number;
+              time: number;
+            }) => [
+              info.bundleId,
+              {
+                filePath: toProjectPath(options.projectRoot, info.filePath),
+                bundleId: info.bundleId,
+                type: info.type,
+                stats: {size: info.size, time: info.time},
+              },
+            ],
+          ),
+        );
         assetRequests = result.assetRequests ?? [];
       } else {
         let request = createAtlaspackBuildRequest({

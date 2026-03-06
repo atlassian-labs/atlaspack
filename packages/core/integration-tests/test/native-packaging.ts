@@ -125,12 +125,8 @@ describe('Native packaging', function () {
       fullNative: true,
     });
 
-    it('should package two SSR entries (expected to fail for now)', async function () {
-      try {
-        await runSsrPackagingTest();
-      } catch (error) {
-        assert.match(error.message, /Bundle has no name/);
-      }
+    it('should package two SSR entries ', async function () {
+      await runSsrPackagingTest();
     });
   });
 });
