@@ -1,3 +1,6 @@
+use std::hash::{Hash, Hasher};
+
+use crate::hash::IdentifierHasher;
 use crate::types::{Asset, Bundle, Dependency};
 
 /// Minimal interface for querying a bundle graph.
@@ -37,7 +40,18 @@ pub trait BundleGraph {
   /// is unchanged from the previous build, the cached package result can be reused.
   ///
   /// Mirrors `bundleGraph.getHash(bundle)` from the JS implementation.
-  fn get_bundle_hash(&self, bundle: &Bundle) -> u64;
+  #[tracing::instrument(level="trace", skip_all, fields(bundle_id = bundle.id))]
+  fn get_bundle_hash(&self, bundle: &Bundle) -> u64 {
+    let mut state = IdentifierHasher::new();
+    bundle.hash(&mut state);
+    if let Ok(mut assets) = self.get_bundle_assets(bundle) {
+      assets.sort_unstable_by_key(|a| a.id.clone());
+      for asset in assets {
+        asset.hash(&mut state);
+      }
+    }
+    state.finish()
+  }
 
   /// Returns the IDs of bundles whose `hash_reference` placeholder is embedded in the content of
   /// `bundle`.

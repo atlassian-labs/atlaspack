@@ -6,9 +6,11 @@
 #[cfg(test)]
 pub mod bundle_graph {
   use std::collections::HashMap;
+  use std::hash::{Hash, Hasher};
   use std::path::PathBuf;
 
   use atlaspack_core::bundle_graph::BundleGraph;
+  use atlaspack_core::hash::IdentifierHasher;
   use atlaspack_core::types::{
     Asset, Bundle, BundleBehavior, Dependency, Environment, FileType, Target,
   };
@@ -121,10 +123,14 @@ pub mod bundle_graph {
     }
 
     fn get_bundle_hash(&self, bundle: &Bundle) -> u64 {
-      use std::collections::hash_map::DefaultHasher;
-      use std::hash::{Hash, Hasher};
-      let mut state = DefaultHasher::new();
-      bundle.id.hash(&mut state);
+      let mut state = IdentifierHasher::new();
+      bundle.hash(&mut state);
+      if let Ok(mut assets) = self.get_bundle_assets(bundle) {
+        assets.sort_unstable_by_key(|a| a.id.clone());
+        for asset in assets {
+          asset.hash(&mut state);
+        }
+      }
       state.finish()
     }
 

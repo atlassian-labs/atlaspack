@@ -493,21 +493,6 @@ impl BundleGraph for NativeBundleGraph {
     false
   }
 
-  fn get_bundle_hash(&self, bundle: &Bundle) -> u64 {
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
-    let mut state = DefaultHasher::new();
-    bundle.id.hash(&mut state);
-    // Include the IDs of all assets contained in this bundle so the hash reflects content changes.
-    if let Ok(assets) = self.get_bundle_assets(bundle) {
-      let mut asset_ids: Vec<&str> = assets.iter().map(|a| a.id.as_str()).collect();
-      // Sort for stability — asset order in the graph is not guaranteed.
-      asset_ids.sort_unstable();
-      asset_ids.hash(&mut state);
-    }
-    state.finish()
-  }
-
   fn get_referenced_bundle_ids(&self, bundle: &Bundle) -> Vec<String> {
     let Some(bundle_node_id) = self.get_node_id_by_content_key(&bundle.id) else {
       return vec![];
