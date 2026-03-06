@@ -1,5 +1,24 @@
 # @atlaspack/rust
 
+## 3.25.0
+
+### Minor Changes
+
+- [#1050](https://github.com/atlassian-labs/atlaspack/pull/1050) [`c80be61`](https://github.com/atlassian-labs/atlaspack/commit/c80be618e42014208fed60b7a2dccc2e47d53aed) Thanks [@marcins](https://github.com/marcins)! - Add native PackagingRequest, implement temporary JS version for testing.
+
+### Patch Changes
+
+- [#1051](https://github.com/atlassian-labs/atlaspack/pull/1051) [`2d3c616`](https://github.com/atlassian-labs/atlaspack/commit/2d3c616bb2ebef55d6850e8ca9eedf13c72f5386) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add native end-to-end build pipeline via BuildRequest.
+
+  When the `fullNative` feature flag is enabled, the entire build pipeline (asset graph, bundle graph,
+  packaging) runs natively in Rust via a single NAPI call, bypassing the JS request tracker.
+
+  Key changes:
+  - Add `BuildRequest` composing `AssetGraphRequest` and `BundleGraphRequest` with a packaging stub
+  - Add `Atlaspack::build()` method and `atlaspack_napi_build` NAPI binding
+  - Add `fullNative` feature flag gating the native path in `Atlaspack.ts._build()`
+  - Packaging step is a no-op pending PackagingRequest implementation
+
 ## 3.24.1
 
 ### Patch Changes

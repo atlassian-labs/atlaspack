@@ -1,5 +1,14 @@
 # @atlaspack/runtime-service-worker
 
+## 2.15.14
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.3.9
+  - @atlaspack/plugin@2.14.57
+  - @atlaspack/types@2.15.47
+
 ## 2.15.13
 
 ### Patch Changes
