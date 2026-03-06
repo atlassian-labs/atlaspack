@@ -1,5 +1,12 @@
 # @atlaspack/compressor-gzip
 
+## 2.13.59
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.57
+
 ## 2.13.58
 
 ### Patch Changes
