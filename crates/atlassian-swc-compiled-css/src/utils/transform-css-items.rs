@@ -1,6 +1,5 @@
 use std::cell::Cell;
 use std::collections::{BTreeMap, HashMap};
-use std::path::PathBuf;
 
 fn first_property_from_sheet(sheet: &str) -> Option<String> {
   if let Some(open) = sheet.find('{') {
@@ -183,10 +182,10 @@ pub(crate) fn create_transform_css_options(
   options.sort_shorthand = None;
   options.class_hash_prefix = state.opts.class_hash_prefix.clone();
   options.flatten_multiple_selectors = state.opts.flatten_multiple_selectors;
-  // Match cssnano/postcss plugins: browserslist resolves relative to the plugin package
-  // directory (path=__dirname), not the project root. Use this crate root to mirror
-  // Babel output for reduce-initial/colormin and hashing.
-  options.browserslist_config_path = Some(PathBuf::from(env!("CARGO_MANIFEST_DIR")));
+  // Use the cached browserslist config path from TransformState, which was
+  // resolved once at construction time. When `use_legacy_browserlists_resolution`
+  // is enabled, this points to the `@compiled/css` package directory; otherwise cwd.
+  options.browserslist_config_path = Some(state.browserslist_config_path.clone());
   options.browserslist_env = state.opts.browserslist_env.clone();
 
   let compression_map = state.opts.class_name_compression_map.clone();
@@ -665,7 +664,6 @@ pub fn apply_selectors(item: &mut CssItem, selectors: &[String]) {
 #[cfg(test)]
 mod tests {
   use std::cell::RefCell;
-  use std::path::PathBuf;
   use std::rc::Rc;
 
   use pretty_assertions::assert_eq;
@@ -699,13 +697,59 @@ mod tests {
   }
 
   #[test]
-  fn uses_crate_root_for_browserslist_config_path() {
+  fn default_browserslist_resolution_uses_cwd() {
     let meta = create_metadata();
     let (options, _compression) = create_transform_css_options(&meta);
+    // When use_legacy_browserlists_resolution is not set (default false),
+    // the cached browserslist_config_path on TransformState should be cwd.
     assert_eq!(
       options.browserslist_config_path,
-      Some(PathBuf::from(env!("CARGO_MANIFEST_DIR")))
+      Some(meta.state().cwd.clone())
     );
+  }
+
+  #[test]
+  fn legacy_browserlists_resolution_walks_to_compiled_css() {
+    let cm: Lrc<SourceMap> = Default::default();
+    let file = TransformFile::new(cm, Vec::new());
+    let opts = PluginOptions {
+      use_legacy_browserlists_resolution: Some(true),
+      ..PluginOptions::default()
+    };
+    let state = Rc::new(RefCell::new(TransformState::new(file, opts)));
+    let meta = Metadata::new(state);
+    let (options, _compression) = create_transform_css_options(&meta);
+    let resolved = options
+      .browserslist_config_path
+      .expect("browserslist_config_path should be set");
+    // When legacy resolution is enabled, it walks up from cwd to find
+    // @compiled/css/dist. If found, the path ends with that suffix.
+    // If not found, it falls back to cwd.
+    // The path is resolved once and cached on TransformState.
+    let ends_with_compiled = resolved
+      .to_string_lossy()
+      .contains("node_modules/@compiled/css/dist");
+    let is_cwd = resolved == meta.state().cwd;
+    assert!(
+      ends_with_compiled || is_cwd,
+      "Expected browserslist_config_path to be @compiled/css/dist or cwd, got: {:?}",
+      resolved
+    );
+  }
+
+  #[test]
+  fn non_legacy_browserlists_resolution_uses_cwd() {
+    let cm: Lrc<SourceMap> = Default::default();
+    let file = TransformFile::new(cm, Vec::new());
+    let opts = PluginOptions {
+      use_legacy_browserlists_resolution: Some(false),
+      ..PluginOptions::default()
+    };
+    let cwd = file.cwd.clone();
+    let state = Rc::new(RefCell::new(TransformState::new(file, opts)));
+    let meta = Metadata::new(state);
+    let (options, _compression) = create_transform_css_options(&meta);
+    assert_eq!(options.browserslist_config_path, Some(cwd));
   }
 
   #[test]
@@ -867,6 +911,22 @@ mod tests {
 
     let css1 = transform_css("a{min-height:100%;}", options).expect("transform css");
     assert_eq!(css1.class_names.len(), 1);
+  }
+
+  #[test]
+  fn transform_background_color_transparent_stays_transparent() {
+    // When no browserslist config is found, initial_support defaults to false
+    // (matching Babel's postcss-reduce-initial behavior with default browsers),
+    // so `transparent` is NOT converted to `initial`.
+    let meta = create_metadata();
+    let (options, _) = create_transform_css_options(&meta);
+
+    let result = transform_css("background-color:transparent;", options).expect("transform css");
+    assert!(
+      result.sheets.iter().any(|s| s.contains("transparent")),
+      "Expected 'transparent' in sheets but got: {:?}",
+      result.sheets
+    );
   }
 
   #[test]

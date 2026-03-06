@@ -62,6 +62,9 @@ pub struct CompiledCssInJsConfigPlugin {
   pub unsafe_skip_pattern: Option<String>,
   /// Browserslist environment (e.g. "development" or "production") for package.json "browserslist".
   pub browserslist_env: Option<String>,
+  /// When enabled, resolve browserslist config from the `@compiled/css` package directory.
+  /// When disabled (default), resolve from the project root / cwd.
+  pub use_legacy_browserlists_resolution: Option<bool>,
 }
 
 #[napi(object)]
@@ -270,6 +273,7 @@ fn process_compiled_css_in_js(
         .browserslist_env
         .clone()
         .or_else(|| input.browserslist_env.clone()),
+      use_legacy_browserlists_resolution: input.config.use_legacy_browserlists_resolution,
     },
   );
 
@@ -559,6 +563,7 @@ fn config_to_plugin_options(
     flatten_multiple_selectors: Some(config.flatten_multiple_selectors),
     extract: Some(config.extract),
     browserslist_env: config.browserslist_env.clone(),
+    use_legacy_browserlists_resolution: Some(config.use_legacy_browserlists_resolution),
   }
 }
 
@@ -594,6 +599,8 @@ mod tests {
         extract: Some(extract),
         ssr: Some(true),
         sort_shorthand: Some(true),
+        browserslist_env: None,
+        use_legacy_browserlists_resolution: None,
       },
     }
   }

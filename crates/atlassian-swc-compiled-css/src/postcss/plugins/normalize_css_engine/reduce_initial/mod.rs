@@ -405,11 +405,35 @@ fn is_transparent_like(value: &str) -> bool {
 }
 
 fn initial_support(config_path: Option<PathBuf>, env: Option<&str>) -> (bool, Vec<String>) {
-  feature_supported_for_config_path(config_path, FeatureName::from("css-initial-value"), env)
+  let (supported, seen) =
+    feature_supported_for_config_path(config_path, FeatureName::from("css-initial-value"), env);
+  // Default to false when browserslist can't resolve — matching Babel/cssnano behavior.
+  // Babel's postcss-reduce-initial resolves browserslist defaults which include browsers
+  // that don't support css-initial-value (e.g., Opera Mini), so initial_support is false.
+  if seen.is_empty()
+    || seen
+      .first()
+      .map(|s| s.starts_with("<browserslist"))
+      .unwrap_or(false)
+  {
+    return (false, seen);
+  }
+  (supported, seen)
 }
 
 pub fn is_initial_supported(config_path: Option<&Path>, env: Option<&str>) -> bool {
-  feature_supported_for_config(FeatureName::from("css-initial-value"), config_path, env).0
+  let (supported, seen) =
+    feature_supported_for_config(FeatureName::from("css-initial-value"), config_path, env);
+  // Default to false when browserslist can't resolve — matching Babel/cssnano behavior.
+  if seen.is_empty()
+    || seen
+      .first()
+      .map(|s| s.starts_with("<browserslist"))
+      .unwrap_or(false)
+  {
+    return false;
+  }
+  supported
 }
 
 pub fn transform_value_for_hash(prop: &str, value: &str, initial_support: bool) -> String {

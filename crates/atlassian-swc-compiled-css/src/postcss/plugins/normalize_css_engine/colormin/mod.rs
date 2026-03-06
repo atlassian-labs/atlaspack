@@ -394,15 +394,15 @@ fn short_hex_candidate(base_hex: &str, alpha: f32) -> Option<String> {
     *chars.get(7).unwrap_or(&'f'),
     *chars.get(8).unwrap_or(&'f'),
   );
-  if alpha > 0.0 && alpha < 1.0 {
-    // JS plugin rejects alpha hex for fractional alpha (n=0)
-    return None;
-  }
+  // Check if each RGB channel pair has equal nibbles (e.g., 00→0, 33→3, ff→f)
   if s == o && u == l && p == f {
-    if alpha == 1.0 {
+    if alpha >= 1.0 {
+      // #rrggbb → #rgb (no alpha channel)
       return Some(format!("#{}{}{}", s, u, p));
     }
-    if alpha == 0.0 && g == v {
+    // For alpha < 1.0 (including 0.0), also check the alpha nibble pair
+    if g == v {
+      // #rrggbbaa → #rgba (e.g., #00000033 → #0003)
       return Some(format!("#{}{}{}{}", s, u, p, g));
     }
   }
@@ -665,8 +665,21 @@ pub(crate) fn resolve_colormin_options(
   let browsers = resolve_browsers(config_path, env);
   let has_ie8_9 = browsers.iter().any(|b| b == "ie 8" || b == "ie 9");
   let mut options = add_plugin_defaults();
-  options.alpha_hex =
-    feature_supported_for_config(FeatureName::from("css-rrggbbaa"), config_path, env).0;
+  let (alpha_hex_supported, seen) =
+    feature_supported_for_config(FeatureName::from("css-rrggbbaa"), config_path, env);
+  // When browserslist can't resolve (no config at path), default to false.
+  // Both JS browserslist and oxc_browserslist defaults include browsers that
+  // don't support css-rrggbbaa (e.g., Opera Mini), matching Babel behavior.
+  options.alpha_hex = if seen.is_empty()
+    || seen
+      .first()
+      .map(|s| s.starts_with("<browserslist"))
+      .unwrap_or(false)
+  {
+    false
+  } else {
+    alpha_hex_supported
+  };
   if has_ie8_9 {
     options.transparent = false;
   }
@@ -757,6 +770,23 @@ mod tests {
       .expect("browserslist config write");
     let (options, _browsers) = resolve_colormin_options(Some(tmp.path()), Some("development"));
     assert_eq!(options.alpha_hex, true);
+  }
+
+  #[test]
+  fn minify_color_does_not_touch_initial() {
+    let options = add_plugin_defaults();
+    let result = minify_color("initial", &options);
+    assert_eq!(result, "initial", "colormin should not transform 'initial'");
+  }
+
+  #[test]
+  fn transform_value_does_not_touch_initial() {
+    let options = add_plugin_defaults();
+    let result = transform_value("initial", &options);
+    assert_eq!(
+      result, "initial",
+      "transform_value should not transform 'initial'"
+    );
   }
 
   #[test]

@@ -195,8 +195,11 @@ fn detect_initial_support(config_path: Option<&Path>, env: Option<&str>) -> bool
   }
   opts.env = env.map(String::from);
 
-  // When browserslist resolution fails or is missing, default to false (expand initial
-  // to longhand) to match Babel output when cwd/config differs from our config path.
+  // When browserslist resolution fails or is missing, default to false (do NOT
+  // convert longhand values to `initial`) to match Babel's postcss-reduce-initial
+  // output. Both JS browserslist and oxc_browserslist defaults include browsers
+  // that don't support `css-initial-value` (e.g., Opera Mini, UC Browser), so
+  // `isSupported('css-initial-value', defaults)` returns false in Babel too.
   execute(&opts)
     .map(|entries| {
       if entries.is_empty() {

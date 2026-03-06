@@ -300,15 +300,8 @@ struct AutoprefixerCache {
   targets: Vec<String>,
 }
 
-static AUTOPREFIXER_CACHE: Lazy<Option<AutoprefixerCache>> = Lazy::new(|| {
-  let db = PrefixDB::load()?;
-  let targets = resolve_browserslist_targets();
-  let data = AutoprefixerData::from_db(db, &targets);
-  Some(AutoprefixerCache {
-    data: Arc::new(data),
-    targets,
-  })
-});
+static AUTOPREFIXER_CACHE: std::sync::OnceLock<Option<AutoprefixerCache>> =
+  std::sync::OnceLock::new();
 
 #[derive(Clone, Debug)]
 pub struct PrefixedDecl {
@@ -317,15 +310,32 @@ pub struct PrefixedDecl {
 }
 
 impl AutoprefixerData {
+  /// Initialize the autoprefixer cache with browserslist options.
+  /// Must be called before `load()` or `load_with_targets()`.
+  /// Only the first call takes effect; subsequent calls are no-ops.
+  pub fn init(config_path: Option<&std::path::Path>, env: Option<&str>) {
+    AUTOPREFIXER_CACHE.get_or_init(|| {
+      let db = PrefixDB::load()?;
+      let targets = resolve_browserslist_targets(config_path, env);
+      let data = AutoprefixerData::from_db(db, &targets);
+      Some(AutoprefixerCache {
+        data: Arc::new(data),
+        targets,
+      })
+    });
+  }
+
   pub fn load_with_targets() -> Option<(Arc<Self>, &'static Vec<String>)> {
     AUTOPREFIXER_CACHE
-      .as_ref()
+      .get()
+      .and_then(|opt| opt.as_ref())
       .map(|cache| (Arc::clone(&cache.data), &cache.targets))
   }
 
   pub fn load() -> Option<Arc<Self>> {
     AUTOPREFIXER_CACHE
-      .as_ref()
+      .get()
+      .and_then(|opt| opt.as_ref())
       .map(|cache| Arc::clone(&cache.data))
   }
 
@@ -481,19 +491,19 @@ impl Plugin for VendorAutoprefixer {
   }
 }
 
-pub fn resolve_browserslist_targets() -> Vec<String> {
-  // Use oxc_browserslist to resolve defaults (no repo-specific options requested)
-  let mut out = Vec::new();
-  let opts = oxc_browserslist::Opts::default();
+pub fn resolve_browserslist_targets(
+  config_path: Option<&std::path::Path>,
+  env: Option<&str>,
+) -> Vec<String> {
+  let opts = oxc_browserslist::Opts {
+    path: config_path.map(|p| p.to_string_lossy().into_owned()),
+    env: env.map(|e| e.to_string()),
+    ..Default::default()
+  };
   match oxc_browserslist::execute(&opts) {
-    Ok(list) => {
-      for item in list {
-        out.push(item.to_string());
-      }
-    }
-    Err(_) => {}
+    Ok(list) => list.into_iter().map(|item| item.to_string()).collect(),
+    Err(_) => Vec::new(),
   }
-  out
 }
 
 fn at_rule_name(name: &AtRuleName) -> Option<&str> {

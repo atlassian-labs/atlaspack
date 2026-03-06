@@ -299,6 +299,10 @@ pub(crate) fn transform_css_via_swc_pipeline(
     .map(|v| v != "off")
     .unwrap_or(true)
   {
+    super::plugins::vendor_autoprefixer::AutoprefixerData::init(
+      options.browserslist_config_path.as_deref(),
+      options.browserslist_env.as_deref(),
+    );
     pipeline.push(Box::new(
       super::plugins::vendor_autoprefixer::vendor_autoprefixer(),
     ));

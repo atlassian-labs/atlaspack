@@ -44,10 +44,10 @@ fn stringify_node(node: &Node, precision: usize) -> String {
       if wrap_right {
         right_str = format!("({})", right_str);
       }
-      let sep = match *op {
-        '+' | '-' => format!(" {} ", op),
-        _ => op.to_string(),
-      };
+      // CSS spec requires spaces around + and -, but not * and /.
+      // However, Babel/postcss-calc preserves spaces around all operators.
+      // Match Babel's output by always using spaces.
+      let sep = format!(" {} ", op);
       format!("{}{}{}", left_str, sep, right_str)
     }
   }
@@ -876,7 +876,7 @@ mod tests {
   #[test]
   fn preserves_leading_dot_in_calc_expression() {
     let output = normalize_calc_value("calc(var(--x) * .125)");
-    assert_eq!(output, "calc(var(--x)*.125)");
+    assert_eq!(output, "calc(var(--x) * .125)");
   }
 
   #[test]
@@ -885,16 +885,19 @@ mod tests {
     let ast = parse_calc_expression(input).expect("calc should parse");
     let reduced = reduce_node(ast, 5);
     let output = stringify_ast(&reduced, 5);
-    assert_eq!(output, "var(--board-scroll-element-height)*1px - 8px");
+    assert_eq!(output, "var(--board-scroll-element-height) * 1px - 8px");
   }
 
   #[test]
-  fn normalize_calc_value_for_hash_removes_whitespace_around_multiplication() {
-    // This is the exact case from side-nav.tsx that was causing hash mismatches
+  fn normalize_calc_value_for_hash_preserves_whitespace_around_multiplication() {
+    // This is the exact case from side-nav.tsx
+    // Babel/postcss-calc preserves spaces around all operators including *
     let input = "translateX(calc(-100% * var(--animation-direction)))";
     let output = normalize_calc_value_for_hash(input);
-    // The * should have whitespace removed, matching Babel's postcss-calc behavior
-    assert_eq!(output, "translateX(calc(-100%*var(--animation-direction)))");
+    assert_eq!(
+      output,
+      "translateX(calc(-100% * var(--animation-direction)))"
+    );
   }
 
   #[test]
@@ -912,9 +915,9 @@ mod tests {
   #[test]
   fn normalize_calc_value_for_hash_handles_nested_var() {
     // Note: the parser evaluates the expression and may reorder operands
-    // The important thing is that whitespace around * is removed
+    // Spaces are preserved around all operators including *
     let input = "calc(-1 * var(--topNavMountedVar, 0px))";
     let output = normalize_calc_value_for_hash(input);
-    assert_eq!(output, "calc(var(--topNavMountedVar, 0px)*-1)");
+    assert_eq!(output, "calc(var(--topNavMountedVar, 0px) * -1)");
   }
 }

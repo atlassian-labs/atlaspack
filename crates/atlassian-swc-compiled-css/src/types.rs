@@ -159,6 +159,11 @@ pub struct PluginOptions {
   /// Browserslist environment (e.g. "development" or "production") for config with
   /// "browserslist": { "development": [...], "production": [...] }.
   pub browserslist_env: Option<String>,
+  /// When enabled, resolve browserslist config from the `@compiled/css` package directory
+  /// (by walking up from `cwd` to find `node_modules/@compiled/css/dist/`). This mirrors
+  /// how Babel's postcss plugins resolve browserslist from their `__dirname`.
+  /// When disabled (default), resolve from the project root / cwd.
+  pub use_legacy_browserlists_resolution: Option<bool>,
 }
 
 impl Default for PluginOptions {
@@ -183,6 +188,7 @@ impl Default for PluginOptions {
       flatten_multiple_selectors: None,
       extract: None,
       browserslist_env: None,
+      use_legacy_browserlists_resolution: None,
     }
   }
 }
@@ -209,6 +215,7 @@ impl From<&crate::config::CompiledCssInJsConfig> for PluginOptions {
       flatten_multiple_selectors: config.flatten_multiple_selectors,
       extract: config.extract,
       browserslist_env: config.browserslist_env.clone(),
+      use_legacy_browserlists_resolution: config.use_legacy_browserlists_resolution,
     }
   }
 }
@@ -414,6 +421,11 @@ pub struct TransformState {
   pub cwd: PathBuf,
   pub root: PathBuf,
   pub handler: Lrc<Handler>,
+  /// Cached browserslist config path, resolved once at construction time.
+  /// When `use_legacy_browserlists_resolution` is enabled, this is the
+  /// `@compiled/css` package directory found by walking up from `cwd`.
+  /// Otherwise, it is simply `cwd`.
+  pub browserslist_config_path: PathBuf,
 }
 
 impl fmt::Debug for TransformState {
@@ -433,6 +445,11 @@ impl fmt::Debug for TransformState {
 }
 
 static GLOBAL_CACHE: OnceCell<SharedCache> = OnceCell::new();
+
+/// Process-level cache for the resolved `@compiled/css` package path.
+/// `find_compiled_css_package_path` does expensive filesystem walks; this
+/// ensures it runs at most once per process.
+static COMPILED_CSS_PACKAGE_PATH: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
 
 /// Shared cache handle mirroring the Babel plugin behaviour.
 pub type SharedCache = Arc<Mutex<Cache<Value>>>;
@@ -475,6 +492,8 @@ impl TransformState {
       });
     }
 
+    let browserslist_config_path = Self::resolve_browserslist_config_path(&opts, &cwd);
+
     Self {
       compiled_imports: None,
       uses_xcss: false,
@@ -501,6 +520,7 @@ impl TransformState {
       cwd,
       root,
       handler,
+      browserslist_config_path,
     }
   }
 
@@ -526,6 +546,10 @@ impl TransformState {
       .as_ref()
       .map(|resolver_option| ResolvedResolver::from_option(resolver_option, &self.root));
     self.module_resolver = None;
+    // Note: browserslist_config_path is intentionally NOT re-resolved here.
+    // The @compiled/css package location is a project-level constant that
+    // doesn't change between files, and find_compiled_css_package_path is
+    // expensive (filesystem walks). It is resolved once in new().
   }
 
   fn resolve_import_sources(file: &TransformFile, opts: &PluginOptions) -> Vec<String> {
@@ -543,6 +567,48 @@ impl TransformState {
       .map(|s| s.to_string())
       .chain(resolved_sources)
       .collect()
+  }
+
+  /// Resolve the browserslist config path based on `use_legacy_browserlists_resolution`.
+  ///
+  /// When enabled, uses a process-level cache to walk up from `cwd` and find
+  /// `node_modules/@compiled/css/dist/` (mirroring Babel's postcss plugin behaviour).
+  /// The filesystem walk runs at most once per process.
+  ///
+  /// When disabled, uses `cwd` directly.
+  fn resolve_browserslist_config_path(opts: &PluginOptions, cwd: &Path) -> PathBuf {
+    if opts.use_legacy_browserlists_resolution.unwrap_or(false) {
+      COMPILED_CSS_PACKAGE_PATH
+        .get_or_init(|| Self::find_compiled_css_package_path(cwd))
+        .clone()
+    } else {
+      cwd.to_path_buf()
+    }
+  }
+
+  /// Find where `@compiled/css` is installed by walking up from `cwd`.
+  ///
+  /// This mirrors how Babel's postcss plugins resolve browserslist: from their
+  /// `__dirname` inside `node_modules/@compiled/css/dist/`.
+  ///
+  /// This is only called once per process via `COMPILED_CSS_PACKAGE_PATH`.
+  fn find_compiled_css_package_path(cwd: &Path) -> PathBuf {
+    println!("find_compiled_css_package_path: cwd: {:?}", cwd);
+    let compiled_css_subpath = Path::new("node_modules/@compiled/css/dist");
+
+    let mut dir = cwd.to_path_buf();
+    loop {
+      let candidate = dir.join(compiled_css_subpath);
+      if candidate.is_dir() {
+        return candidate;
+      }
+      if !dir.pop() {
+        break;
+      }
+    }
+
+    // Fallback: if @compiled/css is not found, use cwd
+    cwd.to_path_buf()
   }
 
   pub fn enqueue_cleanup(&mut self, action: CleanupAction, span: Span) {
