@@ -51,4 +51,9 @@ export class FileSystemV3 implements FileSystem {
       }
     },
   );
+
+  writeFile: JsCallable<[FilePath, number[]], Promise<void>> = jsCallable(
+    (path: FilePath, contents: number[]) =>
+      this.#fs.writeFile(path, Buffer.from(contents)),
+  );
 }

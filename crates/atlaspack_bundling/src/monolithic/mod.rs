@@ -66,6 +66,7 @@ impl Bundler for MonolithicBundler {
         main_entry_id: Some(entry_asset_id.clone()),
         needs_stable_name: Some(entry_dep.needs_stable_name),
         bundle_behavior: None,
+        is_placeholder: false,
         is_splittable: Some(false),
         manual_shared_bundle: None,
         name: None,

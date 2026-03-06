@@ -16,6 +16,7 @@ pub struct FileSystemNapi {
   create_directory_fn: JsCallable,
   cwd_fn: JsCallable,
   read_file_fn: JsCallable,
+  write_file_fn: JsCallable,
   is_file_fn: JsCallable,
   is_dir_fn: JsCallable,
 }
@@ -28,6 +29,7 @@ impl FileSystemNapi {
         .into_unref(env)?,
       cwd_fn: JsCallable::new_method("cwd", js_file_system)?.into_unref(env)?,
       read_file_fn: JsCallable::new_method("readFile", js_file_system)?.into_unref(env)?,
+      write_file_fn: JsCallable::new_method("writeFile", js_file_system)?.into_unref(env)?,
       is_file_fn: JsCallable::new_method("isFile", js_file_system)?.into_unref(env)?,
       is_dir_fn: JsCallable::new_method("isDir", js_file_system)?.into_unref(env)?,
     })
@@ -49,14 +51,18 @@ impl FileSystem for FileSystemNapi {
       .map_err(io::Error::other)
   }
 
-  fn create_dir_all(&self, _path: &Path) -> std::io::Result<()> {
-    Err(io::Error::other(
-      "FileSystemNapi::create_dir_all is not implemented",
-    ))
+  fn create_dir_all(&self, path: &Path) -> std::io::Result<()> {
+    self
+      .create_directory_fn
+      .call_serde_blocking(path.to_path_buf())
+      .map_err(io::Error::other)
   }
 
-  fn write(&self, _path: &Path, _contents: &[u8]) -> std::io::Result<()> {
-    Err(io::Error::other("FileSystemNapi::write is not implemented"))
+  fn write(&self, path: &Path, contents: &[u8]) -> std::io::Result<()> {
+    self
+      .write_file_fn
+      .call_serde_blocking((path.to_path_buf(), contents.to_owned()))
+      .map_err(io::Error::other)
   }
 
   fn cwd(&self) -> io::Result<PathBuf> {

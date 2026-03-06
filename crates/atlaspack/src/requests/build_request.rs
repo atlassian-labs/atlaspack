@@ -1,6 +1,9 @@
 use async_trait::async_trait;
 
-use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError};
+use crate::{
+  request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError},
+  requests::packaging_request::PackagingRequest,
+};
 
 use super::{AssetGraphRequest, BundleGraphRequest, BundleGraphRequestOutput, RequestResult};
 
@@ -47,10 +50,12 @@ impl Request for BuildRequest {
       anyhow::bail!("Unexpected request result from BundleGraphRequest");
     };
 
-    // 3. Package and write bundles — stub for now
-    // This will be replaced by PackagingRequest once it is implemented.
-    // For now, the build pipeline stops after bundling.
-    tracing::info!("BuildRequest: packaging step is a stub — skipping");
+    // 3. Package and write bundles
+    request_context
+      .execute_request(PackagingRequest::new(
+        bundle_graph_output.bundle_graph.clone(),
+      ))
+      .await?;
 
     Ok(ResultAndInvalidations {
       result: RequestResult::Build(BuildRequestOutput {

@@ -15,7 +15,7 @@ use rayon::prelude::*;
 
 use crate::bundle_graph::BundleGraph;
 use crate::bundle_graph::bundle_graph_from_js::types::AssetNode;
-use crate::types::{Asset, Bundle, Dependency, Environment};
+use crate::types::{Asset, Bundle, BundleBehavior, Dependency, Environment};
 
 type BundleGraphNodeId = String;
 
@@ -429,6 +429,82 @@ impl BundleGraph for BundleGraphFromJs {
     Ok(type_matched_fallback.or(first_fallback))
   }
 
+  fn get_referenced_bundle_ids(&self, bundle: &Bundle) -> Vec<String> {
+    let Some(bundle_node_idx) = self.nodes_by_key.get(&bundle.id) else {
+      return vec![];
+    };
+
+    // Mirror the JS getReferencedBundles DFS: follow outgoing References edges from the bundle
+    // node and collect any bundle targets, including via a bundle → dependency → bundle two-hop
+    // (the pattern produced by createAssetReference + markDependencyReferenceable).
+    //
+    // NOTE: Some cross-type dependencies (e.g. JS importing an SVG as a URL) do not produce any
+    // edge at all in the bundle graph. Those bundles end up in the same topo level and receive
+    // only the nameHashForFilename(bundle.id) fallback, which will be incorrect when
+    // shouldContentHash is true. Fixing this requires the bundler to emit the missing References
+    // edge, or adopting a two-phase packaging approach.
+    let mut result = Vec::new();
+    for e in self
+      .graph
+      .edges_directed(*bundle_node_idx, Direction::Outgoing)
+    {
+      if *e.weight() != BundleGraphEdgeType::References {
+        continue;
+      }
+      match self.graph.node_weight(e.target()) {
+        // Direct bundle → bundle References edge (skip self-references, mirroring JS DFS).
+        Some(BundleGraphNode::Bundle(b)) if b.id != bundle.id => {
+          result.push(b.id.clone());
+        }
+        // Two-hop: bundle → dependency → bundle.  Follow each outgoing References edge from
+        // the dependency node and collect any bundle targets.
+        Some(BundleGraphNode::Dependency(_)) => {
+          for dep_e in self.graph.edges_directed(e.target(), Direction::Outgoing) {
+            if *dep_e.weight() != BundleGraphEdgeType::References {
+              continue;
+            }
+            if let Some(BundleGraphNode::Bundle(b)) = self.graph.node_weight(dep_e.target())
+              && b.id != bundle.id
+            {
+              result.push(b.id.clone());
+            }
+          }
+        }
+        _ => {}
+      }
+    }
+    result
+  }
+
+  fn get_inline_bundle_ids(&self, bundle: &Bundle) -> Vec<String> {
+    let Some(bundle_node_idx) = self.nodes_by_key.get(&bundle.id) else {
+      return vec![];
+    };
+    self
+      .graph
+      .edges_directed(*bundle_node_idx, Direction::Outgoing)
+      .filter_map(|e| {
+        let edge_type = *e.weight();
+        if edge_type != BundleGraphEdgeType::Contains
+          && edge_type != BundleGraphEdgeType::References
+        {
+          return None;
+        }
+        match self.graph.node_weight(e.target())? {
+          BundleGraphNode::Bundle(b)
+            if matches!(
+              b.value.bundle_behavior,
+              Some(BundleBehavior::Inline) | Some(BundleBehavior::InlineIsolated)
+            ) =>
+          {
+            Some(b.id.clone())
+          }
+          _ => None,
+        }
+      })
+      .collect()
+  }
+
   fn is_dependency_skipped(&self, dependency: &Dependency) -> bool {
     let dependency_node = self.nodes_by_key.get(&dependency.id).unwrap();
     let node = self.graph.node_weight(*dependency_node).unwrap();
@@ -464,6 +540,7 @@ mod tests {
       needs_stable_name: Some(false),
       pipeline: None,
       public_id: None,
+      is_placeholder: false,
       target: Target::default(),
     }
   }
@@ -1077,5 +1154,106 @@ mod tests {
     let err_msg = result.unwrap_err().to_string();
     assert!(err_msg.contains("is not an asset"));
     assert!(err_msg.contains("bundle1"));
+  }
+
+  #[test]
+  fn test_get_referenced_bundle_ids_direct_references_edge() {
+    // bundle(JS) →[References]→ bundle(SVG): direct bundle-to-bundle References edge.
+    let js_bundle = create_test_bundle_node("js1", "main.js");
+    let svg_bundle = create_test_bundle_node("svg1", "icon.svg");
+
+    let nodes = vec![
+      BundleGraphNode::Bundle(js_bundle.clone()),
+      BundleGraphNode::Bundle(svg_bundle.clone()),
+    ];
+    // js1 → svg1 via References
+    let edges = vec![(0, 1, BundleGraphEdgeType::References)];
+
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![]);
+    let referenced = graph.get_referenced_bundle_ids(&js_bundle.value);
+
+    assert_eq!(referenced, vec!["svg1"]);
+  }
+
+  #[test]
+  fn test_get_referenced_bundle_ids_two_hop_via_dependency() {
+    // Mirrors the JS createAssetReference + markDependencyReferenceable pattern for URL deps:
+    //   bundle(JS) →[References]→ dependency →[References]→ bundle(SVG)
+    //
+    // This is the common case for SVG/image imports from JS. The previous implementation only
+    // checked direct bundle → bundle edges and missed this path entirely.
+    let js_bundle = create_test_bundle_node("js1", "ErrorApp.js");
+    let svg_bundle = create_test_bundle_node("svg1", "something-went-wrong.svg");
+    let dep = create_test_dependency_node("dep1");
+
+    let nodes = vec![
+      BundleGraphNode::Bundle(js_bundle.clone()),
+      BundleGraphNode::Dependency(dep.clone()),
+      BundleGraphNode::Bundle(svg_bundle.clone()),
+    ];
+    // js1 → dep1 via References (markDependencyReferenceable)
+    // dep1 → svg1 via References (createAssetReference)
+    let edges = vec![
+      (0, 1, BundleGraphEdgeType::References),
+      (1, 2, BundleGraphEdgeType::References),
+    ];
+
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![]);
+    let referenced = graph.get_referenced_bundle_ids(&js_bundle.value);
+
+    assert_eq!(referenced, vec!["svg1"]);
+  }
+
+  #[test]
+  fn test_get_referenced_bundle_ids_two_hop_excludes_self_references() {
+    // Even via the two-hop path, self-references must not be returned.
+    let js_bundle = create_test_bundle_node("js1", "main.js");
+    let dep = create_test_dependency_node("dep1");
+
+    let nodes = vec![
+      BundleGraphNode::Bundle(js_bundle.clone()),
+      BundleGraphNode::Dependency(dep.clone()),
+    ];
+    // js1 → dep1 → js1 (self-loop through a dependency; should be filtered)
+    let edges = vec![
+      (0, 1, BundleGraphEdgeType::References),
+      (1, 0, BundleGraphEdgeType::References),
+    ];
+
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![]);
+    let referenced = graph.get_referenced_bundle_ids(&js_bundle.value);
+
+    assert!(
+      referenced.is_empty(),
+      "self-references via dependency hop must be excluded, got: {referenced:?}"
+    );
+  }
+
+  #[test]
+  fn test_get_referenced_bundle_ids_non_references_dep_edge_ignored() {
+    // A dependency reachable only via a non-References edge should not be followed.
+    let js_bundle = create_test_bundle_node("js1", "main.js");
+    let svg_bundle = create_test_bundle_node("svg1", "icon.svg");
+    let dep = create_test_dependency_node("dep1");
+
+    let nodes = vec![
+      BundleGraphNode::Bundle(js_bundle.clone()),
+      BundleGraphNode::Dependency(dep.clone()),
+      BundleGraphNode::Bundle(svg_bundle.clone()),
+    ];
+    // js1 → dep1 via Null (not References), dep1 → svg1 via References
+    // The dep should not be followed because the first hop is not a References edge.
+    let edges = vec![
+      (0, 1, BundleGraphEdgeType::Null),
+      (1, 2, BundleGraphEdgeType::References),
+    ];
+
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![]);
+    let referenced = graph.get_referenced_bundle_ids(&js_bundle.value);
+
+    assert!(
+      referenced.is_empty(),
+      "non-References first-hop must not be followed, got: {referenced:?}"
+    );
   }
 }
