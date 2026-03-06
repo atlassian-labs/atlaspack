@@ -7,6 +7,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
+use crate::{
+  request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError},
+  requests::RequestResult,
+};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use atlaspack_core::{
@@ -16,12 +20,6 @@ use atlaspack_core::{
   types::{Bundle, FileType},
 };
 use atlaspack_packager_js::{JsPackager, PackagingContext};
-use parking_lot::RwLock;
-
-use crate::{
-  request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError},
-  requests::RequestResult,
-};
 
 /// The prefix used in hash reference placeholders embedded in bundle content.
 /// Matches `HASH_REF_PREFIX` in `packages/core/core/src/constants.ts`.
@@ -50,7 +48,7 @@ pub struct PackageRequestOutput {
 /// via topological sort of the bundle graph), and writes the result to disk.
 pub struct PackageRequest<B: BundleGraph + Send + Sync + 'static> {
   pub bundle: Bundle,
-  bundle_graph: Arc<RwLock<B>>,
+  bundle_graph: Arc<B>,
   /// Maps each `HASH_REF_*` placeholder to the resolved name hash for that
   /// bundle. Provided by the parent `WriteBundlesRequest` which has already
   /// performed a topological sort so all dependencies are resolved before
@@ -66,7 +64,7 @@ impl<B: BundleGraph + Send + Sync + 'static> PackageRequest<B> {
   /// Creates a new `PackageRequest`.
   pub fn new(
     bundle: Bundle,
-    bundle_graph: Arc<RwLock<B>>,
+    bundle_graph: Arc<B>,
     hash_ref_to_name_hash: HashMap<String, String>,
   ) -> Self {
     Self {
@@ -86,7 +84,7 @@ impl<B: BundleGraph + Send + Sync + 'static> PackageRequest<B> {
   #[cfg(test)]
   pub fn new_for_testing(
     bundle: Bundle,
-    bundle_graph: Arc<RwLock<B>>,
+    bundle_graph: Arc<B>,
     hash_ref_to_name_hash: HashMap<String, String>,
     content: Vec<u8>,
   ) -> Self {
@@ -112,8 +110,7 @@ impl<B: BundleGraph + Send + Sync + 'static> Hash for PackageRequest<B> {
     // Mirror JS PackageRequest: keyed on bundleGraph.getHash(bundle), which covers the bundle
     // identity and all assets it contains. Changes to any asset in the bundle invalidate the
     // cached result and trigger a re-package.
-    let bundle_graph = self.bundle_graph.read();
-    bundle_graph.get_bundle_hash(&self.bundle).hash(state);
+    self.bundle_graph.get_bundle_hash(&self.bundle).hash(state);
   }
 }
 
@@ -297,11 +294,16 @@ impl<B: BundleGraph + Send + Sync + 'static> Request for PackageRequest<B> {
     let out_path = dist_dir.join(&file_name);
 
     let fs = request_context.file_system();
+    let span = tracing::debug_span!(
+      "write_bundle",
+      bundle_id = self.bundle.id,
+      out_path = %out_path.to_string_lossy()
+    );
     fs.create_dir_all(dist_dir)
       .map_err(|e| anyhow!("Failed to create output directory {:?}: {}", dist_dir, e))?;
     fs.write(&out_path, &substituted_contents)
       .map_err(|e| anyhow!("Failed to write bundle to {:?}: {}", out_path, e))?;
-
+    drop(span);
     let size = substituted_contents.len() as u64;
     let time_ms = start.elapsed().as_millis() as u64;
 
@@ -373,7 +375,7 @@ mod tests {
   ) -> PackageRequest<MockBundleGraph> {
     PackageRequest::new_for_testing(
       bundle,
-      Arc::new(RwLock::new(MockBundleGraph::builder().build())),
+      Arc::new(MockBundleGraph::builder().build()),
       hash_ref_to_name_hash,
       content.to_vec(),
     )

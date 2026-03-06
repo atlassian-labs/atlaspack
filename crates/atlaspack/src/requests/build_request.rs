@@ -1,11 +1,10 @@
 use std::sync::Arc;
 
-use async_trait::async_trait;
-
 use crate::{
   request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError},
   requests::packaging_request::PackagingRequest,
 };
+use async_trait::async_trait;
 
 use super::{
   AssetGraphRequest, BundleGraphRequest, BundleGraphRequestOutput, CommitRequest, RequestResult,
@@ -69,7 +68,7 @@ impl Request for BuildRequest {
       anyhow::bail!("Unexpected request result from BundleGraphRequest");
     };
 
-    // 3. Package and write bundles
+    // 3. Package and write bundles (pass reference; packaging reads from the same graph)
     request_context
       .execute_request(PackagingRequest::new(
         bundle_graph_output.bundle_graph.clone(),

@@ -5,7 +5,6 @@ use atlaspack_core::bundle_graph::bundle_graph::BundleGraph;
 use atlaspack_core::cache::CacheRef;
 use atlaspack_core::database::DatabaseRef;
 use atlaspack_core::debug_tools::DebugTools;
-use parking_lot::RwLock;
 
 /// Context object containing all the dependencies needed for packaging bundles.
 /// This groups related configuration and avoids passing many individual parameters.
@@ -20,7 +19,7 @@ pub struct PackagingContext {
 
 pub struct JsPackager<B: BundleGraph + Send + Sync> {
   context: PackagingContext,
-  bundle_graph: Arc<RwLock<B>>,
+  bundle_graph: Arc<B>,
 }
 
 pub mod inline_requires;
