@@ -208,6 +208,10 @@ impl Atlaspack {
 
       let mut request_tracker = self.request_tracker.write().await;
 
+      // Propagate the report_fn to the request tracker so it's available
+      // to all requests via RunRequestContext
+      request_tracker.set_report_fn(self.report_fn.clone());
+
       let prev_asset_graph = request_tracker
         .get_cached_request_result(AssetGraphRequest::default())
         .map(|result| {
@@ -316,6 +320,10 @@ impl Atlaspack {
       tracing::debug!("build_bundle_graph_with_asset_graph: running BundleGraphRequest");
 
       let mut request_tracker = self.request_tracker.write().await;
+
+      // Propagate the report_fn to the request tracker so it's available
+      // to all requests via RunRequestContext
+      request_tracker.set_report_fn(self.report_fn.clone());
 
       let request_result = request_tracker
         .run_request(BundleGraphRequest {

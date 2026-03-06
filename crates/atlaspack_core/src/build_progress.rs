@@ -8,6 +8,7 @@ use serde::Serialize;
 #[serde(tag = "phase", rename_all = "camelCase")]
 pub enum BuildProgressEvent {
   /// Asset graph is being built.
+  #[serde(rename_all = "camelCase")]
   Building {
     /// Number of assets built so far.
     complete_assets: usize,
@@ -17,6 +18,7 @@ pub enum BuildProgressEvent {
   /// Bundling has started.
   Bundling,
   /// A bundle has been packaged and optimized.
+  #[serde(rename_all = "camelCase")]
   PackagingAndOptimizing {
     /// Number of bundles completed so far.
     complete_bundles: usize,
@@ -42,5 +44,32 @@ impl BuildProgressEvent {
       event: self,
     })
     .expect("BuildProgressEvent serialization should not fail")
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_building_event_json() {
+    let event = BuildProgressEvent::Building {
+      complete_assets: 5,
+      total_assets: 10,
+    };
+    let json = event.to_json();
+    assert!(json.contains("\"completeAssets\":5"));
+    assert!(json.contains("\"totalAssets\":10"));
+    assert!(json.contains("\"phase\":\"building\""));
+    assert!(json.contains("\"type\":\"buildProgress\""));
+  }
+
+  #[test]
+  fn test_bundling_event_json() {
+    let event = BuildProgressEvent::Bundling;
+    let json = event.to_json();
+    println!("Bundling JSON: {}", json);
+    assert!(json.contains("\"phase\":\"bundling\""));
+    assert!(json.contains("\"type\":\"buildProgress\""));
   }
 }
