@@ -29,6 +29,7 @@ use crate::requests::RequestResult;
 use crate::requests::package_request::{PackageRequest, PackageRequestOutput};
 use anyhow::anyhow;
 use async_trait::async_trait;
+use atlaspack_core::build_progress::BuildProgressEvent;
 use atlaspack_core::bundle_graph::BundleGraph;
 use atlaspack_core::types::{Bundle, BundleBehavior};
 use topo_sort::{name_hash_for_filename, topological_levels};
@@ -166,6 +167,8 @@ impl<B: BundleGraph + Send + Sync + 'static> Request for PackagingRequest<B> {
 
     let mut all_outputs: HashMap<String, PackageRequestOutput> =
       HashMap::with_capacity(bundles.len());
+    let total_bundles = bundles.len();
+    let mut complete_bundles: usize = 0;
 
     for level in levels {
       // Build the dispatch map: stable name-hash fallbacks for all bundles, then overwrite with
@@ -195,6 +198,12 @@ impl<B: BundleGraph + Send + Sync + 'static> Request for PackagingRequest<B> {
             ));
           }
         };
+        complete_bundles += 1;
+        request_context.report(BuildProgressEvent::PackagingAndOptimizing {
+          complete_bundles,
+          total_bundles,
+        });
+
         // Record this bundle's real content hash so subsequent levels can resolve it.
         let hash_ref = {
           let graph = &*self.bundle_graph;
