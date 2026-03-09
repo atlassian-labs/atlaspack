@@ -17,11 +17,21 @@ pub fn get_object_property_value(
 
     match prop.as_ref() {
       Prop::KeyValue(key_value) => {
-        let PropName::Ident(ident) = &key_value.key else {
-          continue;
+        let key_matches = match &key_value.key {
+          PropName::Ident(ident) => ident.sym.as_ref() == property_name,
+          PropName::Str(s) => s.value.as_ref() == property_name,
+          // COMPAT(AFB-1871): Handle computed property names like [YELLOW_STAR].
+          // When the computed expression is an identifier whose name matches the
+          // property_name, treat it as a match. This handles patterns like
+          // FILL_MAP[YELLOW_STAR].fill where FILL_MAP uses computed keys.
+          PropName::Computed(computed) => match &*computed.expr {
+            Expr::Ident(ident) => ident.sym.as_ref() == property_name,
+            _ => false,
+          },
+          _ => false,
         };
 
-        if ident.sym.as_ref() == property_name {
+        if key_matches {
           let value = (*key_value.value).clone();
           return Some(TraverserResult {
             span: value.span(),
