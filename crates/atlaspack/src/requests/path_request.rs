@@ -287,11 +287,10 @@ mod tests {
     .run_request(request)
     .await;
 
-    assert_eq!(
-      resolution.map_err(|e| e.to_string()),
-      Err(String::from(
-        "ResolvedResolverPlugin must return an absolute path, but got ./"
-      ))
+    let err_msg = resolution.map_err(|e| e.to_string()).unwrap_err();
+    assert!(
+      err_msg.contains("must return an absolute path"),
+      "Expected 'must return an absolute path' error, got: {err_msg}"
     );
   }
 

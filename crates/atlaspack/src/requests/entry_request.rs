@@ -74,13 +74,17 @@ impl EntryRequest {
     entry_path: PathBuf,
     request_context: &RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {
-    let package_path = if entry_path.starts_with(&request_context.project_root) {
-      request_context.project_root.clone()
+    // Use cwd() when it's inside the project root, matching the JS-side
+    // EntryRequest behavior. This ensures package.json targets are read
+    // from the correct directory in monorepo setups.
+    let cwd = request_context
+      .file_system()
+      .cwd()
+      .unwrap_or_else(|_| request_context.project_root.clone());
+    let package_path = if cwd.starts_with(&request_context.project_root) {
+      cwd
     } else {
-      entry_path
-        .parent()
-        .unwrap_or(&request_context.project_root)
-        .to_path_buf()
+      request_context.project_root.clone()
     };
 
     Ok(ResultAndInvalidations {
@@ -350,7 +354,9 @@ mod tests {
       EntryRequestOutput {
         entries: vec![Entry {
           file_path: entry_path.clone(),
-          package_path: entry_path.parent().unwrap().to_path_buf(),
+          // Matches JS-side EntryRequest behavior: when cwd is not inside
+          // project_root, package_path falls back to project_root.
+          package_path: PathBuf::from("atlaspack"),
           target: None,
         }],
         files: vec![],

@@ -62,6 +62,7 @@ impl Request for BundleGraphRequest {
   fn request_type(&self) -> &'static str {
     "BundleGraphRequest"
   }
+
   #[tracing::instrument(skip_all)]
   async fn run(
     &self,
