@@ -183,9 +183,10 @@ pub(crate) fn create_transform_css_options(
   options.class_hash_prefix = state.opts.class_hash_prefix.clone();
   options.flatten_multiple_selectors = state.opts.flatten_multiple_selectors;
   // Use the cached browserslist config path from TransformState, which was
-  // resolved once at construction time. When `use_legacy_browserlists_resolution`
-  // is enabled, this points to the `@compiled/css` package directory; otherwise cwd.
+  // resolved once at construction time. By default, this points to cwd
+  // (picking up the project's browserslist config).
   options.browserslist_config_path = Some(state.browserslist_config_path.clone());
+  options.cssnano_browserslist_config_path = Some(state.cssnano_browserslist_config_path.clone());
   options.browserslist_env = state.opts.browserslist_env.clone();
 
   let compression_map = state.opts.class_name_compression_map.clone();
@@ -697,35 +698,14 @@ mod tests {
   }
 
   #[test]
-  fn default_browserslist_resolution_uses_cwd() {
+  fn default_browserslist_resolution_walks_to_compiled_css() {
     let meta = create_metadata();
-    let (options, _compression) = create_transform_css_options(&meta);
-    // When use_legacy_browserlists_resolution is not set (default false),
-    // the cached browserslist_config_path on TransformState should be cwd.
-    assert_eq!(
-      options.browserslist_config_path,
-      Some(meta.state().cwd.clone())
-    );
-  }
-
-  #[test]
-  fn legacy_browserlists_resolution_walks_to_compiled_css() {
-    let cm: Lrc<SourceMap> = Default::default();
-    let file = TransformFile::new(cm, Vec::new());
-    let opts = PluginOptions {
-      use_legacy_browserlists_resolution: Some(true),
-      ..PluginOptions::default()
-    };
-    let state = Rc::new(RefCell::new(TransformState::new(file, opts)));
-    let meta = Metadata::new(state);
     let (options, _compression) = create_transform_css_options(&meta);
     let resolved = options
       .browserslist_config_path
       .expect("browserslist_config_path should be set");
-    // When legacy resolution is enabled, it walks up from cwd to find
-    // @compiled/css/dist. If found, the path ends with that suffix.
-    // If not found, it falls back to cwd.
-    // The path is resolved once and cached on TransformState.
+    // browserslist resolves from @compiled/css/dist (browserslist defaults).
+    // If @compiled/css is not found, it falls back to cwd.
     let ends_with_compiled = resolved
       .to_string_lossy()
       .contains("node_modules/@compiled/css/dist");
@@ -738,17 +718,18 @@ mod tests {
   }
 
   #[test]
-  fn non_legacy_browserlists_resolution_uses_cwd() {
+  fn default_browserlists_resolution_uses_cwd() {
     let cm: Lrc<SourceMap> = Default::default();
     let file = TransformFile::new(cm, Vec::new());
     let opts = PluginOptions {
-      use_legacy_browserlists_resolution: Some(false),
       ..PluginOptions::default()
     };
     let cwd = file.cwd.clone();
     let state = Rc::new(RefCell::new(TransformState::new(file, opts)));
     let meta = Metadata::new(state);
     let (options, _compression) = create_transform_css_options(&meta);
+    // Default (false): browserslist resolves from cwd, matching Babel's
+    // autoprefixer which uses { from: undefined } → process.cwd().
     assert_eq!(options.browserslist_config_path, Some(cwd));
   }
 
@@ -925,6 +906,67 @@ mod tests {
     assert!(
       result.sheets.iter().any(|s| s.contains("transparent")),
       "Expected 'transparent' in sheets but got: {:?}",
+      result.sheets
+    );
+  }
+
+  #[test]
+  fn transform_hex_color_stays_full_length() {
+    // When no browserslist config is found (resolves to @compiled/css/dist with
+    // browserslist defaults), colormin should NOT shorten #00000000 to #0000
+    // because browserslist defaults include browsers that don't support
+    // css-rrggbbaa (4/8-digit hex colors).
+    let meta = create_metadata();
+    let (options, _) = create_transform_css_options(&meta);
+
+    let result = transform_css(
+      "background-color:var(--ds-background-neutral-subtle,#00000000);",
+      options,
+    )
+    .expect("transform css");
+    assert!(
+      result
+        .sheets
+        .iter()
+        .any(|s| s.contains("#00000000") || s.contains("#0000")),
+      "Expected hex color in sheets but got: {:?}",
+      result.sheets
+    );
+    // The key assertion: with browserslist defaults, #00000000 should NOT be
+    // shortened to #0000 because Opera Mini doesn't support css-rrggbbaa.
+    // The value stays as-is (either #00000000 or transparent depending on
+    // reduce-initial, but never #0000).
+    assert!(
+      !result.sheets.iter().any(|s| {
+        let lower = s.to_lowercase();
+        lower.contains("#0000}") || lower.contains("#0000)")
+      }),
+      "Expected #00000000 to NOT be shortened to #0000 with browserslist defaults, got: {:?}",
+      result.sheets
+    );
+  }
+
+  #[test]
+  fn transform_text_decoration_color_currentcolor_stays() {
+    // When no browserslist config is found (browserslist defaults),
+    // initial_support is false, so currentColor should NOT be converted to
+    // `initial` by reduce-initial for text-decoration-color.
+    let meta = create_metadata();
+    let (options, _) = create_transform_css_options(&meta);
+
+    let result =
+      transform_css("text-decoration-color:currentColor;", options).expect("transform css");
+    assert!(
+      result
+        .sheets
+        .iter()
+        .any(|s| s.to_lowercase().contains("currentcolor")),
+      "Expected 'currentColor' in sheets (not 'initial') but got: {:?}",
+      result.sheets
+    );
+    assert!(
+      !result.sheets.iter().any(|s| s.contains("initial")),
+      "Expected text-decoration-color to NOT be converted to 'initial' with browserslist defaults, got: {:?}",
       result.sheets
     );
   }

@@ -410,8 +410,6 @@ export interface CompiledCssInJsConfigPlugin {
   unsafeSkipPattern?: string;
   /** Browserslist environment (e.g. "development" or "production") for package.json "browserslist". */
   browserslistEnv?: string;
-  /** When enabled, resolve browserslist config from the @compiled/css package directory. When disabled (default), resolve from the project root / cwd. */
-  useLegacyBrowserlistsResolution?: boolean;
 }
 export declare function hashCode(rawCode: string): string;
 export declare function isSafeFromJs(hash: string, configPath: string): boolean;

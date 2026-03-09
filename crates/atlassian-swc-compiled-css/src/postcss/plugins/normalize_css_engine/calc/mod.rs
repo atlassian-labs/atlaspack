@@ -44,11 +44,13 @@ fn stringify_node(node: &Node, precision: usize) -> String {
       if wrap_right {
         right_str = format!("({})", right_str);
       }
-      // CSS spec requires spaces around + and -, but not * and /.
-      // However, Babel/postcss-calc preserves spaces around all operators.
-      // Match Babel's output by always using spaces.
-      let sep = format!(" {} ", op);
-      format!("{}{}{}", left_str, sep, right_str)
+      // CSS spec requires spaces around + and - (mandatory), but not * and /.
+      // Babel's postcss-calc only adds spaces around + and -, matching the spec.
+      if *op == '+' || *op == '-' {
+        format!("{} {} {}", left_str, op, right_str)
+      } else {
+        format!("{}{}{}", left_str, op, right_str)
+      }
     }
   }
 }
@@ -141,6 +143,22 @@ fn parse_calc_expression(input: &str) -> Option<Node> {
       _ => {
         // identifier or function -> capture literal including possible function body
         let ident = lx.take_while(|ch| ch.is_ascii_alphanumeric() || ch == '-' || ch == '_');
+        let ident_lower = ident.to_ascii_lowercase();
+        // For nested calc()/(-webkit-calc/-moz-calc), parse the inner expression
+        // as a sub-expression so it can participate in algebraic reduction (e.g.
+        // distributing multiplication).  This matches Babel's postcss-calc behavior.
+        if (ident_lower == "calc" || ident_lower == "-webkit-calc" || ident_lower == "-moz-calc")
+          && lx.peek() == Some('(')
+        {
+          lx.bump(); // consume '('
+          let node = parse_add_sub(lx)?;
+          lx.skip_ws();
+          if lx.peek()? != ')' {
+            return None;
+          }
+          lx.bump(); // consume ')'
+          return Some(node);
+        }
         let mut s = ident;
         if lx.peek() == Some('(') {
           let mut depth = 0i32;
@@ -554,9 +572,9 @@ fn reduce_add_sub_expression(left: Node, right: Node, op: char, precision: usize
 
 fn apply_number_multiplication(node: Node, multiplier: f64, precision: usize) -> Node {
   match node {
-    Node::Value(ValueKind { num, unit }) => Node::Value(ValueKind {
+    Node::Value(ValueKind { num, ref unit }) if is_known_unit(unit) => Node::Value(ValueKind {
       num: num * multiplier,
-      unit,
+      unit: unit.clone(),
     }),
     Node::Op(OpKind { op, left, right }) if op == '+' || op == '-' => Node::Op(OpKind {
       op,
@@ -586,9 +604,9 @@ fn apply_number_division(node: Node, divisor: f64, precision: usize) -> Node {
     });
   }
   match node {
-    Node::Value(ValueKind { num, unit }) => Node::Value(ValueKind {
+    Node::Value(ValueKind { num, ref unit }) if is_known_unit(unit) => Node::Value(ValueKind {
       num: num / divisor,
-      unit,
+      unit: unit.clone(),
     }),
     Node::Op(OpKind { op, left, right }) if op == '+' || op == '-' => Node::Op(OpKind {
       op,
@@ -721,7 +739,27 @@ pub fn normalize_calc_value_for_hash(value: &str) -> String {
   vp::stringify(&parsed.nodes)
 }
 
+/// Returns true if the function name is a CSS color function that supports
+/// relative color syntax (e.g., `oklch(from ...)`). Babel's postcss-calc does
+/// not process calc() expressions inside these functions because the relative
+/// color syntax operands (like `l`, `c`, `h`, `a`, `b`, `s`) are not valid
+/// calc operands in the JS postcss-calc parser.
+fn is_relative_color_function(name: &str) -> bool {
+  matches!(
+    name,
+    "oklch" | "oklab" | "lch" | "lab" | "color" | "hsl" | "hsla" | "hwb" | "rgb" | "rgba"
+  )
+}
+
 fn process_nodes_for_calc(nodes: &mut Vec<vp::Node>, opt: &Options) {
+  process_nodes_for_calc_inner(nodes, opt, false);
+}
+
+fn process_nodes_for_calc_inner(
+  nodes: &mut Vec<vp::Node>,
+  opt: &Options,
+  inside_relative_color: bool,
+) {
   for n in nodes.iter_mut() {
     if let vp::Node::Function {
       value: name,
@@ -731,7 +769,7 @@ fn process_nodes_for_calc(nodes: &mut Vec<vp::Node>, opt: &Options) {
     {
       let name_l = name.to_ascii_lowercase();
       let is_calc = name_l == "calc" || name_l == "-webkit-calc" || name_l == "-moz-calc";
-      if is_calc {
+      if is_calc && !inside_relative_color {
         let inner = vp::stringify(inner_nodes);
         if let Some(ast) = parse_calc_expression(&inner) {
           let reduced = reduce_node(ast, opt.precision);
@@ -752,7 +790,10 @@ fn process_nodes_for_calc(nodes: &mut Vec<vp::Node>, opt: &Options) {
         }
       } else {
         // Recursively process nested functions (e.g., translateX(calc(...)))
-        process_nodes_for_calc(inner_nodes, opt);
+        // If we're inside a relative color function (oklch, oklab, etc.),
+        // skip calc processing to match Babel's behavior.
+        let in_color = inside_relative_color || is_relative_color_function(&name_l);
+        process_nodes_for_calc_inner(inner_nodes, opt, in_color);
       }
     }
   }
@@ -876,7 +917,7 @@ mod tests {
   #[test]
   fn preserves_leading_dot_in_calc_expression() {
     let output = normalize_calc_value("calc(var(--x) * .125)");
-    assert_eq!(output, "calc(var(--x) * .125)");
+    assert_eq!(output, "calc(var(--x)*.125)");
   }
 
   #[test]
@@ -885,19 +926,17 @@ mod tests {
     let ast = parse_calc_expression(input).expect("calc should parse");
     let reduced = reduce_node(ast, 5);
     let output = stringify_ast(&reduced, 5);
-    assert_eq!(output, "var(--board-scroll-element-height) * 1px - 8px");
+    // No spaces around * and /, but spaces around + and - (matching Babel)
+    assert_eq!(output, "var(--board-scroll-element-height)*1px - 8px");
   }
 
   #[test]
   fn normalize_calc_value_for_hash_preserves_whitespace_around_multiplication() {
     // This is the exact case from side-nav.tsx
-    // Babel/postcss-calc preserves spaces around all operators including *
+    // Babel's postcss-calc does not add spaces around * and /
     let input = "translateX(calc(-100% * var(--animation-direction)))";
     let output = normalize_calc_value_for_hash(input);
-    assert_eq!(
-      output,
-      "translateX(calc(-100% * var(--animation-direction)))"
-    );
+    assert_eq!(output, "translateX(calc(-100%*var(--animation-direction)))");
   }
 
   #[test]
@@ -915,9 +954,71 @@ mod tests {
   #[test]
   fn normalize_calc_value_for_hash_handles_nested_var() {
     // Note: the parser evaluates the expression and may reorder operands
-    // Spaces are preserved around all operators including *
+    // No spaces around * (matching Babel's postcss-calc)
     let input = "calc(-1 * var(--topNavMountedVar, 0px))";
     let output = normalize_calc_value_for_hash(input);
-    assert_eq!(output, "calc(var(--topNavMountedVar, 0px) * -1)");
+    assert_eq!(output, "calc(var(--topNavMountedVar, 0px)*-1)");
+  }
+
+  #[test]
+  fn normalize_calc_inside_oklch_preserves_spaces() {
+    // Babel's postcss-calc does not process calc() inside oklch() because
+    // the relative color syntax operands (l, c, h) are not valid numeric
+    // calc operands. The original spacing must be preserved.
+    let input = "oklch(from var(--icon-color) calc(l * var(--icon-l-factor)) c h)";
+    let output = normalize_calc_value_for_hash(input);
+    assert_eq!(
+      output,
+      "oklch(from var(--icon-color) calc(l * var(--icon-l-factor)) c h)"
+    );
+  }
+
+  #[test]
+  fn normalize_calc_outside_oklch_still_works() {
+    // calc() outside of relative color functions should still be normalized
+    let input = "calc(100% * var(--x))";
+    let output = normalize_calc_value_for_hash(input);
+    assert_eq!(output, "calc(100%*var(--x))");
+  }
+
+  #[test]
+  fn calc_preserves_unknown_units_like_cqw() {
+    // Babel's postcss-calc v8.2.4 doesn't recognize cqw (container query width)
+    // as a known unit, so calc(100cqw/5.42857) is NOT simplified.
+    // Our implementation should match this behavior.
+    let output = normalize_calc_value("calc(100cqw/5.42857)");
+    assert_eq!(output, "calc(100cqw/5.42857)");
+  }
+
+  #[test]
+  fn calc_preserves_unknown_units_multiplication() {
+    // Unknown units should not be simplified in multiplication either
+    let output = normalize_calc_value("calc(100cqw * 0.18421)");
+    assert_eq!(output, "calc(100cqw*.18421)");
+  }
+
+  #[test]
+  fn calc_still_reduces_known_units() {
+    // Known units like px should still be reduced
+    let output = normalize_calc_value("calc(100px / 5)");
+    assert_eq!(output, "20px");
+  }
+
+  #[test]
+  fn nested_calc_distributes_multiplication() {
+    // Nested calc() should be flattened so multiplication can be distributed,
+    // matching Babel's postcss-calc behavior.
+    // Input: calc(calc(100vw - var(--a, 0px) - var(--b, 0px)) * .18421)
+    // Expected: calc(18.421vw - var(--a, 0px) * .18421 - var(--b, 0px) * .18421)
+    let processor = pc::postcss_with_plugins(vec![plugin()]);
+    let mut result = processor
+      .process("a{width:calc(calc(100vw - var(--a, 0px) - var(--b, 0px)) * .18421)}")
+      .expect("process should succeed");
+    let css = result.css().expect("css string").to_string();
+    // Spaces around + and - but not around * (matching Babel's postcss-calc).
+    assert_eq!(
+      css,
+      "a{width:calc(18.421vw - var(--a, 0px)*.18421 - var(--b, 0px)*.18421)}"
+    );
   }
 }

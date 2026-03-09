@@ -660,6 +660,23 @@ fn get_variable_declarator_value_for_parent_expr(expr: &Expr, meta: &Metadata) -
   }
   let mut variable_name = babel_like_expression(&hash_expr, meta);
 
+  // COMPAT(AFB-1871): When the expression is directly a compiled css()/keyframes()
+  // call, replace it with `null`. These calls are compile-time only and will be
+  // removed by the cleanup pass. Babel's runtime `ix()` sees `null` for these.
+  {
+    let st = meta.state();
+    if is_compiled_css_call_expression(expr, &st)
+      || is_compiled_css_tagged_template_expression(expr, &st)
+    {
+      drop(st);
+      return (
+        Expr::Lit(Lit::Null(swc_core::ecma::ast::Null { span: expr.span() })),
+        variable_name,
+      );
+    }
+    drop(st);
+  }
+
   if let Expr::Ident(ident) = expr {
     let base_name = ident.sym.as_ref();
     variable_name = match &meta.context {
@@ -670,11 +687,22 @@ fn get_variable_declarator_value_for_parent_expr(expr: &Expr, meta: &Metadata) -
     if let Some(binding) = resolve_binding(base_name, meta.clone(), evaluate_expression) {
       if let Some(node) = &binding.node {
         if !matches!(binding.source, BindingSource::Import) {
-          expression = node.clone();
-          if !matches!(meta.context, MetadataContext::Keyframes { .. }) {
-            let mut normalized = node.clone();
-            normalize_props_usage(&mut normalized);
-            variable_name = babel_like_expression(&normalized, &binding.meta);
+          // COMPAT(AFB-1871): Do NOT resolve identifiers that point to compiled
+          // css()/keyframes() calls. These calls will be replaced with `null`
+          // by the cleanup pass. Babel keeps the original identifier reference
+          // (e.g. `ix(smallSize)`) rather than inlining the css() call.
+          let is_compiled = {
+            let st = binding.meta.state();
+            is_compiled_css_call_expression(node, &st)
+              || is_compiled_css_tagged_template_expression(node, &st)
+          };
+          if !is_compiled {
+            expression = node.clone();
+            if !matches!(meta.context, MetadataContext::Keyframes { .. }) {
+              let mut normalized = node.clone();
+              normalize_props_usage(&mut normalized);
+              variable_name = babel_like_expression(&normalized, &binding.meta);
+            }
           }
         }
       }
@@ -1018,6 +1046,49 @@ where
             if has_nested_object_values && matches!(member.prop, MemberProp::Computed(_)) {
               return Some(build_css(&node, &binding.meta));
             }
+
+            // COMPAT(AFB-1871): Handle objects whose values are compiled css() calls
+            // or identifiers that resolve to them. Examples:
+            //   const containerAppearance = { default: css({...}), ... };
+            //   const sizeMapping = { small: smallSize, ... }; // smallSize = css({...})
+            // When the computed key is a runtime variable, Babel treats the object
+            // keys as CSS property names and the values as CSS variable expressions.
+            if matches!(member.prop, MemberProp::Computed(_)) {
+              let st = binding.meta.state();
+              let has_compiled_values = obj.props.iter().any(|prop| {
+                if let swc_core::ecma::ast::PropOrSpread::Prop(p) = prop {
+                  if let swc_core::ecma::ast::Prop::KeyValue(kv) = p.as_ref() {
+                    // Check if value is directly a css() call
+                    if is_compiled_css_call_expression(kv.value.as_ref(), &st)
+                      || is_compiled_css_tagged_template_expression(kv.value.as_ref(), &st)
+                    {
+                      return true;
+                    }
+                    // Check if value is an identifier that resolves to a css() call
+                    if let Expr::Ident(val_ident) = kv.value.as_ref() {
+                      if let Some(val_binding) = resolve_binding(
+                        val_ident.sym.as_ref(),
+                        binding.meta.clone(),
+                        evaluate_expression,
+                      ) {
+                        if let Some(val_node) = &val_binding.node {
+                          let val_st = val_binding.meta.state();
+                          let is_css = is_compiled_css_call_expression(val_node, &val_st)
+                            || is_compiled_css_tagged_template_expression(val_node, &val_st);
+                          drop(val_st);
+                          return is_css;
+                        }
+                      }
+                    }
+                  }
+                }
+                false
+              });
+              drop(st);
+              if has_compiled_values {
+                return Some(build_css(&node, &binding.meta));
+              }
+            }
           }
         }
       }
@@ -1254,12 +1325,55 @@ where
     drop(state);
 
     let conditional_branches_look_like_css = if does_expression_have_conditional_css {
-      let looks_like_css_literal = |expr: &Expr, state: &_| {
+      // COMPAT(AFB-1871): The closure must NOT hold a long-lived Ref<TransformState>
+      // guard while calling evaluate_expression, as that would double-borrow the
+      // RefCell and panic. Each arm acquires its own short-lived borrow via
+      // meta.state() and drops it immediately.
+      let looks_like_css_literal = |expr: &Expr, meta: &Metadata| {
         matches!(expr, Expr::Object(_))
           || matches!(expr, Expr::Tpl(tpl) if tpl.quasis.iter().any(|q| q.raw.as_ref().contains(':')))
+          // COMPAT(AFB-1871): When we are in a property-value position (is_mid_statement),
+          // a static template literal (no dynamic expressions) is a valid CSS value even
+          // without ':' in its quasis, because the property name comes from the enclosing
+          // object key. Templates with dynamic expressions (e.g. `calc(100vh - ${x}px)`)
+          // should go through the CSS variable path instead.
+          || (is_mid_statement && matches!(expr, Expr::Tpl(tpl) if tpl.exprs.is_empty()))
           || matches!(expr, Expr::Lit(Lit::Str(str_lit)) if str_lit.value.contains(':'))
-          || is_compiled_css_tagged_template_expression(expr, state)
-          || is_compiled_css_call_expression(expr, state)
+          || {
+            // Acquire a short-lived borrow for compiled CSS checks
+            let st = meta.state();
+            let result = is_compiled_css_tagged_template_expression(expr, &st)
+              || is_compiled_css_call_expression(expr, &st);
+            drop(st);
+            result
+          }
+          // COMPAT(AFB-1886): Detect call expressions (e.g. token()) that evaluate
+          // to string literals containing CSS declarations. Babel produces two static
+          // CSS rules with class toggling for conditionals where both branches are
+          // token() calls, rather than creating a single CSS variable. Try evaluating
+          // the expression and check if it resolves to a string containing ':' (a CSS
+          // declaration) or undefined (for single-sided conditionals).
+          // Plain values like 'ellipsis' or '104px' should NOT match — they are CSS
+          // values, not declarations, and should go through the CSS variable path.
+          || matches!(expr, Expr::Call(_) | Expr::Ident(_) if {
+            let pair = evaluate_expression(expr, meta.clone());
+            matches!(&pair.value, Expr::Lit(Lit::Str(s)) if s.value.contains(':'))
+          })
+          // COMPAT(AFB-1871): Handle parenthesized nested ternaries. E.g.:
+          //   marginTop: ({ a, b }) => a ? (b ? token('space.600') : token('space.300')) : undefined
+          // The inner `(b ? token('space.600') : token('space.300'))` is Paren(Cond(...))
+          // whose branches are token() calls that evaluate to CSS values.
+          || {
+            let inner = strip_parentheses_expr(expr);
+            if let Expr::Cond(inner_cond) = inner {
+              let cons_pair = evaluate_expression(inner_cond.cons.as_ref(), meta.clone());
+              let alt_pair = evaluate_expression(inner_cond.alt.as_ref(), meta.clone());
+              matches!(&cons_pair.value, Expr::Lit(Lit::Str(s)) if s.value.contains(':'))
+                || matches!(&alt_pair.value, Expr::Lit(Lit::Str(s)) if s.value.contains(':'))
+            } else {
+              false
+            }
+          }
       };
 
       let maybe_cond = match node_expression {
@@ -1278,11 +1392,10 @@ where
         _ => None,
       };
 
-      let state = evaluated.meta.state();
       let looks = maybe_cond.map_or(false, |cond| {
-        looks_like_css_literal(&cond.cons, &state) || looks_like_css_literal(&cond.alt, &state)
+        looks_like_css_literal(&cond.cons, &evaluated.meta)
+          || looks_like_css_literal(&cond.alt, &evaluated.meta)
       });
-      drop(state);
       looks
     } else {
       false
@@ -1393,13 +1506,169 @@ where
           matches!(node_expression, Expr::Tpl(_))
         );
       }
+
+      // When the expression is an arrow with a conditional body whose branches
+      // evaluate to CSS strings (e.g. token() calls), extract the conditional
+      // directly rather than calling build_css on the un-evaluated arrow.
+      // This produces two static CSS rules with class toggling (matching Babel)
+      // instead of a single CSS variable.
+
       let nested_meta = meta.with_context(MetadataContext::Fragment);
       let build_meta = if matches!(node_expression, Expr::Tpl(_)) {
         nested_meta
       } else {
         evaluated.meta.clone()
       };
-      let result = build_css(&evaluated.value, &build_meta);
+
+      // COMPAT(AFB-1886): When the arrow body is a conditional with branches
+      // that evaluate to string literals (e.g. token() calls), build the
+      // conditional directly using the evaluated branch values. This produces
+      // two static CSS rules with class toggling (matching Babel) instead of
+      // a single CSS variable. The branch values are plain CSS values (not full
+      // declarations), so we build CssItem entries directly rather than going
+      // through extract_conditional_expression_with_builder which expects
+      // full declarations with ':'.
+      let result = if does_expression_have_conditional_css && conditional_branches_look_like_css {
+        let maybe_cond_result = (|| -> Option<CssOutput> {
+          let arrow = match node_expression {
+            Expr::Arrow(a) => a,
+            _ => return None,
+          };
+          let body = match arrow.body.as_ref() {
+            BlockStmtOrExpr::Expr(b) => b,
+            _ => return None,
+          };
+          let cond = match strip_parentheses_expr(body.as_ref()) {
+            Expr::Cond(c) => c,
+            _ => return None,
+          };
+
+          // Recursively collect all leaf branches from nested conditionals,
+          // evaluating each to a string value. This handles patterns like:
+          //   cond1 ? (cond2 ? token('a') : token('b')) : undefined
+          fn collect_branches<F>(
+            cond: &CondExpr,
+            meta: &Metadata,
+            build_css: &mut F,
+          ) -> Option<CssOutput>
+          where
+            F: FnMut(&Expr, &Metadata) -> CssOutput,
+          {
+            let eval_branch = |expr: &Expr, build_css: &mut F| -> Option<CssOutput> {
+              if matches!(expr, Expr::Ident(id) if id.sym.as_ref() == "undefined") {
+                return None; // undefined means "no value for this branch"
+              }
+              // COMPAT(AFB-1871): After optimize_conditional_statement absorbs the
+              // property prefix/suffix into branches, string literals like '48px'
+              // become template literals like `margin-top:48px;`. Handle Tpl
+              // expressions with no dynamic expressions as string values.
+              if let Expr::Tpl(tpl) = expr {
+                if tpl.exprs.is_empty() {
+                  let val: String = tpl.quasis.iter().map(|q| q.raw.as_ref()).collect();
+                  if !val.is_empty() {
+                    return Some(CssOutput {
+                      css: vec![CssItem::unconditional(&val)],
+                      variables: Vec::new(),
+                    });
+                  }
+                }
+                // COMPAT(AFB-1871): Template literal with dynamic expressions
+                // (e.g. `height:calc(100vh - ${props.bannerHeight}px);`).
+                // Use build_css to produce CSS items with CSS variables.
+                if !tpl.exprs.is_empty() {
+                  let result = build_css(expr, meta);
+                  if !result.css.is_empty() {
+                    return Some(result);
+                  }
+                }
+              }
+              let pair = evaluate_expression(expr, meta.clone());
+              match &pair.value {
+                Expr::Lit(Lit::Str(s)) => Some(CssOutput {
+                  css: vec![CssItem::unconditional(s.value.as_ref())],
+                  variables: Vec::new(),
+                }),
+                // COMPAT(AFB-1871): Template literals with no expressions that
+                // were created by optimize_conditional_statement.
+                Expr::Tpl(tpl) if tpl.exprs.is_empty() => {
+                  let val: String = tpl.quasis.iter().map(|q| q.raw.as_ref()).collect();
+                  if val.is_empty() {
+                    None
+                  } else {
+                    Some(CssOutput {
+                      css: vec![CssItem::unconditional(&val)],
+                      variables: Vec::new(),
+                    })
+                  }
+                }
+                _ => None,
+              }
+            };
+
+            // Handle nested conditionals by recursion
+            let cons_output = if let Expr::Cond(inner) = strip_parentheses_expr(&cond.cons) {
+              collect_branches(inner, meta, build_css)
+            } else {
+              eval_branch(&cond.cons, build_css)
+            };
+
+            let alt_output = if let Expr::Cond(inner) = strip_parentheses_expr(&cond.alt) {
+              collect_branches(inner, meta, build_css)
+            } else {
+              eval_branch(&cond.alt, build_css)
+            };
+
+            let cons_item = cons_output.and_then(|o| {
+              merge_subsequent_unconditional_css_items(o.css)
+                .into_iter()
+                .next()
+            });
+            let alt_item = alt_output.and_then(|o| {
+              merge_subsequent_unconditional_css_items(o.css)
+                .into_iter()
+                .next()
+            });
+
+            let mut css_items = Vec::new();
+            match (cons_item, alt_item) {
+              (Some(consequent), Some(alternate)) => {
+                css_items.push(CssItem::Conditional(ConditionalCssItem {
+                  test: (*cond.test).clone(),
+                  consequent: Box::new(consequent),
+                  alternate: Box::new(alternate),
+                  guard: None,
+                }));
+              }
+              (Some(consequent), None) => {
+                css_items.extend(logical_items_from_conditional_expression(
+                  vec![consequent],
+                  cond,
+                  ConditionalBranch::Consequent,
+                ));
+              }
+              (None, Some(alternate)) => {
+                css_items.extend(logical_items_from_conditional_expression(
+                  vec![alternate],
+                  cond,
+                  ConditionalBranch::Alternate,
+                ));
+              }
+              (None, None) => return None,
+            }
+
+            Some(CssOutput {
+              css: css_items,
+              variables: Vec::new(),
+            })
+          }
+
+          collect_branches(cond, &build_meta, build_css)
+        })();
+
+        maybe_cond_result.unwrap_or_else(|| build_css(&evaluated.value, &build_meta))
+      } else {
+        build_css(&evaluated.value, &build_meta)
+      };
 
       if std::env::var("STACK_DEBUG").is_ok() {
         eprintln!(
@@ -1680,6 +1949,15 @@ where
             }
           }
         } else if let Expr::Cond(inner_conditional) = expr {
+          css_output = Some(extract_conditional_expression_with_builder(
+            inner_conditional,
+            meta,
+            build_css,
+          ));
+        // COMPAT(AFB-1871): Handle parenthesized nested ternaries. E.g.:
+        //   marginTop: ({ a, b }) => a ? (b ? '48px' : '24px') : undefined
+        // The inner `(b ? '48px' : '24px')` is Paren(Cond(...)).
+        } else if let Expr::Cond(inner_conditional) = strip_parentheses_expr(expr) {
           css_output = Some(extract_conditional_expression_with_builder(
             inner_conditional,
             meta,
@@ -2513,14 +2791,54 @@ where
               },
             };
 
-            if is_selector_key(&key) {
-              // Key is a selector (e.g. [data-styled-selector="..."]); wrap result as a rule
+            // Check if the arrow's conditional branches return CSS declaration
+            // strings (e.g. `color: red`) rather than CSS objects/blocks. When a
+            // selector key like `[data-styled-selector="..."]` has a value that is
+            // a conditional returning CSS strings, Babel treats it as a plain CSS
+            // property value (not a nested rule), so we must do the same.
+            let arrow_returns_css_string_value = {
+              if let BlockStmtOrExpr::Expr(body) = arrow.body.as_ref() {
+                let inner = strip_parentheses_expr(body.as_ref());
+                if let Expr::Cond(cond) = inner {
+                  let cons_is_string_css = matches!(cond.cons.as_ref(),
+                    Expr::Tpl(tpl) if tpl.quasis.iter().any(|q| q.raw.as_ref().contains(':'))
+                  ) || matches!(cond.cons.as_ref(),
+                    Expr::Lit(Lit::Str(s)) if s.value.is_empty() || s.value.contains(':')
+                  );
+                  let alt_is_string_css = matches!(cond.alt.as_ref(),
+                    Expr::Tpl(tpl) if tpl.quasis.iter().any(|q| q.raw.as_ref().contains(':'))
+                  ) || matches!(cond.alt.as_ref(),
+                    Expr::Lit(Lit::Str(s)) if s.value.is_empty() || s.value.contains(':')
+                  );
+                  let neither_is_object = !matches!(cond.cons.as_ref(), Expr::Object(_))
+                    && !matches!(cond.alt.as_ref(), Expr::Object(_));
+                  cons_is_string_css && alt_is_string_css && neither_is_object
+                } else {
+                  false
+                }
+              } else {
+                false
+              }
+            };
+
+            if is_selector_key(&key) && !arrow_returns_css_string_value {
+              // Key is a selector (e.g. &:hover, [data-id~=test]); wrap result as a rule
               // instead of treating it as a property name to produce valid "selector { css }".
               let result =
                 extract_template_literal_with_builder(&optimized, &updated_meta, build_css);
               let mapped = to_css_rule(&key, &result);
               css.extend(mapped.css);
               variables.extend(mapped.variables);
+            } else if is_selector_key(&key) && arrow_returns_css_string_value {
+              // COMPAT: The selector key has a value that is a conditional returning
+              // CSS declaration strings (e.g. `color: red`). Babel treats these as
+              // plain CSS declarations (ignoring the selector key), so the CSS value
+              // already contains the full declaration. Extract it directly without
+              // wrapping in a selector or prepending a property name.
+              let result =
+                extract_template_literal_with_builder(&optimized, &updated_meta, build_css);
+              css.extend(result.css);
+              variables.extend(result.variables);
             } else {
               recompose_template_literal(
                 &mut optimized,
@@ -3065,8 +3383,9 @@ mod tests {
     assert_no_imported_css_variables, babel_like_expression, build_css_internal,
     callback_if_file_included, extract_conditional_expression_with_builder,
     extract_keyframes_with_builder, extract_logical_expression_with_builder,
-    extract_member_expression_with_builder, extract_template_literal_with_builder,
-    find_binding_identifier, generate_cache_for_css_map_with_builder, get_item_css,
+    extract_member_expression_with_builder, extract_object_expression_with_builder,
+    extract_template_literal_with_builder, find_binding_identifier,
+    generate_cache_for_css_map_with_builder, get_item_css,
     get_variable_declarator_value_for_parent_expr, is_selector_key,
     merge_subsequent_unconditional_css_items, print_expression, to_css_declaration, to_css_rule,
   };
@@ -4666,5 +4985,358 @@ mod tests {
       }
       other => panic!("Expected Logical CssItem, got {:?}", other),
     }
+  }
+
+  #[test]
+  fn conditional_plain_value_branches_become_conditional_css_after_optimization() {
+    // When an arrow function in a property-value position returns a conditional
+    // with a plain CSS value like '104px' and undefined, the optimize_conditional_statement
+    // pass absorbs the property prefix "max-height:" and suffix ";" into the branches.
+    // After optimization, '104px' becomes 'max-height:104px;' (a full CSS declaration),
+    // so it correctly enters the conditional CSS path and produces valid CSS.
+    // This tests the post-optimization behavior.
+    let meta = create_metadata();
+    let template = parse_expression(
+      "`max-height: ${({ shouldTruncateCommentContent }) => shouldTruncateCommentContent ? '104px' : undefined};`",
+    );
+    let tpl = match &template {
+      Expr::Tpl(t) => t,
+      _ => panic!("Expected template literal"),
+    };
+
+    let result = extract_template_literal_with_builder(tpl, &meta, &mut |expr, meta| {
+      if let Expr::Object(obj) = expr {
+        extract_object_expression_with_builder(obj, meta, &mut |_e, _m| CssOutput::new())
+      } else {
+        CssOutput::new()
+      }
+    });
+
+    // After optimize_conditional_statement absorbs "max-height:" prefix and ";" suffix,
+    // the branches become 'max-height:104px;' and undefined. Since the branch now
+    // contains ':', it's correctly treated as a conditional CSS item.
+    let has_conditional = result
+      .css
+      .iter()
+      .any(|item| matches!(item, CssItem::Conditional(_)));
+    assert!(
+      has_conditional,
+      "Should produce CssItem::Conditional after optimize_conditional_statement absorbs prefix"
+    );
+  }
+
+  #[test]
+  fn plain_value_string_without_colon_is_not_css_literal() {
+    // A string literal like '104px' that does NOT contain ':' should not be
+    // classified as a CSS literal by looks_like_css_literal. Only strings
+    // containing ':' (full CSS declarations like 'color:red') should match.
+    // This prevents CSS parsing errors when the optimize_conditional_statement
+    // pass doesn't run (e.g., due to has_nested being true).
+    let meta = create_metadata();
+    // Simulate a case where optimize_conditional_statement can't absorb the prefix
+    // (e.g., the arrow is inside a nested template literal with other conditionals).
+    // The expression ${...} between two quasis that don't contain ':'
+    let template = parse_expression("`${({ x }) => x ? '104px' : undefined}`");
+    let tpl = match &template {
+      Expr::Tpl(t) => t,
+      _ => panic!("Expected template literal"),
+    };
+
+    let result = extract_template_literal_with_builder(tpl, &meta, &mut |expr, meta| {
+      if let Expr::Object(obj) = expr {
+        extract_object_expression_with_builder(obj, meta, &mut |_e, _m| CssOutput::new())
+      } else {
+        CssOutput::new()
+      }
+    });
+
+    // '104px' without ':' should NOT be treated as CSS — it should become a variable
+    let has_conditional = result
+      .css
+      .iter()
+      .any(|item| matches!(item, CssItem::Conditional(_)));
+    assert!(
+      !has_conditional,
+      "Plain value string '104px' without ':' should not produce conditional CSS items"
+    );
+  }
+
+  #[test]
+  fn conditional_string_branches_produce_conditional_css_items() {
+    // Simulates the ToolbarAboveTitle pattern where an arrow function returns
+    // a conditional with branches that evaluate to string values.
+    // Pattern: marginTop: (props) => props.x ? 'value1' : 'value2'
+    // This should produce CssItem::Conditional, not a CSS variable.
+    let meta = create_metadata();
+    let template = parse_expression(
+      "`margin-top: ${(props) => props.x ? 'var(--ds-space-600,48px)' : 'var(--ds-space-300,24px)'};`",
+    );
+    let tpl = match &template {
+      Expr::Tpl(t) => t,
+      _ => panic!("Expected template literal"),
+    };
+
+    let result = extract_template_literal_with_builder(tpl, &meta, &mut |expr, meta| {
+      if let Expr::Object(obj) = expr {
+        extract_object_expression_with_builder(obj, meta, &mut |_e, _m| CssOutput::new())
+      } else {
+        CssOutput::new()
+      }
+    });
+
+    // Should produce conditional CSS items, NOT a CSS variable
+    assert!(
+      result.variables.is_empty(),
+      "Should not produce CSS variables for conditional with string branches, got {} variables",
+      result.variables.len()
+    );
+    let has_conditional = result
+      .css
+      .iter()
+      .any(|item| matches!(item, CssItem::Conditional(_)));
+    assert!(
+      has_conditional,
+      "Should produce CssItem::Conditional for conditional string branches, got: {:?}",
+      result
+        .css
+        .iter()
+        .map(|item| match item {
+          CssItem::Unconditional(u) => format!("Unconditional({:?})", u.css),
+          CssItem::Conditional(_) => "Conditional(...)".to_string(),
+          CssItem::Logical(l) => format!("Logical({:?})", l.css),
+          CssItem::Sheet(s) => format!("Sheet({:?})", s.css),
+          CssItem::Map(_) => "Map(...)".to_string(),
+        })
+        .collect::<Vec<_>>()
+    );
+  }
+
+  #[test]
+  fn conditional_string_with_undefined_produces_logical_css_items() {
+    // Pattern: marginTop: (props) => props.x ? 'var(--ds-space-600,48px)' : undefined
+    // This should produce CssItem::Logical (single-sided conditional), not a CSS variable.
+    let meta = create_metadata();
+    let template = parse_expression(
+      "`margin-top: ${(props) => props.x ? 'var(--ds-space-600,48px)' : undefined};`",
+    );
+    let tpl = match &template {
+      Expr::Tpl(t) => t,
+      _ => panic!("Expected template literal"),
+    };
+
+    let result = extract_template_literal_with_builder(tpl, &meta, &mut |expr, meta| {
+      if let Expr::Object(obj) = expr {
+        extract_object_expression_with_builder(obj, meta, &mut |_e, _m| CssOutput::new())
+      } else {
+        CssOutput::new()
+      }
+    });
+
+    // Should produce conditional/logical CSS items (not a CSS variable)
+    assert!(
+      result.variables.is_empty(),
+      "Should not produce CSS variables for single-sided conditional, got {} variables",
+      result.variables.len()
+    );
+    let has_conditional_or_logical = result
+      .css
+      .iter()
+      .any(|item| matches!(item, CssItem::Logical(_) | CssItem::Conditional(_)));
+    assert!(
+      has_conditional_or_logical,
+      "Should produce CssItem::Logical or CssItem::Conditional for single-sided conditional, got: {:?}",
+      result
+        .css
+        .iter()
+        .map(|item| match item {
+          CssItem::Unconditional(u) => format!("Unconditional({:?})", u.css),
+          CssItem::Conditional(_) => "Conditional(...)".to_string(),
+          CssItem::Logical(l) => format!("Logical({:?})", l.css),
+          CssItem::Sheet(s) => format!("Sheet({:?})", s.css),
+          CssItem::Map(_) => "Map(...)".to_string(),
+        })
+        .collect::<Vec<_>>()
+    );
+  }
+
+  #[test]
+  fn container_query_with_static_values_emits_rule() {
+    let meta = create_metadata();
+    let obj =
+      parse_object_literal("({ '@container MyContainer (min-width: 840px)': { flex: 0 } })");
+    let result = extract_object_expression_with_builder(&obj, &meta, &mut |expr, meta| {
+      extract_object_expression_with_builder(
+        match expr {
+          Expr::Object(o) => o,
+          _ => panic!("Expected object"),
+        },
+        meta,
+        &mut |_expr, _meta| CssOutput::new(),
+      )
+    });
+
+    assert!(!result.css.is_empty(), "Should produce CSS for @container");
+    let css_text: String = result.css.iter().map(|item| get_item_css(item)).collect();
+    assert!(
+      css_text.contains("@container MyContainer (min-width: 840px)"),
+      "Should contain @container rule, got: {}",
+      css_text
+    );
+    assert!(
+      css_text.contains("flex"),
+      "Should contain flex property, got: {}",
+      css_text
+    );
+  }
+
+  #[test]
+  fn container_query_with_dynamic_arrow_emits_rule() {
+    let meta = create_metadata();
+    let obj = parse_object_literal(
+      "({ '@container MyContainer (min-width: 840px)': { flexGrow: (props) => props.flexGrow || 1 } })",
+    );
+    let result = extract_object_expression_with_builder(&obj, &meta, &mut |expr, meta| {
+      extract_object_expression_with_builder(
+        match expr {
+          Expr::Object(o) => o,
+          _ => panic!("Expected object"),
+        },
+        meta,
+        &mut |_expr, _meta| CssOutput::new(),
+      )
+    });
+
+    assert!(
+      !result.css.is_empty(),
+      "Should produce CSS for @container with dynamic values"
+    );
+    let css_text: String = result.css.iter().map(|item| get_item_css(item)).collect();
+    assert!(
+      css_text.contains("@container MyContainer (min-width: 840px)"),
+      "Should contain @container rule wrapper, got: {}",
+      css_text
+    );
+  }
+
+  // AFB-1871: Regression tests for nested ternary with token() calls and
+  // template literal in ternary conditional branches.
+
+  #[test]
+  fn extract_object_nested_ternary_with_token_calls_not_dropped() {
+    // Simulates the pattern from ToolbarAboveTitle.tsx:
+    //   marginTop: ({ hasCoverPicture, hasEmoji }) =>
+    //       hasCoverPicture ? (hasEmoji ? token('space.600', '48px') : token('space.300', '24px')) : undefined
+    // Both token() branches should produce CSS rules — not be dropped.
+    let metadata = create_metadata();
+    let object = parse_object_literal(
+      "({ marginTop: ({ hasCoverPicture, hasEmoji }) => hasCoverPicture ? (hasEmoji ? '48px' : '24px') : undefined })",
+    );
+    let mut build_css = |expr: &Expr, meta: &Metadata| super::build_css_internal(expr, meta);
+
+    let output = super::extract_object_expression_with_builder(&object, &metadata, &mut build_css);
+
+    let css_text: String = output.css.iter().map(|item| get_item_css(item)).collect();
+    assert!(
+      css_text.contains("margin-top"),
+      "Should produce margin-top CSS from nested ternary with token values, got: {:?}",
+      output.css
+    );
+    // Should contain both values
+    assert!(
+      css_text.contains("48px"),
+      "Should contain '48px' from inner consequent branch, got: {:?}",
+      output.css
+    );
+    assert!(
+      css_text.contains("24px"),
+      "Should contain '24px' from inner alternate branch, got: {:?}",
+      output.css
+    );
+  }
+
+  #[test]
+  fn extract_object_ternary_with_template_literal_value_not_dropped() {
+    // Simulates the pattern from TemplateEditorWrapper.tsx:
+    //   height: (props) => (props.bannerHeight > 0 ? `calc(100vh - ${props.bannerHeight}px)` : '100vh')
+    // The consequent is a template literal with a dynamic expression (props.bannerHeight),
+    // so it should produce a CSS variable. The alternate '100vh' is a static value.
+    // At the extract_object_expression level, this should produce CSS items (not be dropped).
+    let metadata = create_metadata();
+    let object = parse_object_literal(
+      "({ height: (props) => (props.bannerHeight > 0 ? `calc(100vh - ${props.bannerHeight}px)` : '100vh') })",
+    );
+    let mut build_css = |expr: &Expr, meta: &Metadata| super::build_css_internal(expr, meta);
+
+    let output = super::extract_object_expression_with_builder(&object, &metadata, &mut build_css);
+
+    // Should not be empty -- the property must produce some CSS output
+    assert!(
+      !output.css.is_empty(),
+      "Should produce CSS output from ternary with template literal value, got: {:?}",
+      output.css
+    );
+    let css_text: String = output.css.iter().map(|item| get_item_css(item)).collect();
+    assert!(
+      css_text.contains("height"),
+      "Should produce height CSS from ternary with template literal value, got: {:?}",
+      output.css
+    );
+  }
+
+  #[test]
+  fn extract_object_ternary_with_static_template_literal_value_not_dropped() {
+    // When both branches are static (no dynamic expressions), both should produce CSS items.
+    let metadata = create_metadata();
+    let object =
+      parse_object_literal("({ height: (props) => (props.isExpanded ? '200px' : '100px') })");
+    let mut build_css = |expr: &Expr, meta: &Metadata| super::build_css_internal(expr, meta);
+
+    let output = super::extract_object_expression_with_builder(&object, &metadata, &mut build_css);
+
+    let css_text: String = output.css.iter().map(|item| get_item_css(item)).collect();
+    assert!(
+      css_text.contains("height"),
+      "Should produce height CSS from ternary with static values, got: {:?}",
+      output.css
+    );
+    assert!(
+      css_text.contains("200px"),
+      "Should contain '200px' from consequent, got: {:?}",
+      output.css
+    );
+    assert!(
+      css_text.contains("100px"),
+      "Should contain '100px' from alternate, got: {:?}",
+      output.css
+    );
+  }
+
+  #[test]
+  fn extract_object_simple_ternary_with_string_values_not_dropped() {
+    // A simpler version: both branches are string literals without ':'
+    // In a property-value position, these should be recognized as CSS values.
+    let metadata = create_metadata();
+    let object =
+      parse_object_literal("({ display: (props) => (props.isVisible ? 'block' : 'none') })");
+    let mut build_css = |expr: &Expr, meta: &Metadata| super::build_css_internal(expr, meta);
+
+    let output = super::extract_object_expression_with_builder(&object, &metadata, &mut build_css);
+
+    let css_text: String = output.css.iter().map(|item| get_item_css(item)).collect();
+    assert!(
+      css_text.contains("display"),
+      "Should produce display CSS from ternary with string values, got: {:?}",
+      output.css
+    );
+    assert!(
+      css_text.contains("block"),
+      "Should contain 'block' from consequent, got: {:?}",
+      output.css
+    );
+    assert!(
+      css_text.contains("none"),
+      "Should contain 'none' from alternate, got: {:?}",
+      output.css
+    );
   }
 }

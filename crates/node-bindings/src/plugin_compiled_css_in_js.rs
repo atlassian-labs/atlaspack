@@ -62,9 +62,6 @@ pub struct CompiledCssInJsConfigPlugin {
   pub unsafe_skip_pattern: Option<String>,
   /// Browserslist environment (e.g. "development" or "production") for package.json "browserslist".
   pub browserslist_env: Option<String>,
-  /// When enabled, resolve browserslist config from the `@compiled/css` package directory.
-  /// When disabled (default), resolve from the project root / cwd.
-  pub use_legacy_browserlists_resolution: Option<bool>,
 }
 
 #[napi(object)]
@@ -273,7 +270,6 @@ fn process_compiled_css_in_js(
         .browserslist_env
         .clone()
         .or_else(|| input.browserslist_env.clone()),
-      use_legacy_browserlists_resolution: input.config.use_legacy_browserlists_resolution,
     },
   );
 
@@ -563,7 +559,6 @@ fn config_to_plugin_options(
     flatten_multiple_selectors: Some(config.flatten_multiple_selectors),
     extract: Some(config.extract),
     browserslist_env: config.browserslist_env.clone(),
-    use_legacy_browserlists_resolution: Some(config.use_legacy_browserlists_resolution),
   }
 }
 
@@ -600,7 +595,6 @@ mod tests {
         ssr: Some(true),
         sort_shorthand: Some(true),
         browserslist_env: None,
-        use_legacy_browserlists_resolution: None,
       },
     }
   }
@@ -3035,5 +3029,94 @@ export function CompassNotProvisionedEmptyState({ onCompassSignup }: Props) {
         // Any error should be structured
       }
     }
+  }
+
+  #[test]
+  fn test_selector_key_with_conditional_css_string_not_nested() {
+    // Regression test: when a styled component uses a computed selector key like
+    // `[data-styled-selector="${...}"]` with a value that is an arrow function
+    // returning a conditional CSS *string* (not an object), Babel treats it as a
+    // plain CSS property value. SWC should do the same — producing a simple class
+    // rule like `._hash{color:red}` instead of nesting inside the selector:
+    // `._hash [data-styled-selector="..."]{color:red}`.
+    let config = create_test_config(true, false);
+
+    let code = indoc! {r#"
+      import { styled } from '@compiled/react';
+      import { token } from '@atlaskit/tokens';
+
+      const nameSelector = 'my-component.TemplateName';
+
+      const Wrapper = styled.div<{ selected?: boolean }>({
+        padding: '8px',
+        [`[data-styled-selector="${nameSelector}"]`]: (props) =>
+          props.selected ? `color: ${token('color.text.selected')}` : '',
+      });
+    "#};
+
+    let result = process_compiled_css_in_js(code, &config);
+    assert!(result.is_ok(), "Transformation should succeed");
+
+    let output = result.unwrap();
+    assert!(!output.bail_out, "Should not bail out");
+
+    // The key assertion: the CSS rule for the selected color should NOT include
+    // the [data-styled-selector] nesting. It should be a simple class rule.
+    let has_nested_selector = output.code.contains("data-styled-selector");
+    assert!(
+      !has_nested_selector,
+      "Conditional CSS string values under selector keys should NOT produce nested selector rules. \
+       Expected simple class rules like ._hash{{color:...}}, but output contains data-styled-selector:\n{}",
+      output.code
+    );
+  }
+
+  #[test]
+  #[ignore = "AFB-1886: TODO - conditional token() calls should produce static class toggling, not CSS variables"]
+  fn test_conditional_token_calls_produce_static_class_toggling() {
+    // When a styled component has a conditional prop that returns token() calls
+    // (which evaluate to `var(--ds-..., ...)` strings), Babel produces two
+    // separate static CSS rules with class toggling. SWC currently creates
+    // a CSS variable instead.
+    //
+    // The fix requires creating synthetic arrows for each conditional branch
+    // and building them independently via extract_template_literal_with_builder.
+    // The return type is CssResult, and the approach is documented in the TODO
+    // in css-builders.rs around the `does_expression_have_conditional_css` check.
+    let config = create_test_config(true, false);
+
+    let code = indoc! {r#"
+      import { styled } from '@compiled/react';
+      import { token } from '@atlaskit/tokens';
+
+      const Wrapper = styled.div<{ hasEmoji: boolean }>({
+        marginTop: (props) => props.hasEmoji ? token('space.600') : token('space.300'),
+      });
+    "#};
+
+    let result = process_compiled_css_in_js(code, &config);
+    assert!(result.is_ok(), "Transformation should succeed");
+
+    let output = result.unwrap();
+    assert!(!output.bail_out, "Should not bail out: {}", output.code);
+
+    // Should produce two static CSS rules for margin-top, not a CSS variable
+    let has_css_variable = output.code.contains("var(--_");
+    assert!(
+      !has_css_variable,
+      "Conditional token() calls should produce static class toggling, not CSS variables.\n\
+       Expected two rules like ._hash1{{margin-top:...}} and ._hash2{{margin-top:...}}\n\
+       but output contains var(--_):\n{}",
+      output.code
+    );
+
+    // Should contain two different margin-top rules
+    let margin_top_count = output.code.matches("margin-top:").count();
+    assert!(
+      margin_top_count >= 2,
+      "Expected at least 2 margin-top rules (one per conditional branch), got {}:\n{}",
+      margin_top_count,
+      output.code
+    );
   }
 }

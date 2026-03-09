@@ -119,16 +119,6 @@ pub struct CompiledCssInJsConfig {
   /// Defaults to `None`.
   ///
   pub browserslist_env: Option<String>,
-  ///
-  /// When enabled, resolve browserslist config from the `@compiled/css` package directory
-  /// (by walking up from `cwd` to find `node_modules/@compiled/css/dist/`). This mirrors
-  /// how Babel's postcss plugins resolve browserslist from their `__dirname`.
-  ///
-  /// When disabled (default), resolve browserslist from the project root / cwd.
-  ///
-  /// Defaults to `false`.
-  ///
-  pub use_legacy_browserlists_resolution: Option<bool>,
 }
 
 /// Full configuration for CompiledCssInJs transform.
@@ -249,11 +239,6 @@ pub struct CompiledCssInJsTransformConfig {
   /// Browserslist environment (e.g. "development" or "production") for package.json "browserslist".
   ///
   pub browserslist_env: Option<String>,
-  ///
-  /// When enabled, resolve browserslist config from the `@compiled/css` package directory.
-  /// When disabled, resolve from the project root / cwd.
-  ///
-  pub use_legacy_browserlists_resolution: bool,
 }
 
 impl Default for CompiledCssInJsTransformConfig {
@@ -278,7 +263,6 @@ impl Default for CompiledCssInJsTransformConfig {
       unsafe_use_safe_assets: false,
       unsafe_skip_pattern: None,
       browserslist_env: None,
-      use_legacy_browserlists_resolution: false,
     }
   }
 }
@@ -316,9 +300,6 @@ impl From<CompiledCssInJsConfig> for CompiledCssInJsTransformConfig {
         .unwrap_or(defaults.unsafe_use_safe_assets),
       unsafe_skip_pattern: partial.unsafe_skip_pattern.or(defaults.unsafe_skip_pattern),
       browserslist_env: partial.browserslist_env.or(defaults.browserslist_env),
-      use_legacy_browserlists_resolution: partial
-        .use_legacy_browserlists_resolution
-        .unwrap_or(defaults.use_legacy_browserlists_resolution),
     }
   }
 }

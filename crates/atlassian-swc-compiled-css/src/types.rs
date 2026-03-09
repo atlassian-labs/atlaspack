@@ -159,11 +159,6 @@ pub struct PluginOptions {
   /// Browserslist environment (e.g. "development" or "production") for config with
   /// "browserslist": { "development": [...], "production": [...] }.
   pub browserslist_env: Option<String>,
-  /// When enabled, resolve browserslist config from the `@compiled/css` package directory
-  /// (by walking up from `cwd` to find `node_modules/@compiled/css/dist/`). This mirrors
-  /// how Babel's postcss plugins resolve browserslist from their `__dirname`.
-  /// When disabled (default), resolve from the project root / cwd.
-  pub use_legacy_browserlists_resolution: Option<bool>,
 }
 
 impl Default for PluginOptions {
@@ -188,7 +183,6 @@ impl Default for PluginOptions {
       flatten_multiple_selectors: None,
       extract: None,
       browserslist_env: None,
-      use_legacy_browserlists_resolution: None,
     }
   }
 }
@@ -215,7 +209,6 @@ impl From<&crate::config::CompiledCssInJsConfig> for PluginOptions {
       flatten_multiple_selectors: config.flatten_multiple_selectors,
       extract: config.extract,
       browserslist_env: config.browserslist_env.clone(),
-      use_legacy_browserlists_resolution: config.use_legacy_browserlists_resolution,
     }
   }
 }
@@ -421,11 +414,16 @@ pub struct TransformState {
   pub cwd: PathBuf,
   pub root: PathBuf,
   pub handler: Lrc<Handler>,
-  /// Cached browserslist config path, resolved once at construction time.
-  /// When `use_legacy_browserlists_resolution` is enabled, this is the
-  /// `@compiled/css` package directory found by walking up from `cwd`.
-  /// Otherwise, it is simply `cwd`.
+  /// Cached browserslist config path for **autoprefixer**, resolved once at
+  /// construction time.  By default, this is `cwd`, matching Babel's autoprefixer
+  /// which resolves from `process.cwd()` (picking up the project's browserslist
+  /// config, e.g. `confluence/package.json`'s `"browserslist"` field).
   pub browserslist_config_path: PathBuf,
+  /// Cached browserslist config path for **cssnano plugins** (reduce-initial,
+  /// colormin, etc.), resolved once at construction time.  Always uses the
+  /// `@compiled/css` package directory (falling back to browserslist defaults),
+  /// matching Babel's cssnano plugins which resolve from `{ path: __dirname }`.
+  pub cssnano_browserslist_config_path: PathBuf,
 }
 
 impl fmt::Debug for TransformState {
@@ -493,6 +491,12 @@ impl TransformState {
     }
 
     let browserslist_config_path = Self::resolve_browserslist_config_path(&opts, &cwd);
+    // cssnano plugins (reduce-initial, colormin, etc.) always resolve their
+    // browserslist from `@compiled/css/dist/` (falling back to defaults),
+    // matching Babel's cssnano plugins which use `{ path: __dirname }`.
+    let cssnano_browserslist_config_path = COMPILED_CSS_PACKAGE_PATH
+      .get_or_init(|| Self::find_compiled_css_package_path(&cwd))
+      .clone();
 
     Self {
       compiled_imports: None,
@@ -521,6 +525,7 @@ impl TransformState {
       root,
       handler,
       browserslist_config_path,
+      cssnano_browserslist_config_path,
     }
   }
 
@@ -546,10 +551,6 @@ impl TransformState {
       .as_ref()
       .map(|resolver_option| ResolvedResolver::from_option(resolver_option, &self.root));
     self.module_resolver = None;
-    // Note: browserslist_config_path is intentionally NOT re-resolved here.
-    // The @compiled/css package location is a project-level constant that
-    // doesn't change between files, and find_compiled_css_package_path is
-    // expensive (filesystem walks). It is resolved once in new().
   }
 
   fn resolve_import_sources(file: &TransformFile, opts: &PluginOptions) -> Vec<String> {
@@ -569,21 +570,10 @@ impl TransformState {
       .collect()
   }
 
-  /// Resolve the browserslist config path based on `use_legacy_browserlists_resolution`.
-  ///
-  /// When enabled, uses a process-level cache to walk up from `cwd` and find
-  /// `node_modules/@compiled/css/dist/` (mirroring Babel's postcss plugin behaviour).
-  /// The filesystem walk runs at most once per process.
-  ///
-  /// When disabled, uses `cwd` directly.
-  fn resolve_browserslist_config_path(opts: &PluginOptions, cwd: &Path) -> PathBuf {
-    if opts.use_legacy_browserlists_resolution.unwrap_or(false) {
-      COMPILED_CSS_PACKAGE_PATH
-        .get_or_init(|| Self::find_compiled_css_package_path(cwd))
-        .clone()
-    } else {
-      cwd.to_path_buf()
-    }
+  /// Resolve the browserslist config path for autoprefixer.
+  /// Matches Babel's autoprefixer which uses `{ from: undefined }` → `process.cwd()`.
+  fn resolve_browserslist_config_path(_opts: &PluginOptions, cwd: &Path) -> PathBuf {
+    cwd.to_path_buf()
   }
 
   /// Find where `@compiled/css` is installed by walking up from `cwd`.
@@ -593,7 +583,6 @@ impl TransformState {
   ///
   /// This is only called once per process via `COMPILED_CSS_PACKAGE_PATH`.
   fn find_compiled_css_package_path(cwd: &Path) -> PathBuf {
-    println!("find_compiled_css_package_path: cwd: {:?}", cwd);
     let compiled_css_subpath = Path::new("node_modules/@compiled/css/dist");
 
     let mut dir = cwd.to_path_buf();

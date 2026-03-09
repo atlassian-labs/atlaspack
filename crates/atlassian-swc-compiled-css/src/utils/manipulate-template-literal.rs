@@ -9,6 +9,14 @@ use swc_core::ecma::visit::{Visit, VisitWith, noop_visit_type};
 use crate::types::Metadata;
 use crate::utils_is_empty::is_empty_value;
 
+/// Strip parentheses from an expression, returning the inner expression.
+fn strip_parentheses_expr(mut expr: &Expr) -> &Expr {
+  while let Expr::Paren(paren) = expr {
+    expr = &paren.expr;
+  }
+  expr
+}
+
 fn make_string_literal(value: String, span: Span) -> Expr {
   Expr::Lit(Lit::Str(Str {
     span,
@@ -105,7 +113,11 @@ fn make_template_literal(prefix: &str, suffix: &str, expression: Expr) -> Expr {
 }
 
 fn optimize_conditional_branch(prefix: &str, suffix: &str, branch: &Expr) -> Expr {
-  match branch {
+  // COMPAT(AFB-1871): Strip parentheses before matching so that
+  // Paren(Cond(...)) is handled the same as Cond(...). This ensures
+  // nested ternaries wrapped in parens get properly optimized.
+  let inner = strip_parentheses_expr(branch);
+  match inner {
     Expr::Lit(Lit::Str(str_lit)) => make_string_literal(
       format!("{}{}{}", prefix, str_lit.value, suffix),
       branch.span(),

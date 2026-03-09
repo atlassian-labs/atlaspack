@@ -203,11 +203,11 @@ fn format_css_number(mut num: f64) -> String {
   if string.ends_with(".0") {
     string.truncate(string.len() - 2);
   }
-  if string.starts_with("0.") {
-    string.remove(0);
-  } else if string.starts_with("-0.") {
-    string.remove(1);
-  }
+  // COMPAT: Babel's addUnitIfNeeded uses String(value) which preserves
+  // leading zeros (e.g. "0.38"). Do NOT strip them here — leading-zero
+  // removal is handled downstream by cssnano's postcss-convert-values
+  // plugin where appropriate (it already has property-level guards to
+  // skip flex, custom properties, etc.).
   string
 }
 
@@ -316,8 +316,11 @@ mod tests {
 
   #[test]
   fn add_unit_skips_unitless_properties() {
-    assert_eq!(add_unit_if_needed("opacity", CssValue::Number(0.5)), ".5");
-    assert_eq!(add_unit_if_needed("opacity", CssValue::Number(-0.5)), "-.5");
+    assert_eq!(add_unit_if_needed("opacity", CssValue::Number(0.5)), "0.5");
+    assert_eq!(
+      add_unit_if_needed("opacity", CssValue::Number(-0.5)),
+      "-0.5"
+    );
   }
 
   #[test]

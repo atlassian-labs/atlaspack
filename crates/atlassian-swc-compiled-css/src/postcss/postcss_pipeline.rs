@@ -108,11 +108,14 @@ struct CollectedSheet {
 #[cfg(feature = "postcss_engine")]
 impl AtomicCollector {
   fn push_sheet(&self, path: Vec<(String, String, usize)>, css: String) {
-    self
-      .sheets
-      .lock()
-      .unwrap()
-      .push(CollectedSheet { path, css });
+    let mut guard = self.sheets.lock().unwrap();
+    // Deduplicate: skip if an identical sheet (same at-rule path + CSS text)
+    // has already been collected. This can happen when postcss-nested or the
+    // CSS builder emits the same deeply-nested selector rules multiple times.
+    let dominated = guard.iter().any(|s| s.path == path && s.css == css);
+    if !dominated {
+      guard.push(CollectedSheet { path, css });
+    }
   }
 
   fn push_class(&self, class: String) {
@@ -137,8 +140,9 @@ impl AtomicCollector {
 
 /// Properties that need vendor prefixes when inside a vendor-prefixed selector.
 /// For example, `transition` inside `::-moz-range-track` needs `-moz-transition`.
-/// Note: `appearance` is NOT included because Babel/autoprefixer doesn't add vendor
-/// prefixes for `appearance` when inside vendor-prefixed selectors.
+/// Note: `appearance` is handled separately in `prefixed_decl_entries_with_selector`
+/// — only the matching vendor prefix is kept (e.g., `-webkit-appearance` inside
+/// `::-webkit-slider-thumb`).
 const SELECTOR_PREFIXABLE_PROPERTIES: &[&str] = &["transition", "animation", "transform"];
 
 /// Extract vendor prefix from a selector (e.g., "::-moz-range-track" -> "-moz-").
@@ -184,11 +188,22 @@ fn prefixed_decl_entries_with_selector(
 
   // First, add any prefixes from autoprefixer based on browserslist
   if let Some(engine) = autoprefixer {
+    // When inside a vendor-prefixed selector (e.g., ::-webkit-slider-thumb),
+    // only add the matching vendor prefix for `appearance`. For example,
+    // `-webkit-appearance` is kept inside `::-webkit-slider-thumb`, but
+    // `-moz-appearance` is skipped. This matches Babel's autoprefixer Appearance hack.
+    let selector_vendor_prefix = selector.and_then(extract_vendor_prefix_from_selector);
+
     for PrefixedDecl {
       property,
       mut value,
     } in engine.prefixed_decls(prop, normalized_value)
     {
+      if let Some(sel_prefix) = selector_vendor_prefix {
+        if prop == "appearance" && property != "appearance" && !property.starts_with(sel_prefix) {
+          continue;
+        }
+      }
       if important {
         value.push_str("!important");
       }
@@ -235,6 +250,11 @@ fn selector_variants_with_autoprefixer(
   variants.push(selector.to_string());
   if let Some(engine) = autoprefixer {
     for variant in engine.placeholder_selector_variants(selector) {
+      if !variants.iter().any(|existing| existing == &variant) {
+        variants.push(variant);
+      }
+    }
+    for variant in engine.general_selector_variants(selector) {
       if !variants.iter().any(|existing| existing == &variant) {
         variants.push(variant);
       }
@@ -381,26 +401,37 @@ fn build_processor(options: &TransformCssOptions, collector: &AtomicCollector) -
   plugins.push(super::plugins::normalize_css_engine::minify_selectors::plugin());
   plugins.push(super::plugins::normalize_css_engine::minify_params::plugin());
   if optimize_css {
-    // Plugin order matches cssnano-preset-default for compatibility with Babel/cssnano.
+    // Plugin order matches @compiled/css's normalize-css.js, which filters
+    // cssnano-preset-default plugins.  The preset's internal ordering is:
+    //   discard-comments, minify-gradients, reduce-initial, colormin,
+    //   normalize-timing-functions, calc, convert-values, ordered-values,
+    //   normalize-string, normalize-unicode, normalize-url, normalize-positions.
     use super::plugins::normalize_css_engine as nce;
-    plugins.push(nce::ordered_values::plugin());
-    plugins.push(nce::reduce_initial::plugin(
-      options.browserslist_config_path.clone(),
-      options.browserslist_env.clone(),
-    ));
-    plugins.push(nce::convert_values::plugin());
-    plugins.push(nce::colormin::plugin(
-      options.browserslist_config_path.clone(),
-      options.browserslist_env.clone(),
-    ));
-    plugins.push(nce::normalize_url::plugin());
-    plugins.push(nce::normalize_unicode::plugin());
-    plugins.push(nce::normalize_string::plugin());
-    plugins.push(nce::normalize_positions::plugin());
-    plugins.push(nce::normalize_timing_functions::plugin());
-    plugins.push(nce::minify_gradients::plugin());
+    // cssnano plugins resolve their browserslist from @compiled/css/dist
+    // (falling back to defaults), matching Babel's cssnano plugins which
+    // resolve from `{ path: __dirname }`.
+    let cssnano_bl = options
+      .cssnano_browserslist_config_path
+      .clone()
+      .or(options.browserslist_config_path.clone());
     plugins.push(nce::discard_comments_plugin());
+    plugins.push(nce::minify_gradients::plugin());
+    plugins.push(nce::reduce_initial::plugin(
+      cssnano_bl.clone(),
+      options.browserslist_env.clone(),
+    ));
+    plugins.push(nce::colormin::plugin(
+      cssnano_bl,
+      options.browserslist_env.clone(),
+    ));
+    plugins.push(nce::normalize_timing_functions::plugin());
     plugins.push(nce::calc::plugin());
+    plugins.push(nce::convert_values::plugin());
+    plugins.push(nce::ordered_values::plugin());
+    plugins.push(nce::normalize_string::plugin());
+    plugins.push(nce::normalize_unicode::plugin());
+    plugins.push(nce::normalize_url::plugin());
+    plugins.push(nce::normalize_positions::plugin());
     plugins.push(nce::normalize_current_color_plugin());
   }
   // Match Babel ordering: expand shorthands after normalization.
@@ -413,7 +444,6 @@ fn build_processor(options: &TransformCssOptions, collector: &AtomicCollector) -
   ));
   if flatten_enabled {
     plugins.push(flatten_multiple_selectors_plugin());
-    plugins.push(pc::plugin("discard-duplicates-2").build());
   }
   if options.increase_specificity.unwrap_or(false) {
     plugins.push(pc::plugin("increase-specificity").build());
@@ -1352,6 +1382,11 @@ fn extract_stylesheets_plugin(
             let mut selector_variants: Vec<String> = Vec::new();
             if let Some(engine) = autoprefixer {
               selector_variants = engine.placeholder_selector_variants(&selector_joined);
+              for variant in engine.general_selector_variants(&selector_joined) {
+                if !selector_variants.contains(&variant) {
+                  selector_variants.push(variant);
+                }
+              }
             }
             for variant in selector_variants {
               for (emit_prop, emit_value) in &decls_to_emit {
@@ -1440,9 +1475,50 @@ fn extract_stylesheets_plugin(
     }
   }
 
+  /// Collect ancestor at-rules (e.g. `@supports`, `@media`) that wrap a given
+  /// node. This preserves the conditional context so that `@keyframes` extracted
+  /// from inside `@supports (scroll-timeline-axis:block)` are emitted wrapped in
+  /// that `@supports` block, matching Babel's behavior.
+  fn collect_ancestor_at_rules(node_ref: &pc::ast::NodeRef) -> Vec<(String, String, usize)> {
+    let mut chain = Vec::new();
+    let mut cur = node_ref.borrow().parent();
+    while let Some(n) = cur {
+      if let Some(at) = as_at_rule(&n) {
+        let name = at.name().to_ascii_lowercase();
+        // Only wrap with conditional at-rules that affect rendering context
+        if can_atomicify_at_rule(&name) {
+          let params = at.params().trim().to_string();
+          chain.push((name, params, 0_usize));
+        }
+      }
+      let next = n.borrow().parent();
+      cur = next;
+    }
+    // Reverse so outermost at-rule is first (parent → child order)
+    chain.reverse();
+    chain
+  }
+
+  fn extract_and_push(node_ref: pc::ast::NodeRef, collector: &AtomicCollector) {
+    if let Some(at) = as_at_rule(&node_ref) {
+      let ancestor_chain = collect_ancestor_at_rules(&node_ref);
+      let tmp = postcss::ast::nodes::Root::new();
+      tmp.append(at.to_node());
+      if let Ok(mut res) = tmp.to_result() {
+        let css = res.css().to_string();
+        if ancestor_chain.is_empty() {
+          collector.push_sheet(Vec::new(), css);
+        } else {
+          let wrapped = wrap_in_at_rules(&css, &ancestor_chain);
+          collector.push_sheet(ancestor_chain, wrapped);
+        }
+      }
+    }
+  }
+
   pc::plugin("extract-stylesheets")
     .once_exit(move |root, _| {
-      // Only collect @keyframes as standalone sheets to mirror Babel’s extractor.
+      // Only collect @keyframes as standalone sheets to mirror Babel's extractor.
       // Do not clear or re-emit atomic classes here — those are already pushed
       // by the atomicify_rules plugin earlier in the pipeline.
       match root {
@@ -1462,14 +1538,7 @@ fn extract_stylesheets_plugin(
               )
             },
             |node_ref, _| {
-              if let Some(at) = as_at_rule(&node_ref) {
-                let tmp = postcss::ast::nodes::Root::new();
-                tmp.append(at.to_node());
-                if let Ok(mut res) = tmp.to_result() {
-                  let css = res.css().to_string();
-                  collector.push_sheet(Vec::new(), css);
-                }
-              }
+              extract_and_push(node_ref, &collector);
               true
             },
           );
@@ -1490,14 +1559,7 @@ fn extract_stylesheets_plugin(
               )
             },
             |node_ref, _| {
-              if let Some(at) = as_at_rule(&node_ref) {
-                let tmp = postcss::ast::nodes::Root::new();
-                tmp.append(at.to_node());
-                if let Ok(mut res) = tmp.to_result() {
-                  let css = res.css().to_string();
-                  collector.push_sheet(Vec::new(), css);
-                }
-              }
+              extract_and_push(node_ref, &collector);
               true
             },
           );
@@ -1648,14 +1710,21 @@ fn atomicify_rules_plugin(
 
   // Compute initial_support once based on browserslist config.
   // This determines whether we convert values like `content-box` to `initial`.
+  // Use cssnano_browserslist_config_path (resolved from @compiled/css/dist,
+  // falling back to browserslist defaults) to match Babel's cssnano plugins
+  // which resolve from `{ path: __dirname }`.
   let optimize_css = options.optimize_css.unwrap_or(true);
+  let cssnano_bl_path = options
+    .cssnano_browserslist_config_path
+    .as_deref()
+    .or(options.browserslist_config_path.as_deref());
   let initial_support = super::plugins::normalize_css_engine::reduce_initial::is_initial_supported(
-    options.browserslist_config_path.as_deref(),
+    cssnano_bl_path,
     options.browserslist_env.as_deref(),
   );
   let colormin_options = if optimize_css {
     super::plugins::normalize_css_engine::colormin::resolve_colormin_options(
-      options.browserslist_config_path.as_deref(),
+      cssnano_bl_path,
       options.browserslist_env.as_deref(),
     )
     .0
@@ -1856,6 +1925,12 @@ fn atomicify_rules_plugin(
       if let Some(decl) = as_declaration(&child) {
         let prop = decl.prop();
         let orig_value = decl.value();
+        // Skip declarations with empty values — these come from logical arrow
+        // expressions like `${({ p }) => p && 'value'}` where the unconditional
+        // part has no value and should be discarded, matching Babel's behavior.
+        if is_empty_value(&orig_value) {
+          continue;
+        }
         let has_important = decl.important();
         // COMPAT: Hash seed uses the value AFTER reduce-initial and colormin transformations
         // but BEFORE whitespace normalization, matching Babel's plugin order.
@@ -2034,6 +2109,12 @@ fn atomicify_rules_plugin(
 
         let prop = decl.prop();
         let raw_value = decl.value();
+        // Skip declarations with empty values — these come from logical arrow
+        // expressions like `${({ p }) => p && 'value'}` where the unconditional
+        // part has no value and should be discarded, matching Babel's behavior.
+        if is_empty_value(&raw_value) {
+          return Ok(());
+        }
         let has_important = decl.important();
         // COMPAT: Hash seed uses the value AFTER reduce-initial and colormin transformations
         // but BEFORE whitespace normalization, matching Babel's plugin order.
@@ -2150,17 +2231,12 @@ fn atomicify_rules_plugin(
       let at_stack = at_stack.clone();
       let at_depth_counts = at_depth_counts.clone();
       let sheet_count_stack = sheet_count_stack.clone();
-      let collector = collector.clone();
       move |at, _| {
         if can_atomicify_at_rule(&at.name()) {
-          if let Some(start_len) = sheet_count_stack.lock().unwrap().pop() {
-            let end_len = collector.sheets.lock().unwrap().len();
-            if end_len == start_len {
-              let at_chain = at_stack.lock().unwrap().clone();
-              let empty = wrap_in_at_rules("", &at_chain);
-              collector.push_sheet(at_chain, empty);
-            }
-          }
+          // Pop the sheet count; we do NOT emit empty at-rule wrappers when no
+          // atomic rules were generated inside. Babel's atomicify plugin never
+          // emits empty @supports{}, @container{}, or @media{} blocks.
+          let _ = sheet_count_stack.lock().unwrap().pop();
           {
             let mut counts = at_depth_counts.lock().unwrap();
             let depth = at_stack.lock().unwrap().len();
@@ -2230,6 +2306,12 @@ fn atomicify_rules_plugin(
           if let Some(decl) = as_declaration(&child) {
             let prop = decl.prop();
             let raw_value = decl.value();
+            // Skip declarations with empty values — these come from logical arrow
+            // expressions like `${({ p }) => p && 'value'}` where the unconditional
+            // part has no value and should be discarded, matching Babel's behavior.
+            if is_empty_value(&raw_value) {
+              continue;
+            }
             let has_important = decl.important();
             // COMPAT: Hash seed uses the value AFTER reduce-initial and colormin transformations
             // but BEFORE whitespace normalization, matching Babel's plugin order.
@@ -2718,7 +2800,7 @@ pub fn transform_css_via_postcss(
     path
       .iter()
       .filter(|(n, _, _)| n.to_ascii_lowercase() != "starting-style")
-      .map(|(n, p, _)| format!("{}|{}", n, p)) // Exclude idx to match Babel behavior
+      .map(|(n, p, idx)| format!("{}|{}|{}", n, p, idx)) // Include idx to keep separate at-rule instances separate, matching Babel's extract-stylesheets which emits one sheet per top-level node
       .collect::<Vec<_>>()
       .join(">")
   }
@@ -3772,6 +3854,229 @@ mod tests {
       !kf_sheets[0].contains("0%,"),
       "Expected no grouped keyframe selectors in: {}",
       kf_sheets[0]
+    );
+  }
+
+  #[test]
+  fn container_query_with_declaration_produces_class_name() {
+    let css = "@container AdminCenterPage (min-width: 840px){ flex-grow: var(--_1abc2de); padding-right: var(--_2xyz3fg); }";
+    let options = TransformCssOptions::default();
+    let result = transform_css(css, options).expect("transform should succeed");
+
+    assert!(
+      !result.class_names.is_empty(),
+      "Should produce class names for @container query declarations"
+    );
+
+    // Check that the sheets contain the @container wrapper
+    let all_sheets: String = result.sheets.join(" ");
+    assert!(
+      all_sheets.contains("@container AdminCenterPage"),
+      "Should contain @container wrapper in sheets, got: {:?}",
+      result.sheets
+    );
+  }
+
+  #[test]
+  fn container_query_with_static_declaration_emits_scoped_rule() {
+    let css = "@container MyContainer (min-width: 840px){ flex: 0; }";
+    let options = TransformCssOptions::default();
+    let result = transform_css(css, options).expect("transform should succeed");
+
+    assert!(
+      !result.class_names.is_empty(),
+      "Should produce class names for @container"
+    );
+
+    let all_sheets: String = result.sheets.join(" ");
+    assert!(
+      all_sheets.contains("@container MyContainer"),
+      "Should contain @container in sheets, got: {:?}",
+      result.sheets
+    );
+  }
+
+  #[test]
+  fn keyframes_inside_supports_preserves_wrapper() {
+    // When @keyframes is nested inside @supports, the output should preserve
+    // the @supports wrapper around the @keyframes, matching Babel's behavior.
+    let css = "@supports (scroll-timeline-axis:block){@keyframes myAnim{0%{box-shadow:inset 0 -1px 0 0 transparent}to{box-shadow:inset 0 -1px 0 0 red}} & { animation-name: myAnim }}";
+    let options = TransformCssOptions::default();
+    let result = transform_css(css, options).expect("transform should succeed");
+
+    let all_sheets: String = result.sheets.join(" ");
+    // The @keyframes sheet should be wrapped in @supports
+    let keyframe_sheets: Vec<&String> = result
+      .sheets
+      .iter()
+      .filter(|s| s.contains("@keyframes"))
+      .collect();
+    assert!(
+      !keyframe_sheets.is_empty(),
+      "Should produce keyframe sheets, got: {:?}",
+      result.sheets
+    );
+    for sheet in &keyframe_sheets {
+      assert!(
+        sheet.starts_with("@supports"),
+        "Keyframe sheet should be wrapped in @supports, got: {:?}",
+        sheet
+      );
+    }
+    // Should also have the animation-name rule wrapped in @supports
+    assert!(
+      all_sheets.contains("@supports"),
+      "Should contain @supports wrapper, got: {:?}",
+      result.sheets
+    );
+  }
+
+  #[test]
+  fn empty_valued_declarations_are_discarded() {
+    // Simulates the CSS produced by logical arrow expressions like
+    // `${({ p }) => p && 'value'}` where the unconditional part has no value.
+    let css = "& { flex-direction:; height:; padding-left: 24px }";
+    let options = TransformCssOptions::default();
+    let result = transform_css(css, options).expect("transform should succeed");
+
+    let all_sheets: String = result.sheets.join(" ");
+    // Should NOT contain empty-valued declarations like "flex-direction:" or "height:"
+    assert!(
+      !all_sheets.contains("flex-direction:}"),
+      "Should not emit empty flex-direction, got: {:?}",
+      result.sheets
+    );
+    assert!(
+      !all_sheets.contains("height:}"),
+      "Should not emit empty height, got: {:?}",
+      result.sheets
+    );
+    // Should still contain the valid declaration
+    assert!(
+      all_sheets.contains("padding-left"),
+      "Should emit valid padding-left rule, got: {:?}",
+      result.sheets
+    );
+  }
+
+  #[test]
+  fn empty_valued_declarations_inside_media_are_discarded() {
+    // Simulates @media blocks with only empty-valued declarations
+    let css = "@media (max-width: 1344px) { & { flex-direction:; height:; } }";
+    let options = TransformCssOptions::default();
+    let result = transform_css(css, options).expect("transform should succeed");
+
+    let all_sheets: String = result.sheets.join(" ");
+    // Should NOT contain any rules for this @media block since all values are empty
+    assert!(
+      !all_sheets.contains("flex-direction:}"),
+      "Should not emit empty flex-direction in @media, got: {:?}",
+      result.sheets
+    );
+    assert!(
+      !all_sheets.contains("height:}"),
+      "Should not emit empty height in @media, got: {:?}",
+      result.sheets
+    );
+    // Should NOT emit an empty @media wrapper either
+    assert!(
+      !all_sheets.contains("@media (max-width: 1344px){}")
+        && !all_sheets.contains("@media (max-width:1344px){}"),
+      "Should not emit empty @media wrapper, got: {:?}",
+      result.sheets
+    );
+  }
+
+  #[test]
+  fn empty_supports_block_not_emitted_alongside_valid_rules() {
+    // When @supports has no content alongside valid rules, Babel doesn't
+    // emit an empty @supports wrapper. The atomicify plugin should skip it.
+    let css = "& { color: red } @supports (scroll-timeline-axis: block) { }";
+    let options = TransformCssOptions::default();
+    let result = transform_css(css, options).expect("transform should succeed");
+
+    let all_sheets: String = result.sheets.join(" ");
+    // Should contain the valid color rule
+    assert!(
+      all_sheets.contains("color"),
+      "Should emit valid color rule, got: {:?}",
+      result.sheets
+    );
+    // Should NOT contain an empty @supports wrapper
+    assert!(
+      !all_sheets.contains("@supports"),
+      "Should not emit empty @supports block, got: {:?}",
+      result.sheets
+    );
+  }
+
+  #[test]
+  fn empty_container_block_not_emitted_alongside_valid_rules() {
+    // When @container has no content alongside valid rules, Babel doesn't
+    // emit an empty @container wrapper.
+    let css = "& { color: red } @container AdminCenterPage (min-width: 840px) { }";
+    let options = TransformCssOptions::default();
+    let result = transform_css(css, options).expect("transform should succeed");
+
+    let all_sheets: String = result.sheets.join(" ");
+    // Should contain the valid color rule
+    assert!(
+      all_sheets.contains("color"),
+      "Should emit valid color rule, got: {:?}",
+      result.sheets
+    );
+    // Should NOT contain an empty @container wrapper
+    assert!(
+      !all_sheets.contains("@container"),
+      "Should not emit empty @container block, got: {:?}",
+      result.sheets
+    );
+  }
+
+  #[test]
+  fn supports_blocks_from_different_nesting_levels_are_separate_sheets() {
+    // Babel emits separate @supports blocks when the rules come from different
+    // CSS nesting levels (e.g., parent-level declarations vs child selector rules).
+    // This test verifies that SWC matches Babel by keeping them as separate sheets.
+    //
+    // Input mirrors the media-element pattern:
+    //   @supports not (aspect-ratio: auto) { padding-top: 56.25%; height: 0; }
+    //   > img { @supports not (aspect-ratio: auto) { position: absolute; } }
+    let css = "& { @supports not (aspect-ratio: auto) { padding-top: 56.25%; height: 0; } > img { @supports not (aspect-ratio: auto) { position: absolute; left: 50%; } } }";
+    let options = TransformCssOptions::default();
+    let result = transform_css(css, options).expect("transform should succeed");
+
+    // Count how many separate @supports sheets were emitted
+    let supports_sheets: Vec<&String> = result
+      .sheets
+      .iter()
+      .filter(|s| s.starts_with("@supports"))
+      .collect();
+
+    assert!(
+      supports_sheets.len() >= 2,
+      "Expected at least 2 separate @supports sheets (one for parent rules, one for child selector rules), but got {}: {:?}",
+      supports_sheets.len(),
+      supports_sheets
+    );
+
+    // Verify that parent-level rules and child selector rules are in different sheets
+    let has_parent_sheet = supports_sheets
+      .iter()
+      .any(|s| s.contains("padding-top") && !s.contains(">img"));
+    let has_child_sheet = supports_sheets
+      .iter()
+      .any(|s| s.contains(">img") && !s.contains("padding-top"));
+
+    assert!(
+      has_parent_sheet,
+      "Expected a @supports sheet with parent-level rules only, got: {:?}",
+      supports_sheets
+    );
+    assert!(
+      has_child_sheet,
+      "Expected a @supports sheet with child selector rules only, got: {:?}",
+      supports_sheets
     );
   }
 }

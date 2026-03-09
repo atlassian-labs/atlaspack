@@ -369,8 +369,33 @@ impl AutoprefixerData {
     let mut out: Vec<PrefixedDecl> = Vec::new();
     if let Some(prefixes) = self.property_prefixes(prop) {
       for prefix in prefixes {
+        let prefixed_prop = format!("{}{}", prefix, prop);
+
+        // Special case: background-clip should only be webkit-prefixed when
+        // the value is "text".  This mirrors Babel's autoprefixer
+        // `BackgroundClip` hack.
+        if prop == "background-clip"
+          && prefix.contains("webkit")
+          && !value.trim().eq_ignore_ascii_case("text")
+        {
+          continue;
+        }
+
+        // Special case: mask-composite needs value mapping for -webkit- prefix.
+        // Babel's autoprefixer `MaskComposite` hack maps standard values to
+        // their legacy WebKit equivalents (e.g., exclude → xor).
+        if prop == "mask-composite" && prefix.contains("webkit") {
+          if let Some(old_value) = webkit_mask_composite_value(value) {
+            out.push(PrefixedDecl {
+              property: prefixed_prop,
+              value: old_value.to_string(),
+            });
+            continue;
+          }
+        }
+
         out.push(PrefixedDecl {
-          property: format!("{}{}", prefix, prop),
+          property: prefixed_prop,
           value: value.to_string(),
         });
       }
@@ -420,6 +445,42 @@ impl AutoprefixerData {
           if replaced != selector {
             out.push(replaced);
           }
+        }
+      }
+    }
+    out
+  }
+
+  /// Generate selector variants for all known prefixed selectors (e.g., `:read-only` → `:-moz-read-only`).
+  /// This is the general mechanism that handles all selectors in `selector_map`
+  /// except `::placeholder` (which has its own specialized handler due to legacy variant differences).
+  pub fn general_selector_variants(&self, selector: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    for (base_selector, prefixes) in &self.selector_map {
+      // Skip ::placeholder — it's handled by placeholder_selector_variants
+      if base_selector == "::placeholder" {
+        continue;
+      }
+      if !selector.contains(base_selector.as_str()) {
+        continue;
+      }
+      for prefix in prefixes {
+        let base = strip_note_prefix(prefix);
+        // Build the prefixed selector: e.g., `:read-only` → `:-moz-read-only`
+        // For pseudo-classes like `:read-only`, insert vendor prefix after the colon
+        // For pseudo-elements like `::selection`, insert vendor prefix after the colons
+        let prefixed = if base_selector.starts_with("::") {
+          // Pseudo-element: `::selection` → `::-moz-selection`
+          format!("::{}{}", base, &base_selector[2..])
+        } else if base_selector.starts_with(':') {
+          // Pseudo-class: `:read-only` → `:-moz-read-only`
+          format!(":{}{}", base, &base_selector[1..])
+        } else {
+          continue;
+        };
+        let replaced = selector.replace(base_selector.as_str(), &prefixed);
+        if replaced != *selector && !out.contains(&replaced) {
+          out.push(replaced);
         }
       }
     }
@@ -538,6 +599,36 @@ fn clone_decl_with_prop(decl: &Declaration, prop: String) -> Declaration {
   d
 }
 
+/// Map standard `mask-composite` values to their legacy `-webkit-mask-composite`
+/// equivalents, matching Babel's autoprefixer `MaskComposite` hack.
+fn webkit_mask_composite_value(value: &str) -> Option<&'static str> {
+  match value.trim().to_ascii_lowercase().as_str() {
+    "add" => Some("source-over"),
+    "subtract" => Some("source-out"),
+    "intersect" => Some("source-in"),
+    "exclude" => Some("xor"),
+    _ => None,
+  }
+}
+
+/// Serialize a declaration's value components to a plain string for comparison.
+fn decl_value_text(value: &[ComponentValue]) -> String {
+  let mut out = String::new();
+  for v in value {
+    match v {
+      ComponentValue::Ident(i) => out.push_str(&i.value),
+      ComponentValue::Str(s) => {
+        out.push_str(&s.value);
+      }
+      _ => {
+        // For complex values, use a rough serialization
+        out.push_str(&format!("{:?}", v));
+      }
+    }
+  }
+  out
+}
+
 fn apply_decl_prefixing(rule: &mut QualifiedRule, config: &AutoprefixerData) {
   let mut new_block: Vec<ComponentValue> = Vec::new();
   let push_decl = |vec: &mut Vec<ComponentValue>, decl: Declaration| {
@@ -557,11 +648,43 @@ fn apply_decl_prefixing(rule: &mut QualifiedRule, config: &AutoprefixerData) {
 
       // Property-level: add prefixed properties
       if let Some(prefixes) = config.property_prefixes(&prop) {
+        // Special case: background-clip should only be webkit-prefixed when
+        // the value is "text".  This mirrors Babel's autoprefixer
+        // `BackgroundClip` hack which has `check(decl) { return
+        // decl.value.toLowerCase() === 'text' }`.
+        let is_background_clip = prop == "background-clip";
+        let bg_clip_is_text = is_background_clip
+          && decl.value.len() == 1
+          && matches!(&decl.value[0], ComponentValue::Ident(i) if i.value.eq_ignore_ascii_case("text"));
+
+        // Special case: mask-composite / mask need value mapping for -webkit-
+        // prefix.  Babel's autoprefixer `MaskComposite` hack maps standard
+        // values (add, subtract, intersect, exclude) to their legacy WebKit
+        // equivalents (source-over, source-out, source-in, xor).
+        let is_mask_composite = prop == "mask-composite";
+
         for pref in prefixes {
+          // Skip -webkit-background-clip for non-text values
+          if is_background_clip && pref.contains("webkit") && !bg_clip_is_text {
+            continue;
+          }
+
           let prefixed_prop = format!("{}{}", pref, prop);
           if std::env::var("COMPILED_CLI_TRACE").is_ok() {
             eprintln!("[autoprefixer] add-prop {}", prefixed_prop);
           }
+
+          // For mask-composite with -webkit- prefix, map values
+          if is_mask_composite && pref.contains("webkit") {
+            let value_text = decl_value_text(&decl.value);
+            if let Some(old_value) = webkit_mask_composite_value(&value_text) {
+              let mut prefixed_decl = clone_decl_with_prop(decl, prefixed_prop);
+              prefixed_decl.value = vec![make_ident(old_value)];
+              push_decl(&mut new_block, prefixed_decl);
+              continue;
+            }
+          }
+
           push_decl(&mut new_block, clone_decl_with_prop(decl, prefixed_prop));
         }
       }
@@ -857,5 +980,98 @@ pub(crate) fn placeholder_variants(prefix: &str) -> Vec<String> {
   } else {
     let trimmed = base.trim_matches('-');
     vec![format!("::{}placeholder", trimmed)]
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use pretty_assertions::assert_eq;
+
+  fn make_autoprefixer_with_read_only() -> AutoprefixerData {
+    // Manually build an AutoprefixerData with :read-only in the selector_map
+    let mut selector_map = HashMap::new();
+    selector_map.insert(":read-only".to_string(), vec!["-moz-".to_string()]);
+    selector_map.insert(
+      "::placeholder".to_string(),
+      vec!["-webkit-".to_string(), "-moz-".to_string()],
+    );
+
+    AutoprefixerData {
+      property_add: HashMap::new(),
+      add: HashMap::new(),
+      remove: HashMap::new(),
+      value_map: HashMap::new(),
+      selector_map,
+    }
+  }
+
+  #[test]
+  fn general_selector_variants_produces_moz_read_only() {
+    let data = make_autoprefixer_with_read_only();
+    let variants = data.general_selector_variants(".foo:hover:not(:read-only):not(:focus)");
+    assert_eq!(
+      variants,
+      vec![".foo:hover:not(:-moz-read-only):not(:focus)".to_string()]
+    );
+  }
+
+  #[test]
+  fn general_selector_variants_skips_placeholder() {
+    let data = make_autoprefixer_with_read_only();
+    // ::placeholder should NOT be handled by general_selector_variants
+    let variants = data.general_selector_variants(".foo::placeholder");
+    assert!(
+      variants.is_empty(),
+      "::placeholder should be handled by placeholder_selector_variants, not general_selector_variants"
+    );
+  }
+
+  #[test]
+  fn general_selector_variants_no_match_returns_empty() {
+    let data = make_autoprefixer_with_read_only();
+    let variants = data.general_selector_variants(".foo:hover");
+    assert!(variants.is_empty());
+  }
+
+  #[test]
+  fn general_selector_variants_read_write() {
+    // :read-write is also a known selector in autoprefixer data
+    let mut selector_map = HashMap::new();
+    selector_map.insert(":read-write".to_string(), vec!["-moz-".to_string()]);
+    let data = AutoprefixerData {
+      property_add: HashMap::new(),
+      add: HashMap::new(),
+      remove: HashMap::new(),
+      value_map: HashMap::new(),
+      selector_map,
+    };
+    let variants = data.general_selector_variants(".input:read-write");
+    assert_eq!(variants, vec![".input:-moz-read-write".to_string()]);
+  }
+
+  #[test]
+  fn general_selector_variants_pseudo_element() {
+    // Test pseudo-element prefixing (e.g., ::selection → ::-moz-selection)
+    let mut selector_map = HashMap::new();
+    selector_map.insert("::selection".to_string(), vec!["-moz-".to_string()]);
+    let data = AutoprefixerData {
+      property_add: HashMap::new(),
+      add: HashMap::new(),
+      remove: HashMap::new(),
+      value_map: HashMap::new(),
+      selector_map,
+    };
+    let variants = data.general_selector_variants(".text::selection");
+    assert_eq!(variants, vec![".text::-moz-selection".to_string()]);
+  }
+
+  #[test]
+  fn webkit_mask_composite_value_mapping() {
+    assert_eq!(webkit_mask_composite_value("exclude"), Some("xor"));
+    assert_eq!(webkit_mask_composite_value("add"), Some("source-over"));
+    assert_eq!(webkit_mask_composite_value("subtract"), Some("source-out"));
+    assert_eq!(webkit_mask_composite_value("intersect"), Some("source-in"));
+    assert_eq!(webkit_mask_composite_value("unknown"), None);
   }
 }

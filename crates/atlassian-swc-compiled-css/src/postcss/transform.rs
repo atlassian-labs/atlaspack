@@ -30,9 +30,16 @@ pub struct TransformCssOptions {
   pub class_hash_prefix: Option<String>,
   pub flatten_multiple_selectors: Option<bool>,
   pub declaration_placeholder: Option<String>,
+  /// Path used to resolve the browserslist config for autoprefixer.
+  /// Defaults to `cwd`, matching Babel's autoprefixer which uses `{ from: undefined }`.
   pub browserslist_config_path: Option<PathBuf>,
   /// Browserslist environment (e.g. "development" or "production") for package.json "browserslist".
   pub browserslist_env: Option<String>,
+  /// Path used to resolve the browserslist config for cssnano plugins
+  /// (reduce-initial, colormin, etc.).  Always resolves from the
+  /// `@compiled/css` package directory (falling back to browserslist
+  /// defaults), matching Babel's cssnano plugins which use `{ path: __dirname }`.
+  pub cssnano_browserslist_config_path: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

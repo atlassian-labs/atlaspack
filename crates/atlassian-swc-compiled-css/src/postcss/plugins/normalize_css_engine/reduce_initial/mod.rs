@@ -149,9 +149,29 @@ static FROM_INITIAL: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
   m.insert("cursor", "auto");
   m.insert("direction", "ltr");
   m.insert("empty-cells", "show");
+  m.insert("filter", "none");
+  m.insert("flex-basis", "auto");
+  m.insert("flex-direction", "row");
+  m.insert("flex-grow", "0");
+  m.insert("flex-shrink", "1");
+  m.insert("flex-wrap", "nowrap");
+  m.insert("float", "none");
+  m.insert("font-feature-settings", "normal");
+  m.insert("font-kerning", "auto");
+  m.insert("font-language-override", "normal");
+  m.insert("font-optical-sizing", "auto");
+  m.insert("font-size", "medium");
+  m.insert("font-size-adjust", "none");
+  m.insert("font-stretch", "normal");
+  m.insert("font-style", "normal");
+  m.insert("font-variant", "normal");
+  m.insert("font-variant-alternates", "normal");
+  m.insert("font-variant-caps", "normal");
+  m.insert("font-variant-east-asian", "normal");
   m.insert("font-variant-ligatures", "normal");
   m.insert("font-variant-numeric", "normal");
   m.insert("font-variant-position", "normal");
+  m.insert("font-variation-settings", "normal");
   m.insert("font-weight", "normal");
   m.insert("forced-color-adjust", "auto");
   m.insert("grid-auto-columns", "auto");
@@ -609,5 +629,31 @@ mod tests {
         path: tmp.path().to_path_buf(),
         env: Some("production".to_string()),
       });
+  }
+
+  #[test]
+  fn converts_flex_direction_initial_to_row() {
+    // AFB-1871: flex-direction:initial should resolve to flex-direction:row
+    // to match Babel's postcss-reduce-initial behavior.
+    let result = transform_value_for_hash("flex-direction", "initial", true);
+    assert_eq!(result, "row");
+  }
+
+  #[test]
+  fn converts_flex_grow_initial_to_zero() {
+    let result = transform_value_for_hash("flex-grow", "initial", true);
+    assert_eq!(result, "0");
+  }
+
+  #[test]
+  fn converts_flex_wrap_initial_to_nowrap() {
+    let result = transform_value_for_hash("flex-wrap", "initial", true);
+    assert_eq!(result, "nowrap");
+  }
+
+  #[test]
+  fn converts_filter_initial_to_none() {
+    let result = transform_value_for_hash("filter", "initial", true);
+    assert_eq!(result, "none");
   }
 }

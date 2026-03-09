@@ -306,6 +306,37 @@ function normalizeVarDeclarations(code) {
 }
 
 /**
+ * Normalize rule ordering inside at-rule blocks (@media, @supports, etc.).
+ * SWC and Babel may emit the same atomic CSS rules in a different order within
+ * at-rule strings. This function extracts the individual rules inside each
+ * at-rule block, sorts them, and reassembles the string so that ordering
+ * differences are treated as semantically equivalent.
+ */
+function normalizeAtRuleOrdering(code) {
+  // Match at-rule blocks like @media (...){...rules...}
+  // The pattern captures: @keyword (params){rules}
+  return code.replace(
+    /(@(?:media|supports|layer|container)\s*[^{]*)\{((?:[^{}]|\{[^{}]*\})*)\}/g,
+    (match, atPrefix, innerRules) => {
+      // Extract individual atomic rules: ._hash{prop:value} or ._hash selector{prop:value}
+      const rules = [];
+      let remaining = innerRules;
+      // Match atomic rules like ._abc123{color:red} or ._abc123 .foo>bar{color:red}
+      const ruleRegex = /(\._[^{}]+\{[^{}]*\})/g;
+      let m;
+      while ((m = ruleRegex.exec(innerRules)) !== null) {
+        rules.push(m[1]);
+      }
+      if (rules.length > 0) {
+        rules.sort();
+        return `${atPrefix}{${rules.join('')}}`;
+      }
+      return match;
+    },
+  );
+}
+
+/**
  * Empty the array contents inside <CS>{[...]}</CS> to normalize.
  * This is because the order of style references varies between SWC and Babel.
  */
@@ -314,7 +345,22 @@ function normalizeCSArrays(code) {
   // Handle both single-line and multi-line arrays
   // Single-line: <CS>{[_1, _2, _3]}</CS>
   // Multi-line:  <CS>\n  {[\n    _1,\n    _2,\n  ]}\n</CS>
-  return code.replace(/<CS>\s*\{[\s\S]*?\}\s*<\/CS>/g, '<CS>{[]}</CS>');
+  let result = code.replace(/<CS>\s*\{[\s\S]*?\}\s*<\/CS>/g, '<CS>{[]}</CS>');
+
+  // Also handle createElement format where the array is a child argument:
+  //   React.createElement((0, _runtime.CS), {...}, [_1, _2, _3])
+  // The variable names (_0, _1, etc.) are assigned in different order between
+  // SWC and Babel, so these arrays cannot be meaningfully compared by variable
+  // name. The CSS rule content is already validated by normalizeVarDeclarations.
+  // Empty these arrays to ignore the ordering differences.
+  // These appear as standalone lines like: [_, _2, _3, _4, _5],
+  // or: [_1, _10, _15, _39, _40, _41, _42],
+  result = result.replace(
+    /\[(_\d*(?:,\s*_\d*)*)\]/g,
+    '[]',
+  );
+
+  return result;
 }
 
 /**
@@ -399,6 +445,9 @@ function normalizeCode(code) {
   // Normalize var declarations (remove `var _N = ` and sort those lines)
   result = normalizeVarDeclarations(result);
 
+  // Normalize at-rule internal ordering (@media, @supports, etc.)
+  result = normalizeAtRuleOrdering(result);
+
   // Empty CS arrays to ignore ordering differences
   result = normalizeCSArrays(result);
 
@@ -407,6 +456,10 @@ function normalizeCode(code) {
 
   // Normalize redundant destructuring (e.g., { foo: foo } -> { foo })
   result = normalizeDestructuring(result);
+
+  // Normalize JSX source line/column numbers which naturally differ between transforms
+  result = result.replace(/lineNumber:\s*\d+/g, 'lineNumber: 0');
+  result = result.replace(/columnNumber:\s*\d+/g, 'columnNumber: 0');
 
   return result;
 }
