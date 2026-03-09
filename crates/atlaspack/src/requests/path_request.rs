@@ -103,9 +103,20 @@ impl Request for PathRequest {
         }) => {
           if !file_path.is_absolute() {
             return Err(diagnostic_error!(
-              "{:?} must return an absolute path, but got {}",
+              "{:?} must return an absolute path, but got {:?} (resolving specifier: {:?} from {:?})",
               resolver,
-              file_path.display()
+              file_path.display(),
+              self.dependency.specifier,
+              self
+                .dependency
+                .resolve_from
+                .as_ref()
+                .map(|p| p.display().to_string())
+                .or_else(|| self
+                  .dependency
+                  .source_path
+                  .as_ref()
+                  .map(|p| p.display().to_string()))
             ));
           }
 

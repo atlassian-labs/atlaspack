@@ -1,3 +1,4 @@
+use anyhow::Context;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use atlaspack_core::hash::hash_bytes;
@@ -65,7 +66,10 @@ impl Request for AssetRequest {
     let code = if let Some(code) = self.code.as_ref() {
       Code::from(code.to_owned())
     } else {
-      let code_from_disk = request_context.file_system().read(&self.file_path)?;
+      let code_from_disk = request_context
+        .file_system()
+        .read(&self.file_path)
+        .with_context(|| anyhow!("Failed to read asset file: {:?}", self.file_path))?;
       Code::new(code_from_disk)
     };
 
