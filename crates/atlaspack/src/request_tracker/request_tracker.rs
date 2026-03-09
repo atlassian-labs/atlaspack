@@ -62,6 +62,7 @@ pub struct RequestTracker {
 }
 
 impl RequestTracker {
+  #[allow(clippy::too_many_arguments)]
   pub fn new(
     db: DatabaseRef,
     config_loader: ConfigLoaderRef,
@@ -118,10 +119,6 @@ impl RequestTracker {
   ///     these will run on the main-thread, therefore it'll be simpler to implement queueing
   ///     without stalls and locks/channels
   ///   - For non-main-thread requests, do not allow enqueueing of sub-requests
-  pub fn set_report_fn(&mut self, report_fn: Option<ReportFn>) {
-    self.report_fn = report_fn;
-  }
-
   pub async fn run_request(&mut self, request: impl Request) -> anyhow::Result<Arc<RequestResult>> {
     let request_id = request.id();
     let (tx, rx) = std::sync::mpsc::channel();
@@ -454,6 +451,10 @@ impl RequestTracker {
     !nodes_to_invalidate.is_empty() ||
     // or if there are still any remaining invalid nodes (e.g. Failed requests)
     !self.invalid_nodes.is_empty()
+  }
+
+  pub fn set_report_fn(&mut self, report_fn: Option<ReportFn>) {
+    self.report_fn = report_fn;
   }
 }
 
