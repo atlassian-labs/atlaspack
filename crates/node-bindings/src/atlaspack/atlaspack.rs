@@ -140,9 +140,12 @@ pub fn atlaspack_napi_build_asset_graph(
 ) -> napi::Result<JsObject> {
   let tsfn: Option<ThreadsafeFunction<String, ErrorStrategy::Fatal>> = progress_callback
     .map(|cb| {
-      cb.create_threadsafe_function(0, |ctx: ThreadSafeCallContext<String>| {
+      let mut tsfn = cb.create_threadsafe_function(0, |ctx: ThreadSafeCallContext<String>| {
         Ok(vec![ctx.env.create_string(&ctx.value)?])
-      })
+      })?;
+      // Unref so this doesn't prevent Node from exiting
+      tsfn.unref(&env)?;
+      Ok::<_, napi::Error>(tsfn)
     })
     .transpose()?;
 
@@ -247,9 +250,12 @@ pub fn atlaspack_napi_build_bundle_graph(
 ) -> napi::Result<JsObject> {
   let tsfn: Option<ThreadsafeFunction<String, ErrorStrategy::Fatal>> = progress_callback
     .map(|cb| {
-      cb.create_threadsafe_function(0, |ctx: ThreadSafeCallContext<String>| {
+      let mut tsfn = cb.create_threadsafe_function(0, |ctx: ThreadSafeCallContext<String>| {
         Ok(vec![ctx.env.create_string(&ctx.value)?])
-      })
+      })?;
+      // Unref so this doesn't prevent Node from exiting
+      tsfn.unref(&env)?;
+      Ok::<_, napi::Error>(tsfn)
     })
     .transpose()?;
 
@@ -315,10 +321,12 @@ pub fn atlaspack_napi_build(
   atlaspack_napi: AtlaspackNapi,
   progress_callback: JsFunction,
 ) -> napi::Result<JsObject> {
-  let tsfn: ThreadsafeFunction<String, ErrorStrategy::Fatal> = progress_callback
+  let mut tsfn: ThreadsafeFunction<String, ErrorStrategy::Fatal> = progress_callback
     .create_threadsafe_function(0, |ctx: ThreadSafeCallContext<String>| {
       Ok(vec![ctx.env.create_string(&ctx.value)?])
     })?;
+  // Unref so this doesn't prevent Node from exiting
+  tsfn.unref(&env)?;
 
   let (deferred, promise) = env.create_deferred()?;
 
