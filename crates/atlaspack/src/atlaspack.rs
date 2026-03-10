@@ -209,7 +209,8 @@ impl Atlaspack {
       let mut request_tracker = self.request_tracker.write().await;
 
       // Propagate the report_fn to the request tracker so it's available
-      // to all requests via RunRequestContext
+      // to all requests via RunRequestContext. Cleared after the build
+      // to release the ThreadsafeFunction reference promptly.
       request_tracker.set_report_fn(self.report_fn.clone());
 
       let prev_asset_graph = request_tracker
@@ -256,6 +257,9 @@ impl Atlaspack {
 
       let asset_graph = asset_graph_request_output.graph.clone();
       let symbol_tracker = asset_graph_request_output.symbol_tracker.clone();
+
+      // Clear the report_fn to release the ThreadsafeFunction reference
+      request_tracker.set_report_fn(None);
 
       Ok((symbol_tracker, asset_graph, had_previous_graph))
     })
@@ -335,6 +339,9 @@ impl Atlaspack {
         anyhow::bail!("Unexpected request result from BundleGraphRequest");
       };
 
+      // Clear the report_fn to release the ThreadsafeFunction reference
+      request_tracker.set_report_fn(None);
+
       Ok::<_, anyhow::Error>(bundle_graph_output.clone())
     })?;
 
@@ -355,6 +362,9 @@ impl Atlaspack {
       request_tracker.set_report_fn(self.report_fn.clone());
 
       let request_result = request_tracker.run_request(BuildRequest {}).await?;
+
+      // Clear the report_fn to release the ThreadsafeFunction reference
+      request_tracker.set_report_fn(None);
 
       let RequestResult::Build(build_output) = request_result.as_ref() else {
         anyhow::bail!("Unexpected request result from BuildRequest");
