@@ -6,7 +6,6 @@ use crate::{
   request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError},
   requests::packaging_request::PackagingRequest,
 };
-use async_trait::async_trait;
 
 use super::{
   AssetGraphRequest, BundleGraphRequest, BundleGraphRequestOutput, CommitRequest, RequestResult,
