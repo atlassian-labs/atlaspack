@@ -296,16 +296,19 @@ impl<B: BundleGraph + Send + Sync + 'static> Request for PackageRequest<B> {
     let out_path = dist_dir.join(&file_name);
 
     let fs = request_context.file_system();
-    let span = tracing::debug_span!(
-      "write_bundle",
-      bundle_id = self.bundle.id,
-      out_path = %out_path.to_string_lossy()
-    );
-    fs.create_dir_all(dist_dir)
-      .map_err(|e| anyhow!("Failed to create output directory {:?}: {}", dist_dir, e))?;
-    fs.write(&out_path, &substituted_contents)
-      .map_err(|e| anyhow!("Failed to write bundle to {:?}: {}", out_path, e))?;
-    drop(span);
+
+    {
+      let _span = tracing::debug_span!(
+        "write_bundle",
+        bundle_id = self.bundle.id,
+        out_path = %out_path.to_string_lossy()
+      );
+      fs.create_dir_all(dist_dir)
+        .map_err(|e| anyhow!("Failed to create output directory {:?}: {}", dist_dir, e))?;
+      fs.write(&out_path, &substituted_contents)
+        .map_err(|e| anyhow!("Failed to write bundle to {:?}: {}", out_path, e))?;
+    }
+
     let size = substituted_contents.len() as u64;
     let time_ms = start.elapsed().as_millis() as u64;
 
