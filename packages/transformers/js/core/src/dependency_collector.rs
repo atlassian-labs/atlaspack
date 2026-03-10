@@ -226,6 +226,7 @@ impl DependencyCollector<'_> {
       documentation_url: Some(String::from(
         "https://parceljs.org/languages/javascript/#classic-scripts",
       )),
+      name: None,
     });
   }
 }
@@ -407,6 +408,7 @@ impl VisitMut for DependencyCollector<'_> {
                     documentation_url: Some(String::from(
                       "https://parceljs.org/languages/javascript/#classic-script-workers",
                     )),
+                    name: None,
                   });
                 }
 
@@ -665,6 +667,7 @@ impl VisitMut for DependencyCollector<'_> {
             show_environment: false,
             severity: DiagnosticSeverity::Error,
             documentation_url: Some(String::from(docs)),
+            name: None,
           });
 
           return;
@@ -749,6 +752,7 @@ impl VisitMut for DependencyCollector<'_> {
           severity: DiagnosticSeverity::Error,
           hints: None,
           documentation_url: None,
+          name: None,
         });
 
         return;
@@ -765,6 +769,7 @@ impl VisitMut for DependencyCollector<'_> {
           severity: DiagnosticSeverity::Error,
           hints: None,
           documentation_url: None,
+          name: None,
         });
 
         return;
@@ -936,6 +941,7 @@ impl VisitMut for DependencyCollector<'_> {
           documentation_url: Some(String::from(
             "https://parceljs.org/languages/javascript/#web-workers",
           )),
+          name: None,
         });
 
         return;
@@ -1412,6 +1418,7 @@ impl DependencyCollector<'_> {
             documentation_url: Some(String::from(
               "https://parceljs.org/languages/javascript/#classic-scripts",
             )),
+            name: None,
           })
         }
         true

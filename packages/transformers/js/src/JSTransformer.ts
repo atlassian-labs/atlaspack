@@ -995,6 +995,9 @@ export default new Transformer({
           hints: diagnostic.hints,
         };
 
+        if (diagnostic.name) {
+          res.name = diagnostic.name;
+        }
         if (diagnostic.documentation_url) {
           res.documentationURL = diagnostic.documentation_url;
         }

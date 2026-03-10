@@ -982,6 +982,7 @@ fn macro_error_to_diagnostic(error: MacroError, source_map: &SourceMap) -> Diagn
       show_environment: false,
       severity: DiagnosticSeverity::Error,
       documentation_url: None,
+      name: None,
     },
     MacroError::LoadError(err, span) => Diagnostic {
       message: format!("Error loading macro: {}", err),
@@ -993,6 +994,7 @@ fn macro_error_to_diagnostic(error: MacroError, source_map: &SourceMap) -> Diagn
       show_environment: false,
       severity: DiagnosticSeverity::Error,
       documentation_url: None,
+      name: None,
     },
     MacroError::ExecutionError(err, span) => Diagnostic {
       message: format!("Error evaluating macro: {}", err),
@@ -1004,6 +1006,7 @@ fn macro_error_to_diagnostic(error: MacroError, source_map: &SourceMap) -> Diagn
       show_environment: false,
       severity: DiagnosticSeverity::Error,
       documentation_url: None,
+      name: None,
     },
     MacroError::ParseError(err) => {
       let error_buffer = ErrorBuffer::default();

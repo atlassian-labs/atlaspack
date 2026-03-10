@@ -315,6 +315,7 @@ export interface TokensJsDiagnostic {
   show_environment: boolean;
   severity: string;
   documentation_url: string | null;
+  name?: string | null;
 }
 
 export interface TokensPluginResult {
