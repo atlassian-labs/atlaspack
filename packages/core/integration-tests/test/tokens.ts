@@ -101,6 +101,11 @@ describe('tokens', () => {
         `Expected error to have diagnostics array, got: ${JSON.stringify(error)}`,
       );
       const diagnostic = error.diagnostics[0];
+      assert.strictEqual(
+        diagnostic.name,
+        'SyntaxError',
+        'Parse/syntax error diagnostic should have name === "SyntaxError"',
+      );
       assert(
         diagnostic.codeFrames != null && diagnostic.codeFrames.length > 0,
         `Expected diagnostic to have codeFrames, got: ${JSON.stringify(diagnostic)}`,
