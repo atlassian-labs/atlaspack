@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode};
+use atlaspack_core::hash::IdentifierHasher;
 
 use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError};
 
@@ -29,10 +30,16 @@ pub struct CommitRequest {
 
 impl Hash for CommitRequest {
   fn hash<H: Hasher>(&self, state: &mut H) {
-    // Hash based on the number of nodes — if the graph changes, the request
-    // is re-run. This is a coarse key; the request tracker's invalidation
-    // system handles fine-grained cache busting via file-change edges.
-    self.asset_graph.nodes().count().hash(state);
+    let nodes = self
+      .asset_graph
+      .new_nodes()
+      .chain(self.asset_graph.updated_nodes());
+    for node in nodes {
+      let AssetGraphNode::Asset(asset) = node else {
+        continue;
+      };
+      asset.hash(state);
+    }
   }
 }
 
