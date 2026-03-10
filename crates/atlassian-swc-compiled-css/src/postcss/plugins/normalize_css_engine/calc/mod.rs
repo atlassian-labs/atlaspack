@@ -6,6 +6,13 @@ enum Node {
   Value(ValueKind),
   Op(OpKind),
   Literal(String), // opaque literal like var(--x) or identifier, preserved for stringifier
+  /// Parenthesized sub-expression `(expr)`. Babel's postcss-calc preserves
+  /// parentheses around expressions that contain CSS functions (like `var()`),
+  /// which prevents `*` and `/` from distributing across `+`/`-` inside the
+  /// parens. E.g. `(100% - var(--x)) / 2` stays as-is instead of becoming
+  /// `50% - var(--x)/2`. Nested `calc()` does NOT produce `Paren` — it is
+  /// inlined directly — so distribution still happens through nested calc.
+  Paren(Box<Node>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -21,6 +28,21 @@ struct OpKind {
   right: Box<Node>,
 }
 
+/// Returns true if the node tree contains any CSS function or literal
+/// (e.g. `var(--x)`, `env(...)`, custom identifiers). This mirrors Babel's
+/// postcss-calc `includesNoCssProperties` check — when a parenthesized
+/// expression contains functions, Babel preserves the parentheses.
+fn contains_css_function(node: &Node) -> bool {
+  match node {
+    Node::Literal(_) => true,
+    Node::Value(_) => false,
+    Node::Paren(inner) => contains_css_function(inner),
+    Node::Op(OpKind { left, right, .. }) => {
+      contains_css_function(left) || contains_css_function(right)
+    }
+  }
+}
+
 fn stringify_node(node: &Node, precision: usize) -> String {
   match node {
     Node::Value(ValueKind { num, unit }) => {
@@ -31,6 +53,7 @@ fn stringify_node(node: &Node, precision: usize) -> String {
       s
     }
     Node::Literal(s) => s.clone(),
+    Node::Paren(inner) => format!("({})", stringify_node(inner, precision)),
     Node::Op(OpKind { op, left, right }) => {
       let wrap_left =
         matches!(left.as_ref(), Node::Op(OpKind { op: l, .. }) if op_prec(*op) < op_prec(*l));
@@ -137,7 +160,10 @@ fn parse_calc_expression(input: &str) -> Option<Node> {
           return None;
         }
         lx.bump();
-        Some(node)
+        // Wrap in Paren to match Babel's ParenthesizedExpression.
+        // This prevents * and / from distributing across + / - when
+        // the inner expression contains CSS functions like var().
+        Some(Node::Paren(Box::new(node)))
       }
       c if c.is_ascii_digit() || c == '.' || c == '+' || c == '-' => parse_number_unit(lx),
       _ => {
@@ -683,6 +709,18 @@ fn reduce_node(node: Node, precision: usize) -> Node {
 
   match node {
     Node::Value(_) | Node::Literal(_) => node,
+    Node::Paren(inner) => {
+      let reduced = reduce_node(*inner, precision);
+      // Babel's postcss-calc preserves ParenthesizedExpression when it
+      // contains CSS functions (var(), env(), etc.). Only unwrap parens
+      // when the inner expression is purely numeric values — matching
+      // Babel's `includesNoCssProperties` guard.
+      if contains_css_function(&reduced) {
+        Node::Paren(Box::new(reduced))
+      } else {
+        reduced
+      }
+    }
     Node::Op(OpKind { op, left, right }) => match op {
       '+' | '-' => reduce_add_sub_expression(*left, *right, op, precision),
       '*' => reduce_multiplication_expression(*left, *right, precision),
@@ -1020,5 +1058,63 @@ mod tests {
       css,
       "a{width:calc(18.421vw - var(--a, 0px)*.18421 - var(--b, 0px)*.18421)}"
     );
+  }
+
+  #[test]
+  fn paren_division_preserves_when_contains_var() {
+    // Babel's postcss-calc preserves parenthesized expressions containing CSS
+    // functions (like var()) and does NOT distribute division across +/-.
+    // This is the FullSizeContentSection.tsx case.
+    let output = normalize_calc_value("calc((100% - var(--_8gjczv))/2)");
+    assert_eq!(output, "calc((100% - var(--_8gjczv))/2)");
+  }
+
+  #[test]
+  fn paren_multiplication_preserves_when_contains_var() {
+    // Same behavior for multiplication: parentheses with var() block distribution.
+    let output = normalize_calc_value("calc((100% - var(--x))*2)");
+    assert_eq!(output, "calc((100% - var(--x))*2)");
+  }
+
+  #[test]
+  fn paren_division_simplifies_without_css_functions() {
+    // When parenthesized expression has only known numeric values (no var/functions),
+    // parentheses are unwrapped and the expression is fully reduced.
+    let output = normalize_calc_value("calc((100px - 50px)/2)");
+    assert_eq!(output, "25px");
+  }
+
+  #[test]
+  fn nested_calc_division_distributes_with_var() {
+    // Nested calc() (not parentheses) allows distribution even with var(),
+    // matching Babel's behavior where calc() unwraps to a MathExpression
+    // (not ParenthesizedExpression).
+    let processor = pc::postcss_with_plugins(vec![plugin()]);
+    let mut result = processor
+      .process("a{width:calc(calc(100% - var(--x))/2)}")
+      .expect("process should succeed");
+    let css = result.css().expect("css string").to_string();
+    assert_eq!(css, "a{width:calc(50% - var(--x)/2)}");
+  }
+
+  #[test]
+  fn paren_addition_preserves_with_var() {
+    // Division of parenthesized addition with var()
+    let output = normalize_calc_value("calc((100% + var(--x))/3)");
+    assert_eq!(output, "calc((100% + var(--x))/3)");
+  }
+
+  #[test]
+  fn paren_division_with_only_units_simplifies() {
+    // Parenthesized expression with only percentage units can still be distributed
+    let output = normalize_calc_value("calc((100% - 20%)/2)");
+    assert_eq!(output, "40%");
+  }
+
+  #[test]
+  fn normalize_hash_paren_division_preserves_var() {
+    // The normalize_calc_value_for_hash function should also preserve parens with var()
+    let output = normalize_calc_value_for_hash("calc((100% - var(--x))/2)");
+    assert_eq!(output, "calc((100% - var(--x))/2)");
   }
 }
