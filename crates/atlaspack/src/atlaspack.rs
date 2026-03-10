@@ -493,7 +493,6 @@ mod tests {
       options: AtlaspackOptions::default(),
       package_manager: None,
       rpc: rpc(),
-      report_fn: None,
     })?;
 
     let assets_names = ["foo", "bar", "baz"];
