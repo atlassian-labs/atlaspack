@@ -11,9 +11,7 @@ pub mod bundle_graph {
 
   use atlaspack_core::bundle_graph::BundleGraph;
   use atlaspack_core::hash::IdentifierHasher;
-  use atlaspack_core::types::{
-    Asset, Bundle, BundleBehavior, Dependency, Environment, FileType, Target,
-  };
+  use atlaspack_core::types::{Asset, Bundle, Dependency, Environment, FileType, Target};
 
   // ---------------------------------------------------------------------------
   // Bundle factory
