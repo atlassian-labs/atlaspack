@@ -2,6 +2,7 @@ pub use atlaspack::*;
 pub use atlaspack_filesystem as file_system;
 pub use atlaspack_plugin_rpc as rpc;
 pub use error::*;
+pub use request_tracker::ReportFn;
 pub use watch::*;
 
 pub mod atlaspack;

@@ -7,6 +7,7 @@ use anyhow::anyhow;
 use atlaspack::Atlaspack;
 use atlaspack::AtlaspackError;
 use atlaspack::AtlaspackInitOptions;
+use atlaspack::ReportFn;
 use atlaspack::WatchEvents;
 use atlaspack::rpc::nodejs::NodejsWorker;
 use atlaspack_core::bundle_graph::bundle_graph_from_js::BundleGraphFromJs;
@@ -108,7 +109,6 @@ pub fn atlaspack_napi_create(
         fs,
         options,
         package_manager,
-        report_fn: None,
         rpc,
       });
       tracing::trace!(?thread_id, "atlaspack-napi resolve");
@@ -160,16 +160,13 @@ pub fn atlaspack_napi_build_asset_graph(
     let atlaspack_ref = atlaspack_napi.clone();
     move || {
       let result = {
-        let mut atlaspack = atlaspack_ref.write();
-
-        if let Some(tsfn) = tsfn {
-          let tsfn_clone = tsfn.clone();
-          atlaspack.set_report_fn(Some(Arc::new(move |event| {
-            tsfn_clone.call(event.to_json(), ThreadsafeFunctionCallMode::NonBlocking);
-          })));
-        }
-
-        atlaspack.build_asset_graph()
+        let atlaspack = atlaspack_ref.write();
+        let report_fn: Option<ReportFn> = tsfn.map(|tsfn| -> ReportFn {
+          Arc::new(move |event| {
+            tsfn.call(event.to_json(), ThreadsafeFunctionCallMode::NonBlocking);
+          })
+        });
+        atlaspack.build_asset_graph_with_report_fn(report_fn)
       };
 
       // "deferred.resolve" closure executes on the JavaScript thread.
@@ -270,16 +267,14 @@ pub fn atlaspack_napi_build_bundle_graph(
     let atlaspack_ref = atlaspack_napi.clone();
     move || {
       let result = {
-        let mut atlaspack = atlaspack_ref.write();
+        let atlaspack = atlaspack_ref.write();
 
-        if let Some(tsfn) = tsfn {
-          let tsfn_clone = tsfn.clone();
-          atlaspack.set_report_fn(Some(Arc::new(move |event| {
-            tsfn_clone.call(event.to_json(), ThreadsafeFunctionCallMode::NonBlocking);
-          })));
-        }
-
-        atlaspack.build_bundle_graph()
+        let report_fn: Option<ReportFn> = tsfn.map(|tsfn| -> ReportFn {
+          Arc::new(move |event| {
+            tsfn.call(event.to_json(), ThreadsafeFunctionCallMode::NonBlocking);
+          })
+        });
+        atlaspack.build_bundle_graph_with_report_fn(report_fn)
       };
 
       let mut commit_deferred_opt = Some(second_deferred);
@@ -334,15 +329,12 @@ pub fn atlaspack_napi_build(
     let atlaspack_ref = atlaspack_napi.clone();
     move || {
       let result = {
-        let mut atlaspack = atlaspack_ref.write();
+        let atlaspack = atlaspack_ref.write();
 
-        // Set up progress reporting via ThreadsafeFunction
-        let tsfn_clone = tsfn.clone();
-        atlaspack.set_report_fn(Some(Arc::new(move |event| {
-          tsfn_clone.call(event.to_json(), ThreadsafeFunctionCallMode::NonBlocking);
-        })));
-
-        atlaspack.build()
+        let report_fn: ReportFn = Arc::new(move |event| {
+          tsfn.call(event.to_json(), ThreadsafeFunctionCallMode::NonBlocking);
+        });
+        atlaspack.build_with_report_fn(Some(report_fn))
       };
 
       deferred.resolve(move |env| match result {

@@ -1,16 +1,14 @@
-use async_trait::async_trait;
-use atlaspack_core::build_progress::BuildProgressEvent;
 use std::sync::Arc;
 
-use crate::{
-  request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError},
-  requests::packaging_request::PackagingRequest,
-};
+use async_trait::async_trait;
+use atlaspack_core::build_progress::BuildProgressEvent;
+
+use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError};
+use crate::requests::packaging_request::{PackagingRequest, PackagingRequestOutput};
 
 use super::{
   AssetGraphRequest, BundleGraphRequest, BundleGraphRequestOutput, CommitRequest, RequestResult,
 };
-use crate::requests::packaging_request::PackagingRequestOutput;
 
 /// Output of the full native build pipeline.
 #[derive(Clone, Debug, PartialEq)]

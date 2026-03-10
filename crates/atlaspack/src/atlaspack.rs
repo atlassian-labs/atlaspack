@@ -37,7 +37,6 @@ pub struct AtlaspackInitOptions {
   pub options: AtlaspackOptions,
   pub package_manager: Option<PackageManagerRef>,
   pub rpc: RpcFactoryRef,
-  pub report_fn: Option<ReportFn>,
 }
 
 pub struct Atlaspack {
@@ -51,7 +50,6 @@ pub struct Atlaspack {
   pub config_loader: Arc<ConfigLoader>,
   pub plugins: PluginsRef,
   pub request_tracker: Arc<RwLock<RequestTracker>>,
-  pub report_fn: Option<ReportFn>,
   /// The bundle graph deserialised from JS. Used temporarily until we have a native
   /// bundle graph implementation. Starts empty and is populated via `load_bundle_graph`.
   /// Writers (load_bundle_graph, update_bundle_graph) replace the inner Arc under a Mutex;
@@ -68,7 +66,6 @@ impl Atlaspack {
       options,
       package_manager,
       rpc,
-      report_fn,
     }: AtlaspackInitOptions,
   ) -> Result<Self, anyhow::Error> {
     let fs = fs.unwrap_or_else(|| Arc::new(OsFileSystem));
@@ -173,7 +170,7 @@ impl Atlaspack {
         LmdbCacheReaderWriter::new(db.clone()),
         cache_mode,
       ))),
-      report_fn.clone(),
+      None,
     );
 
     let debug_tools = DebugTools::from_env();
@@ -190,7 +187,6 @@ impl Atlaspack {
       plugins,
       request_tracker: Arc::new(RwLock::new(request_tracker)),
       bundle_graph: parking_lot::Mutex::new(Arc::new(BundleGraphFromJs::default())),
-      report_fn,
       debug_tools,
     })
   }
@@ -200,6 +196,13 @@ impl Atlaspack {
   pub fn build_asset_graph(
     &self,
   ) -> anyhow::Result<(Option<FinalizedSymbolTracker>, Arc<AssetGraph>, bool)> {
+    self.build_asset_graph_with_report_fn(None)
+  }
+
+  pub fn build_asset_graph_with_report_fn(
+    &self,
+    report_fn: Option<ReportFn>,
+  ) -> anyhow::Result<(Option<FinalizedSymbolTracker>, Arc<AssetGraph>, bool)> {
     self.runtime.block_on(async move {
       // Notify all resolver plugins that a new build is starting
       for resolver in self.plugins.resolvers()? {
@@ -208,10 +211,9 @@ impl Atlaspack {
 
       let mut request_tracker = self.request_tracker.write().await;
 
-      // Propagate the report_fn to the request tracker so it's available
-      // to all requests via RunRequestContext. Cleared after the build
-      // to release the ThreadsafeFunction reference promptly.
-      request_tracker.set_report_fn(self.report_fn.clone());
+      // Set the report_fn for this build, cleared at the end to release
+      // the ThreadsafeFunction reference promptly.
+      request_tracker.set_report_fn(report_fn);
 
       let prev_asset_graph = request_tracker
         .get_cached_request_result(AssetGraphRequest::default())
@@ -313,10 +315,18 @@ impl Atlaspack {
   pub fn build_bundle_graph(
     &self,
   ) -> anyhow::Result<(Arc<AssetGraph>, BundleGraphRequestOutput, bool)> {
+    self.build_bundle_graph_with_report_fn(None)
+  }
+
+  pub fn build_bundle_graph_with_report_fn(
+    &self,
+    report_fn: Option<ReportFn>,
+  ) -> anyhow::Result<(Arc<AssetGraph>, BundleGraphRequestOutput, bool)> {
     // First, build the asset graph
     // Eventually we will pass the symbol tracker into bundling to acces
     // directly, but for now it is ignored
-    let (_symbol_tracker, asset_graph, had_previous_graph) = self.build_asset_graph()?;
+    let (_symbol_tracker, asset_graph, had_previous_graph) =
+      self.build_asset_graph_with_report_fn(report_fn.clone())?;
 
     // Then run the bundle graph request
     let asset_graph_for_request = asset_graph.clone();
@@ -325,9 +335,7 @@ impl Atlaspack {
 
       let mut request_tracker = self.request_tracker.write().await;
 
-      // Propagate the report_fn to the request tracker so it's available
-      // to all requests via RunRequestContext
-      request_tracker.set_report_fn(self.report_fn.clone());
+      request_tracker.set_report_fn(report_fn);
 
       let request_result = request_tracker
         .run_request(BundleGraphRequest {
@@ -348,18 +356,19 @@ impl Atlaspack {
     Ok((asset_graph, bundle_delta, had_previous_graph))
   }
 
-  pub fn set_report_fn(&mut self, report_fn: Option<ReportFn>) {
-    self.report_fn = report_fn;
-  }
-
   #[tracing::instrument(level = "info", skip_all)]
   pub fn build(&self) -> anyhow::Result<BuildRequestOutput> {
+    self.build_with_report_fn(None)
+  }
+
+  pub fn build_with_report_fn(
+    &self,
+    report_fn: Option<ReportFn>,
+  ) -> anyhow::Result<BuildRequestOutput> {
     self.runtime.block_on(async move {
       let mut request_tracker = self.request_tracker.write().await;
 
-      // Propagate the report_fn to the request tracker so it's available
-      // to all requests via RunRequestContext
-      request_tracker.set_report_fn(self.report_fn.clone());
+      request_tracker.set_report_fn(report_fn);
 
       let request_result = request_tracker.run_request(BuildRequest {}).await?;
 
