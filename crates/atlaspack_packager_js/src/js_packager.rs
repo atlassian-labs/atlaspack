@@ -9,7 +9,6 @@ use atlaspack_core::{
   types::{Asset, Bundle, OutputFormat},
   version::atlaspack_rust_version,
 };
-use parking_lot::RwLock;
 use pathdiff::diff_paths;
 use rayon::prelude::*;
 
@@ -21,7 +20,7 @@ use super::{JsPackager, PackagingContext};
 type PackagedAsset<'a> = (&'a Asset, String);
 
 impl<B: BundleGraph + Send + Sync> JsPackager<B> {
-  pub fn new(context: PackagingContext, bundle_graph: Arc<RwLock<B>>) -> Self {
+  pub fn new(context: PackagingContext, bundle_graph: Arc<B>) -> Self {
     Self {
       context,
       bundle_graph,
@@ -29,7 +28,7 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
   }
 
   pub fn package(&self, bundle_id: &str) -> anyhow::Result<PackageResult> {
-    let graph = self.bundle_graph.read();
+    let graph = &*self.bundle_graph;
     let bundle = graph
       .get_bundle_by_id(bundle_id)
       .ok_or(anyhow::anyhow!("Bundle not found"))?;
@@ -162,7 +161,7 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
     bundle: &Bundle,
     asset: &Asset,
   ) -> anyhow::Result<HashMap<String, Option<String>>> {
-    let bundle_graph = self.bundle_graph.read();
+    let bundle_graph = &*self.bundle_graph;
 
     // Get dependencies for asset
     let dependencies = bundle_graph.get_dependencies(asset)?;
@@ -196,7 +195,7 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
   }
 
   fn wrap_asset(&self, _bundle: &Bundle, asset: &Asset, code: String) -> anyhow::Result<String> {
-    let bundle_graph = self.bundle_graph.read();
+    let bundle_graph = &*self.bundle_graph;
     let public_id = bundle_graph
       .get_public_asset_id(&asset.id)
       .expect("Asset not found in bundle graph")
@@ -261,7 +260,7 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       .join("\n");
 
     // Build explicit require() calls for entry assets to execute them in order
-    let bundle_graph = self.bundle_graph.read();
+    let bundle_graph = &*self.bundle_graph;
     let entry_requires = bundle
       .entry_asset_ids
       .iter()
