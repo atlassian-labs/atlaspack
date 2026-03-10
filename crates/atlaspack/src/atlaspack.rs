@@ -21,7 +21,7 @@ use tokio::runtime::Runtime;
 use tokio::sync::RwLock;
 
 use crate::WatchEvents;
-use crate::database_reader::LmdbDatabaseReader;
+use crate::database::LmdbDatabase;
 use crate::plugins::{PluginsRef, config_plugins::ConfigPlugins};
 use crate::project_root::infer_project_root;
 use crate::request_tracker::{DynCacheHandler, RequestNode, RequestTracker};
@@ -158,7 +158,7 @@ impl Atlaspack {
     };
 
     let request_tracker = RequestTracker::new(
-      Arc::new(LmdbDatabaseReader(db.clone())),
+      Arc::new(LmdbDatabase(db.clone())),
       config_loader.clone(),
       fs.clone(),
       Arc::new(resolved_options.clone()),
@@ -334,7 +334,7 @@ impl Atlaspack {
 
     let packager = JsPackager::new(
       atlaspack_packager_js::PackagingContext {
-        db: Arc::new(LmdbDatabaseReader(Arc::clone(&self.db))),
+        db: Arc::new(LmdbDatabase(Arc::clone(&self.db))),
         cache: Some(Arc::new(crate::cache::LmdbCache::new(
           Arc::clone(&self.db),
           Arc::new(OsFileSystem),

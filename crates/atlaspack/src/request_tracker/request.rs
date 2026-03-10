@@ -1,6 +1,6 @@
-use atlaspack_core::database_reader::DatabaseReaderRef;
+use atlaspack_core::database::DatabaseRef;
 #[cfg(test)]
-use atlaspack_core::database_reader::InMemoryDatabaseReader;
+use atlaspack_core::database::InMemoryDatabase;
 use atlaspack_memoization_cache::CacheHandler;
 use atlaspack_memoization_cache::CacheHandlerTrait;
 use atlaspack_memoization_cache::InMemoryReaderWriter;
@@ -107,7 +107,7 @@ impl Future for ExecuteRequestFuture {
 /// We want to avoid exposing internals of the request tracker to the implementations so that we
 /// can change this.
 pub struct RunRequestContext {
-  pub db: DatabaseReaderRef,
+  pub db: DatabaseRef,
   config_loader: ConfigLoaderRef,
   file_system: FileSystemRef,
   pub cache: CacheRef,
@@ -134,7 +134,7 @@ impl RunRequestContext {
     });
 
     Self {
-      db: Arc::new(InMemoryDatabaseReader::default()),
+      db: Arc::new(InMemoryDatabase::default()),
       cache: Arc::new(DynCacheHandler::InMemory(CacheHandler::new(
         InMemoryReaderWriter::default(),
         CacheMode::Off,
@@ -153,7 +153,7 @@ impl RunRequestContext {
 impl RunRequestContext {
   #[allow(clippy::too_many_arguments)]
   pub(crate) fn new(
-    db: DatabaseReaderRef,
+    db: DatabaseRef,
     config_loader: ConfigLoaderRef,
     file_system: FileSystemRef,
     options: Arc<AtlaspackOptions>,
@@ -235,6 +235,14 @@ pub trait Request: DynHash + Send + Sync + Debug + 'static {
     std::any::type_name::<Self>().hash(&mut hasher);
     self.dyn_hash(&mut hasher);
     hasher.finish()
+  }
+
+  /// Returns a short, stable name for this request type used in tracing and diagnostics.
+  ///
+  /// The default implementation uses [`std::any::type_name`], which returns the fully-qualified
+  /// Rust path. Override this to return a shorter, more readable name.
+  fn request_type(&self) -> &'static str {
+    std::any::type_name::<Self>()
   }
 
   async fn run(

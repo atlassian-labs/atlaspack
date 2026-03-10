@@ -59,6 +59,9 @@ fn should_use_monolithic_bundler(asset_graph: &AssetGraph) -> bool {
 
 #[async_trait]
 impl Request for BundleGraphRequest {
+  fn request_type(&self) -> &'static str {
+    "BundleGraphRequest"
+  }
   #[tracing::instrument(skip_all)]
   async fn run(
     &self,
