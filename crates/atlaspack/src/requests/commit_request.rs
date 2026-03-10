@@ -3,7 +3,6 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode};
-use atlaspack_core::hash::IdentifierHasher;
 
 use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError};
 
@@ -89,7 +88,7 @@ impl Request for CommitRequest {
 mod tests {
   use std::sync::Arc;
 
-  use atlaspack_core::database::{Database, DatabaseRef, InMemoryDatabase};
+  use atlaspack_core::database::{DatabaseRef, InMemoryDatabase};
   use atlaspack_core::types::{Asset, Code};
   use pretty_assertions::assert_eq;
 

@@ -187,15 +187,6 @@ pub mod bundle_graph {
       self
     }
 
-    /// Mark a bundle (already added via [`bundles`]) as inline by setting its `bundle_behavior`.
-    /// Convenience method — alternatively set `bundle_behavior` directly on the [`Bundle`].
-    pub fn mark_inline(mut self, id: &str, behavior: BundleBehavior) -> Self {
-      if let Some(b) = self.bundles.iter_mut().find(|b| b.id == id) {
-        b.bundle_behavior = Some(behavior);
-      }
-      self
-    }
-
     pub fn build(self) -> MockBundleGraph {
       MockBundleGraph {
         bundles: self.bundles,
