@@ -382,6 +382,15 @@ impl TargetRequest {
     }
 
     for builtin_target in builtin_targets {
+      // Skip builtin targets that aren't in the filter list. When the user
+      // passes targets: ["pillar-native"], they only want "pillar-native" —
+      // not "main", "browser", etc.
+      if let Some(filter) = &target_filter
+        && !filter.iter().any(|name| name == builtin_target.name)
+      {
+        continue;
+      }
+
       // Builtin targets are processed if either:
       // 1. They have a top-level field (e.g., "main": "dist/main.js"), OR
       // 2. They're defined in the targets object (e.g., "targets": {"main": {...}})
@@ -1304,6 +1313,52 @@ mod tests {
         targets: vec![Target {
           dist_dir: package_dir().join("build"),
           dist_entry: Some(PathBuf::from("main.js")),
+          env: Arc::new(Environment {
+            context: EnvironmentContext::Node,
+            output_format: OutputFormat::CommonJS,
+            ..builtin_default_env()
+          }),
+          name: String::from("main"),
+          ..Target::default()
+        }],
+      },
+    );
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn returns_builtin_main_target_with_typescript_extension() {
+    let targets = targets_from_config(String::from(r#"{ "main": "index.ts" }"#), None, None).await;
+
+    assert_target_result(
+      targets,
+      TargetRequestOutput {
+        entry: PathBuf::default(),
+        targets: vec![Target {
+          dist_dir: package_dir(),
+          dist_entry: Some(PathBuf::from("index.ts")),
+          env: Arc::new(Environment {
+            context: EnvironmentContext::Node,
+            output_format: OutputFormat::CommonJS,
+            ..builtin_default_env()
+          }),
+          name: String::from("main"),
+          ..Target::default()
+        }],
+      },
+    );
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn returns_builtin_main_target_with_tsx_extension() {
+    let targets = targets_from_config(String::from(r#"{ "main": "index.tsx" }"#), None, None).await;
+
+    assert_target_result(
+      targets,
+      TargetRequestOutput {
+        entry: PathBuf::default(),
+        targets: vec![Target {
+          dist_dir: package_dir(),
+          dist_entry: Some(PathBuf::from("index.tsx")),
           env: Arc::new(Environment {
             context: EnvironmentContext::Node,
             output_format: OutputFormat::CommonJS,

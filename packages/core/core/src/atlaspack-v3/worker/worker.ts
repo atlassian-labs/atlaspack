@@ -173,15 +173,24 @@ export class AtlaspackWorker {
           resolution: {type: 'excluded'},
         };
       }
+      // A resolver may return a result without filePath to indicate it didn't
+      // resolve the dependency (equivalent to returning null). The JS-side
+      // PathRequest treats this as "try the next resolver".
+      if (!result.filePath) {
+        return {
+          invalidations: [],
+          resolution: {type: 'unresolved'},
+        };
+      }
 
       return {
         invalidations: [],
         resolution: {
           type: 'resolved',
-          filePath: result.filePath || '',
+          filePath: result.filePath,
           canDefer: result.canDefer || false,
           sideEffects: result.sideEffects ?? true,
-          code: result.code || undefined,
+          code: result.code ?? undefined,
           meta: result.meta || undefined,
           pipeline: result.pipeline || undefined,
           priority: dependencyPriorityMap.intoNullable(result.priority),

@@ -104,6 +104,8 @@ impl<B: BundleGraph + Send + Sync + 'static> Request for PackagingRequest<B> {
   fn request_type(&self) -> &'static str {
     "PackagingRequest"
   }
+
+  #[tracing::instrument(level = "info", skip_all)]
   async fn run(
     &self,
     mut request_context: RunRequestContext,
