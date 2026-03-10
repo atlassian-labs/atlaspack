@@ -68,7 +68,6 @@ mod tests {
   fn test_bundling_event_json() {
     let event = BuildProgressEvent::Bundling;
     let json = event.to_json();
-    println!("Bundling JSON: {}", json);
     assert!(json.contains("\"phase\":\"bundling\""));
     assert!(json.contains("\"type\":\"buildProgress\""));
   }
