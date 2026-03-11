@@ -1,4 +1,5 @@
 pub mod asset_graph;
+pub mod build_progress;
 pub mod bundle_graph;
 pub mod cache;
 pub mod config_loader;

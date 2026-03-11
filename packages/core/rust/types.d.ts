@@ -58,12 +58,15 @@ export declare function atlaspackNapiCreate(
 ): object;
 export declare function atlaspackNapiBuild(
   atlaspackNapi: AtlaspackNapi,
+  progressCallback: (eventJson: string) => void,
 ): object;
 export declare function atlaspackNapiBuildAssetGraph(
   atlaspackNapi: AtlaspackNapi,
+  progressCallback?: (eventJson: string) => void,
 ): object;
 export declare function atlaspackNapiBuildBundleGraph(
   atlaspackNapi: AtlaspackNapi,
+  progressCallback?: (eventJson: string) => void,
 ): object;
 export declare function atlaspackNapiRespondToFsEvents(
   atlaspackNapi: AtlaspackNapi,

@@ -442,7 +442,12 @@ export default class Atlaspack {
       let scopeHoistingStats: any;
 
       if (getFeatureFlag('fullNative') && this.rustAtlaspack) {
-        let [result, error] = await this.rustAtlaspack.build();
+        let [result, error] = await this.rustAtlaspack.build(
+          (eventJson: string) => {
+            let event = JSON.parse(eventJson);
+            this.#reporterRunner.report(event);
+          },
+        );
 
         if (error) {
           throw new ThrowableDiagnostic({diagnostic: error});

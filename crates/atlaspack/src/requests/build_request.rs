@@ -1,15 +1,14 @@
 use std::sync::Arc;
 
-use crate::{
-  request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError},
-  requests::packaging_request::PackagingRequest,
-};
 use async_trait::async_trait;
+use atlaspack_core::build_progress::BuildProgressEvent;
+
+use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError};
+use crate::requests::packaging_request::{PackagingRequest, PackagingRequestOutput};
 
 use super::{
   AssetGraphRequest, BundleGraphRequest, BundleGraphRequestOutput, CommitRequest, RequestResult,
 };
-use crate::requests::packaging_request::PackagingRequestOutput;
 
 /// Output of the full native build pipeline.
 #[derive(Clone, Debug, PartialEq)]
@@ -54,6 +53,8 @@ impl Request for BuildRequest {
     let commit_future = request_context.execute_request(CommitRequest {
       asset_graph: Arc::clone(&asset_graph),
     });
+
+    request_context.report(BuildProgressEvent::Bundling);
     let bundle_graph_future = request_context.execute_request(BundleGraphRequest {
       asset_graph: Arc::clone(&asset_graph),
     });

@@ -124,5 +124,6 @@ pub(crate) fn request_tracker_with_db(
     plugins,
     project_root,
     cache,
+    None,
   )
 }
