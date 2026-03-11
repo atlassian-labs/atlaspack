@@ -165,6 +165,10 @@ struct ConvertValueOptions {
 
 impl Default for ConvertValueOptions {
   fn default() -> Self {
+    // @compiled/css initializes postcss-convert-values with default options
+    // (no args), which means length conversion IS enabled (the plugin's own
+    // default is `precision: false`, and `length` defaults to undefined which
+    // is treated as true in the JS `length !== false` check).
     Self {
       length: true,
       time: true,
@@ -357,6 +361,8 @@ mod tests {
 
   #[test]
   fn converts_var_fallback_units_inside_calc() {
+    // @compiled/css initializes postcss-convert-values with default options,
+    // so length conversion IS enabled (12px → 9pt, 16px → 1pc when shorter).
     let processor = pc::postcss_with_plugins(vec![plugin()]);
     let mut result = processor
       .process(

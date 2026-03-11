@@ -94,6 +94,11 @@ fn collect_sheet_idents(sheets: &[String], meta: &Metadata) -> Vec<Expr> {
   let mut idents = Vec::new();
 
   for sheet in sheets {
+    // COMPAT(AFB-1871): Skip empty/invalid sheets that can arise from skeletal
+    // CSS (e.g. all-dynamic styled components producing ";&:hover { ; }").
+    if sheet.trim().is_empty() || !sheet.contains('{') {
+      continue;
+    }
     if unique.insert(sheet.clone()) {
       let ident = hoist_sheet(sheet, meta);
       idents.push(Expr::Ident(ident));
@@ -337,6 +342,15 @@ pub fn build_compiled_component(mut node: Expr, css_output: &CssOutput, meta: &M
     );
   }
 
+  // Validate that all sheets are non-empty CSS strings containing at least one rule.
+  // The CS runtime component expects each sheet to be a string (it calls sheet.includes()).
+  // If a non-string value reaches the runtime, it causes "sheet.includes is not a function".
+  validate_sheets(
+    &transform_result.sheets,
+    &transform_result.class_names,
+    meta,
+  );
+
   merge_class_name(&mut node, &transform_result.class_names, meta);
   merge_style_attribute(&mut node, &css_output.variables);
 
@@ -363,6 +377,107 @@ pub fn build_compiled_component(mut node: Expr, css_output: &CssOutput, meta: &M
   }
 
   result
+}
+
+/// Validate that sheets and class_names produced by transform_css_items are well-formed.
+/// Emits diagnostics for any issues that could cause "sheet.includes is not a function"
+/// at runtime in the CS (Style) component.
+fn validate_sheets(sheets: &[String], class_names: &[Expr], meta: &Metadata) {
+  let filename = meta.state().filename.clone().unwrap_or_default();
+
+  for (i, sheet) in sheets.iter().enumerate() {
+    if sheet.trim().is_empty() {
+      let message = format!(
+        "Compiled CSS: Empty sheet string at index {} in {}. \
+         The CS runtime component expects non-empty CSS strings. \
+         This may cause unexpected behavior at runtime.",
+        i, filename
+      );
+      eprintln!("[compiled-css] WARNING: {}", message);
+      meta.add_diagnostic(crate::errors::create_diagnostic(
+        message,
+        module_path!(),
+        None,
+        None,
+      ));
+    }
+  }
+
+  // Validate that class_name expressions are string-safe.
+  // The className values flow into ax([...]) which concatenates them. Non-string
+  // values (e.g., arrays, objects) would cause issues in the CS children array.
+  for (i, class_expr) in class_names.iter().enumerate() {
+    validate_class_expression(class_expr, i, &filename, meta);
+  }
+}
+
+/// Validates that a class expression will produce a string-compatible value at runtime.
+/// Non-string values (arrays, objects, numeric literals) in the className array would
+/// eventually flow to the CS component children and cause "sheet.includes is not a function".
+fn validate_class_expression(expr: &Expr, index: usize, filename: &str, meta: &Metadata) {
+  match expr {
+    // String literals are always valid
+    Expr::Lit(swc_core::ecma::ast::Lit::Str(_)) => {}
+    // Identifiers resolve at runtime - we can't validate them statically,
+    // but they're the common case for cssMap lookups (e.g., styles.root)
+    // This also covers `undefined` which is used as a fallback in conditionals.
+    Expr::Ident(_) => {}
+    // Member expressions (e.g., styles.root) are valid cssMap lookups
+    Expr::Member(_) => {}
+    // Conditional expressions (ternary) are valid if both branches are valid
+    Expr::Cond(cond) => {
+      validate_class_expression(&cond.cons, index, filename, meta);
+      validate_class_expression(&cond.alt, index, filename, meta);
+    }
+    // Binary expressions (&&, ||, ??) are valid if right side is valid
+    Expr::Bin(bin) => {
+      if matches!(
+        bin.op,
+        swc_core::ecma::ast::BinaryOp::LogicalAnd
+          | swc_core::ecma::ast::BinaryOp::LogicalOr
+          | swc_core::ecma::ast::BinaryOp::NullishCoalescing
+      ) {
+        validate_class_expression(&bin.right, index, filename, meta);
+      }
+    }
+    // Parenthesized expressions - validate inner
+    Expr::Paren(paren) => {
+      validate_class_expression(&paren.expr, index, filename, meta);
+    }
+    // Call expressions (e.g., ax([...])) are valid
+    Expr::Call(_) => {}
+    // Template literals are valid
+    Expr::Tpl(_) => {}
+    // Array literals, object literals, or other non-string expressions are suspicious
+    Expr::Array(_) | Expr::Object(_) => {
+      let message = format!(
+        "Compiled CSS: class expression at index {} in {} is an array or object literal. \
+         The CS runtime component expects string values in the className array. \
+         This will cause \"sheet.includes is not a function\" at runtime. \
+         Expression: {:?}",
+        index, filename, expr
+      );
+      eprintln!("[compiled-css] WARNING: {}", message);
+      meta.add_diagnostic(crate::errors::create_diagnostic(
+        message,
+        module_path!(),
+        None,
+        None,
+      ));
+    }
+    // Other expression types - emit a trace-level warning for debugging
+    _ => {
+      if std::env::var("COMPILED_CLI_TRACE").is_ok() {
+        eprintln!(
+          "[compiled-css] TRACE: class expression at index {} in {} has type {:?} - \
+           verify this produces a string at runtime",
+          index,
+          filename,
+          std::mem::discriminant(expr)
+        );
+      }
+    }
+  }
 }
 
 #[cfg(test)]

@@ -384,6 +384,12 @@ export async function loadCompiledCssInJsConfig(
     },
   );
 
+  const resolvedBrowserslistEnv =
+    conf?.contents.browserslistEnv ??
+    process.env.BROWSERSLIST_ENV ??
+    process.env.NODE_ENV ??
+    'production';
+
   const contents: CompiledCssInJsConfigPlugin = {
     ...conf?.contents,
     importSources: [
@@ -391,6 +397,9 @@ export async function loadCompiledCssInJsConfig(
       ...(conf?.contents.importSources ?? []),
     ],
     extract: conf?.contents.extract && options.mode !== 'development',
+    // Use explicit env or process env (BROWSERSLIST_ENV/NODE_ENV). Default to "production"
+    // to match browserslist/caniuse defaults and the legacy Babel plugin behavior.
+    browserslistEnv: resolvedBrowserslistEnv,
   };
 
   return contents;

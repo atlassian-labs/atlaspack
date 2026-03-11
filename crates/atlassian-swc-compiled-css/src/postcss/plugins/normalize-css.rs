@@ -12,7 +12,10 @@ pub fn normalize_css(options: &TransformCssOptions) -> Vec<Box<dyn Plugin>> {
 
   // Base plugins that always run regardless of `optimize_css`.
   plugins.push(Box::new(minify_selectors(true)));
-  plugins.push(Box::new(minify_params()));
+  plugins.push(Box::new(minify_params(
+    options.browserslist_config_path.as_deref(),
+    options.browserslist_env.as_deref(),
+  )));
 
   if options.optimize_css.unwrap_or(true) {
     // Production-only plugins that cssnano would include, in preset order.

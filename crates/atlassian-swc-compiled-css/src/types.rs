@@ -156,6 +156,9 @@ pub struct PluginOptions {
   pub class_hash_prefix: Option<String>,
   pub flatten_multiple_selectors: Option<bool>,
   pub extract: Option<bool>,
+  /// Browserslist environment (e.g. "development" or "production") for config with
+  /// "browserslist": { "development": [...], "production": [...] }.
+  pub browserslist_env: Option<String>,
 }
 
 impl Default for PluginOptions {
@@ -179,6 +182,7 @@ impl Default for PluginOptions {
       class_hash_prefix: None,
       flatten_multiple_selectors: None,
       extract: None,
+      browserslist_env: None,
     }
   }
 }
@@ -204,6 +208,7 @@ impl From<&crate::config::CompiledCssInJsConfig> for PluginOptions {
       class_hash_prefix: config.class_hash_prefix.clone(),
       flatten_multiple_selectors: config.flatten_multiple_selectors,
       extract: config.extract,
+      browserslist_env: config.browserslist_env.clone(),
     }
   }
 }
@@ -411,6 +416,16 @@ pub struct TransformState {
   pub cwd: PathBuf,
   pub root: PathBuf,
   pub handler: Lrc<Handler>,
+  /// Cached browserslist config path for **autoprefixer**, resolved once at
+  /// construction time.  By default, this is `cwd`, matching Babel's autoprefixer
+  /// which resolves from `process.cwd()` (picking up the project's browserslist
+  /// config, e.g. `confluence/package.json`'s `"browserslist"` field).
+  pub browserslist_config_path: PathBuf,
+  /// Cached browserslist config path for **cssnano plugins** (reduce-initial,
+  /// colormin, etc.), resolved once at construction time.  Always uses the
+  /// `@compiled/css` package directory (falling back to browserslist defaults),
+  /// matching Babel's cssnano plugins which resolve from `{ path: __dirname }`.
+  pub cssnano_browserslist_config_path: PathBuf,
   pub diagnostics: Vec<atlaspack_core::types::Diagnostic>,
 }
 
@@ -431,6 +446,11 @@ impl fmt::Debug for TransformState {
 }
 
 static GLOBAL_CACHE: OnceCell<SharedCache> = OnceCell::new();
+
+/// Process-level cache for the resolved `@compiled/css` package path.
+/// `find_compiled_css_package_path` does expensive filesystem walks; this
+/// ensures it runs at most once per process.
+static COMPILED_CSS_PACKAGE_PATH: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
 
 /// Shared cache handle mirroring the Babel plugin behaviour.
 pub type SharedCache = Arc<Mutex<Cache<Value>>>;
@@ -473,6 +493,14 @@ impl TransformState {
       });
     }
 
+    let browserslist_config_path = Self::resolve_browserslist_config_path(&opts, &cwd);
+    // cssnano plugins (reduce-initial, colormin, etc.) always resolve their
+    // browserslist from `@compiled/css/dist/` (falling back to defaults),
+    // matching Babel's cssnano plugins which use `{ path: __dirname }`.
+    let cssnano_browserslist_config_path = COMPILED_CSS_PACKAGE_PATH
+      .get_or_init(|| Self::find_compiled_css_package_path(&cwd))
+      .clone();
+
     Self {
       compiled_imports: None,
       uses_xcss: false,
@@ -499,6 +527,8 @@ impl TransformState {
       cwd,
       root,
       handler,
+      browserslist_config_path,
+      cssnano_browserslist_config_path,
       diagnostics: Vec::new(),
     }
   }
@@ -542,6 +572,36 @@ impl TransformState {
       .map(|s| s.to_string())
       .chain(resolved_sources)
       .collect()
+  }
+
+  /// Resolve the browserslist config path for autoprefixer.
+  /// Matches Babel's autoprefixer which uses `{ from: undefined }` → `process.cwd()`.
+  fn resolve_browserslist_config_path(_opts: &PluginOptions, cwd: &Path) -> PathBuf {
+    cwd.to_path_buf()
+  }
+
+  /// Find where `@compiled/css` is installed by walking up from `cwd`.
+  ///
+  /// This mirrors how Babel's postcss plugins resolve browserslist: from their
+  /// `__dirname` inside `node_modules/@compiled/css/dist/`.
+  ///
+  /// This is only called once per process via `COMPILED_CSS_PACKAGE_PATH`.
+  fn find_compiled_css_package_path(cwd: &Path) -> PathBuf {
+    let compiled_css_subpath = Path::new("node_modules/@compiled/css/dist");
+
+    let mut dir = cwd.to_path_buf();
+    loop {
+      let candidate = dir.join(compiled_css_subpath);
+      if candidate.is_dir() {
+        return candidate;
+      }
+      if !dir.pop() {
+        break;
+      }
+    }
+
+    // Fallback: if @compiled/css is not found, use cwd
+    cwd.to_path_buf()
   }
 
   pub fn enqueue_cleanup(&mut self, action: CleanupAction, span: Span) {
