@@ -561,7 +561,8 @@ mod tests {
         message: String::from("Cannot find module 'foo.js'"),
         origin: Some(String::from(
           "atlaspack_plugin_resolver::atlaspack_resolver"
-        ))
+        )),
+        name: None,
       }
     );
   }
@@ -602,7 +603,8 @@ mod tests {
         message: String::from("Module 'foo/bar' is not exported from the 'foo' package"),
         origin: Some(String::from(
           "atlaspack_plugin_resolver::atlaspack_resolver"
-        ))
+        )),
+        name: None,
       }
     );
   }
