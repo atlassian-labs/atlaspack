@@ -5,6 +5,8 @@ import process from 'process';
 // @ts-expect-error TS2724
 import type {Transferable} from '@atlaspack/rust';
 import {getAvailableThreads} from '@atlaspack/rust';
+import logger from '@atlaspack/logger';
+import type {LogEvent} from '@atlaspack/types-internal';
 
 const WORKER_PATH = path.join(__dirname, 'worker', 'index.js');
 const ATLASPACK_NAPI_WORKERS =
@@ -43,6 +45,35 @@ export class NapiWorkerPool implements INapiWorkerPool {
           worker.once('message', res),
         ),
       );
+
+      // Re-emit log events from the worker thread into the main-thread logger
+      // so they reach reporters and are subject to log-level filtering.
+      worker.on('message', (message: unknown) => {
+        if (
+          message != null &&
+          typeof message === 'object' &&
+          (message as {type?: unknown}).type === 'logEvent'
+        ) {
+          const event = (message as {type: string; event: LogEvent}).event;
+          switch (event.level) {
+            case 'verbose':
+              logger.verbose(event.diagnostics);
+              break;
+            case 'info':
+              logger.info(event.diagnostics);
+              break;
+            case 'warn':
+              logger.warn(event.diagnostics);
+              break;
+            case 'error':
+              logger.error(event.diagnostics);
+              break;
+            case 'progress':
+              logger.progress(event.message);
+              break;
+          }
+        }
+      });
     }
   }
 
@@ -59,6 +90,13 @@ export class NapiWorkerPool implements INapiWorkerPool {
               if (message === 'stateCleared') {
                 worker.removeListener('message', messageHandler);
                 res();
+              } else if (
+                message != null &&
+                typeof message === 'object' &&
+                (message as {type?: unknown}).type === 'logEvent'
+              ) {
+                // logEvent messages are forwarded asynchronously from the worker
+                // logger bridge and are expected at any time; ignore them here.
               } else {
                 // Log unexpected messages for debugging
                 // eslint-disable-next-line no-console
