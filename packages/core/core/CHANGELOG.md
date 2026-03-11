@@ -1,5 +1,53 @@
 # @atlaspack/core
 
+## 2.38.0
+
+### Minor Changes
+
+- [#1054](https://github.com/atlassian-labs/atlaspack/pull/1054) [`ffa1e42`](https://github.com/atlassian-labs/atlaspack/commit/ffa1e4276c22cc48b6be45ac81df8adde85f2237) Thanks [@marcins](https://github.com/marcins)! - - Implement plumbing to ensure data flows back out of build request that JS expects
+  - Implement a temporary namer to get an end-to-end test working
+
+- [#1057](https://github.com/atlassian-labs/atlaspack/pull/1057) [`939d5bd`](https://github.com/atlassian-labs/atlaspack/commit/939d5bd41b3bcb5508f58ca41165d48122762e26) Thanks [@marcins](https://github.com/marcins)! - Set `SyntaxError` as the diagnostic name for parse/syntax errors from the JS and Tokens transformers.
+
+  Parse and syntax errors from the JS Transformer and Tokens Transformer now set `diagnostic.name` to `"SyntaxError"`, so consumers can reliably detect syntax/parse failures (e.g. for reporting or error handling). The Rust diagnostic type and NAPI `JsDiagnostic` include an optional `name` field; `error_buffer_to_diagnostics` sets it to `"SyntaxError"` for SWC parse errors, and both transformers pass it through to the thrown diagnostic. Integration tests assert that the first diagnostic has `name === 'SyntaxError'` for tokens and JS parse-error cases.
+
+- [#1053](https://github.com/atlassian-labs/atlaspack/pull/1053) [`71981ea`](https://github.com/atlassian-labs/atlaspack/commit/71981eac258f7e6dfb40ec4b202d194f71c64ff1) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add native build progress reporting.
+
+  Fires `BuildProgressEvent` from Rust requests back to JS reporters via a fire-and-forget
+  `ThreadsafeFunction` callback. Works in both `atlaspackV3` and `fullNative` build paths.
+
+  Events:
+  - `building` — per-asset progress from AssetGraphRequest (completeAssets / totalAssets)
+  - `bundling` — once from BuildRequest before bundle graph creation
+  - `packagingAndOptimizing` — ready for when native packaging is wired up
+
+  Adds `BuildingProgressEvent` type and CLI reporter handling.
+
+### Patch Changes
+
+- [#1056](https://github.com/atlassian-labs/atlaspack/pull/1056) [`0bb5830`](https://github.com/atlassian-labs/atlaspack/commit/0bb5830d1a7800e673f21ab020cd86bef873df9c) Thanks [@marcins](https://github.com/marcins)! - Fix native config loader rejecting TypeScript entry points in package.json.
+
+  The Rust package.json deserializer rejected `.ts` and `.tsx` extensions in builtin target fields
+  (`main`, `browser`, `module`), causing builds to fail with "Unexpected file type" errors when a
+  package.json uses TypeScript source entry points (e.g. `"main": "index.ts"`).
+
+  Additionally fixes EntryRequest to resolve the package path using `cwd()` instead of `project_root`,
+  matching the JS-side behavior for correct target resolution in monorepo setups.
+
+- Updated dependencies [[`ffa1e42`](https://github.com/atlassian-labs/atlaspack/commit/ffa1e4276c22cc48b6be45ac81df8adde85f2237), [`ea9730d`](https://github.com/atlassian-labs/atlaspack/commit/ea9730dd953d0512c2ab97cbba810e7a297a29a6), [`939d5bd`](https://github.com/atlassian-labs/atlaspack/commit/939d5bd41b3bcb5508f58ca41165d48122762e26), [`71981ea`](https://github.com/atlassian-labs/atlaspack/commit/71981eac258f7e6dfb40ec4b202d194f71c64ff1), [`0bb5830`](https://github.com/atlassian-labs/atlaspack/commit/0bb5830d1a7800e673f21ab020cd86bef873df9c), [`cba96b1`](https://github.com/atlassian-labs/atlaspack/commit/cba96b1a15c07703ee104bf2a2888cc715575cbd)]:
+  - @atlaspack/rust@3.26.0
+  - @atlaspack/utils@3.4.0
+  - @atlaspack/cache@3.2.53
+  - @atlaspack/fs@2.15.53
+  - @atlaspack/logger@2.14.50
+  - @atlaspack/source-map@3.3.2
+  - @atlaspack/graph@3.6.20
+  - @atlaspack/plugin@2.14.58
+  - @atlaspack/profiler@2.15.19
+  - @atlaspack/types@2.15.48
+  - @atlaspack/workers@2.14.58
+  - @atlaspack/package-manager@2.14.58
+
 ## 2.37.0
 
 ### Minor Changes
