@@ -217,13 +217,27 @@ fn ensure_module_resolver(state: &mut TransformState) {
   }
 
   let mut options = ResolveOptions::default();
-  let extensions = state.opts.extensions.clone().unwrap_or_else(|| {
+
+  // Set extensions from config or defaults.
+  // oxc_resolver default is [".js", ".json", ".node"] which misses TypeScript/JSX.
+  options.extensions = state.opts.extensions.clone().unwrap_or_else(|| {
     DEFAULT_CODE_EXTENSIONS
       .iter()
       .map(|ext| ext.to_string())
       .collect()
   });
-  options.extensions = extensions;
+
+  // Set condition_names for package.json exports field resolution.
+  // oxc_resolver default is empty, which can cause resolution failures.
+  options.condition_names = vec![
+    "import".to_string(),
+    "require".to_string(),
+    "default".to_string(),
+  ];
+
+  // Prefer ESM entry points when available, fall back to CommonJS.
+  // oxc_resolver default is ["main"] only.
+  options.main_fields = vec!["module".to_string(), "main".to_string()];
 
   state.module_resolver = Some(Resolver::new(options));
 }
@@ -475,19 +489,15 @@ pub(crate) fn load_or_parse_module(meta: &Metadata, source: &str) -> Option<Cach
     ensure_module_resolver(&mut state);
     let resolved = resolve_request(&mut state, &filename, source)?;
 
-    if !state
-      .opts
-      .extensions
-      .clone()
-      .unwrap_or_else(|| {
-        DEFAULT_CODE_EXTENSIONS
-          .iter()
-          .map(|ext| ext.to_string())
-          .collect()
-      })
-      .iter()
-      .any(|ext| resolved.ends_with(ext))
-    {
+    // Only parse files with configured code extensions
+    let valid_extensions: Vec<String> = state.opts.extensions.clone().unwrap_or_else(|| {
+      DEFAULT_CODE_EXTENSIONS
+        .iter()
+        .map(|ext| ext.to_string())
+        .collect()
+    });
+
+    if !valid_extensions.iter().any(|ext| resolved.ends_with(ext)) {
       return None;
     }
 

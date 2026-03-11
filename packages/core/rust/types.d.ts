@@ -26,7 +26,6 @@ export interface LmdbOptions {
    */
   mapSize?: number;
 }
-export declare function initTracingSubscriber(): void;
 export interface Entry {
   key: string;
   value: Buffer;
@@ -421,6 +420,8 @@ export interface CompiledCssInJsConfigPlugin {
   unsafeReportSafeAssetsForMigration?: boolean;
   unsafeUseSafeAssets?: boolean;
   unsafeSkipPattern?: string;
+  /** Browserslist environment (e.g. "development" or "production") for package.json "browserslist". */
+  browserslistEnv?: string;
 }
 export declare function hashCode(rawCode: string): string;
 export declare function isSafeFromJs(hash: string, configPath: string): boolean;

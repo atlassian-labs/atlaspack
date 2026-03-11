@@ -343,10 +343,8 @@ const {
   hashCode,
   hashString,
   initializeMonitoring,
-  initTracingSubscriber,
   isSafeFromJs,
   Lmdb,
-  LmdbJsLite,
   newNodejsWorker,
   optimizeImage,
   performStringReplacements,
@@ -393,10 +391,8 @@ module.exports.hashBuffer = hashBuffer
 module.exports.hashCode = hashCode
 module.exports.hashString = hashString
 module.exports.initializeMonitoring = initializeMonitoring
-module.exports.initTracingSubscriber = initTracingSubscriber
 module.exports.isSafeFromJs = isSafeFromJs
 module.exports.Lmdb = Lmdb
-module.exports.LmdbJsLite = LmdbJsLite
 module.exports.newNodejsWorker = newNodejsWorker
 module.exports.optimizeImage = optimizeImage
 module.exports.performStringReplacements = performStringReplacements
