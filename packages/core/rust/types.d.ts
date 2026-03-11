@@ -26,6 +26,7 @@ export interface LmdbOptions {
    */
   mapSize?: number;
 }
+export declare function initTracingSubscriber(): void;
 export interface Entry {
   key: string;
   value: Buffer;
