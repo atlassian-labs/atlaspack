@@ -49,6 +49,7 @@ pub fn map_diagnostic(
     documentation_url: input.documentation_url.clone(),
     message: input.message,
     origin: Some("@atlaspack/transformer-js".to_string()),
+    name: input.name.clone(),
   };
 
   let source_code = if let Some(source_code) = source_code {

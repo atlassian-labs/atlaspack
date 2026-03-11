@@ -38,6 +38,8 @@ pub struct JsDiagnostic {
   pub show_environment: bool,
   pub severity: String,
   pub documentation_url: Option<String>,
+  /// Error name (e.g. "SyntaxError" for parse/syntax errors).
+  pub name: Option<String>,
 }
 
 /// Convert a Rust SourceLocation to a NAPI-compatible JsSourceLocation
@@ -69,6 +71,7 @@ pub fn convert_diagnostic(diagnostic: Diagnostic) -> JsDiagnostic {
     show_environment: diagnostic.show_environment,
     severity: severity_to_string(diagnostic.severity),
     documentation_url: diagnostic.documentation_url,
+    name: diagnostic.name,
   }
 }
 

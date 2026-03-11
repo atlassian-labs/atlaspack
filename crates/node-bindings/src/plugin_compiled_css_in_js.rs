@@ -217,6 +217,7 @@ fn map_atlaspack_diagnostics_to_js_diagnostics(
         show_environment: false,
         severity: DiagnosticSeverity::Error,
         documentation_url: diagnostic.documentation_url,
+        name: None,
       }
     })
     .collect()
@@ -295,6 +296,7 @@ fn process_compiled_css_in_js(
           show_environment: false,
           severity: "Error".to_string(),
           documentation_url: None,
+          name: None,
         }],
         bail_out: true,
       });

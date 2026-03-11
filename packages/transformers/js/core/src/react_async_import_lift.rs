@@ -111,6 +111,7 @@ impl<'a> ReactAsyncImportLift<'a> {
         show_environment: false,
         severity,
         documentation_url: None,
+        name: None,
       });
     }
 
