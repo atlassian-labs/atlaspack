@@ -34,6 +34,25 @@ pub trait BundleGraph {
   /// Returns whether a dependency was excluded because it had no used symbols.
   fn is_dependency_skipped(&self, dependency: &Dependency) -> bool;
 
+  /// Returns all dependencies that resolve TO the given asset (incoming dependency edges).
+  ///
+  /// This is the reverse of `get_dependencies`, which returns dependencies FROM an asset.
+  /// CSS packaging needs this to determine which bundles import a given asset and to
+  /// check conditional import metadata on incoming edges.
+  fn get_incoming_dependencies(&self, asset: &Asset) -> anyhow::Result<Vec<&Dependency>>;
+
+  /// Returns assets in the bundle in CSS source order (DFS post-order of the dependency graph).
+  ///
+  /// "Source order" means: if asset A imports asset B, then B appears before A in the
+  /// returned vec. This matches the `bundle.traverse()` exit-callback order used by the
+  /// JS CSS packager and is required for correct CSS cascade semantics.
+  ///
+  /// Entry assets appear last (they import everything else).
+  ///
+  /// Order is unspecified for `get_bundle_assets`. Use this method when concatenation
+  /// order matters (e.g., CSS).
+  fn get_bundle_assets_in_source_order(&self, bundle: &Bundle) -> anyhow::Result<Vec<&Asset>>;
+
   /// Returns a stable hash representing the current state of `bundle` and all assets it contains.
   ///
   /// This is used as the cache key for [`PackageRequest`]: if the bundle graph hash for a bundle

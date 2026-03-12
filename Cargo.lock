@@ -679,6 +679,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "atlaspack_packager_css"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "atlaspack_core",
+ "lightningcss",
+ "parking_lot",
+ "pretty_assertions",
+ "rayon",
+]
+
+[[package]]
 name = "atlaspack_packager_js"
 version = "0.1.0"
 dependencies = [

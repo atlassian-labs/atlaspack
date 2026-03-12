@@ -371,6 +371,108 @@ impl NativeBundleGraph {
   }
 }
 
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::types::{Asset, Bundle, Dependency, Environment, FileType, Target};
+  use pretty_assertions::assert_eq;
+  use std::sync::Arc;
+
+  fn make_asset(id: &str) -> Arc<Asset> {
+    Arc::new(Asset {
+      id: id.to_string(),
+      ..Asset::default()
+    })
+  }
+
+  fn make_dependency(id: &str) -> Arc<Dependency> {
+    Arc::new(Dependency {
+      id: id.to_string(),
+      ..Dependency::default()
+    })
+  }
+
+  fn make_bundle(id: &str, entry_asset_ids: Vec<String>) -> Bundle {
+    Bundle {
+      id: id.to_string(),
+      bundle_type: FileType::Css,
+      entry_asset_ids,
+      env: Environment::default(),
+      hash_reference: String::new(),
+      is_splittable: None,
+      main_entry_id: None,
+      manual_shared_bundle: None,
+      name: None,
+      needs_stable_name: None,
+      pipeline: None,
+      public_id: None,
+      bundle_behavior: None,
+      is_placeholder: false,
+      target: Target::default(),
+    }
+  }
+
+  /// `get_incoming_dependencies` must return the single dependency whose Null
+  /// edge points to the target asset.
+  #[test]
+  fn test_get_incoming_dependencies_single_dep() {
+    let mut bg = NativeBundleGraph::new();
+
+    let dep = make_dependency("dep1");
+    let asset = make_asset("asset1");
+
+    let dep_id = bg.add_dependency(dep.clone(), false);
+    let asset_id = bg.add_asset(asset.clone(), false);
+
+    // dep1 --Null--> asset1  (the pattern used in AssetGraph)
+    bg.add_edge(&dep_id, &asset_id, NativeBundleGraphEdgeType::Null);
+
+    let incoming = bg.get_incoming_dependencies(&asset).unwrap();
+    assert_eq!(incoming.len(), 1);
+    assert_eq!(incoming[0].id, "dep1");
+  }
+
+  /// `get_bundle_assets_in_source_order` must return assets in DFS post-order
+  /// (dependencies before dependents) for a simple 3-asset linear chain:
+  ///   asset_a --dep_ab--> asset_b --dep_bc--> asset_c
+  /// Expected order: [asset_c, asset_b, asset_a]
+  #[test]
+  fn test_get_bundle_assets_in_source_order_three_asset_chain() {
+    let mut bg = NativeBundleGraph::new();
+
+    let asset_a = make_asset("asset_a");
+    let asset_b = make_asset("asset_b");
+    let asset_c = make_asset("asset_c");
+    let dep_ab = make_dependency("dep_ab");
+    let dep_bc = make_dependency("dep_bc");
+
+    let id_a = bg.add_asset(asset_a.clone(), false);
+    let id_b = bg.add_asset(asset_b.clone(), false);
+    let id_c = bg.add_asset(asset_c.clone(), false);
+    let id_dep_ab = bg.add_dependency(dep_ab.clone(), false);
+    let id_dep_bc = bg.add_dependency(dep_bc.clone(), false);
+
+    // asset_a -> dep_ab -> asset_b -> dep_bc -> asset_c  (Null edges, mirroring AssetGraph)
+    bg.add_edge(&id_a, &id_dep_ab, NativeBundleGraphEdgeType::Null);
+    bg.add_edge(&id_dep_ab, &id_b, NativeBundleGraphEdgeType::Null);
+    bg.add_edge(&id_b, &id_dep_bc, NativeBundleGraphEdgeType::Null);
+    bg.add_edge(&id_dep_bc, &id_c, NativeBundleGraphEdgeType::Null);
+
+    // Bundle contains all three assets. The id must be a hex string for generate_public_id.
+    let bundle = make_bundle("aabbccdd11223344", vec!["asset_a".to_string()]);
+    let bundle_id = bg.add_bundle(bundle.clone());
+    bg.add_edge(&bundle_id, &id_a, NativeBundleGraphEdgeType::Contains);
+    bg.add_edge(&bundle_id, &id_b, NativeBundleGraphEdgeType::Contains);
+    bg.add_edge(&bundle_id, &id_c, NativeBundleGraphEdgeType::Contains);
+
+    let ordered = bg.get_bundle_assets_in_source_order(&bundle).unwrap();
+    let ids: Vec<&str> = ordered.iter().map(|a| a.id.as_str()).collect();
+
+    // Post-order: leaf first, root last.
+    assert_eq!(ids, vec!["asset_c", "asset_b", "asset_a"]);
+  }
+}
+
 const BASE62_ALPHABET: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 fn base62_encode(bytes: &[u8]) -> String {
@@ -535,6 +637,173 @@ impl BundleGraph for NativeBundleGraph {
 
   fn is_dependency_skipped(&self, _dependency: &Dependency) -> bool {
     false
+  }
+
+  fn get_incoming_dependencies(&self, asset: &Asset) -> anyhow::Result<Vec<&Dependency>> {
+    let asset_node_id = self
+      .get_node_id_by_content_key(&asset.id)
+      .ok_or_else(|| anyhow::anyhow!("Asset {} not found in bundle graph", asset.id))?;
+
+    let asset_node_index = self
+      .node_id_to_node_index
+      .get(asset_node_id)
+      .ok_or_else(|| anyhow::anyhow!("Asset node index missing for {}", asset.id))?;
+
+    self
+      .graph
+      .edges_directed(*asset_node_index, Direction::Incoming)
+      .filter_map(|e| {
+        if *e.weight() != NativeBundleGraphEdgeType::Null {
+          return None;
+        }
+        let from_id = *self.graph.node_weight(e.source())?;
+        match self.nodes.get(from_id)? {
+          NativeBundleGraphNode::Dependency(d) => Some(Ok(d.as_ref())),
+          other => Some(Err(anyhow::anyhow!(
+            "Expected dependency node on incoming Null edge, got {:?}",
+            other
+          ))),
+        }
+      })
+      .collect()
+  }
+
+  fn get_bundle_assets_in_source_order(&self, bundle: &Bundle) -> anyhow::Result<Vec<&Asset>> {
+    let bundle_node_id = self
+      .get_node_id_by_content_key(&bundle.id)
+      .ok_or_else(|| anyhow::anyhow!("Bundle {} not found in bundle graph", bundle.id))?;
+
+    let bundle_node_index = self
+      .node_id_to_node_index
+      .get(bundle_node_id)
+      .ok_or_else(|| anyhow::anyhow!("Bundle node index missing for {}", bundle.id))?;
+
+    // Collect asset node indices contained in this bundle.
+    let bundle_asset_ids: HashSet<NodeId> = self
+      .graph
+      .edges_directed(*bundle_node_index, Direction::Outgoing)
+      .filter_map(|e| {
+        if *e.weight() != NativeBundleGraphEdgeType::Contains {
+          return None;
+        }
+        let to_id = *self.graph.node_weight(e.target())?;
+        if matches!(self.nodes.get(to_id)?, NativeBundleGraphNode::Asset(_)) {
+          Some(to_id)
+        } else {
+          None
+        }
+      })
+      .collect();
+
+    // DFS post-order: dependencies before dependents (correct CSS cascade order).
+    let mut result: Vec<&Asset> = Vec::with_capacity(bundle_asset_ids.len());
+    let mut visited: HashSet<NodeId> = HashSet::new();
+
+    // Entry assets: bundle assets with no incoming Null edge from another bundle asset
+    // (asset → dep → asset two-hop).
+    let is_root = |asset_id: NodeId| -> bool {
+      let Some(&asset_idx) = self.node_id_to_node_index.get(&asset_id) else {
+        return true;
+      };
+      !self
+        .graph
+        .edges_directed(asset_idx, Direction::Incoming)
+        .any(|e| {
+          if *e.weight() != NativeBundleGraphEdgeType::Null {
+            return false;
+          }
+          let dep_id = match self.graph.node_weight(e.source()) {
+            Some(&id) => id,
+            None => return false,
+          };
+          let Some(&dep_idx) = self.node_id_to_node_index.get(&dep_id) else {
+            return false;
+          };
+          self
+            .graph
+            .edges_directed(dep_idx, Direction::Incoming)
+            .any(|dep_in| {
+              if *dep_in.weight() != NativeBundleGraphEdgeType::Null {
+                return false;
+              }
+              match self.graph.node_weight(dep_in.source()) {
+                Some(&src_id) => bundle_asset_ids.contains(&src_id),
+                None => false,
+              }
+            })
+        })
+    };
+
+    // Seed with entry_asset_ids order first for deterministic output matching JS traversal.
+    let mut seen_entries: HashSet<NodeId> = HashSet::new();
+    let mut entry_ids: Vec<NodeId> = bundle
+      .entry_asset_ids
+      .iter()
+      .filter_map(|id| self.get_node_id_by_content_key(id).copied())
+      .filter(|&nid| bundle_asset_ids.contains(&nid) && is_root(nid))
+      .inspect(|&nid| {
+        seen_entries.insert(nid);
+      })
+      .collect();
+
+    // Append remaining roots sorted by NodeId for stability.
+    let mut remaining_roots: Vec<NodeId> = bundle_asset_ids
+      .iter()
+      .filter(|&&nid| is_root(nid) && !seen_entries.contains(&nid))
+      .copied()
+      .collect();
+    remaining_roots.sort_unstable();
+    entry_ids.extend(remaining_roots);
+
+    // Iterative DFS post-order stack: (node_id, expanded).
+    let mut stack: Vec<(NodeId, bool)> = entry_ids.iter().map(|&id| (id, false)).collect();
+
+    while let Some((node_id, expanded)) = stack.pop() {
+      if expanded {
+        if let Some(NativeBundleGraphNode::Asset(a)) = self.nodes.get(node_id) {
+          result.push(a.as_ref());
+        }
+        continue;
+      }
+
+      if visited.contains(&node_id) {
+        continue;
+      }
+      visited.insert(node_id);
+      stack.push((node_id, true));
+
+      let Some(&node_idx) = self.node_id_to_node_index.get(&node_id) else {
+        continue;
+      };
+
+      // Follow asset → dep → asset (Null edges).
+      for dep_edge in self.graph.edges_directed(node_idx, Direction::Outgoing) {
+        if *dep_edge.weight() != NativeBundleGraphEdgeType::Null {
+          continue;
+        }
+        let dep_id = match self.graph.node_weight(dep_edge.target()) {
+          Some(&id) => id,
+          None => continue,
+        };
+        let Some(&dep_idx) = self.node_id_to_node_index.get(&dep_id) else {
+          continue;
+        };
+        for asset_edge in self.graph.edges_directed(dep_idx, Direction::Outgoing) {
+          if *asset_edge.weight() != NativeBundleGraphEdgeType::Null {
+            continue;
+          }
+          let child_id = match self.graph.node_weight(asset_edge.target()) {
+            Some(&id) => id,
+            None => continue,
+          };
+          if bundle_asset_ids.contains(&child_id) && !visited.contains(&child_id) {
+            stack.push((child_id, false));
+          }
+        }
+      }
+    }
+
+    Ok(result)
   }
 
   fn get_referenced_bundle_ids(&self, bundle: &Bundle) -> Vec<String> {

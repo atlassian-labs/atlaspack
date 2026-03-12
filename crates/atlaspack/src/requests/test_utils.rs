@@ -120,6 +120,14 @@ pub mod bundle_graph {
       false
     }
 
+    fn get_incoming_dependencies(&self, _asset: &Asset) -> anyhow::Result<Vec<&Dependency>> {
+      Ok(vec![])
+    }
+
+    fn get_bundle_assets_in_source_order(&self, _bundle: &Bundle) -> anyhow::Result<Vec<&Asset>> {
+      Ok(vec![])
+    }
+
     fn get_bundle_hash(&self, bundle: &Bundle) -> u64 {
       let mut state = IdentifierHasher::new();
       bundle.hash(&mut state);
