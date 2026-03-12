@@ -172,6 +172,7 @@ impl TransformerPlugin for AtlaspackTokensTransformerPlugin {
           documentation_url: error.documentation_url.clone(),
           message: error.message.clone(),
           origin: Some("@atlaspack/transformer-tokens".to_string()),
+          name: error.name.clone(),
         };
 
         if let Some(code_highlights) = &error.code_highlights {

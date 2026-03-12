@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/packaging-test-harness",
-  "version": "0.0.7",
+  "version": "0.0.9",
   "license": "(MIT OR Apache-2.0)",
   "private": true,
   "scripts": {
@@ -17,12 +17,12 @@
   "main": "lib/index.js",
   "source": "src/index.ts",
   "dependencies": {
-    "@atlaspack/cache": "3.2.51",
-    "@atlaspack/core": "2.36.0",
+    "@atlaspack/cache": "3.2.53",
+    "@atlaspack/core": "2.38.0",
     "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/fs": "2.15.51",
-    "@atlaspack/package-manager": "2.14.56",
-    "@atlaspack/rust": "3.24.1",
+    "@atlaspack/fs": "2.15.53",
+    "@atlaspack/package-manager": "2.14.58",
+    "@atlaspack/rust": "3.26.0",
     "commander": "^7.0.0",
     "nullthrows": "^1.1.1",
     "v8-compile-cache": "^2.0.0"

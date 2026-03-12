@@ -1,5 +1,23 @@
 # @atlaspack/profiler
 
+## 2.15.19
+
+### Patch Changes
+
+- Updated dependencies [[`71981ea`](https://github.com/atlassian-labs/atlaspack/commit/71981eac258f7e6dfb40ec4b202d194f71c64ff1)]:
+  - @atlaspack/types-internal@2.25.0
+  - @atlaspack/utils@3.4.0
+  - @atlaspack/logger@2.14.50
+
+## 2.15.18
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.24.2
+  - @atlaspack/utils@3.3.9
+  - @atlaspack/logger@2.14.49
+
 ## 2.15.17
 
 ### Patch Changes

@@ -24,6 +24,7 @@ use crate::WatchEvents;
 use crate::database::LmdbDatabase;
 use crate::plugins::{PluginsRef, config_plugins::ConfigPlugins};
 use crate::project_root::infer_project_root;
+use crate::request_tracker::ReportFn;
 use crate::request_tracker::{DynCacheHandler, RequestNode, RequestTracker};
 use crate::requests::{
   AssetGraphRequest, BuildRequest, BuildRequestOutput, BundleGraphRequest,
@@ -169,6 +170,7 @@ impl Atlaspack {
         LmdbCacheReaderWriter::new(db.clone()),
         cache_mode,
       ))),
+      None,
     );
 
     let debug_tools = DebugTools::from_env();
@@ -194,6 +196,13 @@ impl Atlaspack {
   pub fn build_asset_graph(
     &self,
   ) -> anyhow::Result<(Option<FinalizedSymbolTracker>, Arc<AssetGraph>, bool)> {
+    self.build_asset_graph_with_report_fn(None)
+  }
+
+  pub fn build_asset_graph_with_report_fn(
+    &self,
+    report_fn: Option<ReportFn>,
+  ) -> anyhow::Result<(Option<FinalizedSymbolTracker>, Arc<AssetGraph>, bool)> {
     self.runtime.block_on(async move {
       // Notify all resolver plugins that a new build is starting
       for resolver in self.plugins.resolvers()? {
@@ -201,6 +210,10 @@ impl Atlaspack {
       }
 
       let mut request_tracker = self.request_tracker.write().await;
+
+      // Set the report_fn for this build, cleared at the end to release
+      // the ThreadsafeFunction reference promptly.
+      request_tracker.set_report_fn(report_fn);
 
       let prev_asset_graph = request_tracker
         .get_cached_request_result(AssetGraphRequest::default())
@@ -246,6 +259,9 @@ impl Atlaspack {
 
       let asset_graph = asset_graph_request_output.graph.clone();
       let symbol_tracker = asset_graph_request_output.symbol_tracker.clone();
+
+      // Clear the report_fn to release the ThreadsafeFunction reference
+      request_tracker.set_report_fn(None);
 
       Ok((symbol_tracker, asset_graph, had_previous_graph))
     })
@@ -299,10 +315,18 @@ impl Atlaspack {
   pub fn build_bundle_graph(
     &self,
   ) -> anyhow::Result<(Arc<AssetGraph>, BundleGraphRequestOutput, bool)> {
+    self.build_bundle_graph_with_report_fn(None)
+  }
+
+  pub fn build_bundle_graph_with_report_fn(
+    &self,
+    report_fn: Option<ReportFn>,
+  ) -> anyhow::Result<(Arc<AssetGraph>, BundleGraphRequestOutput, bool)> {
     // First, build the asset graph
     // Eventually we will pass the symbol tracker into bundling to acces
     // directly, but for now it is ignored
-    let (_symbol_tracker, asset_graph, had_previous_graph) = self.build_asset_graph()?;
+    let (_symbol_tracker, asset_graph, had_previous_graph) =
+      self.build_asset_graph_with_report_fn(report_fn.clone())?;
 
     // Then run the bundle graph request
     let asset_graph_for_request = asset_graph.clone();
@@ -310,6 +334,8 @@ impl Atlaspack {
       tracing::debug!("build_bundle_graph_with_asset_graph: running BundleGraphRequest");
 
       let mut request_tracker = self.request_tracker.write().await;
+
+      request_tracker.set_report_fn(report_fn);
 
       let request_result = request_tracker
         .run_request(BundleGraphRequest {
@@ -321,6 +347,9 @@ impl Atlaspack {
         anyhow::bail!("Unexpected request result from BundleGraphRequest");
       };
 
+      // Clear the report_fn to release the ThreadsafeFunction reference
+      request_tracker.set_report_fn(None);
+
       Ok::<_, anyhow::Error>(bundle_graph_output.clone())
     })?;
 
@@ -329,10 +358,22 @@ impl Atlaspack {
 
   #[tracing::instrument(level = "info", skip_all)]
   pub fn build(&self) -> anyhow::Result<BuildRequestOutput> {
+    self.build_with_report_fn(None)
+  }
+
+  pub fn build_with_report_fn(
+    &self,
+    report_fn: Option<ReportFn>,
+  ) -> anyhow::Result<BuildRequestOutput> {
     self.runtime.block_on(async move {
       let mut request_tracker = self.request_tracker.write().await;
 
+      request_tracker.set_report_fn(report_fn);
+
       let request_result = request_tracker.run_request(BuildRequest {}).await?;
+
+      // Clear the report_fn to release the ThreadsafeFunction reference
+      request_tracker.set_report_fn(None);
 
       let RequestResult::Build(build_output) = request_result.as_ref() else {
         anyhow::bail!("Unexpected request result from BuildRequest");

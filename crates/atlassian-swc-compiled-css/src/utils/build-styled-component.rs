@@ -722,10 +722,16 @@ pub fn build_styled_component(
 
   let runtime_call = build_runtime_call(helper, class_array);
 
+  // COMPAT(AFB-1871): Filter out empty/invalid sheets before hoisting. When all
+  // property values in a styled component are dynamic (CSS variables), the
+  // unconditional CSS can be skeletal (e.g. ";&:hover { ; }") which transform_css
+  // atomifies into an empty string. These empty sheets must not be hoisted as they
+  // cause "sheet.includes is not a function" at runtime.
   let sheets: Vec<String> = css_result
     .sheets
     .into_iter()
     .chain(conditional_output.sheets.into_iter())
+    .filter(|s| !s.trim().is_empty() && s.contains('{'))
     .collect();
   let cs_child = build_cs_element(sheets, meta, nonce.as_ref());
 

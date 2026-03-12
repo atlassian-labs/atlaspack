@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::sync::Arc;
 
 use once_cell::sync::Lazy;
@@ -22,14 +23,17 @@ pub struct MinifyParams {
   has_all_bug: bool,
 }
 
-pub fn minify_params() -> MinifyParams {
-  MinifyParams::new()
+pub fn minify_params(
+  browserslist_config_path: Option<&Path>,
+  browserslist_env: Option<&str>,
+) -> MinifyParams {
+  MinifyParams::new(browserslist_config_path, browserslist_env)
 }
 
 impl MinifyParams {
-  fn new() -> Self {
+  fn new(browserslist_config_path: Option<&Path>, browserslist_env: Option<&str>) -> Self {
     Self {
-      has_all_bug: detect_all_bug(),
+      has_all_bug: detect_all_bug(browserslist_config_path, browserslist_env),
     }
   }
 
@@ -137,9 +141,12 @@ impl Plugin for MinifyParams {
   }
 }
 
-fn detect_all_bug() -> bool {
-  let mut opts = Opts::default();
-  opts.path = Some(env!("CARGO_MANIFEST_DIR").to_string());
+fn detect_all_bug(browserslist_config_path: Option<&Path>, browserslist_env: Option<&str>) -> bool {
+  let opts = Opts {
+    path: browserslist_config_path.map(|p| p.to_string_lossy().into_owned()),
+    env: browserslist_env.map(|e| e.to_string()),
+    ..Default::default()
+  };
 
   execute(&opts)
     .map(|list| {
@@ -486,7 +493,7 @@ fn gcd(mut a: u32, mut b: u32) -> u32 {
 
 impl Default for MinifyParams {
   fn default() -> Self {
-    Self::new()
+    Self::new(None, None)
   }
 }
 

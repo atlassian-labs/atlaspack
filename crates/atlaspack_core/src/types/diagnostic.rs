@@ -74,6 +74,10 @@ pub struct Diagnostic {
   /// Consumers can also enable backtraces for more detailed origin information.
   #[builder(default)]
   pub origin: Option<String>,
+
+  /// Error name for diagnostics (e.g. "SyntaxError" for parse/syntax errors).
+  #[builder(default)]
+  pub name: Option<String>,
 }
 
 impl Display for Diagnostic {

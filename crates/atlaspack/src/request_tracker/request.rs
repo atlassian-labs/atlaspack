@@ -77,6 +77,8 @@ pub struct RunRequestMessage {
 
 type RunRequestFn = Box<dyn Fn(RunRequestMessage) + Send + Sync>;
 
+pub type ReportFn = Arc<dyn Fn(atlaspack_core::build_progress::BuildProgressEvent) + Send + Sync>;
+
 /// A future that represents an executing request
 pub struct ExecuteRequestFuture {
   queue_result: anyhow::Result<()>,
@@ -116,6 +118,7 @@ pub struct RunRequestContext {
   plugins: PluginsRef,
   pub project_root: PathBuf,
   run_request_fn: RunRequestFn,
+  report_fn: Option<ReportFn>,
 }
 
 impl RunRequestContext {
@@ -146,6 +149,7 @@ impl RunRequestContext {
       plugins,
       project_root: PathBuf::default(),
       run_request_fn: Box::new(|_| {}),
+      report_fn: None,
     }
   }
 }
@@ -162,6 +166,7 @@ impl RunRequestContext {
     project_root: PathBuf,
     cache: CacheRef,
     run_request_fn: RunRequestFn,
+    report_fn: Option<ReportFn>,
   ) -> Self {
     Self {
       db,
@@ -173,8 +178,16 @@ impl RunRequestContext {
       plugins,
       project_root,
       run_request_fn,
+      report_fn,
     }
   }
+
+  pub fn report(&self, event: atlaspack_core::build_progress::BuildProgressEvent) {
+    if let Some(report_fn) = &self.report_fn {
+      report_fn(event);
+    }
+  }
+
   /// Run a child request to the current request
   pub fn queue_request(
     &mut self,

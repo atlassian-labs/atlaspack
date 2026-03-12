@@ -329,6 +329,9 @@ pub struct Diagnostic {
   pub show_environment: bool,
   pub severity: DiagnosticSeverity,
   pub documentation_url: Option<String>,
+  /// Error name for diagnostics (e.g. "SyntaxError" for parse/syntax errors).
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub name: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
@@ -367,6 +370,7 @@ impl Bailout {
       show_environment: false,
       severity: DiagnosticSeverity::Warning,
       hints: None,
+      name: None,
     }
   }
 }
@@ -504,6 +508,7 @@ pub fn error_buffer_to_diagnostics(
         show_environment: false,
         severity: DiagnosticSeverity::Error,
         documentation_url: None,
+        name: Some("SyntaxError".into()),
       }
     })
     .collect()
@@ -556,5 +561,6 @@ pub fn atlaspack_diagnostic_to_utils_diagnostic(
     show_environment: false,
     severity: DiagnosticSeverity::Error,
     documentation_url: diagnostic.documentation_url,
+    name: None,
   }
 }

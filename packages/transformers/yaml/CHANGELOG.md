@@ -1,5 +1,19 @@
 # @atlaspack/transformer-yaml
 
+## 2.14.58
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.58
+
+## 2.14.57
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.57
+
 ## 2.14.56
 
 ### Patch Changes

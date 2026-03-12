@@ -7,6 +7,7 @@ import {instrument, instrumentAsync, PluginLogger} from '@atlaspack/logger';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 import InternalBundleGraph, {bundleGraphEdgeTypes} from '../BundleGraph';
+import {report} from '../ReporterRunner';
 import dumpGraphToGraphViz from '../dumpGraphToGraphViz';
 import nullthrows from 'nullthrows';
 import {hashString} from '@atlaspack/rust';
@@ -96,7 +97,10 @@ export default function createBundleGraphRequestRust(
       invariant(rustAtlaspack, 'BundleGraphRequestRust requires rustAtlaspack');
 
       let {bundleGraphPromise, commitPromise} =
-        await rustAtlaspack.buildBundleGraph();
+        await rustAtlaspack.buildBundleGraph((eventJson: string) => {
+          let event = JSON.parse(eventJson);
+          report(event);
+        });
       let [serializedBundleGraph, bundleGraphError] =
         (await bundleGraphPromise) as [SerializedBundleGraph, Error | null];
 

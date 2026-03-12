@@ -58,12 +58,15 @@ export declare function atlaspackNapiCreate(
 ): object;
 export declare function atlaspackNapiBuild(
   atlaspackNapi: AtlaspackNapi,
+  progressCallback: (eventJson: string) => void,
 ): object;
 export declare function atlaspackNapiBuildAssetGraph(
   atlaspackNapi: AtlaspackNapi,
+  progressCallback?: (eventJson: string) => void,
 ): object;
 export declare function atlaspackNapiBuildBundleGraph(
   atlaspackNapi: AtlaspackNapi,
+  progressCallback?: (eventJson: string) => void,
 ): object;
 export declare function atlaspackNapiRespondToFsEvents(
   atlaspackNapi: AtlaspackNapi,
@@ -315,6 +318,7 @@ export interface TokensJsDiagnostic {
   show_environment: boolean;
   severity: string;
   documentation_url: string | null;
+  name?: string | null;
 }
 
 export interface TokensPluginResult {
@@ -421,6 +425,8 @@ export interface CompiledCssInJsConfigPlugin {
   unsafeReportSafeAssetsForMigration?: boolean;
   unsafeUseSafeAssets?: boolean;
   unsafeSkipPattern?: string;
+  /** Browserslist environment (e.g. "development" or "production") for package.json "browserslist". */
+  browserslistEnv?: string;
 }
 export declare function hashCode(rawCode: string): string;
 export declare function isSafeFromJs(hash: string, configPath: string): boolean;
