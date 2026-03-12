@@ -333,13 +333,10 @@ impl<B: BundleGraph + Send + Sync + 'static> Request for PackageRequest<B> {
         .map_err(|e| anyhow!("Failed to write bundle to {:?}: {}", out_path, e))?;
 
       if let Some(ref map_bytes) = bundle_info.map_contents {
-        let map_path = {
-          let mut p = out_path.clone().into_os_string();
-          p.push(".map");
-          std::path::PathBuf::from(p)
-        };
+        let mut map_path = out_path.clone();
+        map_path.as_mut_os_string().push(".map");
         fs.write(&map_path, map_bytes)
-          .map_err(|e| anyhow!("Failed to write source map to {:?}: {}", map_path, e))?;
+          .map_err(|e| anyhow!("Failed to write source map to {map_path:?}: {e}"))?;
       }
     }
 
@@ -672,7 +669,7 @@ mod tests {
   }
 
   // ---------------------------------------------------------------------------
-  // Source map write path tests (AFB-1911)
+  // Source map write path tests
   // ---------------------------------------------------------------------------
 
   /// Build a test request that carries both bundle content and source map bytes.

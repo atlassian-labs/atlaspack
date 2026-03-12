@@ -41,35 +41,29 @@ pub trait BundleGraph {
   /// check conditional import metadata on incoming edges.
   fn get_incoming_dependencies(&self, asset: &Asset) -> anyhow::Result<Vec<&Dependency>>;
 
-  /// Returns assets in the bundle in CSS source order (DFS post-order of the dependency graph).
+  /// Returns assets in source order (DFS post-order of the dependency graph).
   ///
-  /// "Source order" means: if asset A imports asset B, then B appears before A in the
-  /// returned vec. This matches the `bundle.traverse()` exit-callback order used by the
-  /// JS CSS packager and is required for correct CSS cascade semantics.
+  /// If asset A imports asset B, B appears before A. This matches the `bundle.traverse()`
+  /// exit-callback order used by the JS packagers and is required for CSS cascade semantics.
   ///
-  /// Entry assets appear last (they import everything else).
+  /// Entry assets appear last.
   ///
-  /// **Sibling order**: when an asset imports multiple children, the children are visited
-  /// in petgraph edge-iteration order, which reflects the order edges were inserted into
-  /// the graph. This matches source-import order only if edges were added in source order.
-  /// Implementations do not sort siblings by source position.
+  /// **Sibling order**: Children are visited in graph edge-iteration order (usually source
+  /// order). Implementations do not sort siblings by source position.
   ///
   /// Order is unspecified for `get_bundle_assets`. Use this method when concatenation
-  /// order matters (e.g., CSS).
+  /// order matters.
   fn get_bundle_assets_in_source_order(&self, bundle: &Bundle) -> anyhow::Result<Vec<&Asset>>;
 
-  /// Returns a stable hash representing the current state of `bundle` and all assets it contains.
+  /// Returns a stable hash representing the current state of `bundle` and its assets.
   ///
-  /// This is used as the cache key for [`PackageRequest`]: if the bundle graph hash for a bundle
-  /// is unchanged from the previous build, the cached package result can be reused.
-  ///
-  /// Mirrors `bundleGraph.getHash(bundle)` from the JS implementation.
+  /// This drives the cache key for [`PackageRequest`].
   #[tracing::instrument(level="trace", skip_all, fields(bundle_id = bundle.id))]
   fn get_bundle_hash(&self, bundle: &Bundle) -> u64 {
     let mut state = IdentifierHasher::new();
     bundle.hash(&mut state);
     if let Ok(mut assets) = self.get_bundle_assets(bundle) {
-      assets.sort_unstable_by_key(|a| a.id.clone());
+      assets.sort_unstable_by(|a, b| a.id.cmp(&b.id));
       for asset in assets {
         asset.hash(&mut state);
       }

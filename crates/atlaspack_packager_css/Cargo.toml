@@ -11,7 +11,7 @@ workspace = true
 atlaspack_core = { path = "../atlaspack_core" }
 anyhow = { workspace = true }
 # parking_lot and rayon are not used in this stub but are required for the parallel
-# concatenation work planned in AFB-1912. Declaring them here avoids a Cargo.toml
+# concatenation work planned. Declaring them here avoids a Cargo.toml
 # churn PR when that work lands.
 parking_lot = { workspace = true }
 rayon = { workspace = true }

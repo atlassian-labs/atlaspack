@@ -5,15 +5,10 @@ use atlaspack_core::bundle_graph::bundle_graph::BundleGraph;
 
 pub mod css_packager;
 
-/// Context provided to the CSS packager for each packaging run.
+/// Context provided to the CSS packager.
 ///
-/// Mirrors the essential fields from `PackagingContext` in `atlaspack_packager_js`. Both
-/// packagers need the same resources; consolidating into a shared type in `atlaspack_core`
-/// is tracked as a follow-up (see AFB-1911 open questions). For now this is defined here
-/// to avoid a cross-packager-crate dependency.
-///
-/// TODO(AFB-1911): Consolidate with `PackagingContext` in `atlaspack_packager_js` into a
-/// shared type in `atlaspack_core`.
+/// Mirrors `PackagingContext` in `atlaspack_packager_js`. Consolidating into a shared
+/// type in `atlaspack_core` is planned.
 pub struct CssPackagingContext {
   /// Absolute path to the project root directory.
   pub project_root: PathBuf,
@@ -23,9 +18,7 @@ pub struct CssPackagingContext {
 
 /// Native Rust CSS packager.
 ///
-/// Packages a CSS bundle into its final output form. Full implementation is tracked in
-/// AFB-1912 (core bundling), AFB-1913 (URL replacement), AFB-1915 (source maps), and
-/// AFB-1916 (CSS Modules tree-shaking).
+/// Full implementation is tracked separately.
 pub struct CssPackager<B: BundleGraph + Send + Sync> {
   #[allow(dead_code)]
   context: CssPackagingContext,

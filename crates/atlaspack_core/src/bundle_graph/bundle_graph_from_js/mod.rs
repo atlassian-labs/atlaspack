@@ -1401,7 +1401,7 @@ mod tests {
   }
 
   // ---------------------------------------------------------------------------
-  // TDD tests for get_incoming_dependencies (AFB-1911)
+  // TDD tests for get_incoming_dependencies
   // These tests FAIL until the Coder implements get_incoming_dependencies.
   // ---------------------------------------------------------------------------
 
@@ -1490,7 +1490,7 @@ mod tests {
   }
 
   // ---------------------------------------------------------------------------
-  // TDD tests for get_bundle_assets_in_source_order (AFB-1911)
+  // TDD tests for get_bundle_assets_in_source_order
   // These tests FAIL until the Coder implements get_bundle_assets_in_source_order.
   // ---------------------------------------------------------------------------
 

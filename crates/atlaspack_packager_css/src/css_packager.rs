@@ -13,12 +13,11 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
     }
   }
 
-  /// Package the CSS bundle identified by `bundle_id`.
+  /// Packages the CSS bundle.
   ///
-  /// Full implementation is tracked in AFB-1912. This stub allows the crate to compile
-  /// and lets downstream PRs wire the packager into `PackageRequest` dispatch safely.
+  /// Full implementation is tracked separately.
   pub fn package(&self, _bundle_id: &str) -> Result<()> {
-    todo!("CSS packaging not yet implemented — see AFB-1912")
+    todo!("CSS packaging not yet implemented")
   }
 }
 
