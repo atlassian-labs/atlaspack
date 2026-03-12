@@ -11,6 +11,9 @@ pub mod css_packager;
 /// packagers need the same resources; consolidating into a shared type in `atlaspack_core`
 /// is tracked as a follow-up (see AFB-1911 open questions). For now this is defined here
 /// to avoid a cross-packager-crate dependency.
+///
+/// TODO(AFB-1911): Consolidate with `PackagingContext` in `atlaspack_packager_js` into a
+/// shared type in `atlaspack_core`.
 pub struct CssPackagingContext {
   /// Absolute path to the project root directory.
   pub project_root: PathBuf,
@@ -24,6 +27,8 @@ pub struct CssPackagingContext {
 /// AFB-1912 (core bundling), AFB-1913 (URL replacement), AFB-1915 (source maps), and
 /// AFB-1916 (CSS Modules tree-shaking).
 pub struct CssPackager<B: BundleGraph + Send + Sync> {
-  pub context: CssPackagingContext,
-  pub bundle_graph: Arc<B>,
+  #[allow(dead_code)]
+  context: CssPackagingContext,
+  #[allow(dead_code)]
+  bundle_graph: Arc<B>,
 }

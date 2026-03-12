@@ -49,6 +49,11 @@ pub trait BundleGraph {
   ///
   /// Entry assets appear last (they import everything else).
   ///
+  /// **Sibling order**: when an asset imports multiple children, the children are visited
+  /// in petgraph edge-iteration order, which reflects the order edges were inserted into
+  /// the graph. This matches source-import order only if edges were added in source order.
+  /// Implementations do not sort siblings by source position.
+  ///
   /// Order is unspecified for `get_bundle_assets`. Use this method when concatenation
   /// order matters (e.g., CSS).
   fn get_bundle_assets_in_source_order(&self, bundle: &Bundle) -> anyhow::Result<Vec<&Asset>>;

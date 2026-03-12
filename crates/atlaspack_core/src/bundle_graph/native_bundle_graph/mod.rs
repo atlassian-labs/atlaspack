@@ -371,108 +371,6 @@ impl NativeBundleGraph {
   }
 }
 
-#[cfg(test)]
-mod tests {
-  use super::*;
-  use crate::types::{Asset, Bundle, Dependency, Environment, FileType, Target};
-  use pretty_assertions::assert_eq;
-  use std::sync::Arc;
-
-  fn make_asset(id: &str) -> Arc<Asset> {
-    Arc::new(Asset {
-      id: id.to_string(),
-      ..Asset::default()
-    })
-  }
-
-  fn make_dependency(id: &str) -> Arc<Dependency> {
-    Arc::new(Dependency {
-      id: id.to_string(),
-      ..Dependency::default()
-    })
-  }
-
-  fn make_bundle(id: &str, entry_asset_ids: Vec<String>) -> Bundle {
-    Bundle {
-      id: id.to_string(),
-      bundle_type: FileType::Css,
-      entry_asset_ids,
-      env: Environment::default(),
-      hash_reference: String::new(),
-      is_splittable: None,
-      main_entry_id: None,
-      manual_shared_bundle: None,
-      name: None,
-      needs_stable_name: None,
-      pipeline: None,
-      public_id: None,
-      bundle_behavior: None,
-      is_placeholder: false,
-      target: Target::default(),
-    }
-  }
-
-  /// `get_incoming_dependencies` must return the single dependency whose Null
-  /// edge points to the target asset.
-  #[test]
-  fn test_get_incoming_dependencies_single_dep() {
-    let mut bg = NativeBundleGraph::new();
-
-    let dep = make_dependency("dep1");
-    let asset = make_asset("asset1");
-
-    let dep_id = bg.add_dependency(dep.clone(), false);
-    let asset_id = bg.add_asset(asset.clone(), false);
-
-    // dep1 --Null--> asset1  (the pattern used in AssetGraph)
-    bg.add_edge(&dep_id, &asset_id, NativeBundleGraphEdgeType::Null);
-
-    let incoming = bg.get_incoming_dependencies(&asset).unwrap();
-    assert_eq!(incoming.len(), 1);
-    assert_eq!(incoming[0].id, "dep1");
-  }
-
-  /// `get_bundle_assets_in_source_order` must return assets in DFS post-order
-  /// (dependencies before dependents) for a simple 3-asset linear chain:
-  ///   asset_a --dep_ab--> asset_b --dep_bc--> asset_c
-  /// Expected order: [asset_c, asset_b, asset_a]
-  #[test]
-  fn test_get_bundle_assets_in_source_order_three_asset_chain() {
-    let mut bg = NativeBundleGraph::new();
-
-    let asset_a = make_asset("asset_a");
-    let asset_b = make_asset("asset_b");
-    let asset_c = make_asset("asset_c");
-    let dep_ab = make_dependency("dep_ab");
-    let dep_bc = make_dependency("dep_bc");
-
-    let id_a = bg.add_asset(asset_a.clone(), false);
-    let id_b = bg.add_asset(asset_b.clone(), false);
-    let id_c = bg.add_asset(asset_c.clone(), false);
-    let id_dep_ab = bg.add_dependency(dep_ab.clone(), false);
-    let id_dep_bc = bg.add_dependency(dep_bc.clone(), false);
-
-    // asset_a -> dep_ab -> asset_b -> dep_bc -> asset_c  (Null edges, mirroring AssetGraph)
-    bg.add_edge(&id_a, &id_dep_ab, NativeBundleGraphEdgeType::Null);
-    bg.add_edge(&id_dep_ab, &id_b, NativeBundleGraphEdgeType::Null);
-    bg.add_edge(&id_b, &id_dep_bc, NativeBundleGraphEdgeType::Null);
-    bg.add_edge(&id_dep_bc, &id_c, NativeBundleGraphEdgeType::Null);
-
-    // Bundle contains all three assets. The id must be a hex string for generate_public_id.
-    let bundle = make_bundle("aabbccdd11223344", vec!["asset_a".to_string()]);
-    let bundle_id = bg.add_bundle(bundle.clone());
-    bg.add_edge(&bundle_id, &id_a, NativeBundleGraphEdgeType::Contains);
-    bg.add_edge(&bundle_id, &id_b, NativeBundleGraphEdgeType::Contains);
-    bg.add_edge(&bundle_id, &id_c, NativeBundleGraphEdgeType::Contains);
-
-    let ordered = bg.get_bundle_assets_in_source_order(&bundle).unwrap();
-    let ids: Vec<&str> = ordered.iter().map(|a| a.id.as_str()).collect();
-
-    // Post-order: leaf first, root last.
-    assert_eq!(ids, vec!["asset_c", "asset_b", "asset_a"]);
-  }
-}
-
 const BASE62_ALPHABET: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 fn base62_encode(bytes: &[u8]) -> String {
@@ -864,5 +762,169 @@ impl BundleGraph for NativeBundleGraph {
         }
       })
       .collect()
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::types::{Asset, Bundle, Dependency, Environment, FileType, Target};
+  use pretty_assertions::assert_eq;
+  use std::sync::Arc;
+
+  fn make_asset(id: &str) -> Arc<Asset> {
+    Arc::new(Asset {
+      id: id.to_string(),
+      ..Asset::default()
+    })
+  }
+
+  fn make_dependency(id: &str) -> Arc<Dependency> {
+    Arc::new(Dependency {
+      id: id.to_string(),
+      ..Dependency::default()
+    })
+  }
+
+  fn make_bundle(id: &str, entry_asset_ids: Vec<String>) -> Bundle {
+    Bundle {
+      id: id.to_string(),
+      bundle_type: FileType::Css,
+      entry_asset_ids,
+      env: Environment::default(),
+      hash_reference: String::new(),
+      is_splittable: None,
+      main_entry_id: None,
+      manual_shared_bundle: None,
+      name: None,
+      needs_stable_name: None,
+      pipeline: None,
+      public_id: None,
+      bundle_behavior: None,
+      is_placeholder: false,
+      target: Target::default(),
+    }
+  }
+
+  /// `get_incoming_dependencies` must return the single dependency whose Null
+  /// edge points to the target asset.
+  #[test]
+  fn test_get_incoming_dependencies_single_dep() {
+    let mut bg = NativeBundleGraph::new();
+
+    let dep = make_dependency("dep1");
+    let asset = make_asset("asset1");
+
+    let dep_id = bg.add_dependency(dep.clone(), false);
+    let asset_id = bg.add_asset(asset.clone(), false);
+
+    // dep1 --Null--> asset1  (the pattern used in AssetGraph)
+    bg.add_edge(&dep_id, &asset_id, NativeBundleGraphEdgeType::Null);
+
+    let incoming = bg.get_incoming_dependencies(&asset).unwrap();
+    assert_eq!(incoming.len(), 1);
+    assert_eq!(incoming[0].id, "dep1");
+  }
+
+  /// `get_bundle_assets_in_source_order` must return assets in DFS post-order
+  /// (dependencies before dependents) for a simple 3-asset linear chain:
+  ///   asset_a --dep_ab--> asset_b --dep_bc--> asset_c
+  /// Expected order: [asset_c, asset_b, asset_a]
+  #[test]
+  fn test_get_bundle_assets_in_source_order_three_asset_chain() {
+    let mut bg = NativeBundleGraph::new();
+
+    let asset_a = make_asset("asset_a");
+    let asset_b = make_asset("asset_b");
+    let asset_c = make_asset("asset_c");
+    let dep_ab = make_dependency("dep_ab");
+    let dep_bc = make_dependency("dep_bc");
+
+    let id_a = bg.add_asset(asset_a.clone(), false);
+    let id_b = bg.add_asset(asset_b.clone(), false);
+    let id_c = bg.add_asset(asset_c.clone(), false);
+    let id_dep_ab = bg.add_dependency(dep_ab.clone(), false);
+    let id_dep_bc = bg.add_dependency(dep_bc.clone(), false);
+
+    // asset_a -> dep_ab -> asset_b -> dep_bc -> asset_c  (Null edges, mirroring AssetGraph)
+    bg.add_edge(&id_a, &id_dep_ab, NativeBundleGraphEdgeType::Null);
+    bg.add_edge(&id_dep_ab, &id_b, NativeBundleGraphEdgeType::Null);
+    bg.add_edge(&id_b, &id_dep_bc, NativeBundleGraphEdgeType::Null);
+    bg.add_edge(&id_dep_bc, &id_c, NativeBundleGraphEdgeType::Null);
+
+    // Bundle contains all three assets. The id must be a hex string for generate_public_id.
+    let bundle = make_bundle("aabbccdd11223344", vec!["asset_a".to_string()]);
+    let bundle_id = bg.add_bundle(bundle.clone());
+    bg.add_edge(&bundle_id, &id_a, NativeBundleGraphEdgeType::Contains);
+    bg.add_edge(&bundle_id, &id_b, NativeBundleGraphEdgeType::Contains);
+    bg.add_edge(&bundle_id, &id_c, NativeBundleGraphEdgeType::Contains);
+
+    let ordered = bg.get_bundle_assets_in_source_order(&bundle).unwrap();
+    let ids: Vec<&str> = ordered.iter().map(|a| a.id.as_str()).collect();
+
+    // Post-order: leaf first, root last.
+    assert_eq!(ids, vec!["asset_c", "asset_b", "asset_a"]);
+  }
+
+  /// Diamond: A imports B and C, both B and C import D.
+  /// D must appear exactly once. B and C must both appear before A. D before B and C.
+  #[test]
+  fn test_get_bundle_assets_in_source_order_handles_diamond() {
+    let mut bg = NativeBundleGraph::new();
+
+    let asset_a = make_asset("asset_a");
+    let asset_b = make_asset("asset_b");
+    let asset_c = make_asset("asset_c");
+    let asset_d = make_asset("asset_d");
+    let dep_ab = make_dependency("dep_ab");
+    let dep_ac = make_dependency("dep_ac");
+    let dep_bd = make_dependency("dep_bd");
+    let dep_cd = make_dependency("dep_cd");
+
+    let id_a = bg.add_asset(asset_a.clone(), false);
+    let id_b = bg.add_asset(asset_b.clone(), false);
+    let id_c = bg.add_asset(asset_c.clone(), false);
+    let id_d = bg.add_asset(asset_d.clone(), false);
+    let id_dep_ab = bg.add_dependency(dep_ab.clone(), false);
+    let id_dep_ac = bg.add_dependency(dep_ac.clone(), false);
+    let id_dep_bd = bg.add_dependency(dep_bd.clone(), false);
+    let id_dep_cd = bg.add_dependency(dep_cd.clone(), false);
+
+    bg.add_edge(&id_a, &id_dep_ab, NativeBundleGraphEdgeType::Null);
+    bg.add_edge(&id_dep_ab, &id_b, NativeBundleGraphEdgeType::Null);
+    bg.add_edge(&id_a, &id_dep_ac, NativeBundleGraphEdgeType::Null);
+    bg.add_edge(&id_dep_ac, &id_c, NativeBundleGraphEdgeType::Null);
+    bg.add_edge(&id_b, &id_dep_bd, NativeBundleGraphEdgeType::Null);
+    bg.add_edge(&id_dep_bd, &id_d, NativeBundleGraphEdgeType::Null);
+    bg.add_edge(&id_c, &id_dep_cd, NativeBundleGraphEdgeType::Null);
+    bg.add_edge(&id_dep_cd, &id_d, NativeBundleGraphEdgeType::Null);
+
+    let bundle = make_bundle("aabbccdd11223344", vec!["asset_a".to_string()]);
+    let bundle_id = bg.add_bundle(bundle.clone());
+    bg.add_edge(&bundle_id, &id_a, NativeBundleGraphEdgeType::Contains);
+    bg.add_edge(&bundle_id, &id_b, NativeBundleGraphEdgeType::Contains);
+    bg.add_edge(&bundle_id, &id_c, NativeBundleGraphEdgeType::Contains);
+    bg.add_edge(&bundle_id, &id_d, NativeBundleGraphEdgeType::Contains);
+
+    let ordered = bg.get_bundle_assets_in_source_order(&bundle).unwrap();
+    let ids: Vec<&str> = ordered.iter().map(|a| a.id.as_str()).collect();
+
+    // D must appear exactly once.
+    assert_eq!(
+      ids.iter().filter(|&&id| id == "asset_d").count(),
+      1,
+      "diamond-shared asset must appear exactly once, got: {ids:?}"
+    );
+
+    let pos = |target: &str| ids.iter().position(|&id| id == target).unwrap();
+    let pos_a = pos("asset_a");
+    let pos_b = pos("asset_b");
+    let pos_c = pos("asset_c");
+    let pos_d = pos("asset_d");
+
+    assert!(pos_d < pos_b, "D must come before B, got: {ids:?}");
+    assert!(pos_d < pos_c, "D must come before C, got: {ids:?}");
+    assert!(pos_b < pos_a, "B must come before A, got: {ids:?}");
+    assert!(pos_c < pos_a, "C must come before A, got: {ids:?}");
   }
 }

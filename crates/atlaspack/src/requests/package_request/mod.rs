@@ -106,7 +106,7 @@ impl<B: BundleGraph + Send + Sync + 'static> PackageRequest<B> {
 
   /// Creates a `PackageRequest` for use in tests with both content and a source map.
   #[cfg(test)]
-  pub fn new_for_testing_with_map(
+  pub(crate) fn new_for_testing_with_map(
     bundle: Bundle,
     bundle_graph: Arc<B>,
     hash_ref_to_name_hash: HashMap<String, String>,
@@ -672,28 +672,10 @@ mod tests {
   }
 
   // ---------------------------------------------------------------------------
-  // TDD tests for source map write path (AFB-1911)
-  //
-  // The `.test` packager arm currently hard-codes `map_contents: None`.
-  // To exercise the write path, the plan calls for adding a `test_map_content`
-  // field (cfg(test)-only) to `PackageRequest` and threading it through the
-  // `.test` arm so `map_contents` can be `Some(...)`.
-  //
-  // These tests FAIL until the Coder:
-  //   1. Adds `test_map_content: Option<Vec<u8>>` to `PackageRequest` (cfg(test))
-  //   2. Populates `map_contents` from it in the `.test` arm
-  //   3. Adds the `if let Some(ref map_bytes) = map_contents { ... }` write block
-  //      in `PackageRequest::run()` after the bundle write.
-  //
-  // The tests compile today (they use `new_for_testing` which exists), but
-  // the assertions will fail because no `.map` file is written yet.
+  // Source map write path tests (AFB-1911)
   // ---------------------------------------------------------------------------
 
-  /// Build a test request that also carries source map bytes to be written.
-  ///
-  /// Once the Coder adds `test_map_content` to `PackageRequest`, this helper
-  /// should be updated to pass `map_content` through. For now it is a thin
-  /// wrapper so the test bodies stay readable.
+  /// Build a test request that carries both bundle content and source map bytes.
   fn make_test_request_with_map(
     bundle: Bundle,
     content: &[u8],
@@ -756,19 +738,12 @@ mod tests {
       ..Target::default()
     };
 
-    let (output, fs) = run_test_request(bundle, content, HashMap::new()).await;
+    let (_output, fs) = run_test_request(bundle, content, HashMap::new()).await;
 
-    let map_path = output.file_path.with_extension(format!(
-      "{}.map",
-      output
-        .file_path
-        .extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or("")
-    ));
+    let expected_map_path = dist_dir.join("bundle.test.map");
     assert!(
-      !fs.is_file(&map_path),
-      "no source map should be written when map_contents is None, but found {map_path:?}"
+      !fs.is_file(&expected_map_path),
+      "no source map should be written when map_contents is None, but found {expected_map_path:?}"
     );
   }
 }
