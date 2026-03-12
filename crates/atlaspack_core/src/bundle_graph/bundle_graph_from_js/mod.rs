@@ -1400,11 +1400,6 @@ mod tests {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // TDD tests for get_incoming_dependencies
-  // These tests FAIL until the Coder implements get_incoming_dependencies.
-  // ---------------------------------------------------------------------------
-
   #[test]
   fn test_get_incoming_dependencies_returns_deps_pointing_to_asset() {
     // Two separate assets each have a dependency edge pointing at `asset_target`.
@@ -1488,11 +1483,6 @@ mod tests {
       "expected no incoming deps for a root asset, got: {incoming:?}"
     );
   }
-
-  // ---------------------------------------------------------------------------
-  // TDD tests for get_bundle_assets_in_source_order
-  // These tests FAIL until the Coder implements get_bundle_assets_in_source_order.
-  // ---------------------------------------------------------------------------
 
   #[test]
   fn test_get_bundle_assets_in_source_order_respects_import_order() {
