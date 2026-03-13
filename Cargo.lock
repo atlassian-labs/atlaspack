@@ -685,6 +685,7 @@ dependencies = [
  "anyhow",
  "atlaspack_core",
  "lightningcss",
+ "mockall",
  "parking_lot",
  "pretty_assertions",
  "rayon",
