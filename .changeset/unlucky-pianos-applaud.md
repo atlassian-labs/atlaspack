@@ -1,5 +1,5 @@
 ---
-'@atlaspack/core': minor
+'@atlaspack/core': patch
 ---
 
 Improve multithreaded logging
