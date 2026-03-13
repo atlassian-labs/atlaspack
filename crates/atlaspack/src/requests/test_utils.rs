@@ -93,7 +93,7 @@ pub mod bundle_graph {
     }
 
     fn get_bundle_assets(&self, _bundle: &Bundle) -> anyhow::Result<Vec<&Asset>> {
-      Ok(vec![])
+      unimplemented!("scaffold for imminent implementation");
     }
 
     fn get_bundle_by_id(&self, id: &str) -> Option<&Bundle> {
@@ -105,7 +105,7 @@ pub mod bundle_graph {
     }
 
     fn get_dependencies(&self, _asset: &Asset) -> anyhow::Result<Vec<&Dependency>> {
-      Ok(vec![])
+      unimplemented!("scaffold for imminent implementation");
     }
 
     fn get_resolved_asset(
@@ -118,6 +118,14 @@ pub mod bundle_graph {
 
     fn is_dependency_skipped(&self, _dependency: &Dependency) -> bool {
       false
+    }
+
+    fn get_incoming_dependencies(&self, _asset: &Asset) -> anyhow::Result<Vec<&Dependency>> {
+      unimplemented!("scaffold for imminent implementation");
+    }
+
+    fn get_bundle_assets_in_source_order(&self, _bundle: &Bundle) -> anyhow::Result<Vec<&Asset>> {
+      unimplemented!("scaffold for imminent implementation");
     }
 
     fn get_bundle_hash(&self, bundle: &Bundle) -> u64 {

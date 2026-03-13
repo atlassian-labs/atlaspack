@@ -34,18 +34,36 @@ pub trait BundleGraph {
   /// Returns whether a dependency was excluded because it had no used symbols.
   fn is_dependency_skipped(&self, dependency: &Dependency) -> bool;
 
-  /// Returns a stable hash representing the current state of `bundle` and all assets it contains.
+  /// Returns all dependencies that resolve TO the given asset (incoming dependency edges).
   ///
-  /// This is used as the cache key for [`PackageRequest`]: if the bundle graph hash for a bundle
-  /// is unchanged from the previous build, the cached package result can be reused.
+  /// This is the reverse of `get_dependencies`, which returns dependencies FROM an asset.
+  /// CSS packaging needs this to determine which bundles import a given asset and to
+  /// check conditional import metadata on incoming edges.
+  fn get_incoming_dependencies(&self, asset: &Asset) -> anyhow::Result<Vec<&Dependency>>;
+
+  /// Returns assets in source order (DFS post-order of the dependency graph).
   ///
-  /// Mirrors `bundleGraph.getHash(bundle)` from the JS implementation.
+  /// If asset A imports asset B, B appears before A. This matches the `bundle.traverse()`
+  /// exit-callback order used by the JS packagers and is required for CSS cascade semantics.
+  ///
+  /// Entry assets appear last.
+  ///
+  /// **Sibling order**: Children are visited in graph edge-iteration order (usually source
+  /// order). Implementations do not sort siblings by source position.
+  ///
+  /// Order is unspecified for `get_bundle_assets`. Use this method when concatenation
+  /// order matters.
+  fn get_bundle_assets_in_source_order(&self, bundle: &Bundle) -> anyhow::Result<Vec<&Asset>>;
+
+  /// Returns a stable hash representing the current state of `bundle` and its assets.
+  ///
+  /// This drives the cache key for [`PackageRequest`].
   #[tracing::instrument(level="trace", skip_all, fields(bundle_id = bundle.id))]
   fn get_bundle_hash(&self, bundle: &Bundle) -> u64 {
     let mut state = IdentifierHasher::new();
     bundle.hash(&mut state);
     if let Ok(mut assets) = self.get_bundle_assets(bundle) {
-      assets.sort_unstable_by_key(|a| a.id.clone());
+      assets.sort_unstable_by(|a, b| a.id.cmp(&b.id));
       for asset in assets {
         asset.hash(&mut state);
       }

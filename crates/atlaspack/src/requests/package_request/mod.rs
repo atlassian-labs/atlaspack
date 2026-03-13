@@ -60,6 +60,9 @@ pub struct PackageRequest<B: BundleGraph + Send + Sync + 'static> {
   /// varying struct shape is never visible outside this module.
   #[cfg(test)]
   test_content: Vec<u8>,
+  /// Optional source map content used by the `.test` packager arm.
+  #[cfg(test)]
+  test_map_content: Option<Vec<u8>>,
 }
 
 impl<B: BundleGraph + Send + Sync + 'static> PackageRequest<B> {
@@ -75,6 +78,8 @@ impl<B: BundleGraph + Send + Sync + 'static> PackageRequest<B> {
       hash_ref_to_name_hash,
       #[cfg(test)]
       test_content: vec![],
+      #[cfg(test)]
+      test_map_content: None,
     }
   }
 
@@ -95,6 +100,25 @@ impl<B: BundleGraph + Send + Sync + 'static> PackageRequest<B> {
       bundle_graph,
       hash_ref_to_name_hash,
       test_content: content,
+      test_map_content: None,
+    }
+  }
+
+  /// Creates a `PackageRequest` for use in tests with both content and a source map.
+  #[cfg(test)]
+  pub(crate) fn new_for_testing_with_map(
+    bundle: Bundle,
+    bundle_graph: Arc<B>,
+    hash_ref_to_name_hash: HashMap<String, String>,
+    content: Vec<u8>,
+    map_content: Vec<u8>,
+  ) -> Self {
+    Self {
+      bundle,
+      bundle_graph,
+      hash_ref_to_name_hash,
+      test_content: content,
+      test_map_content: Some(map_content),
     }
   }
 }
@@ -217,7 +241,7 @@ impl<B: BundleGraph + Send + Sync + 'static> Request for PackageRequest<B> {
             is_large_blob: false,
             time: None,
             bundle_contents: Some(content),
-            map_contents: None,
+            map_contents: self.test_map_content.clone(),
           },
           config_requests: vec![],
           dev_dep_requests: vec![],
@@ -307,6 +331,13 @@ impl<B: BundleGraph + Send + Sync + 'static> Request for PackageRequest<B> {
         .map_err(|e| anyhow!("Failed to create output directory {:?}: {}", dist_dir, e))?;
       fs.write(&out_path, &substituted_contents)
         .map_err(|e| anyhow!("Failed to write bundle to {:?}: {}", out_path, e))?;
+
+      if let Some(ref map_bytes) = bundle_info.map_contents {
+        let mut map_path = out_path.clone();
+        map_path.as_mut_os_string().push(".map");
+        fs.write(&map_path, map_bytes)
+          .map_err(|e| anyhow!("Failed to write source map to {map_path:?}: {e}"))?;
+      }
     }
 
     let size = substituted_contents.len() as u64;
@@ -634,6 +665,82 @@ mod tests {
         .unwrap_err()
         .to_string()
         .contains("HASH_REF_abcdef1234567890")
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Source map write path tests
+  // ---------------------------------------------------------------------------
+
+  /// Build a test request that carries both bundle content and source map bytes.
+  fn make_test_request_with_map(
+    bundle: Bundle,
+    content: &[u8],
+    map_content: Vec<u8>,
+    hash_ref_to_name_hash: HashMap<String, String>,
+  ) -> PackageRequest<MockBundleGraph> {
+    PackageRequest::new_for_testing_with_map(
+      bundle,
+      Arc::new(MockBundleGraph::builder().build()),
+      hash_ref_to_name_hash,
+      content.to_vec(),
+      map_content,
+    )
+  }
+
+  #[tokio::test]
+  async fn test_run_writes_source_map_when_map_contents_present() {
+    // Arrange: a bundle whose packager returns `map_contents = Some(b"source map data")`.
+    // After run(), a file named `<bundle>.<ext>.map` must exist alongside the bundle.
+    let map_bytes = b"source map data".to_vec();
+    let content = b"bundle body";
+    let dist_dir = PathBuf::from("/dist");
+
+    let mut bundle = mock_bundle(test_bundle_type());
+    bundle.name = Some("bundle.test".to_string());
+    bundle.target = Target {
+      dist_dir: dist_dir.clone(),
+      ..Target::default()
+    };
+
+    let request = make_test_request_with_map(bundle, content, map_bytes.clone(), HashMap::new());
+    let ctx = make_run_context();
+    let fs = ctx.file_system().clone();
+    let _ = request.run(ctx).await.expect("PackageRequest::run failed");
+
+    // The source map must be written at <bundle_path>.map, i.e. /dist/bundle.test.map
+    let expected_map_path = dist_dir.join("bundle.test.map");
+    assert!(
+      fs.is_file(&expected_map_path),
+      "expected source map file at {expected_map_path:?} but it was not written"
+    );
+    assert_eq!(
+      fs.read(&expected_map_path).unwrap(),
+      map_bytes,
+      "source map file contents must match what the packager returned"
+    );
+  }
+
+  #[tokio::test]
+  async fn test_run_does_not_write_source_map_when_map_contents_absent() {
+    // Arrange: the `.test` packager arm returns `map_contents = None` (current behaviour).
+    // After run(), NO `.map` file should exist alongside the bundle.
+    let content = b"bundle body";
+    let dist_dir = PathBuf::from("/dist");
+
+    let mut bundle = mock_bundle(test_bundle_type());
+    bundle.name = Some("bundle.test".to_string());
+    bundle.target = Target {
+      dist_dir: dist_dir.clone(),
+      ..Target::default()
+    };
+
+    let (_output, fs) = run_test_request(bundle, content, HashMap::new()).await;
+
+    let expected_map_path = dist_dir.join("bundle.test.map");
+    assert!(
+      !fs.is_file(&expected_map_path),
+      "no source map should be written when map_contents is None, but found {expected_map_path:?}"
     );
   }
 }
