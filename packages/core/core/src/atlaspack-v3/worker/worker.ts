@@ -23,11 +23,11 @@ import logger from '@atlaspack/logger';
 import * as module from 'module';
 
 import {jsCallable} from '../jsCallable';
+import {PluginLogger} from '@atlaspack/logger';
 import {
   Environment,
   Dependency,
   PluginConfig,
-  PluginLogger,
   PluginTracer,
   PluginOptions,
   MutableAsset,
