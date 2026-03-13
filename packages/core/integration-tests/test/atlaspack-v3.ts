@@ -7,9 +7,13 @@ import {
   Atlaspack,
   createWorkerFarm,
 } from '@atlaspack/core';
+import logger from '@atlaspack/logger';
 import {NodePackageManager} from '@atlaspack/package-manager';
+import stripAnsi from 'strip-ansi';
+import sinon from 'sinon';
 import {
   describe,
+  bundler,
   fsFixture,
   inputFS,
   it,
@@ -46,6 +50,32 @@ async function assertOutputIsIdentical(
 
     assert.equal(v3Code, v2Code);
   }
+}
+
+function mockStdio() {
+  const setup = (stream: any) => {
+    let output = '';
+    let stub = sinon.stub(stream, 'write').callsFake((chunk, ...args) => {
+      output += stripAnsi(chunk.toString());
+      if (process.env.DEBUG_TERMINAL_OUTPUT)
+        stub.wrappedMethod.apply(stream, [chunk, ...args]);
+      if (typeof args[args.length - 1] === 'function') args[args.length - 1]();
+      return true;
+    });
+    return {getOutput: () => output, stub};
+  };
+
+  const stdout = setup(process.stdout);
+  const stderr = setup(process.stderr);
+
+  return {
+    getStdout: stdout.getOutput,
+    getStderr: stderr.getOutput,
+    restore: () => {
+      stdout.stub.restore();
+      stderr.stub.restore();
+    },
+  };
 }
 
 describe.v3('AtlaspackV3', function () {
@@ -359,5 +389,143 @@ describe.v3('AtlaspackV3', function () {
     );
 
     await inputFS.rimraf(dir);
+  });
+
+  describe('worker thread logging', () => {
+    // The v3 plugin host (AtlaspackWorker) runs inside a real worker_threads
+    // Worker spawned by NapiWorkerPool. Log events are forwarded to the main
+    // thread via parentPort.postMessage({type: 'logEvent', event}) and
+    // re-emitted onto the main-thread @atlaspack/logger singleton by
+    // NapiWorkerPool's message handler - unconditionally, regardless of
+    // logLevel. These tests assert that end-to-end path works.
+    //
+    // Fixtures must be written to the real filesystem (inputFS) because the
+    // v3 worker uses NodePackageManager which resolves against disk, not the
+    // in-memory overlayFS.
+
+    it('forwards plugin logger events from a worker thread to the main thread', async () => {
+      const dir = join(__dirname, 'tmp', 'worker-logging');
+      await inputFS.rimraf(dir);
+      await inputFS.mkdirp(dir);
+
+      await fsFixture(inputFS, dir)`
+        index.js:
+          export default 42;
+
+        .parcelrc:
+          {
+            "extends": "@atlaspack/config-default",
+            "transformers": {
+              "*.js": ["./logging-transformer.js", "..."]
+            },
+            "reporters": ["@atlaspack/reporter-cli"]
+          }
+
+        logging-transformer.js:
+          const {Transformer} = require('@atlaspack/plugin');
+          module.exports = new Transformer({
+            async transform({asset, logger}) {
+              logger.warn({message: 'worker-thread-warn'});
+              return [asset];
+            }
+          });
+
+        yarn.lock:
+      `;
+
+      const stdio = mockStdio();
+
+      try {
+        await bundler(join(dir, 'index.js'), {
+          inputFS,
+          featureFlags: {atlaspackV3: true},
+          defaultConfig: undefined, // Use .parcelrc in the fixture
+          logLevel: 'warn',
+        }).run();
+      } finally {
+        stdio.restore();
+        await inputFS.rimraf(dir);
+      }
+
+      assert.ok(
+        stdio.getStderr().includes('worker-thread-warn'),
+        `Expected terminal output to contain "worker-thread-warn", but got:\nSTDOUT: ${stdio.getStdout()}\nSTDERR: ${stdio.getStderr()}`,
+      );
+    });
+
+    it('forwards all log levels from a worker thread transformer', async () => {
+      const dir = join(__dirname, 'tmp', 'worker-logging-levels');
+      await inputFS.rimraf(dir);
+      await inputFS.mkdirp(dir);
+
+      await fsFixture(inputFS, dir)`
+        index.js:
+          export default 1;
+
+        .parcelrc:
+          {
+            "extends": "@atlaspack/config-default",
+            "transformers": {
+              "*.js": ["./multi-level-transformer.js", "..."]
+            },
+            "reporters": ["@atlaspack/reporter-cli"]
+          }
+
+        multi-level-transformer.js:
+          const {Transformer} = require('@atlaspack/plugin');
+          module.exports = new Transformer({
+            async transform({asset, logger}) {
+              logger.verbose({message: 'verbose-msg'});
+              logger.info({message: 'info-msg'});
+              logger.warn({message: 'warn-msg'});
+              logger.error({
+                message: 'error-msg',
+                codeFrames: [{
+                  code: 'const x = 1;',
+                  codeHighlights: [{start: {line: 1, column: 7}, end: {line: 1, column: 8}}]
+                }]
+              });
+              return [asset];
+            }
+          });
+
+        yarn.lock:
+      `;
+
+      const stdio = mockStdio();
+
+      try {
+        await bundler(join(dir, 'index.js'), {
+          inputFS,
+          featureFlags: {atlaspackV3: true},
+          defaultConfig: undefined,
+          logLevel: 'verbose',
+        }).run();
+      } finally {
+        stdio.restore();
+        await inputFS.rimraf(dir);
+      }
+
+      assert.ok(
+        stdio.getStdout().includes('verbose-msg'),
+        'verbose log not written to terminal',
+      );
+      assert.ok(
+        stdio.getStdout().includes('info-msg'),
+        'info log not written to terminal',
+      );
+      assert.ok(
+        stdio.getStderr().includes('warn-msg'),
+        'warn log not written to terminal',
+      );
+      assert.ok(
+        stdio.getStderr().includes('error-msg'),
+        'error log not written to terminal',
+      );
+      assert.ok(
+        stdio.getStderr().includes('const x = 1;'),
+        'codeframe not written to terminal',
+      );
+    });
   });
 });
