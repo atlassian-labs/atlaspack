@@ -96,6 +96,14 @@ fn mime_for_file_type(file_type: &FileType) -> &'static str {
     FileType::WebP => "image/webp",
     FileType::Avif => "image/avif",
     FileType::Tiff => "image/tiff",
+    FileType::Other(ext) => match ext.as_str() {
+      "svg" => "image/svg+xml",
+      "woff2" => "font/woff2",
+      "woff" => "font/woff",
+      "ttf" => "font/ttf",
+      "eot" => "application/vnd.ms-fontobject",
+      _ => "application/octet-stream",
+    },
     _ => "application/octet-stream",
   }
 }
@@ -747,6 +755,63 @@ mod tests {
       path_occurrences.len(),
       3,
       "Expected exactly 3 replacements of the placeholder, got: {result:?}"
+    );
+  }
+
+  #[test]
+  fn inline_svg_asset_replaced_with_correct_mime_type() {
+    let placeholder = "svg_placeholder";
+    let css_bundle = make_css_bundle("bundle_css");
+    let db = make_db();
+    let output_dir = PathBuf::from("/dist");
+    let svg_content = "<svg>...</svg>";
+    // Fix: Pass slice instead of Vec
+    db.put("svg_content", svg_content.as_bytes()).unwrap();
+
+    // Create an inline SVG asset
+    let svg_asset = Asset {
+      id: "asset_svg_1".to_string(),
+      file_type: FileType::Other("svg".to_string()),
+      env: Arc::new(Environment::default()),
+      bundle_behavior: Some(BundleBehavior::Inline),
+      content_key: Some("svg_content".to_string()),
+      ..Asset::default()
+    };
+
+    let dep = make_url_dep("icon.svg", Some(placeholder));
+
+    let css_asset = Asset {
+      id: "asset_css_1".to_string(),
+      file_type: FileType::Css,
+      env: Arc::new(Environment::default()),
+      ..Asset::default()
+    };
+
+    let mut graph = MockBundleGraph::new();
+    graph.bundles.push(css_bundle.clone());
+    graph
+      .assets_by_bundle
+      .insert("bundle_css".to_string(), vec![css_asset.clone()]);
+    graph
+      .deps_by_asset
+      .insert("asset_css_1".to_string(), vec![dep]);
+    graph.resolved.insert(placeholder.to_string(), svg_asset);
+
+    let input = format!(".icon {{ background: url({}); }}", placeholder);
+
+    let result = replace_url_references(&input, &css_bundle, &graph, &db, &output_dir)
+      .expect("replace_url_references must succeed");
+
+    use base64::Engine;
+    let encoded = base64::engine::general_purpose::STANDARD.encode(svg_content);
+    let expected = format!(
+      ".icon {{ background: url(data:image/svg+xml;base64,{}); }}",
+      encoded
+    );
+
+    assert_eq!(
+      result, expected,
+      "SVG data URI should have correct MIME type"
     );
   }
 }
