@@ -1,0 +1,24 @@
+[package]
+name = "atlaspack_packager_css"
+version = "0.1.0"
+edition = { workspace = true }
+description = "CSS packager for the Atlaspack Bundler"
+
+[lints]
+workspace = true
+
+[dependencies]
+atlaspack_core = { path = "../atlaspack_core" }
+anyhow = { workspace = true }
+# parking_lot and rayon are not used in this stub but are required for the parallel
+# concatenation work planned. Declaring them here avoids a Cargo.toml
+# churn PR when that work lands.
+parking_lot = { workspace = true }
+rayon = { workspace = true }
+
+[dependencies.lightningcss]
+workspace = true
+features = ["browserslist", "sourcemap"]
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
