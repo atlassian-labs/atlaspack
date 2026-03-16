@@ -7,7 +7,6 @@ import {
   Atlaspack,
   createWorkerFarm,
 } from '@atlaspack/core';
-import logger from '@atlaspack/logger';
 import {NodePackageManager} from '@atlaspack/package-manager';
 import stripAnsi from 'strip-ansi';
 import sinon from 'sinon';
