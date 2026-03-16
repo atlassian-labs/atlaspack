@@ -120,14 +120,16 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
       css_code_map.insert(asset.id.clone(), filtered_css);
     }
 
-    // Phase 2: insert the synthetic entry under the bundle ID.
-    css_code_map.insert(bundle_id.to_string(), entry_contents);
+    // Phase 2: insert the synthetic entry under a unique key to avoid collision with asset IDs.
+    // We use a reserved prefix that is unlikely to match any real asset ID or file path.
+    let entry_path = format!("__atlaspack_entry_{}.css", bundle_id);
+    css_code_map.insert(entry_path.clone(), entry_contents);
 
     // Phase 3: bundle via lightningcss::Bundler — resolves all internal @imports.
     let provider = InMemoryCssProvider::new(css_code_map);
     let mut bundler = Bundler::new(&provider, None, ParserOptions::default());
     let stylesheet = bundler
-      .bundle(Path::new(bundle_id))
+      .bundle(Path::new(&entry_path))
       .map_err(|e| anyhow::anyhow!("lightningcss bundling failed: {:?}", e))?;
     let result = stylesheet
       .to_css(PrinterOptions::default())
@@ -624,12 +626,10 @@ mod tests {
     let result = packager.package("foo").expect("should succeed");
     let output = output_string(&result);
 
-    // CURRENT BEHAVIOR: Output is empty/broken because bundle entry overwrites asset content in the map.
-    // This is a bug/gap to be reported.
-    // We assert the current broken behavior (missing asset content) to keep the test suite passing while documenting the gap.
+    // FIXED BEHAVIOR: Output should contain the asset content.
     assert!(
-      !output.contains(".foo"),
-      "Bug: Collision between bundle ID and asset ID results in lost asset content"
+      output.contains(".foo"),
+      "Asset content should be present even if bundle ID matches asset ID"
     );
   }
 
