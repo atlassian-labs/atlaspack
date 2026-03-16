@@ -1,4 +1,4 @@
-import program from 'commander';
+import {Command} from 'commander';
 // flowlint-next-line untyped-import:off
 import {version} from '../package.json';
 // flowlint-next-line untyped-import:off
@@ -24,6 +24,8 @@ const TEMPLATES_DIR = path.resolve(__dirname, '../templates');
 const ncp = promisify(_ncp);
 // eslint-disable-next-line no-console
 const log = console.log;
+
+const program = new Command();
 
 program
   .name('create-react-app')

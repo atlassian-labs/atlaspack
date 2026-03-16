@@ -8,6 +8,7 @@ import {
   serialize,
 } from '@atlaspack/build-cache';
 import {bufferStream} from '@atlaspack/utils';
+// @ts-expect-error TS1479: idb is ESM-only but we need to import it in this browser-specific CJS file
 import {openDB} from 'idb';
 
 import packageJson from '../package.json';

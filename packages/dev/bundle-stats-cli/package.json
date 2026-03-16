@@ -27,12 +27,12 @@
     "@atlaspack/query": "2.14.59",
     "@atlaspack/reporter-bundle-stats": "2.14.59",
     "@atlaspack/utils": "3.4.0",
-    "commander": "^7.0.0"
+    "commander": "^8.3.0"
   },
   "devDependencies": {
     "@atlaspack/babel-register": "2.14.4",
     "@atlaspack/types": "2.15.48",
-    "rimraf": "^5.0.5"
+    "rimraf": "^3.0.2"
   },
   "type": "commonjs"
 }

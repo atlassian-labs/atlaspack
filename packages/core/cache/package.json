@@ -31,7 +31,7 @@
     "ncp": "^2.0.0"
   },
   "devDependencies": {
-    "idb": "^5.0.8"
+    "idb": "^8.0.0"
   },
   "browser": {
     "./src/IDBCache.js": "./src/IDBCache.browser.js"
