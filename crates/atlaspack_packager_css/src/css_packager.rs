@@ -10,7 +10,7 @@ use lightningcss::bundler::{Bundler, SourceProvider};
 use lightningcss::printer::PrinterOptions;
 use lightningcss::stylesheet::ParserOptions;
 
-use crate::{CssPackager, CssPackagingContext};
+use crate::{CssPackager, CssPackagingContext, url_replacer};
 
 /// Stores CSS strings in a Vec (indexed by HashMap) so that `read<'a>` can
 /// return `&'a str` tied to `&'a self` without unsafe code.
@@ -141,6 +141,16 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
       let hoisted = hoisted_imports.join("\n");
       css = format!("{hoisted}\n{css}");
     }
+
+    // Phase 5: Replace URL reference placeholders with resolved paths or data URIs.
+    let output_dir = &self.context.output_dir;
+    let css = url_replacer::replace_url_references(
+      &css,
+      bundle,
+      self.bundle_graph.as_ref(),
+      &self.context.db,
+      output_dir,
+    )?;
 
     let size = css.len() as u64;
     Ok(PackageResult {

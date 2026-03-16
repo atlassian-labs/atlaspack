@@ -685,6 +685,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "atlaspack_core",
+ "base64",
  "lightningcss",
  "mockall",
  "parking_lot",
