@@ -93,6 +93,7 @@ pub mod bundle_graph {
     }
 
     fn get_bundle_assets(&self, _bundle: &Bundle) -> anyhow::Result<Vec<&Asset>> {
+      // Temporary stub for imminent implementation.
       Ok(vec![])
     }
 
@@ -105,6 +106,7 @@ pub mod bundle_graph {
     }
 
     fn get_dependencies(&self, _asset: &Asset) -> anyhow::Result<Vec<&Dependency>> {
+      // Temporary stub for imminent implementation.
       Ok(vec![])
     }
 
@@ -121,10 +123,12 @@ pub mod bundle_graph {
     }
 
     fn get_incoming_dependencies(&self, _asset: &Asset) -> anyhow::Result<Vec<&Dependency>> {
+      // Temporary stub for imminent implementation.
       Ok(vec![])
     }
 
     fn get_bundle_assets_in_source_order(&self, _bundle: &Bundle) -> anyhow::Result<Vec<&Asset>> {
+      // Temporary stub for imminent implementation.
       Ok(vec![])
     }
 
