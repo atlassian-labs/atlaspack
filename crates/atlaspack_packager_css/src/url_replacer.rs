@@ -7,11 +7,7 @@ use atlaspack_core::bundle_graph::bundle_graph::BundleGraph;
 use atlaspack_core::database::DatabaseRef;
 use atlaspack_core::types::{Bundle, BundleBehavior, FileType};
 
-/// Replaces `url()` placeholder tokens emitted by lightningcss with the correct
-/// relative output path (or a base64 data URI for inline assets).
-///
-/// Called after lightningcss bundling in `CssPackager::package()`, on the final
-/// output CSS string.
+/// Replaces `url()` placeholder tokens with resolved relative paths or data URIs.
 pub fn replace_url_references(
   css: &str,
   bundle: &Bundle,
@@ -19,10 +15,8 @@ pub fn replace_url_references(
   db: &DatabaseRef,
   output_dir: &Path,
 ) -> anyhow::Result<String> {
-  // Collect all URL dependencies (skip CSS @import deps) for assets in this bundle.
   let bundle_assets = bundle_graph.get_bundle_assets(bundle)?;
 
-  // Build placeholder → dependency map, only for non-CSS-import URL deps.
   let mut placeholder_to_dep = Vec::new();
   for asset in &bundle_assets {
     let deps = bundle_graph.get_dependencies(asset)?;
@@ -35,12 +29,10 @@ pub fn replace_url_references(
     }
   }
 
-  // Fast path: no URL deps, nothing to replace.
   if placeholder_to_dep.is_empty() {
     return Ok(css.to_string());
   }
 
-  // Filter to only those placeholders actually present in the CSS string.
   let active: Vec<_> = placeholder_to_dep
     .iter()
     .filter(|(token, _)| css.contains(token.as_str()))
@@ -56,10 +48,7 @@ pub fn replace_url_references(
     let resolved = bundle_graph.get_resolved_asset(dep, bundle)?;
 
     let replacement = match resolved {
-      None => {
-        // Unresolvable: fall back to the original specifier.
-        dep.specifier.clone()
-      }
+      None => dep.specifier.clone(),
       Some(asset) => {
         let is_inline = matches!(
           asset.bundle_behavior,
@@ -67,14 +56,12 @@ pub fn replace_url_references(
         );
 
         if is_inline {
-          // Read asset bytes from the DB and encode as a data URI.
           let db_key = asset.content_key.as_deref().unwrap_or(asset.id.as_str());
           let bytes = db.get(db_key)?.unwrap_or_default();
           let mime = mime_for_file_type(&asset.file_type);
           let encoded = BASE64_STANDARD.encode(&bytes);
           format!("data:{mime};base64,{encoded}")
         } else {
-          // Find the bundle that owns this asset and compute a relative path.
           find_relative_path(asset.id.as_str(), bundle, bundle_graph, output_dir)
             .unwrap_or_else(|| dep.specifier.clone())
         }
@@ -108,9 +95,7 @@ fn mime_for_file_type(file_type: &FileType) -> &'static str {
   }
 }
 
-/// Finds the bundle containing `asset_id` and computes a forward-slash relative
-/// path from the CSS bundle's output directory to that bundle's output file.
-/// Returns `None` if no containing bundle is found or if a path cannot be computed.
+/// Resolves a forward-slash relative path from the CSS bundle to the bundle owning `asset_id`.
 fn find_relative_path(
   asset_id: &str,
   css_bundle: &Bundle,
@@ -118,7 +103,6 @@ fn find_relative_path(
   output_dir: &Path,
 ) -> Option<String> {
   let target_bundle = bundle_graph.get_bundles().into_iter().find(|b| {
-    // Skip the CSS bundle itself and inline bundles.
     if b.id == css_bundle.id {
       return false;
     }
@@ -128,7 +112,6 @@ fn find_relative_path(
     ) {
       return false;
     }
-    // Check if this bundle contains the asset.
     bundle_graph
       .get_bundle_assets(b)
       .ok()
@@ -138,7 +121,6 @@ fn find_relative_path(
 
   let to_name = target_bundle.name.as_deref().filter(|n| !n.is_empty())?;
 
-  // CSS bundle output file path (used to derive the "from" directory).
   let from_name = css_bundle.name.as_deref().unwrap_or("");
   let from_file = output_dir.join(from_name);
   let from_dir = from_file.parent().unwrap_or(output_dir);
@@ -149,13 +131,11 @@ fn find_relative_path(
   Some(path_to_url_string(&rel))
 }
 
-/// Computes a relative path from `from_dir` to `to`, similar to Node's `path.relative`.
-/// Returns `None` if the paths cannot be compared (e.g. different path roots on Windows).
+/// Computes a relative path from `from_dir` to `to`.
 fn diff_paths(to: &Path, from_dir: &Path) -> Option<PathBuf> {
   let to = to.components().collect::<Vec<_>>();
   let from = from_dir.components().collect::<Vec<_>>();
 
-  // Find common prefix length.
   let common = to
     .iter()
     .zip(from.iter())
@@ -178,7 +158,6 @@ fn diff_paths(to: &Path, from_dir: &Path) -> Option<PathBuf> {
   Some(result)
 }
 
-/// Converts a `PathBuf` to a forward-slash URL string.
 fn path_to_url_string(path: &Path) -> String {
   path
     .components()
@@ -191,10 +170,6 @@ fn path_to_url_string(path: &Path) -> String {
     .collect::<Vec<_>>()
     .join("/")
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {
@@ -212,18 +187,10 @@ mod tests {
 
   use super::replace_url_references;
 
-  // -------------------------------------------------------------------------
-  // Minimal mock BundleGraph
-  // -------------------------------------------------------------------------
-
   struct MockBundleGraph {
-    /// All bundles visible to this graph.
     bundles: Vec<Bundle>,
-    /// bundle_id → assets contained in that bundle.
     assets_by_bundle: HashMap<String, Vec<Asset>>,
-    /// asset_id → outgoing dependencies.
     deps_by_asset: HashMap<String, Vec<Dependency>>,
-    /// lookup key (placeholder or specifier) → resolved Asset.
     resolved: HashMap<String, Asset>,
   }
 
@@ -276,7 +243,6 @@ mod tests {
       dependency: &Dependency,
       _bundle: &Bundle,
     ) -> anyhow::Result<Option<&Asset>> {
-      // Mirror the lookup key logic: prefer placeholder, fall back to specifier.
       let key = dependency
         .placeholder
         .as_deref()
@@ -305,15 +271,10 @@ mod tests {
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Helpers
-  // -------------------------------------------------------------------------
-
   fn make_db() -> DatabaseRef {
     Arc::new(InMemoryDatabase::default()) as DatabaseRef
   }
 
-  /// Creates a CSS bundle whose output file is `dist/styles.css`.
   fn make_css_bundle(id: &str) -> Bundle {
     Bundle {
       id: id.to_string(),
@@ -337,7 +298,6 @@ mod tests {
     }
   }
 
-  /// Creates an image asset with the given id, file type, and optional bundle_behavior.
   fn make_image_asset(id: &str, file_type: FileType, behavior: Option<BundleBehavior>) -> Asset {
     Asset {
       id: id.to_string(),
@@ -348,7 +308,6 @@ mod tests {
     }
   }
 
-  /// Creates a URL dependency (the kind emitted by lightningcss for `url()` references).
   fn make_url_dep(specifier: &str, placeholder: Option<&str>) -> Dependency {
     let mut dep = DependencyBuilder::default()
       .specifier(specifier.to_string())
@@ -360,7 +319,6 @@ mod tests {
     dep
   }
 
-  /// Creates a CSS @import dependency (is_css_import = true).
   fn make_import_dep(specifier: &str, placeholder: Option<&str>) -> Dependency {
     let mut dep = DependencyBuilder::default()
       .specifier(specifier.to_string())
@@ -373,7 +331,6 @@ mod tests {
     dep
   }
 
-  /// Creates a bundle that owns the given asset, with a resolved output name/path.
   fn make_image_bundle(id: &str, asset_id: &str, name: &str, dist_dir: &str) -> Bundle {
     Bundle {
       id: id.to_string(),
@@ -397,10 +354,6 @@ mod tests {
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Test 1: no_url_refs — CSS with no placeholder tokens is passed through unchanged
-  // -------------------------------------------------------------------------
-
   #[test]
   fn no_url_refs_passes_css_through_unchanged() {
     let css_bundle = make_css_bundle("bundle_css");
@@ -414,10 +367,6 @@ mod tests {
 
     assert_eq!(result, input);
   }
-
-  // -------------------------------------------------------------------------
-  // Test 2: single_url_ref — one placeholder replaced with relative path to image
-  // -------------------------------------------------------------------------
 
   #[test]
   fn single_url_ref_replaced_with_relative_path() {
@@ -471,10 +420,6 @@ mod tests {
       "Placeholder token must be removed from output, got: {result:?}"
     );
   }
-
-  // -------------------------------------------------------------------------
-  // Test 3: multiple_url_refs — two different placeholders both replaced
-  // -------------------------------------------------------------------------
 
   #[test]
   fn multiple_url_refs_all_replaced_with_correct_paths() {
@@ -544,10 +489,6 @@ mod tests {
     );
   }
 
-  // -------------------------------------------------------------------------
-  // Test 4: inline_data_uri — inline asset replaced with data URI
-  // -------------------------------------------------------------------------
-
   #[test]
   fn inline_asset_replaced_with_base64_data_uri() {
     let placeholder = "ccc3333333333333";
@@ -555,7 +496,6 @@ mod tests {
     let db = make_db();
     let output_dir = PathBuf::from("/dist");
 
-    // PNG bytes stored in the DB under the asset's id
     let fake_png_bytes: &[u8] = b"\x89PNG\r\n\x1a\n";
     db.put("asset_img_inline", fake_png_bytes).unwrap();
 
@@ -601,10 +541,6 @@ mod tests {
     );
   }
 
-  // -------------------------------------------------------------------------
-  // Test 5: unresolvable_url — no resolved asset means fallback to dep.specifier
-  // -------------------------------------------------------------------------
-
   #[test]
   fn unresolvable_url_falls_back_to_specifier() {
     let placeholder = "ddd4444444444444";
@@ -631,8 +567,6 @@ mod tests {
     graph
       .deps_by_asset
       .insert("asset_css_1".to_string(), vec![dep]);
-    // No entry in graph.resolved -> unresolvable
-
     let input = format!(".missing {{ background: url({placeholder}); }}");
 
     let result = replace_url_references(&input, &css_bundle, &graph, &db, &output_dir)
@@ -648,21 +582,13 @@ mod tests {
     );
   }
 
-  // -------------------------------------------------------------------------
-  // Test 6: no_op_import_dep — CSS @import deps (is_css_import=true) are skipped
-  // -------------------------------------------------------------------------
-
   #[test]
   fn css_import_dep_placeholders_are_not_processed() {
-    // A dep with is_css_import = true should be ignored entirely by replace_url_references.
-    // The placeholder should remain unchanged in the output (it won't appear in real CSS
-    // output anyway, but if it does, the function must leave it alone).
     let import_placeholder = "eee5555555555555";
     let css_bundle = make_css_bundle("bundle_css");
     let db = make_db();
     let output_dir = PathBuf::from("/dist");
 
-    // Even if the dep could theoretically resolve, it must be skipped because is_css_import=true
     let import_dep = make_import_dep("other.css", Some(import_placeholder));
 
     let image_asset = make_image_asset("asset_img_1", FileType::Png, None);
@@ -681,28 +607,20 @@ mod tests {
     graph
       .deps_by_asset
       .insert("asset_css_1".to_string(), vec![import_dep]);
-    // Would resolve if processed — but it must NOT be processed
     graph
       .resolved
       .insert(import_placeholder.to_string(), image_asset);
 
-    // CSS that happens to contain the import placeholder token
     let input = format!(".rule {{ color: red; }} /* token: {import_placeholder} */");
 
     let result = replace_url_references(&input, &css_bundle, &graph, &db, &output_dir)
       .expect("replace_url_references must succeed");
 
-    // The import placeholder must NOT have been replaced with a path —
-    // the token should still be present as-is because the dep was skipped.
     assert!(
       result.contains(import_placeholder),
       "CSS @import dep placeholder must not be processed/replaced, got: {result:?}"
     );
   }
-
-  // -------------------------------------------------------------------------
-  // Test 7: duplicate_placeholder — same token appearing multiple times is fully replaced
-  // -------------------------------------------------------------------------
 
   #[test]
   fn duplicate_placeholder_all_occurrences_replaced() {
@@ -737,7 +655,6 @@ mod tests {
       .insert("asset_css_1".to_string(), vec![dep]);
     graph.resolved.insert(placeholder.to_string(), image_asset);
 
-    // The same placeholder appears three times (e.g. repeated background declarations)
     let input = format!(
       ".a {{ background: url({placeholder}); }} .b {{ background: url({placeholder}); }} .c {{ background: url({placeholder}); }}"
     );
@@ -749,7 +666,6 @@ mod tests {
       !result.contains(placeholder),
       "All occurrences of placeholder must be replaced, got: {result:?}"
     );
-    // All three occurrences should be the resolved path
     let path_occurrences: Vec<_> = result.matches("images/bg.png").collect();
     assert_eq!(
       path_occurrences.len(),
@@ -765,10 +681,8 @@ mod tests {
     let db = make_db();
     let output_dir = PathBuf::from("/dist");
     let svg_content = "<svg>...</svg>";
-    // Fix: Pass slice instead of Vec
     db.put("svg_content", svg_content.as_bytes()).unwrap();
 
-    // Create an inline SVG asset
     let svg_asset = Asset {
       id: "asset_svg_1".to_string(),
       file_type: FileType::Other("svg".to_string()),
