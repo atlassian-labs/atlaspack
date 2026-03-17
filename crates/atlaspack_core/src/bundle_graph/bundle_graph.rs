@@ -80,6 +80,14 @@ pub trait BundleGraph {
   /// parallel level.
   fn get_referenced_bundle_ids(&self, bundle: &Bundle) -> Vec<String>;
 
+  /// Returns the set of symbol names used from `asset_id` across the bundle graph.
+  ///
+  /// Returns `Some(set)` if symbol usage information is available, or `None` if the
+  /// implementation does not track used symbols (the default).
+  fn get_used_symbols(&self, _asset_id: &str) -> Option<std::collections::HashSet<String>> {
+    None
+  }
+
   /// Returns the IDs of inline bundles (bundle_behavior == Inline | InlineIsolated) that are
   /// directly contained within or referenced by `bundle`.
   ///

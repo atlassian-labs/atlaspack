@@ -514,6 +514,27 @@ impl BundleGraph for BundleGraphFromJs {
     dependency.deferred || dependency.excluded
   }
 
+  fn get_used_symbols(&self, asset_id: &str) -> Option<HashSet<String>> {
+    // TODO: JS serializes Set as {} not array; returns None until JS side is fixed
+    let node = self
+      .graph
+      .node_weights()
+      .find(|n| matches!(n, BundleGraphNode::Asset(a) if a.id == asset_id))?;
+    let BundleGraphNode::Asset(asset_node) = node else {
+      return None;
+    };
+    match &asset_node.used_symbols {
+      serde_json::Value::Array(arr) => {
+        let set = arr
+          .iter()
+          .filter_map(|v| v.as_str().map(|s| s.to_string()))
+          .collect();
+        Some(set)
+      }
+      _ => None,
+    }
+  }
+
   fn get_incoming_dependencies(&self, asset: &Asset) -> anyhow::Result<Vec<&Dependency>> {
     let asset_node_idx = self
       .nodes_by_key

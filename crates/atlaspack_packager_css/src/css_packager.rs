@@ -52,6 +52,122 @@ impl SourceProvider for InMemoryCssProvider {
   }
 }
 
+/// Removes CSS rules whose selector is in `all_module_selectors` but not in `used_selectors`.
+/// Operates as a simple brace-depth scanner on the raw CSS string.
+fn remove_unused_class_rules(
+  css: &str,
+  all_module_selectors: &std::collections::HashSet<String>,
+  used_selectors: &std::collections::HashSet<String>,
+) -> String {
+  let mut output = String::with_capacity(css.len());
+  let mut selector_buf = String::new();
+  let mut depth: u32 = 0;
+  let mut skipping = false;
+  let mut skip_depth: u32 = 0;
+  let mut in_single_quote = false;
+  let mut in_double_quote = false;
+  let mut prev_char = '\0';
+
+  for ch in css.chars() {
+    // Track string literals to avoid misidentifying braces inside strings
+    if ch == '\'' && !in_double_quote && prev_char != '\\' {
+      in_single_quote = !in_single_quote;
+    } else if ch == '"' && !in_single_quote && prev_char != '\\' {
+      in_double_quote = !in_double_quote;
+    }
+
+    let in_string = in_single_quote || in_double_quote;
+
+    if !in_string && ch == '{' {
+      if depth == 0 {
+        let selector = selector_buf.trim().to_string();
+        selector_buf.clear();
+        // Check if this is an unused module class rule
+        if all_module_selectors.contains(&selector) && !used_selectors.contains(&selector) {
+          skipping = true;
+          skip_depth = 1;
+        } else {
+          output.push_str(&selector);
+          output.push('{');
+          depth = 1;
+        }
+      } else if skipping {
+        skip_depth += 1;
+      } else {
+        output.push(ch);
+        depth += 1;
+      }
+    } else if !in_string && ch == '}' {
+      if skipping {
+        skip_depth -= 1;
+        if skip_depth == 0 {
+          skipping = false;
+        }
+      } else if depth > 0 {
+        depth -= 1;
+        output.push(ch);
+      } else {
+        // Unmatched '}', pass through
+        output.push(ch);
+      }
+    } else if skipping {
+      // Skip body content
+    } else if depth == 0 {
+      selector_buf.push(ch);
+    } else {
+      output.push(ch);
+    }
+
+    prev_char = ch;
+  }
+
+  // Flush any remaining selector buffer (shouldn't happen in valid CSS)
+  output.push_str(&selector_buf);
+  output
+}
+
+/// Applies CSS Module tree-shaking to a single asset's CSS string.
+/// Returns the CSS with unused class rules removed.
+/// Returns the CSS unchanged if the asset is not a CSS Module, has no symbol info,
+/// or optimization is disabled for the asset's environment.
+pub(crate) fn apply_css_module_tree_shaking(
+  css: &str,
+  asset: &atlaspack_core::types::Asset,
+  used_symbols: &std::collections::HashSet<String>,
+) -> String {
+  use std::collections::HashSet;
+
+  // Only apply in production (optimized) builds
+  if !asset.env.should_optimize {
+    return css.to_string();
+  }
+
+  // Only process CSS Module assets (those with a non-empty symbols list)
+  let symbols = match asset.symbols.as_ref() {
+    Some(s) if !s.is_empty() => s,
+    _ => return css.to_string(),
+  };
+
+  // Build exported->local mapping from asset symbols
+  let symbol_map: std::collections::HashMap<String, String> = symbols
+    .iter()
+    .map(|s| (s.exported.clone(), s.local.clone()))
+    .collect();
+
+  // All CSS selector names from this module (e.g. ".foo_abc123")
+  let all_module_selectors: HashSet<String> =
+    symbols.iter().map(|s| format!(".{}", s.local)).collect();
+
+  // Selectors that are actually used (mapped from exported names to local names)
+  let used_selectors: HashSet<String> = used_symbols
+    .iter()
+    .filter_map(|exported| symbol_map.get(exported))
+    .map(|local| format!(".{}", local))
+    .collect();
+
+  remove_unused_class_rules(css, &all_module_selectors, &used_selectors)
+}
+
 impl<B: BundleGraph + Send + Sync> CssPackager<B> {
   pub fn new(context: CssPackagingContext, bundle_graph: Arc<B>) -> Self {
     Self {
@@ -115,6 +231,49 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
         css_code
       } else {
         filter_external_imports(&css_code, &external_specifiers)
+      };
+
+      // Phase 1.5: CSS Module tree-shaking (production-only)
+      let filtered_css = if asset.env.should_optimize {
+        if let Some(used_syms) = self.bundle_graph.get_used_symbols(&asset.id) {
+          if used_syms.contains("*") {
+            // Wildcard import: retain all classes
+            filtered_css
+          } else {
+            // Check for default import guard
+            let has_default_import = used_syms.contains("default") && {
+              self
+                .bundle_graph
+                .get_incoming_dependencies(asset)
+                .ok()
+                .map(|deps| {
+                  deps.iter().any(|dep| {
+                    dep
+                      .symbols
+                      .as_deref()
+                      .unwrap_or(&[])
+                      .iter()
+                      .any(|s| s.exported == "default")
+                  })
+                })
+                .unwrap_or(false)
+            };
+            if has_default_import {
+              eprintln!(
+                "atlaspack: CSS modules cannot be tree shaken when imported with a \
+                 default specifier ({})",
+                asset.file_path.display()
+              );
+              filtered_css
+            } else {
+              apply_css_module_tree_shaking(&filtered_css, asset, &used_syms)
+            }
+          }
+        } else {
+          filtered_css
+        }
+      } else {
+        filtered_css
       };
 
       css_code_map.insert(asset.id.clone(), filtered_css);
@@ -223,6 +382,10 @@ mod tests {
     resolved: HashMap<String, Asset>,
     /// dep specifiers that are marked as skipped (tree-shaken away).
     skipped: HashSet<String>,
+    /// asset_id → set of used exported symbol names (for CSS Modules tree-shaking).
+    used_symbols_by_asset: HashMap<String, HashSet<String>>,
+    /// asset_id → incoming dependencies (for testing default import guard).
+    incoming_deps_by_asset: HashMap<String, Vec<Dependency>>,
   }
 
   impl TestBundleGraph {
@@ -233,6 +396,8 @@ mod tests {
         deps_by_asset: HashMap::new(),
         resolved: HashMap::new(),
         skipped: HashSet::new(),
+        used_symbols_by_asset: HashMap::new(),
+        incoming_deps_by_asset: HashMap::new(),
       }
     }
   }
@@ -286,8 +451,14 @@ mod tests {
       self.skipped.contains(dependency.specifier.as_str())
     }
 
-    fn get_incoming_dependencies(&self, _asset: &Asset) -> anyhow::Result<Vec<&Dependency>> {
-      Ok(vec![])
+    fn get_incoming_dependencies(&self, asset: &Asset) -> anyhow::Result<Vec<&Dependency>> {
+      Ok(
+        self
+          .incoming_deps_by_asset
+          .get(&asset.id)
+          .map(|v| v.iter().collect())
+          .unwrap_or_default(),
+      )
     }
 
     /// Returns assets in the insertion order recorded in `assets_by_bundle`.
@@ -301,6 +472,10 @@ mod tests {
 
     fn get_inline_bundle_ids(&self, _bundle: &Bundle) -> Vec<String> {
       vec![]
+    }
+
+    fn get_used_symbols(&self, asset_id: &str) -> Option<HashSet<String>> {
+      self.used_symbols_by_asset.get(asset_id).cloned()
     }
   }
 
@@ -677,6 +852,434 @@ mod tests {
 
     assert!(output.contains(".normal"));
     // Empty content should just result in no extra text, no errors.
+  }
+
+  // ---------------------------------------------------------------------------
+  // CSS Modules tree-shaking tests
+  // These tests reference functions that do not exist yet — compile errors are expected.
+  // ---------------------------------------------------------------------------
+
+  // Helper: build an Asset with the given symbols list (exported name → local mangled name).
+  // Each tuple is (exported, local) matching Symbol::exported and Symbol::local.
+  fn make_css_module_asset(id: &str, symbols: Vec<(&str, &str)>, should_optimize: bool) -> Asset {
+    use atlaspack_core::types::Symbol;
+    Asset {
+      id: id.to_string(),
+      file_type: FileType::Css,
+      env: Arc::new(Environment {
+        should_optimize,
+        ..Environment::default()
+      }),
+      symbols: if symbols.is_empty() {
+        None
+      } else {
+        Some(
+          symbols
+            .into_iter()
+            .map(|(exported, local)| Symbol {
+              exported: exported.to_string(),
+              local: local.to_string(),
+              loc: None,
+              is_weak: false,
+              is_esm_export: false,
+              self_referenced: false,
+              is_static_binding_safe: true,
+            })
+            .collect(),
+        )
+      },
+      ..Asset::default()
+    }
+  }
+
+  // --- Test A: unused class is removed ---
+  #[test]
+  fn tree_shaking_removes_unused_class() {
+    let css = ".foo_abc { color: red; } .bar_def { color: blue; }";
+    let all: HashSet<String> = [".foo_abc", ".bar_def"]
+      .iter()
+      .map(|s| s.to_string())
+      .collect();
+    let used: HashSet<String> = [".foo_abc"].iter().map(|s| s.to_string()).collect();
+
+    let output = remove_unused_class_rules(css, &all, &used);
+
+    assert!(
+      output.contains(".foo_abc"),
+      "used class .foo_abc must be retained; got: {output:?}"
+    );
+    assert!(
+      !output.contains(".bar_def"),
+      "unused class .bar_def must be removed; got: {output:?}"
+    );
+  }
+
+  // --- Test B: used class is retained ---
+  #[test]
+  fn tree_shaking_retains_used_class() {
+    let css = ".foo_abc { color: red; }";
+    let all: HashSet<String> = [".foo_abc"].iter().map(|s| s.to_string()).collect();
+    let used: HashSet<String> = [".foo_abc"].iter().map(|s| s.to_string()).collect();
+
+    let output = remove_unused_class_rules(css, &all, &used);
+
+    assert!(
+      output.contains(".foo_abc"),
+      "used class .foo_abc must appear in output; got: {output:?}"
+    );
+  }
+
+  // --- Test C: non-module selector is not touched even when all module classes are unused ---
+  #[test]
+  fn tree_shaking_preserves_non_module_selectors() {
+    let css = ".foo_abc { color: red; } body { margin: 0; }";
+    let all: HashSet<String> = [".foo_abc"].iter().map(|s| s.to_string()).collect();
+    let used: HashSet<String> = HashSet::new(); // foo_abc unused
+
+    let output = remove_unused_class_rules(css, &all, &used);
+
+    assert!(
+      !output.contains(".foo_abc"),
+      "unused module class .foo_abc must be removed; got: {output:?}"
+    );
+    assert!(
+      output.contains("body"),
+      "non-module selector body must be retained; got: {output:?}"
+    );
+    assert!(
+      output.contains("margin"),
+      "body rule body must be retained; got: {output:?}"
+    );
+  }
+
+  // --- Test D: when used_selectors == all_module_selectors, everything is retained (wildcard) ---
+  #[test]
+  fn tree_shaking_wildcard_retains_all_classes() {
+    let css = ".foo_abc { color: red; } .bar_def { color: blue; }";
+    let all: HashSet<String> = [".foo_abc", ".bar_def"]
+      .iter()
+      .map(|s| s.to_string())
+      .collect();
+    // wildcard: used == all
+    let used = all.clone();
+
+    let output = remove_unused_class_rules(css, &all, &used);
+
+    assert!(
+      output.contains(".foo_abc"),
+      ".foo_abc must be retained under wildcard; got: {output:?}"
+    );
+    assert!(
+      output.contains(".bar_def"),
+      ".bar_def must be retained under wildcard; got: {output:?}"
+    );
+  }
+
+  // --- Test E: empty used set removes all module classes ---
+  #[test]
+  fn tree_shaking_empty_used_symbols_removes_all_module_classes() {
+    let css = ".foo_abc { color: red; } .bar_def { color: blue; }";
+    let all: HashSet<String> = [".foo_abc", ".bar_def"]
+      .iter()
+      .map(|s| s.to_string())
+      .collect();
+    let used: HashSet<String> = HashSet::new();
+
+    let output = remove_unused_class_rules(css, &all, &used);
+
+    assert!(
+      !output.contains(".foo_abc"),
+      ".foo_abc must be removed; got: {output:?}"
+    );
+    assert!(
+      !output.contains(".bar_def"),
+      ".bar_def must be removed; got: {output:?}"
+    );
+  }
+
+  // --- Test F: multi-line rule is fully removed ---
+  #[test]
+  fn tree_shaking_removes_multiline_unused_rule() {
+    let css = ".unused_xyz {\n  color: blue;\n  font-size: 12px;\n}";
+    let all: HashSet<String> = [".unused_xyz"].iter().map(|s| s.to_string()).collect();
+    let used: HashSet<String> = HashSet::new();
+
+    let output = remove_unused_class_rules(css, &all, &used);
+
+    assert!(
+      !output.contains(".unused_xyz"),
+      "selector must be removed; got: {output:?}"
+    );
+    assert!(
+      !output.contains("font-size: 12px"),
+      "rule body must also be removed; got: {output:?}"
+    );
+  }
+
+  // --- Test G: multiple rules, partial removal ---
+  #[test]
+  fn tree_shaking_partial_removal_keeps_used_removes_unused() {
+    let css = ".a_111 { color: red; } .b_222 { color: blue; } .c_333 { color: green; }";
+    let all: HashSet<String> = [".a_111", ".b_222", ".c_333"]
+      .iter()
+      .map(|s| s.to_string())
+      .collect();
+    let used: HashSet<String> = [".a_111", ".c_333"].iter().map(|s| s.to_string()).collect();
+
+    let output = remove_unused_class_rules(css, &all, &used);
+
+    assert!(
+      output.contains(".a_111"),
+      ".a_111 must be retained; got: {output:?}"
+    );
+    assert!(
+      output.contains(".c_333"),
+      ".c_333 must be retained; got: {output:?}"
+    );
+    assert!(
+      !output.contains(".b_222"),
+      ".b_222 must be removed; got: {output:?}"
+    );
+  }
+
+  // --- Test H: dev mode (should_optimize = false) — apply_css_module_tree_shaking is a no-op ---
+  #[test]
+  fn tree_shaking_is_skipped_in_dev_mode() {
+    let css = ".foo_abc { color: red; } .bar_def { color: blue; }";
+    // Asset has symbols but should_optimize = false
+    let asset = make_css_module_asset(
+      "asset_dev",
+      vec![("foo", "foo_abc"), ("bar", "bar_def")],
+      false, // dev mode
+    );
+    let used: HashSet<String> = ["foo_abc"].iter().map(|s| s.to_string()).collect();
+
+    let output = apply_css_module_tree_shaking(css, &asset, &used);
+
+    // In dev mode the function must return css unchanged
+    assert!(
+      output.contains(".foo_abc"),
+      ".foo_abc must be present in dev mode output; got: {output:?}"
+    );
+    assert!(
+      output.contains(".bar_def"),
+      ".bar_def must be present in dev mode output (no tree-shaking); got: {output:?}"
+    );
+  }
+
+  // --- Test K: Production mode — unused symbols ARE removed end-to-end ---
+  #[test]
+  fn tree_shaking_is_applied_in_production_mode() {
+    let css = ".foo_abc { color: red; } .bar_def { color: blue; }";
+    // Asset has symbols and should_optimize = true
+    let asset = make_css_module_asset(
+      "asset_prod",
+      vec![("foo", "foo_abc"), ("bar", "bar_def")],
+      true, // production mode
+    );
+    // Only "foo" is used (mapping to "foo_abc")
+    let used: HashSet<String> = ["foo"].iter().map(|s| s.to_string()).collect();
+
+    let output = apply_css_module_tree_shaking(css, &asset, &used);
+
+    assert!(
+      output.contains(".foo_abc"),
+      ".foo_abc must be present in prod mode output (used); got: {output:?}"
+    );
+    assert!(
+      !output.contains(".bar_def"),
+      ".bar_def must be REMOVED in prod mode output (unused); got: {output:?}"
+    );
+  }
+
+  // --- Test L: Wildcard import in package() protects against tree shaking ---
+  #[test]
+  fn wildcard_import_disables_tree_shaking_in_package() {
+    let db = make_db();
+    let css = ".foo_abc { color: red; } .bar_def { color: blue; }";
+    db.put("asset_wildcard", css.as_bytes()).unwrap();
+
+    let asset = make_css_module_asset(
+      "asset_wildcard",
+      vec![("foo", "foo_abc"), ("bar", "bar_def")],
+      true, // production
+    );
+
+    let bundle = make_bundle("bundle_w", vec!["asset_wildcard"]);
+    let mut graph = TestBundleGraph::new();
+    graph.bundles.push(bundle.clone());
+    graph
+      .assets_by_bundle
+      .insert("bundle_w".to_string(), vec![asset]);
+
+    // Used symbols contains "*", implying wildcard import
+    let mut used_syms = HashSet::new();
+    used_syms.insert("*".to_string());
+    graph
+      .used_symbols_by_asset
+      .insert("asset_wildcard".to_string(), used_syms);
+
+    let packager = CssPackager::new(
+      CssPackagingContext {
+        db,
+        project_root: PathBuf::from("/tmp"),
+        output_dir: PathBuf::from("/tmp/dist"),
+      },
+      Arc::new(graph),
+    );
+
+    let result = packager.package("bundle_w").expect("should succeed");
+    let output = output_string(&result);
+
+    assert!(
+      output.contains(".foo_abc"),
+      ".foo_abc must be present (wildcard); got: {output:?}"
+    );
+    assert!(
+      output.contains(".bar_def"),
+      ".bar_def must be present (wildcard); got: {output:?}"
+    );
+  }
+
+  // --- Test M: Default import guard ---
+  #[test]
+  fn default_import_disables_tree_shaking() {
+    use atlaspack_core::types::Symbol;
+
+    let db = make_db();
+    let css = ".foo_abc { color: red; } .bar_def { color: blue; }";
+    db.put("asset_default", css.as_bytes()).unwrap();
+
+    let asset = make_css_module_asset(
+      "asset_default",
+      vec![("foo", "foo_abc"), ("bar", "bar_def")],
+      true, // production
+    );
+
+    let bundle = make_bundle("bundle_d", vec!["asset_default"]);
+    let mut graph = TestBundleGraph::new();
+    graph.bundles.push(bundle.clone());
+    graph
+      .assets_by_bundle
+      .insert("bundle_d".to_string(), vec![asset.clone()]);
+
+    // Used symbols contains "default"
+    let mut used_syms = HashSet::new();
+    used_syms.insert("default".to_string());
+    // Also mark 'foo' as used, but 'bar' unused.
+    // If guard works, 'bar' will still be kept.
+    used_syms.insert("foo".to_string());
+    graph
+      .used_symbols_by_asset
+      .insert("asset_default".to_string(), used_syms);
+
+    // Create incoming dependency that imports "default"
+    let mut dep = make_dependency("asset_default", Priority::Sync);
+    dep.symbols = Some(vec![Symbol {
+      exported: "default".to_string(),
+      local: "default".to_string(),
+      ..Symbol::default()
+    }]);
+    graph
+      .incoming_deps_by_asset
+      .insert("asset_default".to_string(), vec![dep]);
+
+    let packager = CssPackager::new(
+      CssPackagingContext {
+        db,
+        project_root: PathBuf::from("/tmp"),
+        output_dir: PathBuf::from("/tmp/dist"),
+      },
+      Arc::new(graph),
+    );
+
+    let result = packager.package("bundle_d").expect("should succeed");
+    let output = output_string(&result);
+
+    assert!(
+      output.contains(".foo_abc"),
+      ".foo_abc must be present; got: {output:?}"
+    );
+    assert!(
+      output.contains(".bar_def"),
+      ".bar_def must be present (default import guard); got: {output:?}"
+    );
+  }
+
+  // --- Test I: plain CSS asset with no symbols is not modified ---
+  #[test]
+  fn tree_shaking_no_op_for_asset_without_symbols() {
+    let css = ".plain { color: red; }";
+    // Asset with symbols = None (plain CSS, not a CSS Module)
+    let asset = Asset {
+      id: "asset_plain".to_string(),
+      file_type: FileType::Css,
+      env: Arc::new(Environment {
+        should_optimize: true,
+        ..Environment::default()
+      }),
+      symbols: None,
+      ..Asset::default()
+    };
+    let used: HashSet<String> = HashSet::new();
+
+    let output = apply_css_module_tree_shaking(css, &asset, &used);
+
+    assert_eq!(
+      output, css,
+      "plain CSS asset with no symbols must be returned unchanged"
+    );
+  }
+
+  // --- Test J: asset with empty symbols vec is not modified ---
+  #[test]
+  fn tree_shaking_no_op_for_asset_with_empty_symbols() {
+    let css = ".plain { color: red; }";
+    let asset = make_css_module_asset("asset_empty_syms", vec![], true);
+    // make_css_module_asset returns symbols = None when vec is empty,
+    // which is the correct representation for "no CSS module exports"
+    let used: HashSet<String> = HashSet::new();
+
+    let output = apply_css_module_tree_shaking(css, &asset, &used);
+
+    assert_eq!(
+      output, css,
+      "asset with empty symbols must be returned unchanged"
+    );
+  }
+
+  // --- Test N: composes retention — composed-from class is retained when composing class is used ---
+  //
+  // When class `foo` composes from class `bar` (local composes), the CSS transformer
+  // emits both `foo` and `bar` as symbols. If `foo` is in `used_symbols`, `bar` must
+  // also appear there (the JS runtime value of `foo` includes `bar`'s local name as a
+  // space-separated string). This test verifies that when both `foo` and `bar` are in
+  // `used_symbols`, both their CSS rules are retained — i.e. the tree-shaker does not
+  // incorrectly prune a composed-from class that appears in `used_symbols`.
+  #[test]
+  fn tree_shaking_retains_composed_from_class_when_in_used_symbols() {
+    // .foo_abc composes from .bar_def (local composes).
+    // Both are exported as symbols by the CSS transformer.
+    let css = ".foo_abc { color: red; } .bar_def { font-weight: bold; }";
+    let asset = make_css_module_asset(
+      "asset_composes",
+      vec![("foo", "foo_abc"), ("bar", "bar_def")],
+      true, // production mode
+    );
+    // foo is directly used; bar appears in used_symbols because foo composes from bar
+    // (the JS bundleGraph propagates bar as used when foo is used).
+    let used: HashSet<String> = ["foo", "bar"].iter().map(|s| s.to_string()).collect();
+
+    let output = apply_css_module_tree_shaking(css, &asset, &used);
+
+    assert!(
+      output.contains(".foo_abc"),
+      ".foo_abc (composing class) must be retained; got: {output:?}"
+    );
+    assert!(
+      output.contains(".bar_def"),
+      ".bar_def (composed-from class) must be retained when in used_symbols; got: {output:?}"
+    );
   }
 
   // ---------------------------------------------------------------------------
