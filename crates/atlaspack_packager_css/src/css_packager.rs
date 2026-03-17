@@ -159,7 +159,11 @@ pub(crate) fn apply_css_module_tree_shaking(
     return css.to_string();
   }
 
-  // Only process CSS Module assets (those with a non-empty symbols list)
+  // CSS Modules are identified by the presence of a non-empty symbols list. There is no
+  // dedicated `is_module` field on `Asset`, so `symbols` is the only available signal.
+  // Known limitation: a CSS Module that exports zero symbols (rare but valid) will be
+  // skipped conservatively; a non-CSS-Module asset that somehow carries symbols would be
+  // incorrectly pruned. Neither case arises in normal Atlaspack usage.
   let symbols = match asset.symbols.as_ref() {
     Some(s) if !s.is_empty() => s,
     _ => return css.to_string(),
@@ -196,7 +200,11 @@ fn apply_css_module_tree_shaking_ast<'i>(
 ) {
   use std::collections::HashSet;
 
-  // Only process CSS Module assets (those with a non-empty symbols list).
+  // CSS Modules are identified by the presence of a non-empty symbols list. There is no
+  // dedicated `is_module` field on `Asset`, so `symbols` is the only available signal.
+  // Known limitation: a CSS Module that exports zero symbols (rare but valid) will be
+  // skipped conservatively; a non-CSS-Module asset that somehow carries symbols would be
+  // incorrectly pruned. Neither case arises in normal Atlaspack usage.
   let symbols = match asset.symbols.as_ref() {
     Some(s) if !s.is_empty() => s,
     _ => return,
@@ -213,13 +221,122 @@ fn apply_css_module_tree_shaking_ast<'i>(
     symbols.iter().map(|s| format!(".{}", s.local)).collect();
 
   // Selectors that are actually used (mapped from exported names to local names).
-  let used_selectors: HashSet<String> = used_symbols
+  let mut used_selectors: HashSet<String> = used_symbols
     .iter()
     .filter_map(|exported| symbol_map.get(exported))
     .map(|local| format!(".{}", local))
     .collect();
 
+  // composes retention: if a used class composes from another class in this module,
+  // the composed-from class must be retained even if it does not appear directly in
+  // used_symbols. We perform an AST-level extraction of `composes:` declarations as
+  // a fallback, since the JS bundle graph may not always propagate composed-from
+  // symbols (the propagation is done by the JS packager's symbol resolution pass,
+  // which may not run for all builds). This fixed-point expansion ensures correctness
+  // regardless of bundle graph symbol propagation.
+  //
+  // lightningcss only parses `composes` as a typed `Property::Composes` when CSS Modules
+  // mode is enabled on the parser. In the post-bundling AST it will be a `Property::Custom`
+  // with name "composes". We extract it by matching on that custom property name and
+  // parsing the value as a whitespace-separated list of local class names (stopping at the
+  // optional `from` keyword for cross-file composes).
+  expand_composes_selectors(rules, &all_module_selectors, &mut used_selectors);
+
   remove_unused_from_rule_list(rules, &all_module_selectors, &used_selectors);
+}
+
+/// Expands `used_selectors` to include any classes that are composed-from by an already-used
+/// class, by parsing `composes:` declarations from the AST. Iterates to a fixed point so that
+/// transitive `composes` chains are fully resolved.
+fn expand_composes_selectors<'i>(
+  rules: &lightningcss::rules::CssRuleList<'i>,
+  all_module_selectors: &std::collections::HashSet<String>,
+  used_selectors: &mut std::collections::HashSet<String>,
+) {
+  use lightningcss::properties::Property;
+  use lightningcss::rules::CssRule;
+  use lightningcss::traits::ToCss;
+
+  loop {
+    let mut added_any = false;
+
+    for rule in &rules.0 {
+      let style_rule = match rule {
+        CssRule::Style(s) => s,
+        _ => continue,
+      };
+
+      // Check if this rule's selector is currently in the used set.
+      let rule_is_used = style_rule.selectors.0.iter().any(|sel| {
+        let s = sel.to_css_string(Default::default()).unwrap_or_default();
+        used_selectors.contains(&s)
+      });
+
+      if !rule_is_used {
+        continue;
+      }
+
+      // Walk declarations looking for `composes:`. lightningcss parses `composes: foo;`
+      // as `Property::Unparsed` with `property_id == PropertyId::Composes` (not as
+      // `Property::Custom` or `Property::Composes`), because `composes` is a known property
+      // name but its value is not further typed in non-CSS-modules mode.
+      for decl in &style_rule.declarations.declarations {
+        use lightningcss::properties::PropertyId;
+        use lightningcss::properties::custom::{Token, TokenOrValue};
+        let raw_value: Option<String> = match decl {
+          Property::Unparsed(unparsed) if unparsed.property_id == PropertyId::Composes => {
+            // TokenList is a Vec<TokenOrValue>. Extract ident tokens; these are the local
+            // class names (and possibly the `from` keyword for cross-file composes).
+            let s = unparsed
+              .value
+              .0
+              .iter()
+              .filter_map(|tok| match tok {
+                TokenOrValue::Token(Token::Ident(ident)) => Some(ident.as_ref().to_string()),
+                _ => None,
+              })
+              .collect::<Vec<_>>()
+              .join(" ");
+            Some(s)
+          }
+          Property::Composes(composes) => {
+            // When lightningcss parses it as a fully typed value (CSS modules mode).
+            let names = composes
+              .names
+              .iter()
+              .map(|n| n.as_ref().to_string())
+              .collect::<Vec<_>>()
+              .join(" ");
+            Some(names)
+          }
+          _ => None,
+        };
+
+        let Some(value) = raw_value else {
+          continue;
+        };
+
+        // Parse: `<name>+ [from "<file>"|global]`
+        // Take all tokens before the first `from` keyword.
+        let names_part = value
+          .split_whitespace()
+          .take_while(|tok| !tok.eq_ignore_ascii_case("from"))
+          .collect::<Vec<_>>();
+
+        for name in names_part {
+          let selector = format!(".{}", name);
+          if all_module_selectors.contains(&selector) && !used_selectors.contains(&selector) {
+            used_selectors.insert(selector);
+            added_any = true;
+          }
+        }
+      }
+    }
+
+    if !added_any {
+      break;
+    }
+  }
 }
 
 impl<B: BundleGraph + Send + Sync> CssPackager<B> {
@@ -1665,6 +1782,302 @@ mod tests {
       occurrences.len(),
       1,
       "External @import must appear exactly once; got: {output:?}"
+    );
+  }
+
+  // --- Test Y: plain CSS asset is not pruned even when its selector name collides with a
+  // CSS Module selector ---
+  //
+  // This test targets the CSS Module detection guard in `apply_css_module_tree_shaking`.
+  // A plain CSS asset (symbols = None) must never be pruned, even if its selector names
+  // happen to match the local mangled name of a CSS Module exported from another asset.
+  //
+  // TODO: use a dedicated module_type / is_css_module field once one is added to Asset.
+  // For now detection relies solely on symbols = None (plain CSS) vs Some(...) (CSS Module).
+  #[test]
+  fn plain_css_asset_is_not_pruned_even_with_matching_selector_name() {
+    // Simulate a plain CSS asset that happens to contain ".foo_abc" —
+    // the same local mangled name that a CSS Module exports as "foo".
+    let css = ".foo_abc { color: red; }";
+
+    // Plain CSS asset: symbols = None (not a CSS Module).
+    // The packager correctly identifies plain CSS by the absence of symbols.
+    let plain_asset = Asset {
+      id: "plain_asset".to_string(),
+      file_type: FileType::Css,
+      env: Arc::new(Environment {
+        should_optimize: true,
+        ..Environment::default()
+      }),
+      symbols: None, // <- plain CSS, not a CSS Module
+      ..Asset::default()
+    };
+
+    // used_symbols does NOT contain "foo", which would map to ".foo_abc" in a CSS Module.
+    // If the guard incorrectly treats this plain asset as a CSS Module, ".foo_abc" would
+    // be pruned. The guard must return the CSS unchanged.
+    let used: HashSet<String> = HashSet::new();
+
+    let output = apply_css_module_tree_shaking(css, &plain_asset, &used);
+
+    assert_eq!(
+      output, css,
+      "plain CSS asset (symbols = None) must never be pruned, \
+       even when its selector name collides with a CSS Module's local name; got: {output:?}"
+    );
+    assert!(
+      output.contains(".foo_abc"),
+      ".foo_abc must be present in plain CSS output; got: {output:?}"
+    );
+  }
+
+  // --- Test Z: composes integration — composed-from class is retained when only the composing
+  // class is in used_symbols, exercised through CssPackager::package() ---
+  //
+  // This is an integration-level test that exercises the full Phase 4 tree-shaking path via
+  // `CssPackager::package()` rather than calling `apply_css_module_tree_shaking` directly.
+  //
+  // Scenario:
+  //   - CSS Module asset with two classes: `.foo_abc` (exported as "foo") and `.bar_def`
+  //     (exported as "bar").
+  //   - `.foo_abc` composes from `.bar_def` (local composes relationship).
+  //   - `TestBundleGraph.used_symbols_by_asset` contains ONLY "foo", NOT "bar".
+  //
+  // Correct behaviour:
+  //   Both `.foo_abc` AND `.bar_def` must appear in the packager output.
+  //   `.bar_def` must be retained because `.foo_abc` composes from it — dropping `.bar_def`
+  //   would break the composed class at runtime.
+  //
+  // This test is EXPECTED TO FAIL until one of the following is implemented:
+  //   a) The JS bundle graph propagation is confirmed to add "bar" to used_symbols whenever
+  //      "foo" is used and foo composes from bar — and this test is updated to reflect that
+  //      guarantee by asserting it at the packager boundary.
+  //   b) An AST-level fallback in `apply_css_module_tree_shaking_ast` parses `composes:`
+  //      declarations and adds composed-from local class names to `used_selectors` before
+  //      pruning, regardless of what the bundle graph contains.
+  //
+  // Until either mechanism is in place, the packager will incorrectly prune `.bar_def`
+  // because only "foo" → ".foo_abc" appears in the used set, and ".bar_def" is unknown.
+  #[test]
+  fn composes_retention_when_only_composing_class_is_in_used_symbols() {
+    let db = make_db();
+
+    // CSS with a local composes relationship:
+    //   .foo_abc composes from .bar_def
+    //   .bar_def provides font-weight that .foo_abc depends on at runtime.
+    let css = ".foo_abc { composes: bar_def; color: red; } .bar_def { font-weight: bold; }";
+    db.put("asset_composes_int", css.as_bytes()).unwrap();
+
+    let asset = make_css_module_asset(
+      "asset_composes_int",
+      vec![("foo", "foo_abc"), ("bar", "bar_def")],
+      true, // production
+    );
+
+    let mut bundle = make_bundle("bundle_composes", vec!["asset_composes_int"]);
+    // Enable production optimisation so Phase 4 tree-shaking is active.
+    bundle.env.should_optimize = true;
+
+    let mut graph = TestBundleGraph::new();
+    graph.bundles.push(bundle.clone());
+    graph
+      .assets_by_bundle
+      .insert("bundle_composes".to_string(), vec![asset.clone()]);
+
+    // Only "foo" is in used_symbols — "bar" is NOT explicitly listed.
+    // In a correct implementation, the packager must still retain ".bar_def" because
+    // ".foo_abc" composes from it (either via bundle-graph propagation or AST fallback).
+    let mut used_syms = HashSet::new();
+    used_syms.insert("foo".to_string());
+    graph
+      .used_symbols_by_asset
+      .insert("asset_composes_int".to_string(), used_syms);
+
+    let packager = CssPackager::new(
+      CssPackagingContext {
+        db,
+        project_root: PathBuf::from("/tmp"),
+        output_dir: PathBuf::from("/tmp/dist"),
+      },
+      Arc::new(graph),
+    );
+
+    let result = packager
+      .package("bundle_composes")
+      .expect("package() must succeed");
+    let output = output_string(&result);
+
+    assert!(
+      output.contains(".foo_abc"),
+      ".foo_abc (composing class, explicitly used) must be retained; got: {output:?}"
+    );
+    // This assertion is the crux of the test and is EXPECTED TO FAIL until the
+    // composes-retention mechanism (bundle-graph propagation or AST fallback) is implemented.
+    assert!(
+      output.contains(".bar_def"),
+      ".bar_def (composed-from class) must be retained even though 'bar' is not in \
+       used_symbols — it is required at runtime by .foo_abc's composes declaration; \
+       got: {output:?}"
+    );
+  }
+
+  // --- Test AA: composes with multiple local classes ---
+  #[test]
+  fn composes_retention_multiple_local_classes() {
+    let db = make_db();
+    let css = ".main { composes: a b; color: red; } .a { color: blue; } .b { color: green; }";
+    db.put("asset_multi", css.as_bytes()).unwrap();
+
+    let asset = make_css_module_asset(
+      "asset_multi",
+      vec![("main", "main"), ("a", "a"), ("b", "b")],
+      true,
+    );
+
+    let mut bundle = make_bundle("bundle_multi", vec!["asset_multi"]);
+    bundle.env.should_optimize = true;
+
+    let mut graph = TestBundleGraph::new();
+    graph.bundles.push(bundle.clone());
+    graph
+      .assets_by_bundle
+      .insert("bundle_multi".to_string(), vec![asset.clone()]);
+
+    let mut used_syms = HashSet::new();
+    used_syms.insert("main".to_string());
+    graph
+      .used_symbols_by_asset
+      .insert("asset_multi".to_string(), used_syms);
+
+    let packager = CssPackager::new(
+      CssPackagingContext {
+        db,
+        project_root: PathBuf::from("/tmp"),
+        output_dir: PathBuf::from("/tmp/dist"),
+      },
+      Arc::new(graph),
+    );
+
+    let result = packager
+      .package("bundle_multi")
+      .expect("package() must succeed");
+    let output = output_string(&result);
+
+    assert!(output.contains(".main"), ".main must be retained");
+    assert!(
+      output.contains(".a"),
+      ".a must be retained (composed by main)"
+    );
+    assert!(
+      output.contains(".b"),
+      ".b must be retained (composed by main)"
+    );
+  }
+
+  // --- Test AB: composes ignores 'from global' ---
+  #[test]
+  fn composes_ignores_global_from() {
+    let db = make_db();
+    // 'global' keyword means the class is global, not in this module.
+    // The packager should NOT try to look up 'global-class' in the module symbols
+    // and should not crash or erroneously retain something else.
+    let css = ".main { composes: global-class from global; color: red; } .other { color: blue; }";
+    db.put("asset_global", css.as_bytes()).unwrap();
+
+    let asset = make_css_module_asset(
+      "asset_global",
+      // 'other' is unused and should be removed.
+      vec![("main", "main"), ("other", "other")],
+      true,
+    );
+
+    let mut bundle = make_bundle("bundle_global", vec!["asset_global"]);
+    bundle.env.should_optimize = true;
+
+    let mut graph = TestBundleGraph::new();
+    graph.bundles.push(bundle.clone());
+    graph
+      .assets_by_bundle
+      .insert("bundle_global".to_string(), vec![asset.clone()]);
+
+    let mut used_syms = HashSet::new();
+    used_syms.insert("main".to_string());
+    graph
+      .used_symbols_by_asset
+      .insert("asset_global".to_string(), used_syms);
+
+    let packager = CssPackager::new(
+      CssPackagingContext {
+        db,
+        project_root: PathBuf::from("/tmp"),
+        output_dir: PathBuf::from("/tmp/dist"),
+      },
+      Arc::new(graph),
+    );
+
+    let result = packager
+      .package("bundle_global")
+      .expect("package() must succeed");
+    let output = output_string(&result);
+
+    assert!(output.contains(".main"), ".main must be retained");
+    assert!(
+      !output.contains(".other"),
+      ".other is unused and should be removed"
+    );
+    // We don't check for 'global-class' retention because it's not in the module's CSS definitions,
+    // it's just referenced.
+  }
+
+  // --- Test AC: composes ignores external file imports ---
+  #[test]
+  fn composes_ignores_external_from() {
+    let db = make_db();
+    // 'from \"./file.css\"' means the class is from another file.
+    // The packager should ignore this regarding THIS module's symbol usage.
+    let css =
+      ".main { composes: ext-class from \"./other.css\"; color: red; } .other { color: blue; }";
+    db.put("asset_ext", css.as_bytes()).unwrap();
+
+    let asset = make_css_module_asset(
+      "asset_ext",
+      vec![("main", "main"), ("other", "other")],
+      true,
+    );
+
+    let mut bundle = make_bundle("bundle_ext", vec!["asset_ext"]);
+    bundle.env.should_optimize = true;
+
+    let mut graph = TestBundleGraph::new();
+    graph.bundles.push(bundle.clone());
+    graph
+      .assets_by_bundle
+      .insert("bundle_ext".to_string(), vec![asset.clone()]);
+
+    let mut used_syms = HashSet::new();
+    used_syms.insert("main".to_string());
+    graph
+      .used_symbols_by_asset
+      .insert("asset_ext".to_string(), used_syms);
+
+    let packager = CssPackager::new(
+      CssPackagingContext {
+        db,
+        project_root: PathBuf::from("/tmp"),
+        output_dir: PathBuf::from("/tmp/dist"),
+      },
+      Arc::new(graph),
+    );
+
+    let result = packager
+      .package("bundle_ext")
+      .expect("package() must succeed");
+    let output = output_string(&result);
+
+    assert!(output.contains(".main"), ".main must be retained");
+    assert!(
+      !output.contains(".other"),
+      ".other is unused and should be removed"
     );
   }
 
