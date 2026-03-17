@@ -1628,10 +1628,6 @@ mod tests {
     assert!(pos_c < pos_a, "C must come before A");
   }
 
-  // ---------------------------------------------------------------------------
-  // get_used_symbols tests
-  // ---------------------------------------------------------------------------
-
   fn make_graph_with_asset_used_symbols(
     asset_id: &str,
     used_symbols: serde_json::Value,
