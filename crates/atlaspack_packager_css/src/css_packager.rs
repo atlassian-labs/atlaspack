@@ -53,7 +53,23 @@ impl SourceProvider for InMemoryCssProvider {
 }
 
 /// Removes CSS rules whose selector is in `all_module_selectors` but not in `used_selectors`.
-/// Operates as a simple brace-depth scanner on the raw CSS string.
+///
+/// Operates as a brace-depth scanner on the raw CSS string. Only rules at the **top level**
+/// (depth 0) are candidates for removal. Rules nested inside at-rules such as `@media` or
+/// `@supports` are passed through unchanged (the outer at-rule block is not in
+/// `all_module_selectors` so it is never skipped).
+///
+/// # Known limitations
+///
+/// - **Nested rules inside at-rules** (`@media`, `@supports`, etc.) are not tree-shaken.
+///   In practice this is not an issue for CSS Modules output from lightningcss, because CSS
+///   Module class rules are always emitted at the top level. This matches the behaviour of
+///   the JS reference implementation which uses `postcss.walkRules()`.
+/// - **CSS comments containing braces** (`/* { */`) are not handled; lightningcss strips
+///   comments in production output so this is not a practical concern.
+/// - **Compound/grouped selectors** (`.a, .b { }`) and **pseudo-class selectors**
+///   (`.a:hover { }`) are treated as opaque strings. Since CSS Modules output from
+///   lightningcss always produces single mangled class selectors, this is acceptable.
 fn remove_unused_class_rules(
   css: &str,
   all_module_selectors: &std::collections::HashSet<String>,
@@ -1279,6 +1295,32 @@ mod tests {
     assert!(
       output.contains(".bar_def"),
       ".bar_def (composed-from class) must be retained when in used_symbols; got: {output:?}"
+    );
+  }
+
+  // --- Test O: media query nested rules are NOT tree-shaken (documented limitation) ---
+  //
+  // CSS Module class rules are always emitted at the top level by lightningcss.
+  // Rules inside @media blocks are NOT candidates for removal by the depth-0 scanner.
+  // This documents the known limitation so the behavior is explicit and not hidden.
+  #[test]
+  fn tree_shaking_does_not_remove_rules_inside_at_rules() {
+    // A class inside @media is passed through unchanged regardless of used_selectors.
+    let css = "@media (min-width: 500px) { .unused_xyz { color: red; } }";
+    let all: HashSet<String> = [".unused_xyz"].iter().map(|s| s.to_string()).collect();
+    let used: HashSet<String> = HashSet::new(); // unused — but inside @media
+
+    let output = remove_unused_class_rules(css, &all, &used);
+
+    // The @media block and its contents are passed through unchanged because the
+    // scanner only operates at depth 0. This is a known limitation.
+    assert!(
+      output.contains(".unused_xyz"),
+      "rules inside @media are not tree-shaken (known limitation); got: {output:?}"
+    );
+    assert!(
+      output.contains("@media"),
+      "@media block must be retained; got: {output:?}"
     );
   }
 
