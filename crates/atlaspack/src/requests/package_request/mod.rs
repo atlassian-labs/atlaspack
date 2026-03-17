@@ -258,6 +258,7 @@ impl<B: BundleGraph + Send + Sync + 'static> Request for PackageRequest<B> {
           config_requests: vec![],
           dev_dep_requests: vec![],
           invalidations: vec![],
+          warnings: vec![],
         })
       }
       // Use for testing - delete this soon...

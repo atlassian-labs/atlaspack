@@ -129,6 +129,7 @@ impl From<PackageResult> for JsPackageResult {
       config_requests: vec![],
       dev_dep_requests: vec![],
       invalidations: vec![],
+      // warnings are Rust-internal diagnostics; not forwarded to JS at this time
     }
   }
 }
@@ -266,6 +267,7 @@ mod tests {
       config_requests: vec![],
       dev_dep_requests: vec![],
       invalidations: vec![],
+      warnings: vec![],
     };
 
     let js_result: JsPackageResult = rust_result.into();
@@ -304,6 +306,7 @@ mod tests {
       config_requests: vec![],
       dev_dep_requests: vec![],
       invalidations: vec![],
+      warnings: vec![],
     };
 
     let js_result: JsPackageResult = rust_result.into();

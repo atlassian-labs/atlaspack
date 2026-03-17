@@ -515,7 +515,6 @@ impl BundleGraph for BundleGraphFromJs {
   }
 
   fn get_used_symbols(&self, asset_id: &str) -> Option<HashSet<String>> {
-    // TODO: JS serializes Set as {} not array; returns None until JS side is fixed
     let node = self
       .graph
       .node_weights()
@@ -524,6 +523,9 @@ impl BundleGraph for BundleGraphFromJs {
       return None;
     };
     match &asset_node.used_symbols {
+      // JS may serialize a Set as a JSON array when using JSON.stringify with a replacer,
+      // or as an object with string keys when serialized naively (e.g. `{}` for an empty Set,
+      // or `{"foo":true}` for a Set containing "foo"). Handle both forms.
       serde_json::Value::Array(arr) => {
         let set = arr
           .iter()
@@ -531,6 +533,13 @@ impl BundleGraph for BundleGraphFromJs {
           .collect();
         Some(set)
       }
+      serde_json::Value::Object(obj) => {
+        // JS Set serialized as object: keys are the symbol names, values are ignored.
+        let set = obj.keys().cloned().collect();
+        Some(set)
+      }
+      // Null or missing means no symbol tracking information available.
+      serde_json::Value::Null => None,
       _ => None,
     }
   }
@@ -1617,5 +1626,85 @@ mod tests {
     assert!(pos_d < pos_c, "D must come before C");
     assert!(pos_b < pos_a, "B must come before A");
     assert!(pos_c < pos_a, "C must come before A");
+  }
+
+  // ---------------------------------------------------------------------------
+  // get_used_symbols tests
+  // ---------------------------------------------------------------------------
+
+  fn make_graph_with_asset_used_symbols(
+    asset_id: &str,
+    used_symbols: serde_json::Value,
+  ) -> BundleGraphFromJs {
+    let mut asset_node = create_test_asset_node(asset_id);
+    asset_node.used_symbols = used_symbols;
+    let nodes = vec![
+      BundleGraphNode::Root(create_test_root_node()),
+      BundleGraphNode::Asset(asset_node),
+    ];
+    let edges = vec![(0, 1, BundleGraphEdgeType::Null)];
+    BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![])
+  }
+
+  #[test]
+  fn get_used_symbols_returns_none_for_unknown_asset() {
+    let graph = make_graph_with_asset_used_symbols("asset_a", serde_json::Value::Null);
+    assert!(
+      graph.get_used_symbols("nonexistent").is_none(),
+      "Should return None for an asset not in the graph"
+    );
+  }
+
+  #[test]
+  fn get_used_symbols_returns_none_for_null_value() {
+    let graph = make_graph_with_asset_used_symbols("asset_a", serde_json::Value::Null);
+    assert!(
+      graph.get_used_symbols("asset_a").is_none(),
+      "Should return None when used_symbols is JSON null"
+    );
+  }
+
+  #[test]
+  fn get_used_symbols_parses_json_array_form() {
+    // When JS serializes a Set via a replacer as a JSON array.
+    let graph = make_graph_with_asset_used_symbols("asset_a", serde_json::json!(["foo", "bar"]));
+    let result = graph
+      .get_used_symbols("asset_a")
+      .expect("Should return Some");
+    assert!(result.contains("foo"), "Should contain 'foo'");
+    assert!(result.contains("bar"), "Should contain 'bar'");
+    assert_eq!(result.len(), 2);
+  }
+
+  #[test]
+  fn get_used_symbols_parses_json_object_form() {
+    // When JS serializes a Set naively as an object with keys being the symbol names.
+    let graph =
+      make_graph_with_asset_used_symbols("asset_a", serde_json::json!({"foo": true, "bar": true}));
+    let result = graph
+      .get_used_symbols("asset_a")
+      .expect("Should return Some");
+    assert!(result.contains("foo"), "Should contain 'foo'");
+    assert!(result.contains("bar"), "Should contain 'bar'");
+    assert_eq!(result.len(), 2);
+  }
+
+  #[test]
+  fn get_used_symbols_returns_empty_set_for_empty_object() {
+    // An empty JS Set serialized as {} should return Some(empty set), not None.
+    let graph = make_graph_with_asset_used_symbols("asset_a", serde_json::json!({}));
+    let result = graph
+      .get_used_symbols("asset_a")
+      .expect("Should return Some for empty object");
+    assert!(result.is_empty(), "Empty object should produce empty set");
+  }
+
+  #[test]
+  fn get_used_symbols_returns_empty_set_for_empty_array() {
+    let graph = make_graph_with_asset_used_symbols("asset_a", serde_json::json!([]));
+    let result = graph
+      .get_used_symbols("asset_a")
+      .expect("Should return Some for empty array");
+    assert!(result.is_empty(), "Empty array should produce empty set");
   }
 }
