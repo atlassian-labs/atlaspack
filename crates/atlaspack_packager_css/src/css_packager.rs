@@ -52,94 +52,83 @@ impl SourceProvider for InMemoryCssProvider {
   }
 }
 
-/// Removes CSS rules whose selector is in `all_module_selectors` but not in `used_selectors`.
+/// Removes CSS rules whose selector matches an unused CSS Module class.
 ///
-/// Operates as a brace-depth scanner on the raw CSS string. Only rules at the **top level**
-/// (depth 0) are candidates for removal. Rules nested inside at-rules such as `@media` or
-/// `@supports` are passed through unchanged (the outer at-rule block is not in
-/// `all_module_selectors` so it is never skipped).
+/// Uses the lightningcss AST to correctly handle:
+/// - CSS comments (stripped by the parser)
+/// - Rules nested inside at-rules (`@media`, `@supports`, `@layer`, `@starting-style`)
+/// - Grouped selectors (`.a, .b { }`) — rule removed only if ALL selectors are unused module
+///   classes; if any selector is used or not a module selector, the whole rule is kept
 ///
-/// # Known limitations
-///
-/// - **Nested rules inside at-rules** (`@media`, `@supports`, etc.) are not tree-shaken.
-///   In practice this is not an issue for CSS Modules output from lightningcss, because CSS
-///   Module class rules are always emitted at the top level. This matches the behaviour of
-///   the JS reference implementation which uses `postcss.walkRules()`.
-/// - **CSS comments containing braces** (`/* { */`) are not handled; lightningcss strips
-///   comments in production output so this is not a practical concern.
-/// - **Compound/grouped selectors** (`.a, .b { }`) and **pseudo-class selectors**
-///   (`.a:hover { }`) are treated as opaque strings. Since CSS Modules output from
-///   lightningcss always produces single mangled class selectors, this is acceptable.
+/// Falls back to returning the original CSS string if parsing or serialization fails.
 fn remove_unused_class_rules(
   css: &str,
   all_module_selectors: &std::collections::HashSet<String>,
   used_selectors: &std::collections::HashSet<String>,
 ) -> String {
-  let mut output = String::with_capacity(css.len());
-  let mut selector_buf = String::new();
-  let mut depth: u32 = 0;
-  let mut skipping = false;
-  let mut skip_depth: u32 = 0;
-  let mut in_single_quote = false;
-  let mut in_double_quote = false;
-  let mut prev_char = '\0';
+  use lightningcss::stylesheet::StyleSheet;
 
-  for ch in css.chars() {
-    // Track string literals to avoid misidentifying braces inside strings
-    if ch == '\'' && !in_double_quote && prev_char != '\\' {
-      in_single_quote = !in_single_quote;
-    } else if ch == '"' && !in_single_quote && prev_char != '\\' {
-      in_double_quote = !in_double_quote;
-    }
+  let mut stylesheet = match StyleSheet::parse(css, Default::default()) {
+    Ok(ss) => ss,
+    Err(_) => return css.to_string(),
+  };
 
-    let in_string = in_single_quote || in_double_quote;
+  remove_unused_from_rule_list(&mut stylesheet.rules, all_module_selectors, used_selectors);
 
-    if !in_string && ch == '{' {
-      if depth == 0 {
-        let selector = selector_buf.trim().to_string();
-        selector_buf.clear();
-        // Check if this is an unused module class rule
-        if all_module_selectors.contains(&selector) && !used_selectors.contains(&selector) {
-          skipping = true;
-          skip_depth = 1;
-        } else {
-          output.push_str(&selector);
-          output.push('{');
-          depth = 1;
-        }
-      } else if skipping {
-        skip_depth += 1;
-      } else {
-        output.push(ch);
-        depth += 1;
-      }
-    } else if !in_string && ch == '}' {
-      if skipping {
-        skip_depth -= 1;
-        if skip_depth == 0 {
-          skipping = false;
-        }
-      } else if depth > 0 {
-        depth -= 1;
-        output.push(ch);
-      } else {
-        // Unmatched '}', pass through
-        output.push(ch);
-      }
-    } else if skipping {
-      // Skip body content
-    } else if depth == 0 {
-      selector_buf.push(ch);
-    } else {
-      output.push(ch);
-    }
-
-    prev_char = ch;
+  match stylesheet.to_css(Default::default()) {
+    Ok(result) => result.code,
+    Err(_) => css.to_string(),
   }
+}
 
-  // Flush any remaining selector buffer (shouldn't happen in valid CSS)
-  output.push_str(&selector_buf);
-  output
+/// Recursively removes unused CSS Module class rules from a rule list.
+/// Handles `@media`, `@supports`, `@layer`, and `@starting-style` nesting.
+fn remove_unused_from_rule_list<'i>(
+  rule_list: &mut lightningcss::rules::CssRuleList<'i>,
+  all_module_selectors: &std::collections::HashSet<String>,
+  used_selectors: &std::collections::HashSet<String>,
+) {
+  use lightningcss::rules::CssRule;
+  use lightningcss::traits::ToCss;
+
+  rule_list.0.retain_mut(|rule| match rule {
+    CssRule::Style(style_rule) => {
+      // A rule is removed only when ALL its selectors are unused module classes.
+      // If any selector is used or is not a known module selector, retain the rule.
+      let all_unused = style_rule.selectors.0.iter().all(|selector| {
+        let selector_str = selector
+          .to_css_string(Default::default())
+          .unwrap_or_default();
+        all_module_selectors.contains(&selector_str) && !used_selectors.contains(&selector_str)
+      });
+      !all_unused
+    }
+    CssRule::Media(media_rule) => {
+      remove_unused_from_rule_list(&mut media_rule.rules, all_module_selectors, used_selectors);
+      true
+    }
+    CssRule::Supports(supports_rule) => {
+      remove_unused_from_rule_list(
+        &mut supports_rule.rules,
+        all_module_selectors,
+        used_selectors,
+      );
+      true
+    }
+    CssRule::LayerBlock(layer_rule) => {
+      remove_unused_from_rule_list(&mut layer_rule.rules, all_module_selectors, used_selectors);
+      true
+    }
+    CssRule::StartingStyle(starting_style_rule) => {
+      remove_unused_from_rule_list(
+        &mut starting_style_rule.rules,
+        all_module_selectors,
+        used_selectors,
+      );
+      true
+    }
+    _ => true,
+  });
 }
 
 /// Applies CSS Module tree-shaking to a single asset's CSS string.
@@ -1298,29 +1287,152 @@ mod tests {
     );
   }
 
-  // --- Test O: media query nested rules are NOT tree-shaken (documented limitation) ---
-  //
-  // CSS Module class rules are always emitted at the top level by lightningcss.
-  // Rules inside @media blocks are NOT candidates for removal by the depth-0 scanner.
-  // This documents the known limitation so the behavior is explicit and not hidden.
+  // --- Test O: @media block is retained even when its only rule is removed ---
   #[test]
-  fn tree_shaking_does_not_remove_rules_inside_at_rules() {
-    // A class inside @media is passed through unchanged regardless of used_selectors.
+  fn tree_shaking_retains_empty_media_block_after_removing_nested_rule() {
+    // When the only rule inside @media is unused, the rule is removed.
+    // The @media block itself may remain (empty) or be omitted — both are acceptable.
+    // We just verify there is no crash and the unused class is absent.
     let css = "@media (min-width: 500px) { .unused_xyz { color: red; } }";
     let all: HashSet<String> = [".unused_xyz"].iter().map(|s| s.to_string()).collect();
-    let used: HashSet<String> = HashSet::new(); // unused — but inside @media
+    let used: HashSet<String> = HashSet::new();
 
     let output = remove_unused_class_rules(css, &all, &used);
 
-    // The @media block and its contents are passed through unchanged because the
-    // scanner only operates at depth 0. This is a known limitation.
     assert!(
-      output.contains(".unused_xyz"),
-      "rules inside @media are not tree-shaken (known limitation); got: {output:?}"
+      !output.contains(".unused_xyz"),
+      "unused class inside @media must be removed by AST shaker; got: {output:?}"
+    );
+  }
+
+  // --- Test P: CSS comment containing a brace does not corrupt the output ---
+  //
+  // The current brace-depth scanner does not handle comments, so `/* } */` will
+  // confuse its depth counter and corrupt the output. The AST-based replacement
+  // must handle this correctly because lightningcss parses comments before the
+  // tree-shaker sees the stylesheet.
+  #[test]
+  fn tree_shaking_comment_with_brace_does_not_corrupt_output() {
+    let css = "/* } */ .foo_abc { color: red; } .bar_def { color: blue; }";
+    let all: HashSet<String> = [".foo_abc", ".bar_def"]
+      .iter()
+      .map(|s| s.to_string())
+      .collect();
+    let used: HashSet<String> = [".foo_abc"].iter().map(|s| s.to_string()).collect();
+
+    let output = remove_unused_class_rules(css, &all, &used);
+
+    assert!(
+      output.contains(".foo_abc"),
+      "used class .foo_abc must be retained; got: {output:?}"
+    );
+    assert!(
+      !output.contains(".bar_def"),
+      "unused class .bar_def must be removed; got: {output:?}"
+    );
+    // Verify the output is not corrupted: it must not contain mismatched braces.
+    // A simple proxy: the number of '{' and '}' in the output must be equal.
+    let open_braces = output.chars().filter(|&c| c == '{').count();
+    let close_braces = output.chars().filter(|&c| c == '}').count();
+    assert_eq!(
+      open_braces, close_braces,
+      "output must have balanced braces (no corruption from comment brace); got: {output:?}"
+    );
+  }
+
+  // --- Test Q: class rule inside @media is tree-shaken when unused ---
+  //
+  // The AST-based implementation must descend into at-rule blocks and remove
+  // unused CSS Module class rules nested inside them. The brace scanner cannot
+  // do this (known limitation documented in Test O).
+  #[test]
+  fn tree_shaking_removes_unused_class_inside_media_query() {
+    let css = "@media (min-width: 500px) { .unused_xyz { color: red; } }";
+    let all: HashSet<String> = [".unused_xyz"].iter().map(|s| s.to_string()).collect();
+    let used: HashSet<String> = HashSet::new();
+
+    let output = remove_unused_class_rules(css, &all, &used);
+
+    assert!(
+      !output.contains(".unused_xyz"),
+      "unused class inside @media must be removed by AST-based shaker; got: {output:?}"
+    );
+    // The @media block may be empty or absent — either is acceptable.
+  }
+
+  // --- Test R: class rule inside @media is retained when used ---
+  //
+  // When the nested class IS in `used_selectors`, the AST-based implementation
+  // must keep the rule (and the surrounding @media block).
+  #[test]
+  fn tree_shaking_retains_used_class_inside_media_query() {
+    let css = "@media (min-width: 500px) { .used_abc { color: red; } }";
+    let all: HashSet<String> = [".used_abc"].iter().map(|s| s.to_string()).collect();
+    let used: HashSet<String> = [".used_abc"].iter().map(|s| s.to_string()).collect();
+
+    let output = remove_unused_class_rules(css, &all, &used);
+
+    assert!(
+      output.contains(".used_abc"),
+      "used class inside @media must be retained; got: {output:?}"
     );
     assert!(
       output.contains("@media"),
-      "@media block must be retained; got: {output:?}"
+      "@media block must be retained when its rule is used; got: {output:?}"
+    );
+  }
+
+  // --- Test S: grouped selector — unused group is removed ---
+  //
+  // When both selectors in a comma-separated group are in `all_module_selectors`
+  // but neither is in `used_selectors`, the entire rule must be removed.
+  #[test]
+  fn tree_shaking_removes_fully_unused_grouped_selector() {
+    let css = ".foo_abc, .bar_def { color: red; }";
+    let all: HashSet<String> = [".foo_abc", ".bar_def"]
+      .iter()
+      .map(|s| s.to_string())
+      .collect();
+    let used: HashSet<String> = HashSet::new();
+
+    let output = remove_unused_class_rules(css, &all, &used);
+
+    assert!(
+      !output.contains(".foo_abc"),
+      ".foo_abc must be absent when no selectors in the group are used; got: {output:?}"
+    );
+    assert!(
+      !output.contains(".bar_def"),
+      ".bar_def must be absent when no selectors in the group are used; got: {output:?}"
+    );
+  }
+
+  // --- Test T: grouped selector — partially used group retains the rule ---
+  //
+  // When at least one selector in a comma-separated group is used, the safe
+  // behaviour is to retain the entire rule. The AST-based implementation may
+  // alternatively strip only the unused selectors from the group, but it must
+  // not drop the used one.
+  #[test]
+  fn tree_shaking_retains_grouped_selector_rule_when_any_selector_is_used() {
+    let css = ".foo_abc, .bar_def { color: red; }";
+    let all: HashSet<String> = [".foo_abc", ".bar_def"]
+      .iter()
+      .map(|s| s.to_string())
+      .collect();
+    // Only foo is used; bar is not.
+    let used: HashSet<String> = [".foo_abc"].iter().map(|s| s.to_string()).collect();
+
+    let output = remove_unused_class_rules(css, &all, &used);
+
+    assert!(
+      output.contains(".foo_abc"),
+      ".foo_abc must be present because it is used; got: {output:?}"
+    );
+    // The rule body must be retained (it applies to the used selector).
+    assert!(
+      output.contains("color: red"),
+      "rule body must be retained when a selector in the group is used; got: {output:?}"
     );
   }
 
