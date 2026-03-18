@@ -1,5 +1,13 @@
 # @atlaspack/transformer-html
 
+## 2.15.36
+
+### Patch Changes
+
+- Updated dependencies [[`a958853`](https://github.com/atlassian-labs/atlaspack/commit/a958853ae3de2812bfd032357e9fa7cab6a1ddb6), [`0f5c1ef`](https://github.com/atlassian-labs/atlaspack/commit/0f5c1eff9138728168231efa66202a8d844c33ef)]:
+  - @atlaspack/rust@3.27.0
+  - @atlaspack/plugin@2.14.59
+
 ## 2.15.35
 
 ### Patch Changes

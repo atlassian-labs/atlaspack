@@ -1,5 +1,13 @@
 # @atlaspack/transformer-webmanifest
 
+## 2.14.59
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.4.1
+  - @atlaspack/plugin@2.14.59
+
 ## 2.14.58
 
 ### Patch Changes
