@@ -8,6 +8,10 @@ pub mod migration_hash;
 pub use config::CompiledCssInJsTransformConfig;
 pub use constants::DEFAULT_IMPORT_SOURCES;
 
+#[cfg(test)]
+#[path = "test-utils.rs"]
+pub mod test_utils;
+
 #[path = "babel-plugin.rs"]
 mod babel_plugin;
 #[path = "index.rs"]

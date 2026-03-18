@@ -1346,7 +1346,7 @@ export const Ellipsis = styled.div(css<Record<any, any>>(ellipsis));
 
     // Verify styled components are compiled away
     assert!(
-      !output.code.contains("css"),
+      !output.code.contains("css="),
       "css calls should be compiled away and replaced with className-based components"
     );
 

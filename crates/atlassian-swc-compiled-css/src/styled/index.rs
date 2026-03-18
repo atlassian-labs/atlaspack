@@ -425,47 +425,51 @@ mod tests {
 
   #[test]
   fn transforms_member_expression_template_literal() {
-    let mut expr = parse_expression("styled.div`color: red;`");
-    let meta = metadata_with_styled_import("styled");
-    let mut received_input = None;
-    let result = visit_styled_with_builder(
-      &mut expr,
-      &meta,
-      |node, _| {
-        received_input = Some(node.clone());
-        css_output()
-      },
-      Some("Component"),
-    );
+    crate::test_utils::with_globals(|| {
+      let mut expr = parse_expression("styled.div`color: red;`");
+      let meta = metadata_with_styled_import("styled");
+      let mut received_input = None;
+      let result = visit_styled_with_builder(
+        &mut expr,
+        &meta,
+        |node, _| {
+          received_input = Some(node.clone());
+          css_output()
+        },
+        Some("Component"),
+      );
 
-    assert!(matches!(received_input, Some(StyledCssNode::Expression(_))));
-    assert!(result.transformed);
-    assert!(matches!(expr, Expr::Call(_)));
-    match result.display_name {
-      Some(Stmt::If(_)) => {}
-      other => panic!("unexpected display name statement: {other:?}"),
-    }
+      assert!(matches!(received_input, Some(StyledCssNode::Expression(_))));
+      assert!(result.transformed);
+      assert!(matches!(expr, Expr::Call(_)));
+      match result.display_name {
+        Some(Stmt::If(_)) => {}
+        other => panic!("unexpected display name statement: {other:?}"),
+      }
+    });
   }
 
   #[test]
   fn transforms_call_expression_object_literal() {
-    let mut expr = parse_expression("styled.div({ color: 'red' })");
-    let meta = metadata_with_styled_import("styled");
-    let mut received_input = None;
-    let result = visit_styled_with_builder(
-      &mut expr,
-      &meta,
-      |node, _| {
-        received_input = Some(node.clone());
-        css_output()
-      },
-      None,
-    );
+    crate::test_utils::with_globals(|| {
+      let mut expr = parse_expression("styled.div({ color: 'red' })");
+      let meta = metadata_with_styled_import("styled");
+      let mut received_input = None;
+      let result = visit_styled_with_builder(
+        &mut expr,
+        &meta,
+        |node, _| {
+          received_input = Some(node.clone());
+          css_output()
+        },
+        None,
+      );
 
-    assert!(result.transformed);
-    assert!(
-      matches!(received_input, Some(StyledCssNode::Expressions(values)) if !values.is_empty())
-    );
+      assert!(result.transformed);
+      assert!(
+        matches!(received_input, Some(StyledCssNode::Expressions(values)) if !values.is_empty())
+      );
+    });
   }
 
   #[test]
