@@ -15,6 +15,7 @@ base64 = { workspace = true }
 # concatenation work planned. Declaring them here avoids a Cargo.toml
 # churn PR when that work lands.
 parking_lot = { workspace = true }
+pathdiff = { workspace = true }
 rayon = { workspace = true }
 
 [dependencies.lightningcss]

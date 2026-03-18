@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/optimizer-inline-requires",
-  "version": "2.16.4",
+  "version": "2.16.6",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -17,10 +17,10 @@
   },
   "dependencies": {
     "@atlaspack/feature-flags": "2.31.0",
-    "@atlaspack/plugin": "2.14.58",
-    "@atlaspack/rust": "3.26.0",
-    "@atlaspack/source-map": "3.3.2",
-    "@atlaspack/types": "2.15.48",
+    "@atlaspack/plugin": "2.14.60",
+    "@atlaspack/rust": "3.28.0",
+    "@atlaspack/source-map": "3.3.4",
+    "@atlaspack/types": "2.15.50",
     "@swc/core": "1.15.11",
     "nullthrows": "^1.1.1"
   },

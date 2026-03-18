@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/package-manager",
-  "version": "2.14.58",
+  "version": "2.14.60",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
@@ -40,12 +40,12 @@
   "dependencies": {
     "@atlaspack/build-cache": "2.13.14",
     "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/fs": "2.15.53",
-    "@atlaspack/logger": "2.14.50",
-    "@atlaspack/node-resolver-core": "3.7.29",
-    "@atlaspack/types": "2.15.48",
-    "@atlaspack/utils": "3.4.0",
-    "@atlaspack/workers": "2.14.58",
+    "@atlaspack/fs": "2.15.55",
+    "@atlaspack/logger": "2.14.52",
+    "@atlaspack/node-resolver-core": "3.7.31",
+    "@atlaspack/types": "2.15.50",
+    "@atlaspack/utils": "3.4.2",
+    "@atlaspack/workers": "2.14.60",
     "@swc/core": "1.15.11",
     "semver": "^7.5.2",
     "command-exists": "^1.2.6",

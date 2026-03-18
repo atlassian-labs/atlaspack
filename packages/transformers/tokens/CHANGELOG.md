@@ -1,5 +1,29 @@
 # @atlaspack/transformer-tokens
 
+## 1.2.2
+
+### Patch Changes
+
+- Updated dependencies [[`7d1839c`](https://github.com/atlassian-labs/atlaspack/commit/7d1839cc7cf0225dd35afecb68109a11fd931f2b)]:
+  - @atlaspack/rust@3.28.0
+  - @atlaspack/source-map@3.3.4
+  - @atlaspack/utils@3.4.2
+  - @atlaspack/transformer-js@19.0.2
+  - @atlaspack/types-internal@2.25.2
+  - @atlaspack/plugin@2.14.60
+
+## 1.2.1
+
+### Patch Changes
+
+- Updated dependencies [[`a958853`](https://github.com/atlassian-labs/atlaspack/commit/a958853ae3de2812bfd032357e9fa7cab6a1ddb6), [`0f5c1ef`](https://github.com/atlassian-labs/atlaspack/commit/0f5c1eff9138728168231efa66202a8d844c33ef)]:
+  - @atlaspack/rust@3.27.0
+  - @atlaspack/source-map@3.3.3
+  - @atlaspack/utils@3.4.1
+  - @atlaspack/transformer-js@19.0.1
+  - @atlaspack/types-internal@2.25.1
+  - @atlaspack/plugin@2.14.59
+
 ## 1.2.0
 
 ### Minor Changes

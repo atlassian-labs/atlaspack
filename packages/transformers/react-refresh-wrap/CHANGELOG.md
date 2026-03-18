@@ -1,5 +1,21 @@
 # @atlaspack/transformer-react-refresh-wrap
 
+## 2.15.36
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.4.2
+  - @atlaspack/plugin@2.14.60
+
+## 2.15.35
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.4.1
+  - @atlaspack/plugin@2.14.59
+
 ## 2.15.34
 
 ### Patch Changes

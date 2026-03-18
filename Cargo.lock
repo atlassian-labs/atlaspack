@@ -689,6 +689,7 @@ dependencies = [
  "lightningcss",
  "mockall",
  "parking_lot",
+ "pathdiff",
  "pretty_assertions",
  "rayon",
 ]
