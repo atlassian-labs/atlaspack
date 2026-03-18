@@ -19,6 +19,7 @@ use atlaspack_core::{
   package_result::PackageResult,
   types::{Bundle, FileType},
 };
+use atlaspack_packager_css::{CssPackager, CssPackagingContext};
 use atlaspack_packager_js::{JsPackager, PackagingContext};
 
 /// The prefix used in hash reference placeholders embedded in bundle content.
@@ -217,6 +218,17 @@ impl<B: BundleGraph + Send + Sync + 'static> Request for PackageRequest<B> {
             cache: None,
             project_root: request_context.project_root.clone(),
             debug_tools: DebugTools::default(),
+          },
+          Arc::clone(&self.bundle_graph),
+        );
+        packager.package(&self.bundle.id)
+      }
+      FileType::Css => {
+        let packager = CssPackager::new(
+          CssPackagingContext {
+            db: Arc::clone(&request_context.db),
+            project_root: request_context.project_root.clone(),
+            output_dir: self.bundle.target.dist_dir.clone(),
           },
           Arc::clone(&self.bundle_graph),
         );
