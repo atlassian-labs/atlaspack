@@ -1,5 +1,15 @@
 # @atlaspack/transformer-css
 
+## 2.15.21
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.3.4
+  - @atlaspack/utils@3.4.2
+  - @atlaspack/types@2.15.50
+  - @atlaspack/plugin@2.14.60
+
 ## 2.15.20
 
 ### Patch Changes

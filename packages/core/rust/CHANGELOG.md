@@ -1,5 +1,11 @@
 # @atlaspack/rust
 
+## 3.28.0
+
+### Minor Changes
+
+- [#1062](https://github.com/atlassian-labs/atlaspack/pull/1062) [`7d1839c`](https://github.com/atlassian-labs/atlaspack/commit/7d1839cc7cf0225dd35afecb68109a11fd931f2b) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Implement native CSS packaging core
+
 ## 3.27.0
 
 ### Minor Changes

@@ -1,5 +1,12 @@
 # @atlaspack/e2e-tests
 
+## 2.14.15
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/transformer-compiled-external@0.2.14
+
 ## 2.14.14
 
 ### Patch Changes
