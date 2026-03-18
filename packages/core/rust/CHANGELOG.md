@@ -1,5 +1,21 @@
 # @atlaspack/rust
 
+## 3.28.0
+
+### Minor Changes
+
+- [#1062](https://github.com/atlassian-labs/atlaspack/pull/1062) [`7d1839c`](https://github.com/atlassian-labs/atlaspack/commit/7d1839cc7cf0225dd35afecb68109a11fd931f2b) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Implement native CSS packaging core
+
+## 3.27.0
+
+### Minor Changes
+
+- [#1061](https://github.com/atlassian-labs/atlaspack/pull/1061) [`a958853`](https://github.com/atlassian-labs/atlaspack/commit/a958853ae3de2812bfd032357e9fa7cab6a1ddb6) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Implement native CSS packager scaffolding
+
+### Patch Changes
+
+- [#1067](https://github.com/atlassian-labs/atlaspack/pull/1067) [`0f5c1ef`](https://github.com/atlassian-labs/atlaspack/commit/0f5c1eff9138728168231efa66202a8d844c33ef) Thanks [@JakeLane](https://github.com/JakeLane)! - Fix Compiled SWC plugin binding collisions in some cases.
+
 ## 3.26.0
 
 ### Minor Changes

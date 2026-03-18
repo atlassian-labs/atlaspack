@@ -381,61 +381,64 @@ mod tests {
 
   #[test]
   fn transforms_inline_object_into_compiled_template() {
-    let code = "<Component xcss={{ color: 'red' }} />";
-    let (mut expr, cm, _fm) = parse_jsx_expression(code, None);
-    let metadata = create_metadata(cm, Vec::new());
+    crate::test_utils::with_globals(|| {
+      let code = "<Component xcss={{ color: 'red' }} />";
+      let (mut expr, cm, _fm) = parse_jsx_expression(code, None);
+      let metadata = create_metadata(cm, Vec::new());
 
-    let mut calls = 0usize;
-    let mut build_css = |value: &Expr, _meta: &Metadata| {
-      calls += 1;
-      assert!(matches!(value, Expr::Object(_)));
-      CssOutput {
-        css: vec![CssItem::unconditional(String::from("._a{color:red;}"))],
-        variables: Vec::new(),
+      let mut calls = 0usize;
+      let mut build_css = |value: &Expr, _meta: &Metadata| {
+        calls += 1;
+        assert!(matches!(value, Expr::Object(_)));
+        CssOutput {
+          css: vec![CssItem::unconditional(String::from("._a{color:red;}"))],
+          variables: Vec::new(),
+        }
+      };
+
+      let transformed = visit_xcss_prop_with_builder(&mut expr, &metadata, &mut build_css);
+      assert!(transformed);
+      assert_eq!(calls, 1);
+
+      let Expr::JSXElement(wrapper) = &expr else {
+        panic!("expected JSX element wrapper");
+      };
+
+      match &wrapper.opening.name {
+        JSXElementName::Ident(ident) => assert_eq!(ident.sym.as_ref(), "CC"),
+        other => panic!("expected CC wrapper, found {other:?}"),
       }
-    };
 
-    let transformed = visit_xcss_prop_with_builder(&mut expr, &metadata, &mut build_css);
-    assert!(transformed);
-    assert_eq!(calls, 1);
+      let inner = find_inner_component(&expr);
+      let attr = inner
+              .opening
+              .attrs
+              .iter()
+              .find_map(|attr| match attr {
+                  JSXAttrOrSpread::JSXAttr(attr)
+                      if matches!(&attr.name, JSXAttrName::Ident(ident) if ident.sym.as_ref() == "xcss") =>
+                  {
+                      Some(attr)
+                  }
+                  _ => None,
+              })
+              .expect("xcss attribute");
 
-    let Expr::JSXElement(wrapper) = &expr else {
-      panic!("expected JSX element wrapper");
-    };
+      let JSXAttrValue::JSXExprContainer(container) = attr.value.as_ref().expect("attr value")
+      else {
+        panic!("expected expression container");
+      };
 
-    match &wrapper.opening.name {
-      JSXElementName::Ident(ident) => assert_eq!(ident.sym.as_ref(), "CC"),
-      other => panic!("expected CC wrapper, found {other:?}"),
-    }
+      match &container.expr {
+        JSXExpr::Expr(expr) => match &**expr {
+          Expr::Lit(Lit::Str(Str { value, .. })) => assert!(!value.is_empty()),
+          other => panic!("expected string literal, found {other:?}"),
+        },
+        other => panic!("expected expression, found {other:?}"),
+      }
 
-    let inner = find_inner_component(&expr);
-    let attr = inner
-            .opening
-            .attrs
-            .iter()
-            .find_map(|attr| match attr {
-                JSXAttrOrSpread::JSXAttr(attr)
-                    if matches!(&attr.name, JSXAttrName::Ident(ident) if ident.sym.as_ref() == "xcss") =>
-                {
-                    Some(attr)
-                }
-                _ => None,
-            })
-            .expect("xcss attribute");
-
-    let JSXAttrValue::JSXExprContainer(container) = attr.value.as_ref().expect("attr value") else {
-      panic!("expected expression container");
-    };
-
-    match &container.expr {
-      JSXExpr::Expr(expr) => match &**expr {
-        Expr::Lit(Lit::Str(Str { value, .. })) => assert!(!value.is_empty()),
-        other => panic!("expected string literal, found {other:?}"),
-      },
-      other => panic!("expected expression, found {other:?}"),
-    }
-
-    assert!(metadata.state().uses_xcss);
+      assert!(metadata.state().uses_xcss);
+    });
   }
 
   #[test]
@@ -468,69 +471,72 @@ mod tests {
 
   #[test]
   fn transforms_css_map_usage_when_styles_available() {
-    let code = "<Component xcss={styles.primary} />";
-    let (mut expr, cm, _fm) = parse_jsx_expression(code, None);
-    let metadata = create_metadata(cm, Vec::new());
+    crate::test_utils::with_globals(|| {
+      let code = "<Component xcss={styles.primary} />";
+      let (mut expr, cm, _fm) = parse_jsx_expression(code, None);
+      let metadata = create_metadata(cm, Vec::new());
 
-    {
-      let mut state = metadata.state_mut();
-      state
-        .css_map
-        .insert("styles".into(), vec!["._hash{color:red}".into()]);
-    }
+      {
+        let mut state = metadata.state_mut();
+        state
+          .css_map
+          .insert("styles".into(), vec!["._hash{color:red}".into()]);
+      }
 
-    let mut calls = 0usize;
-    let mut build_css = |_value: &Expr, _meta: &Metadata| {
-      calls += 1;
-      CssOutput::new()
-    };
+      let mut calls = 0usize;
+      let mut build_css = |_value: &Expr, _meta: &Metadata| {
+        calls += 1;
+        CssOutput::new()
+      };
 
-    let transformed = visit_xcss_prop_with_builder(&mut expr, &metadata, &mut build_css);
-    assert!(transformed);
-    assert_eq!(calls, 0);
+      let transformed = visit_xcss_prop_with_builder(&mut expr, &metadata, &mut build_css);
+      assert!(transformed);
+      assert_eq!(calls, 0);
 
-    let Expr::JSXElement(wrapper) = &expr else {
-      panic!("expected JSX element wrapper");
-    };
+      let Expr::JSXElement(wrapper) = &expr else {
+        panic!("expected JSX element wrapper");
+      };
 
-    match &wrapper.opening.name {
-      JSXElementName::Ident(ident) => assert_eq!(ident.sym.as_ref(), "CC"),
-      other => panic!("expected CC wrapper, found {other:?}"),
-    }
+      match &wrapper.opening.name {
+        JSXElementName::Ident(ident) => assert_eq!(ident.sym.as_ref(), "CC"),
+        other => panic!("expected CC wrapper, found {other:?}"),
+      }
 
-    let inner = find_inner_component(&expr);
-    let attr = inner
-            .opening
-            .attrs
-            .iter()
-            .find_map(|attr| match attr {
-                JSXAttrOrSpread::JSXAttr(attr)
-                    if matches!(&attr.name, JSXAttrName::Ident(ident) if ident.sym.as_ref() == "xcss") =>
-                {
-                    Some(attr)
-                }
-                _ => None,
-            })
-            .expect("xcss attribute");
+      let inner = find_inner_component(&expr);
+      let attr = inner
+              .opening
+              .attrs
+              .iter()
+              .find_map(|attr| match attr {
+                  JSXAttrOrSpread::JSXAttr(attr)
+                      if matches!(&attr.name, JSXAttrName::Ident(ident) if ident.sym.as_ref() == "xcss") =>
+                  {
+                      Some(attr)
+                  }
+                  _ => None,
+              })
+              .expect("xcss attribute");
 
-    let JSXAttrValue::JSXExprContainer(container) = attr.value.as_ref().expect("attr value") else {
-      panic!("expected expression container");
-    };
+      let JSXAttrValue::JSXExprContainer(container) = attr.value.as_ref().expect("attr value")
+      else {
+        panic!("expected expression container");
+      };
 
-    match &container.expr {
-      JSXExpr::Expr(expr) => match &**expr {
-        Expr::Member(member) => {
-          let Expr::Ident(object) = &*member.obj else {
-            panic!("expected identifier object");
-          };
-          assert_eq!(object.sym.as_ref(), "styles");
-        }
-        other => panic!("expected member expression, found {other:?}"),
-      },
-      other => panic!("expected expression, found {other:?}"),
-    }
+      match &container.expr {
+        JSXExpr::Expr(expr) => match &**expr {
+          Expr::Member(member) => {
+            let Expr::Ident(object) = &*member.obj else {
+              panic!("expected identifier object");
+            };
+            assert_eq!(object.sym.as_ref(), "styles");
+          }
+          other => panic!("expected member expression, found {other:?}"),
+        },
+        other => panic!("expected expression, found {other:?}"),
+      }
 
-    assert!(metadata.state().uses_xcss);
+      assert!(metadata.state().uses_xcss);
+    });
   }
 
   #[test]
