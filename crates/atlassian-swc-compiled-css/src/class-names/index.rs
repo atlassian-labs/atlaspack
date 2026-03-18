@@ -470,118 +470,124 @@ mod tests {
 
   #[test]
   fn transforms_class_names_usage() {
-    let mut expr = parse_jsx_expression(
-      "<ClassNames>{({ css, style }) => <div className={css({ color: 'red' })} style={style} />}</ClassNames>",
-    );
-    let meta = metadata_with_class_names_import("ClassNames");
-    let mut received_input = Vec::new();
-    let transformed = visit_class_names_with_builder(&mut expr, &meta, |node, _| {
-      received_input.push(node);
-      css_output()
-    });
+    crate::test_utils::with_globals(|| {
+      let mut expr = parse_jsx_expression(
+        "<ClassNames>{({ css, style }) => <div className={css({ color: 'red' })} style={style} />}</ClassNames>",
+      );
+      let meta = metadata_with_class_names_import("ClassNames");
+      let mut received_input = Vec::new();
+      let transformed = visit_class_names_with_builder(&mut expr, &meta, |node, _| {
+        received_input.push(node);
+        css_output()
+      });
 
-    assert!(transformed);
-    assert_eq!(received_input.len(), 1);
+      assert!(transformed);
+      assert_eq!(received_input.len(), 1);
 
-    let Expr::JSXElement(cc_element) = &expr else {
-      panic!("expected compiled component");
-    };
+      let Expr::JSXElement(cc_element) = &expr else {
+        panic!("expected compiled component");
+      };
 
-    // The body expression is stored in the penultimate child of <CC>.
-    let body_expr = match cc_element.children.get(3) {
-      Some(JSXElementChild::JSXExprContainer(JSXExprContainer {
-        expr: JSXExpr::Expr(inner),
-        ..
-      })) => inner,
-      other => panic!("unexpected CC children structure: {other:?}"),
-    };
+      // The body expression is stored in the penultimate child of <CC>.
+      let body_expr = match cc_element.children.get(3) {
+        Some(JSXElementChild::JSXExprContainer(JSXExprContainer {
+          expr: JSXExpr::Expr(inner),
+          ..
+        })) => inner,
+        other => panic!("unexpected CC children structure: {other:?}"),
+      };
 
-    let Expr::JSXElement(div_element) = body_expr.as_ref() else {
-      panic!("expected div element");
-    };
+      let Expr::JSXElement(div_element) = body_expr.as_ref() else {
+        panic!("expected div element");
+      };
 
-    let mut class_attr = None;
-    let mut style_attr = None;
-    for attr in &div_element.opening.attrs {
-      if let JSXAttrOrSpread::JSXAttr(JSXAttr { name, value, .. }) = attr {
-        match name {
-          JSXAttrName::Ident(ident) if ident.sym.as_ref() == "className" => {
-            class_attr = value.clone();
+      let mut class_attr = None;
+      let mut style_attr = None;
+      for attr in &div_element.opening.attrs {
+        if let JSXAttrOrSpread::JSXAttr(JSXAttr { name, value, .. }) = attr {
+          match name {
+            JSXAttrName::Ident(ident) if ident.sym.as_ref() == "className" => {
+              class_attr = value.clone();
+            }
+            JSXAttrName::Ident(ident) if ident.sym.as_ref() == "style" => {
+              style_attr = value.clone();
+            }
+            _ => {}
           }
-          JSXAttrName::Ident(ident) if ident.sym.as_ref() == "style" => {
-            style_attr = value.clone();
-          }
-          _ => {}
         }
       }
-    }
 
-    let Some(JSXAttrValue::JSXExprContainer(class_container)) = class_attr else {
-      panic!("missing className expression");
-    };
-    match &class_container.expr {
-      JSXExpr::Expr(class_expr) => match class_expr.as_ref() {
-        Expr::Call(call) => {
-          let Callee::Expr(callee) = &call.callee else {
-            panic!("unexpected callee");
-          };
-          match callee.as_ref() {
-            Expr::Ident(ident) => assert!(
-              ident.sym.as_ref() == "ax" || ident.sym.as_ref() == "ac",
-              "unexpected runtime helper"
-            ),
-            other => panic!("unexpected className expression: {other:?}"),
+      let Some(JSXAttrValue::JSXExprContainer(class_container)) = class_attr else {
+        panic!("missing className expression");
+      };
+      match &class_container.expr {
+        JSXExpr::Expr(class_expr) => match class_expr.as_ref() {
+          Expr::Call(call) => {
+            let Callee::Expr(callee) = &call.callee else {
+              panic!("unexpected callee");
+            };
+            match callee.as_ref() {
+              Expr::Ident(ident) => assert!(
+                ident.sym.as_ref() == "ax" || ident.sym.as_ref() == "ac",
+                "unexpected runtime helper"
+              ),
+              other => panic!("unexpected className expression: {other:?}"),
+            }
           }
-        }
-        other => panic!("unexpected className expression: {other:?}"),
-      },
-      other => panic!("unexpected className container: {other:?}"),
-    }
+          other => panic!("unexpected className expression: {other:?}"),
+        },
+        other => panic!("unexpected className container: {other:?}"),
+      }
 
-    let Some(JSXAttrValue::JSXExprContainer(style_container)) = style_attr else {
-      panic!("missing style expression");
-    };
-    match &style_container.expr {
-      JSXExpr::Expr(style_expr) => match style_expr.as_ref() {
-        Expr::Ident(ident) => assert_eq!(ident.sym.as_ref(), "undefined"),
-        other => panic!("unexpected style expression: {other:?}"),
-      },
-      other => panic!("unexpected style container: {other:?}"),
-    }
+      let Some(JSXAttrValue::JSXExprContainer(style_container)) = style_attr else {
+        panic!("missing style expression");
+      };
+      match &style_container.expr {
+        JSXExpr::Expr(style_expr) => match style_expr.as_ref() {
+          Expr::Ident(ident) => assert_eq!(ident.sym.as_ref(), "undefined"),
+          other => panic!("unexpected style expression: {other:?}"),
+        },
+        other => panic!("unexpected style container: {other:?}"),
+      }
 
-    assert_eq!(meta.state().sheets.len(), 1);
+      assert_eq!(meta.state().sheets.len(), 1);
+    });
   }
 
   #[test]
   fn supports_aliases_in_destructuring() {
-    let mut expr = parse_jsx_expression(
-      "<ClassNames>{({ css: cx, style: styles }) => <div className={cx({})} style={styles} />}</ClassNames>",
-    );
-    let meta = metadata_with_class_names_import("ClassNames");
-    let mut called = 0;
-    let transformed = visit_class_names_with_builder(&mut expr, &meta, |node, _| {
-      called += 1;
-      match node {
-        ClassNamesCssNode::Expressions(values) => {
-          assert_eq!(values.len(), 1);
+    crate::test_utils::with_globals(|| {
+      let mut expr = parse_jsx_expression(
+        "<ClassNames>{({ css: cx, style: styles }) => <div className={cx({})} style={styles} />}</ClassNames>",
+      );
+      let meta = metadata_with_class_names_import("ClassNames");
+      let mut called = 0;
+      let transformed = visit_class_names_with_builder(&mut expr, &meta, |node, _| {
+        called += 1;
+        match node {
+          ClassNamesCssNode::Expressions(values) => {
+            assert_eq!(values.len(), 1);
+          }
+          other => panic!("unexpected node: {other:?}"),
         }
-        other => panic!("unexpected node: {other:?}"),
-      }
-      css_output()
-    });
+        css_output()
+      });
 
-    assert!(transformed);
-    assert_eq!(called, 1);
+      assert!(transformed);
+      assert_eq!(called, 1);
+    });
   }
 
   #[test]
   fn handles_member_expression_calls() {
-    let mut expr = parse_jsx_expression(
-      "<ClassNames>{(props) => <div className={props.css({})} style={props.style} />}</ClassNames>",
-    );
-    let meta = metadata_with_class_names_import("ClassNames");
-    let transformed = visit_class_names_with_builder(&mut expr, &meta, |_, _| css_output());
-    assert!(transformed);
+    crate::test_utils::with_globals(|| {
+      let mut expr = parse_jsx_expression(
+        "<ClassNames>{(props) => <div className={props.css({})} style={props.style} />}</ClassNames>",
+      );
+      let meta = metadata_with_class_names_import("ClassNames");
+      let transformed = visit_class_names_with_builder(&mut expr, &meta, |_, _| css_output());
+      assert!(transformed);
+    });
   }
 
   #[test]
@@ -611,33 +617,35 @@ mod tests {
 
   #[test]
   fn runtime_helper_switches_with_compression_map() {
-    let mut expr =
-      parse_jsx_expression("<ClassNames>{({ css }) => <div className={css({})} />}</ClassNames>");
-    let mut options = PluginOptions::default();
-    options.class_name_compression_map = Some(std::collections::BTreeMap::from([(
-      "ax".into(),
-      "a".into(),
-    )]));
-    let cm: Lrc<SourceMap> = Default::default();
-    let file = TransformFile::transform_compiled_with_options(
-      cm,
-      Vec::new(),
-      crate::types::TransformFileOptions {
-        filename: Some("file.tsx".into()),
-        ..Default::default()
-      },
-    );
-    let state = Rc::new(RefCell::new(TransformState::new(file, options)));
-    {
-      let mut state_mut = state.borrow_mut();
-      state_mut.compiled_imports = Some(CompiledImports {
-        class_names: vec!["ClassNames".into()],
-        ..CompiledImports::default()
-      });
-    }
-    let meta = Metadata::new(Rc::clone(&state));
+    crate::test_utils::with_globals(|| {
+      let mut expr =
+        parse_jsx_expression("<ClassNames>{({ css }) => <div className={css({})} />}</ClassNames>");
+      let mut options = PluginOptions::default();
+      options.class_name_compression_map = Some(std::collections::BTreeMap::from([(
+        "ax".into(),
+        "a".into(),
+      )]));
+      let cm: Lrc<SourceMap> = Default::default();
+      let file = TransformFile::transform_compiled_with_options(
+        cm,
+        Vec::new(),
+        crate::types::TransformFileOptions {
+          filename: Some("file.tsx".into()),
+          ..Default::default()
+        },
+      );
+      let state = Rc::new(RefCell::new(TransformState::new(file, options)));
+      {
+        let mut state_mut = state.borrow_mut();
+        state_mut.compiled_imports = Some(CompiledImports {
+          class_names: vec!["ClassNames".into()],
+          ..CompiledImports::default()
+        });
+      }
+      let meta = Metadata::new(Rc::clone(&state));
 
-    let transformed = visit_class_names_with_builder(&mut expr, &meta, |_, _| css_output());
-    assert!(transformed);
+      let transformed = visit_class_names_with_builder(&mut expr, &meta, |_, _| css_output());
+      assert!(transformed);
+    });
   }
 }

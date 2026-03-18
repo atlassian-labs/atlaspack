@@ -383,34 +383,36 @@ mod tests {
 
   #[test]
   fn replaces_element_when_css_output_present() {
-    let code = "<div css={{ color: 'red' }} />";
-    let (mut expr, cm, _fm) = parse_jsx_expression(code);
-    let metadata = create_metadata(cm, Vec::new());
+    crate::test_utils::with_globals(|| {
+      let code = "<div css={{ color: 'red' }} />";
+      let (mut expr, cm, _fm) = parse_jsx_expression(code);
+      let metadata = create_metadata(cm, Vec::new());
 
-    let captured: Rc<RefCell<Option<Expr>>> = Rc::new(RefCell::new(None));
-    let capture = Rc::clone(&captured);
+      let captured: Rc<RefCell<Option<Expr>>> = Rc::new(RefCell::new(None));
+      let capture = Rc::clone(&captured);
 
-    visit_css_prop_with_builder(&mut expr, &metadata, |value, _| {
-      capture.borrow_mut().replace(value.clone());
-      CssOutput {
-        css: vec![CssItem::unconditional(
-          "._1wyb1fwx{font-size:12px}".to_string(),
-        )],
-        variables: Vec::new(),
+      visit_css_prop_with_builder(&mut expr, &metadata, |value, _| {
+        capture.borrow_mut().replace(value.clone());
+        CssOutput {
+          css: vec![CssItem::unconditional(
+            "._1wyb1fwx{font-size:12px}".to_string(),
+          )],
+          variables: Vec::new(),
+        }
+      });
+
+      assert!(captured.borrow().is_some(), "builder should be invoked");
+
+      match expr {
+        Expr::JSXElement(element) => match &element.opening.name {
+          JSXElementName::Ident(ident) => {
+            assert_eq!(ident.sym.as_ref(), "CC");
+          }
+          other => panic!("expected CC wrapper, found {:?}", other),
+        },
+        other => panic!("expected JSX element replacement, found {:?}", other),
       }
     });
-
-    assert!(captured.borrow().is_some(), "builder should be invoked");
-
-    match expr {
-      Expr::JSXElement(element) => match &element.opening.name {
-        JSXElementName::Ident(ident) => {
-          assert_eq!(ident.sym.as_ref(), "CC");
-        }
-        other => panic!("expected CC wrapper, found {:?}", other),
-      },
-      other => panic!("expected JSX element replacement, found {:?}", other),
-    }
   }
 
   #[test]
@@ -433,30 +435,32 @@ mod tests {
 
   #[test]
   fn sets_runtime_wrappers_flag_when_css_output_present() {
-    let code = "<div css={{ color: 'red' }} />";
-    let (mut expr, cm, _fm) = parse_jsx_expression(code);
-    let metadata = create_metadata(cm, Vec::new());
+    crate::test_utils::with_globals(|| {
+      let code = "<div css={{ color: 'red' }} />";
+      let (mut expr, cm, _fm) = parse_jsx_expression(code);
+      let metadata = create_metadata(cm, Vec::new());
 
-    {
+      {
+        let state = metadata.state();
+        assert!(
+          !state.uses_runtime_wrappers,
+          "flag should be false before transform"
+        );
+      }
+
+      visit_css_prop_with_builder(&mut expr, &metadata, |_value, _| CssOutput {
+        css: vec![CssItem::unconditional(
+          "._1wyb1fwx{font-size:12px}".to_string(),
+        )],
+        variables: Vec::new(),
+      });
+
       let state = metadata.state();
       assert!(
-        !state.uses_runtime_wrappers,
-        "flag should be false before transform"
+        state.uses_runtime_wrappers,
+        "flag should be true after css prop transform"
       );
-    }
-
-    visit_css_prop_with_builder(&mut expr, &metadata, |_value, _| CssOutput {
-      css: vec![CssItem::unconditional(
-        "._1wyb1fwx{font-size:12px}".to_string(),
-      )],
-      variables: Vec::new(),
     });
-
-    let state = metadata.state();
-    assert!(
-      state.uses_runtime_wrappers,
-      "flag should be true after css prop transform"
-    );
   }
 
   #[test]
