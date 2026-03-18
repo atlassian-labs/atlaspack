@@ -1,5 +1,13 @@
 # @atlaspack/reporter-tracer
 
+## 2.14.60
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.4.2
+  - @atlaspack/plugin@2.14.60
+
 ## 2.14.59
 
 ### Patch Changes

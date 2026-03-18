@@ -1,5 +1,14 @@
 # @atlaspack/reporter-json
 
+## 2.14.60
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.4.2
+  - @atlaspack/types@2.15.50
+  - @atlaspack/plugin@2.14.60
+
 ## 2.14.59
 
 ### Patch Changes
