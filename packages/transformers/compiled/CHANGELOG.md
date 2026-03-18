@@ -1,5 +1,14 @@
 # @atlaspack/transformer-compiled
 
+## 0.5.4
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.3.3
+  - @atlaspack/utils@3.4.1
+  - @atlaspack/plugin@2.14.59
+
 ## 0.5.3
 
 ### Patch Changes
