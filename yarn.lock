@@ -2607,6 +2607,17 @@
   dependencies:
     "@babel/helper-plugin-utils" "^7.28.6"
 
+"@babel/plugin-transform-object-rest-spread@^7.22.11", "@babel/plugin-transform-object-rest-spread@^7.28.6":
+  version "7.28.6"
+  resolved "https://registry.yarnpkg.com/@babel/plugin-transform-object-rest-spread/-/plugin-transform-object-rest-spread-7.28.6.tgz#fdd4bc2d72480db6ca42aed5c051f148d7b067f7"
+  integrity sha512-5rh+JR4JBC4pGkXLAcYdLHZjXudVxWMXbB6u6+E9lRL5TrGVbHt1TjxGbZ8CkmYw9zjkB7jutzOROArsqtncEA==
+  dependencies:
+    "@babel/helper-compilation-targets" "^7.28.6"
+    "@babel/helper-plugin-utils" "^7.28.6"
+    "@babel/plugin-transform-destructuring" "^7.28.5"
+    "@babel/plugin-transform-parameters" "^7.27.7"
+    "@babel/traverse" "^7.28.6"
+
 "@babel/plugin-transform-object-rest-spread@^7.28.0":
   version "7.28.4"
   resolved "https://registry.yarnpkg.com/@babel/plugin-transform-object-rest-spread/-/plugin-transform-object-rest-spread-7.28.4.tgz#9ee1ceca80b3e6c4bac9247b2149e36958f7f98d"
@@ -2617,17 +2628,6 @@
     "@babel/plugin-transform-destructuring" "^7.28.0"
     "@babel/plugin-transform-parameters" "^7.27.7"
     "@babel/traverse" "^7.28.4"
-
-"@babel/plugin-transform-object-rest-spread@^7.28.6":
-  version "7.28.6"
-  resolved "https://registry.yarnpkg.com/@babel/plugin-transform-object-rest-spread/-/plugin-transform-object-rest-spread-7.28.6.tgz#fdd4bc2d72480db6ca42aed5c051f148d7b067f7"
-  integrity sha512-5rh+JR4JBC4pGkXLAcYdLHZjXudVxWMXbB6u6+E9lRL5TrGVbHt1TjxGbZ8CkmYw9zjkB7jutzOROArsqtncEA==
-  dependencies:
-    "@babel/helper-compilation-targets" "^7.28.6"
-    "@babel/helper-plugin-utils" "^7.28.6"
-    "@babel/plugin-transform-destructuring" "^7.28.5"
-    "@babel/plugin-transform-parameters" "^7.27.7"
-    "@babel/traverse" "^7.28.6"
 
 "@babel/plugin-transform-object-super@^7.27.1":
   version "7.27.1"
