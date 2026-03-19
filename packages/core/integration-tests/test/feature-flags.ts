@@ -1,7 +1,7 @@
 import assert from 'assert';
 import path from 'path';
-import {promisify} from 'util';
 import _rimraf from 'rimraf';
+import {promisify} from 'util';
 import {
   bundle,
   describe,
