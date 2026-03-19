@@ -688,10 +688,12 @@ dependencies = [
  "base64",
  "lightningcss",
  "mockall",
+ "parcel_sourcemap",
  "parking_lot",
  "pathdiff",
  "pretty_assertions",
  "rayon",
+ "serde_json",
 ]
 
 [[package]]
