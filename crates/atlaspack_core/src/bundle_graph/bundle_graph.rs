@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 
 use crate::hash::IdentifierHasher;
@@ -84,7 +85,7 @@ pub trait BundleGraph {
   ///
   /// Returns `Some(set)` if symbol usage information is available, or `None` if the
   /// implementation does not track used symbols (the default).
-  fn get_used_symbols(&self, _asset_id: &str) -> Option<std::collections::HashSet<String>> {
+  fn get_used_symbols(&self, _asset_id: &str) -> Option<HashSet<String>> {
     None
   }
 
