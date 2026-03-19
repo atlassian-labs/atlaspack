@@ -1,6 +1,8 @@
 import assert from 'assert';
 import path from 'path';
-import {rimraf} from 'rimraf';
+import {promisify} from 'util';
+import _rimraf from 'rimraf';
+
 import {
   bundle,
   describe,
@@ -10,6 +12,8 @@ import {
   fsFixture,
   inputFS,
 } from '@atlaspack/test-utils';
+
+const rimraf = promisify(_rimraf);
 
 describe('plugins with "registered" languages', () => {
   it('should support plugins with esbuild-register', async () => {

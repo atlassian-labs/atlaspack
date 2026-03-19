@@ -13,7 +13,8 @@ import commandExists from 'command-exists';
 // flowlint-next-line untyped-import:off
 // @ts-expect-error TS7016
 import _spawn from '@npmcli/promise-spawn';
-import rimraf from 'rimraf';
+// @ts-expect-error TS7016
+import _rimraf from 'rimraf';
 // @ts-expect-error TS7016
 import tempy from 'tempy';
 import chalk from 'chalk';
@@ -22,6 +23,7 @@ import * as emoji from './emoji';
 const TEMPLATES_DIR = path.resolve(__dirname, '../templates');
 
 const ncp = promisify(_ncp);
+const rimraf = promisify(_rimraf);
 // eslint-disable-next-line no-console
 const log = console.log;
 
@@ -53,7 +55,6 @@ async function run(packagePath: string) {
   try {
     await createApp(path.basename(packagePath), tempPath);
   } catch (e: any) {
-    // @ts-expect-error TS2349
     await rimraf(tempPath);
     throw e;
   }
