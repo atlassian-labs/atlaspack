@@ -261,6 +261,29 @@ impl<B: BundleGraph + Send + Sync + 'static> Request for PackageRequest<B> {
           warnings: vec![],
         })
       }
+      // Use for testing - delete this soon...
+      // _ => {
+      //   // just write an empty file..
+      //   let content = vec![];
+      //   let hash = atlaspack_core::hash::hash_bytes(&content);
+      //   Ok(PackageResult {
+      //     bundle_info: atlaspack_core::package_result::BundleInfo {
+      //       bundle_type: self.bundle.bundle_type.extension().to_string(),
+      //       size: content.len() as u64,
+      //       total_assets: 0,
+      //       hash,
+      //       hash_references: vec![],
+      //       cache_keys: None,
+      //       is_large_blob: false,
+      //       time: None,
+      //       bundle_contents: Some(content),
+      //       map_contents: None,
+      //     },
+      //     config_requests: vec![],
+      //     dev_dep_requests: vec![],
+      //     invalidations: vec![],
+      //   })
+      // }
       _ => Err(anyhow!(
         "Unsupported bundle type: {:?}",
         self.bundle.bundle_type
