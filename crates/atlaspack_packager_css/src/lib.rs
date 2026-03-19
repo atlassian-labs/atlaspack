@@ -5,6 +5,7 @@ use atlaspack_core::bundle_graph::bundle_graph::BundleGraph;
 use atlaspack_core::database::DatabaseRef;
 
 pub mod css_packager;
+pub mod url_replacer;
 
 /// Context provided to the CSS packager.
 ///
