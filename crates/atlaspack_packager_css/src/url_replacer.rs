@@ -1,4 +1,4 @@
-use std::path::{Component, Path, PathBuf};
+use std::path::{Component, Path};
 
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
@@ -127,35 +127,8 @@ fn find_relative_path(
 
   let to_file = target_bundle.target.dist_dir.join(to_name);
 
-  let rel = diff_paths(&to_file, from_dir)?;
+  let rel = pathdiff::diff_paths(&to_file, from_dir)?;
   Some(path_to_url_string(&rel))
-}
-
-/// Computes a relative path from `from_dir` to `to`.
-fn diff_paths(to: &Path, from_dir: &Path) -> Option<PathBuf> {
-  let to = to.components().collect::<Vec<_>>();
-  let from = from_dir.components().collect::<Vec<_>>();
-
-  let common = to
-    .iter()
-    .zip(from.iter())
-    .take_while(|(a, b)| a == b)
-    .count();
-
-  let up_count = from.len() - common;
-  let mut result = PathBuf::new();
-  for _ in 0..up_count {
-    result.push("..");
-  }
-  for component in &to[common..] {
-    match component {
-      Component::Normal(s) => result.push(s),
-      Component::CurDir => {}
-      Component::ParentDir => result.push(".."),
-      _ => return None,
-    }
-  }
-  Some(result)
 }
 
 fn path_to_url_string(path: &Path) -> String {
