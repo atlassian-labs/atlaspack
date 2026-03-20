@@ -195,8 +195,11 @@ impl From<PackageResult> for JsPackageResult {
 
 #[cfg(test)]
 mod tests {
-  use super::*;
+  use atlaspack_core::package_result::{BundleInfo, CacheKeyMap, PackageResult};
+  use atlaspack_core::types::DiagnosticBuilder;
   use pretty_assertions::assert_eq;
+
+  use super::*;
 
   #[test]
   fn test_bundle_info_conversion() {
@@ -370,25 +373,22 @@ mod tests {
 
     let js_result: JsPackageResult = rust_result.into();
 
-    assert_eq!(js_result.bundle_info.hash_references.len(), 3);
-    assert_eq!(js_result.bundle_info.hash_references[0], "ref1");
-    assert_eq!(js_result.bundle_info.hash_references[1], "ref2");
-    assert_eq!(js_result.bundle_info.hash_references[2], "ref3");
+    assert_eq!(
+      js_result.bundle_info.hash_references,
+      vec!["ref1", "ref2", "ref3"]
+    );
   }
 
   #[test]
   fn package_result_warnings_are_forwarded() {
-    use atlaspack_core::package_result::PackageResult;
-    use atlaspack_core::types::DiagnosticBuilder;
-
     let result = PackageResult {
-      bundle_info: atlaspack_core::package_result::BundleInfo {
+      bundle_info: BundleInfo {
         bundle_type: "css".to_string(),
         size: 0,
         total_assets: 0,
         hash: String::new(),
         hash_references: vec![],
-        cache_keys: Some(atlaspack_core::package_result::CacheKeyMap {
+        cache_keys: Some(CacheKeyMap {
           content: "c".to_string(),
           map: "m".to_string(),
           info: "i".to_string(),
@@ -424,5 +424,104 @@ mod tests {
     assert_eq!(js_result.warnings[0].name, Some("UnusedImport".to_string()));
     assert_eq!(js_result.warnings[0].documentation_url, None);
     assert!(js_result.warnings[0].code_highlights.is_empty());
+  }
+
+  #[test]
+  fn convert_package_diagnostic_maps_code_frames_to_highlights() {
+    use atlaspack_core::types::{CodeFrame, CodeHighlight, Location};
+
+    let diagnostic = atlaspack_core::types::DiagnosticBuilder::default()
+      .message("syntax error".to_string())
+      .origin(Some("css-packager".to_string()))
+      .code_frames(vec![CodeFrame {
+        file_path: Some(std::path::PathBuf::from("/src/styles.css")),
+        code: None,
+        code_highlights: vec![
+          CodeHighlight {
+            message: Some("unexpected token".to_string()),
+            start: Location {
+              line: 10,
+              column: 5,
+            },
+            end: Location {
+              line: 10,
+              column: 12,
+            },
+          },
+          CodeHighlight {
+            message: Some("hint here".to_string()),
+            start: Location {
+              line: 15,
+              column: 1,
+            },
+            end: Location {
+              line: 16,
+              column: 3,
+            },
+          },
+        ],
+        language: None,
+      }])
+      .build()
+      .unwrap();
+
+    let result = PackageResult {
+      bundle_info: BundleInfo {
+        bundle_type: "css".to_string(),
+        size: 0,
+        total_assets: 0,
+        hash: String::new(),
+        hash_references: vec![],
+        cache_keys: Some(CacheKeyMap {
+          content: "c".to_string(),
+          map: "m".to_string(),
+          info: "i".to_string(),
+        }),
+        is_large_blob: false,
+        time: None,
+        bundle_contents: None,
+        map_contents: None,
+      },
+      config_requests: vec![],
+      dev_dep_requests: vec![],
+      invalidations: vec![],
+      warnings: vec![diagnostic],
+    };
+
+    let js_result = JsPackageResult::from(result);
+
+    assert_eq!(js_result.warnings.len(), 1);
+    let highlights = &js_result.warnings[0].code_highlights;
+    assert_eq!(highlights.len(), 2);
+
+    assert_eq!(highlights[0].message, Some("unexpected token".to_string()));
+    assert_eq!(highlights[0].file_path, Some("/src/styles.css".to_string()));
+    assert_eq!(highlights[0].start_line, 10);
+    assert_eq!(highlights[0].start_col, 5);
+    assert_eq!(highlights[0].end_line, 10);
+    assert_eq!(highlights[0].end_col, 12);
+
+    assert_eq!(highlights[1].message, Some("hint here".to_string()));
+    assert_eq!(highlights[1].start_line, 15);
+    assert_eq!(highlights[1].end_line, 16);
+    assert_eq!(highlights[1].end_col, 3);
+  }
+
+  #[test]
+  #[should_panic(expected = "Cache keys are required")]
+  fn bundle_info_from_panics_when_cache_keys_is_none() {
+    let info = BundleInfo {
+      bundle_type: "js".to_string(),
+      size: 100,
+      total_assets: 1,
+      hash: "h".to_string(),
+      hash_references: vec![],
+      cache_keys: None, // intentionally None — should panic
+      is_large_blob: false,
+      time: None,
+      bundle_contents: None,
+      map_contents: None,
+    };
+    let _: JsBundleInfo = info.into(); // must panic
   }
 }

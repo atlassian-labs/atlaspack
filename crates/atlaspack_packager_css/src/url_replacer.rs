@@ -163,7 +163,7 @@ fn find_relative_path(
   Some(path_to_url_string(&rel))
 }
 
-fn path_to_url_string(path: &Path) -> String {
+pub(crate) fn path_to_url_string(path: &Path) -> String {
   path
     .components()
     .filter_map(|c| match c {
@@ -192,7 +192,10 @@ mod tests {
   use base64::Engine;
   use pretty_assertions::assert_eq;
 
-  use super::replace_url_references;
+  use super::{
+    append_fragment, is_non_inline_bundle_containing_asset, mime_for_file_type, path_to_url_string,
+    replace_url_references,
+  };
 
   struct MockBundleGraph {
     bundles: Vec<Bundle>,
@@ -747,6 +750,312 @@ mod tests {
       escape_css_string("both\"and\\mixed"),
       "both\\\"and\\\\mixed"
     );
+  }
+
+  #[test]
+  fn append_fragment_with_some_appends_hash() {
+    assert_eq!(
+      append_fragment("path/to/file.svg".to_string(), Some("icon")),
+      "path/to/file.svg#icon"
+    );
+    assert_eq!(
+      append_fragment("file.png".to_string(), Some("section")),
+      "file.png#section"
+    );
+  }
+
+  #[test]
+  fn append_fragment_with_none_returns_base_unchanged() {
+    assert_eq!(
+      append_fragment("path/to/file.svg".to_string(), None),
+      "path/to/file.svg"
+    );
+    assert_eq!(append_fragment(String::new(), None), "");
+  }
+
+  #[test]
+  fn is_non_inline_bundle_containing_asset_false_for_inline_bundle() {
+    let mut bundle = make_css_bundle("css");
+    bundle.bundle_behavior = Some(BundleBehavior::Inline);
+    let graph = MockBundleGraph::new();
+    assert!(!is_non_inline_bundle_containing_asset(
+      &bundle,
+      "any-asset",
+      &graph
+    ));
+  }
+
+  #[test]
+  fn is_non_inline_bundle_containing_asset_false_for_inline_isolated_bundle() {
+    let mut bundle = make_css_bundle("css");
+    bundle.bundle_behavior = Some(BundleBehavior::InlineIsolated);
+    let graph = MockBundleGraph::new();
+    assert!(!is_non_inline_bundle_containing_asset(
+      &bundle,
+      "any-asset",
+      &graph
+    ));
+  }
+
+  #[test]
+  fn is_non_inline_bundle_containing_asset_true_when_bundle_contains_asset() {
+    let bundle = make_css_bundle("css");
+    let asset = Asset {
+      id: "my-asset".to_string(),
+      file_type: FileType::Css,
+      env: Arc::new(Environment::default()),
+      ..Asset::default()
+    };
+    let mut graph = MockBundleGraph::new();
+    graph
+      .assets_by_bundle
+      .insert("css".to_string(), vec![asset]);
+    assert!(is_non_inline_bundle_containing_asset(
+      &bundle, "my-asset", &graph
+    ));
+  }
+
+  #[test]
+  fn is_non_inline_bundle_containing_asset_false_when_bundle_does_not_contain_asset() {
+    let bundle = make_css_bundle("css");
+    let graph = MockBundleGraph::new(); // no assets registered
+    assert!(!is_non_inline_bundle_containing_asset(
+      &bundle,
+      "absent-asset",
+      &graph
+    ));
+  }
+
+  #[test]
+  fn mime_for_file_type_known_image_types() {
+    assert_eq!(mime_for_file_type(&FileType::Png), "image/png");
+    assert_eq!(mime_for_file_type(&FileType::Jpeg), "image/jpeg");
+    assert_eq!(mime_for_file_type(&FileType::Gif), "image/gif");
+    assert_eq!(mime_for_file_type(&FileType::WebP), "image/webp");
+    assert_eq!(mime_for_file_type(&FileType::Avif), "image/avif");
+    assert_eq!(mime_for_file_type(&FileType::Tiff), "image/tiff");
+  }
+
+  #[test]
+  fn mime_for_file_type_other_image_and_font_extensions() {
+    assert_eq!(
+      mime_for_file_type(&FileType::Other("svg".to_string())),
+      "image/svg+xml"
+    );
+    assert_eq!(
+      mime_for_file_type(&FileType::Other("woff2".to_string())),
+      "font/woff2"
+    );
+    assert_eq!(
+      mime_for_file_type(&FileType::Other("woff".to_string())),
+      "font/woff"
+    );
+    assert_eq!(
+      mime_for_file_type(&FileType::Other("ttf".to_string())),
+      "font/ttf"
+    );
+    assert_eq!(
+      mime_for_file_type(&FileType::Other("eot".to_string())),
+      "application/vnd.ms-fontobject"
+    );
+  }
+
+  #[test]
+  fn mime_for_file_type_unknown_extension_returns_octet_stream() {
+    assert_eq!(
+      mime_for_file_type(&FileType::Other("bin".to_string())),
+      "application/octet-stream"
+    );
+    assert_eq!(
+      mime_for_file_type(&FileType::Other("xyz".to_string())),
+      "application/octet-stream"
+    );
+  }
+
+  #[test]
+  fn mime_for_file_type_non_image_file_types_return_octet_stream() {
+    assert_eq!(
+      mime_for_file_type(&FileType::Js),
+      "application/octet-stream"
+    );
+    assert_eq!(
+      mime_for_file_type(&FileType::Css),
+      "application/octet-stream"
+    );
+    assert_eq!(
+      mime_for_file_type(&FileType::Html),
+      "application/octet-stream"
+    );
+  }
+
+  #[test]
+  fn path_to_url_string_simple_path() {
+    assert_eq!(
+      path_to_url_string(std::path::Path::new("images/hero.png")),
+      "images/hero.png"
+    );
+    assert_eq!(
+      path_to_url_string(std::path::Path::new("file.css")),
+      "file.css"
+    );
+  }
+
+  #[test]
+  fn path_to_url_string_parent_dir_components() {
+    assert_eq!(
+      path_to_url_string(std::path::Path::new("../images/hero.png")),
+      "../images/hero.png"
+    );
+    assert_eq!(
+      path_to_url_string(std::path::Path::new("../../fonts/fira.woff2")),
+      "../../fonts/fira.woff2"
+    );
+  }
+
+  #[test]
+  fn path_to_url_string_cur_dir_components() {
+    assert_eq!(
+      path_to_url_string(std::path::Path::new("./images/hero.png")),
+      "./images/hero.png"
+    );
+  }
+
+  #[test]
+  fn path_to_url_string_root_prefix_stripped() {
+    // On Unix, the root `/` component is a Prefix/RootDir which is dropped.
+    // So `/images/hero.png` → "images/hero.png".
+    let result = path_to_url_string(std::path::Path::new("/images/hero.png"));
+    // Root component is stripped; only Normal components survive.
+    assert_eq!(result, "images/hero.png");
+  }
+
+  #[test]
+  fn unresolvable_url_with_fragment_preserves_fragment_in_fallback() {
+    let placeholder = "frag_placeholder";
+    let specifier = "./sprite.svg#icon";
+
+    let css_bundle = make_css_bundle("bundle_css");
+    let db = make_db();
+    let output_dir = PathBuf::from("/dist");
+
+    let mut dep = make_url_dep(specifier, Some(placeholder));
+    dep.specifier = specifier.to_string();
+
+    let css_asset = Asset {
+      id: "asset_css_1".to_string(),
+      file_type: FileType::Css,
+      env: Arc::new(Environment::default()),
+      ..Asset::default()
+    };
+
+    let mut graph = MockBundleGraph::new();
+    graph.bundles.push(css_bundle.clone());
+    graph
+      .assets_by_bundle
+      .insert("bundle_css".to_string(), vec![css_asset]);
+    graph
+      .deps_by_asset
+      .insert("asset_css_1".to_string(), vec![dep]);
+    // No resolved asset → falls back to specifier.
+
+    let input = format!(".icon {{ background: url({placeholder}); }}");
+    let result = replace_url_references(&input, &css_bundle, &graph, &db, &output_dir)
+      .expect("replace_url_references must succeed");
+
+    assert!(
+      result.contains("./sprite.svg"),
+      "Base specifier path must be present in fallback; got: {result:?}"
+    );
+    assert!(
+      result.contains("#icon"),
+      "Fragment must be preserved in unresolvable-URL fallback; got: {result:?}"
+    );
+    assert!(
+      !result.contains(placeholder),
+      "Placeholder must be replaced; got: {result:?}"
+    );
+  }
+
+  #[test]
+  fn inline_isolated_asset_replaced_with_data_uri() {
+    let placeholder = "isolated_placeholder";
+    let css_bundle = make_css_bundle("bundle_css");
+    let db = make_db();
+    let output_dir = PathBuf::from("/dist");
+
+    let png_bytes: &[u8] = b"\x89PNG\r\n";
+    db.put("isolated_img", png_bytes).unwrap();
+
+    let isolated_asset = Asset {
+      id: "isolated_img".to_string(),
+      file_type: FileType::Png,
+      bundle_behavior: Some(BundleBehavior::InlineIsolated),
+      content_key: Some("isolated_img".to_string()),
+      env: Arc::new(Environment::default()),
+      ..Asset::default()
+    };
+
+    let dep = make_url_dep("./isolated.png", Some(placeholder));
+    let css_asset = Asset {
+      id: "asset_css_isolated".to_string(),
+      file_type: FileType::Css,
+      env: Arc::new(Environment::default()),
+      ..Asset::default()
+    };
+
+    let mut graph = MockBundleGraph::new();
+    graph.bundles.push(css_bundle.clone());
+    graph
+      .assets_by_bundle
+      .insert("bundle_css".to_string(), vec![css_asset]);
+    graph
+      .deps_by_asset
+      .insert("asset_css_isolated".to_string(), vec![dep]);
+    graph
+      .resolved
+      .insert(placeholder.to_string(), isolated_asset);
+
+    let input = format!(".img {{ background: url({placeholder}); }}");
+    let result = replace_url_references(&input, &css_bundle, &graph, &db, &output_dir)
+      .expect("replace_url_references must succeed");
+
+    assert!(
+      result.contains("data:image/png;base64,"),
+      "InlineIsolated asset must produce a data URI; got: {result:?}"
+    );
+  }
+
+  #[test]
+  fn unresolvable_url_exact_output() {
+    let placeholder = "exact_placeholder";
+    let specifier = "./missing.png";
+
+    let css_bundle = make_css_bundle("bundle_css");
+    let db = make_db();
+    let output_dir = PathBuf::from("/dist");
+
+    let dep = make_url_dep(specifier, Some(placeholder));
+    let css_asset = Asset {
+      id: "asset_css_1".to_string(),
+      file_type: FileType::Css,
+      env: Arc::new(Environment::default()),
+      ..Asset::default()
+    };
+
+    let mut graph = MockBundleGraph::new();
+    graph.bundles.push(css_bundle.clone());
+    graph
+      .assets_by_bundle
+      .insert("bundle_css".to_string(), vec![css_asset]);
+    graph
+      .deps_by_asset
+      .insert("asset_css_1".to_string(), vec![dep]);
+
+    let input = format!(".rule {{ background: url({placeholder}); }}");
+    let result = replace_url_references(&input, &css_bundle, &graph, &db, &output_dir)
+      .expect("replace_url_references must succeed");
+
+    assert_eq!(result, ".rule { background: url(./missing.png); }");
   }
 
   #[test]

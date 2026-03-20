@@ -656,6 +656,7 @@ mod tests {
     Asset, Bundle, BundleBehavior, Dependency, DependencyBuilder, Environment, FileType, Priority,
     SpecifierType, Symbol, Target,
   };
+  use pretty_assertions::assert_eq;
   use serde_json::{Value, from_slice, json};
 
   use super::*;
@@ -1009,7 +1010,7 @@ mod tests {
   }
 
   #[test]
-  fn handles_bundle_id_colliding_with_asset_id() {
+  fn reserved_entry_prefix_avoids_collision_with_asset_id() {
     let db = make_db();
     db.put("foo", b".foo { color: blue; }").unwrap();
 
@@ -2182,8 +2183,6 @@ mod tests {
 
   #[test]
   fn default_import_emits_structured_warning_in_package_result() {
-    use atlaspack_core::types::Symbol;
-
     let db = make_db();
     let css = ".foo_abc { color: red; } .bar_def { color: blue; }";
     db.put("asset_default", css.as_bytes()).unwrap();

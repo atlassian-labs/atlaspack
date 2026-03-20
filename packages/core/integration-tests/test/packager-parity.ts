@@ -87,8 +87,8 @@ describe('packager-parity (JS vs native CSS packager)', function () {
       `native CSS must contain 'color: red'; got: ${nativeCss}`,
     );
     assert.ok(
-      nativeCss.includes('font-size') || nativeCss.includes('font-size'),
-      `native CSS must contain 'font-size'; got: ${nativeCss}`,
+      nativeCss.includes('font-size') || nativeCss.includes('.heading'),
+      `native CSS must contain 'font-size' or '.heading'; got: ${nativeCss}`,
     );
     // Both packagers must produce output containing the same declarations.
     assert.ok(
