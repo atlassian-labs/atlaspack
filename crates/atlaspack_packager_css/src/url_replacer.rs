@@ -7,6 +7,34 @@ use atlaspack_core::bundle_graph::bundle_graph::BundleGraph;
 use atlaspack_core::database::DatabaseRef;
 use atlaspack_core::types::{Bundle, BundleBehavior, FileType};
 
+/// Appends a URL fragment to a base URL string when one is present.
+fn append_fragment(base: String, fragment: Option<&str>) -> String {
+  match fragment {
+    Some(f) => format!("{base}#{f}"),
+    None => base,
+  }
+}
+
+/// Returns true if `bundle` is a non-inline bundle containing `asset_id`.
+fn is_non_inline_bundle_containing_asset(
+  bundle: &Bundle,
+  asset_id: &str,
+  bundle_graph: &dyn BundleGraph,
+) -> bool {
+  let is_inline = matches!(
+    bundle.bundle_behavior,
+    Some(BundleBehavior::Inline) | Some(BundleBehavior::InlineIsolated)
+  );
+  if is_inline {
+    return false;
+  }
+  bundle_graph
+    .get_bundle_assets(bundle)
+    .ok()
+    .map(|assets| assets.iter().any(|a| a.id == asset_id))
+    .unwrap_or(false)
+}
+
 /// Replaces `url()` placeholder tokens with resolved relative paths or data URIs.
 pub fn replace_url_references(
   css: &str,
@@ -17,34 +45,35 @@ pub fn replace_url_references(
 ) -> anyhow::Result<String> {
   let bundle_assets = bundle_graph.get_bundle_assets(bundle)?;
 
-  let mut placeholder_to_dep = Vec::new();
+  // Collect all non-CSS-import URL dependencies across all assets in the bundle.
+  let mut url_deps: Vec<(String, _)> = Vec::new();
   for asset in &bundle_assets {
-    let deps = bundle_graph.get_dependencies(asset)?;
-    for dep in deps {
+    for dep in bundle_graph.get_dependencies(asset)? {
       if dep.is_css_import {
         continue;
       }
       let token = dep.placeholder.as_deref().unwrap_or(dep.specifier.as_str());
-      placeholder_to_dep.push((token.to_string(), dep));
+      url_deps.push((token.to_string(), dep));
     }
   }
 
-  if placeholder_to_dep.is_empty() {
+  if url_deps.is_empty() {
     return Ok(css.to_string());
   }
 
-  let active: Vec<_> = placeholder_to_dep
+  // Only process placeholders that actually appear in the CSS output.
+  let active_url_deps: Vec<_> = url_deps
     .iter()
     .filter(|(token, _)| css.contains(token.as_str()))
     .collect();
 
-  if active.is_empty() {
+  if active_url_deps.is_empty() {
     return Ok(css.to_string());
   }
 
   let mut result = css.to_string();
 
-  for (token, dep) in &active {
+  for (token, dep) in &active_url_deps {
     let resolved = bundle_graph.get_resolved_asset(dep, bundle)?;
 
     // Extract any URL fragment (e.g. `sprite.svg#icon`) from the specifier.
@@ -55,19 +84,12 @@ pub fn replace_url_references(
       .unwrap_or((dep.specifier.as_str(), None));
 
     let replacement = match resolved {
-      None => {
-        let base = escape_css_string(specifier_base);
-        match fragment {
-          Some(f) => format!("{base}#{f}"),
-          None => base,
-        }
-      }
+      None => append_fragment(escape_css_string(specifier_base), fragment),
       Some(asset) => {
         let is_inline = matches!(
           asset.bundle_behavior,
           Some(BundleBehavior::Inline) | Some(BundleBehavior::InlineIsolated)
         );
-
         if is_inline {
           // Data URIs do not need CSS string escaping and cannot have fragments.
           let db_key = asset.content_key.as_deref().unwrap_or(asset.id.as_str());
@@ -76,14 +98,10 @@ pub fn replace_url_references(
           let encoded = BASE64_STANDARD.encode(&bytes);
           format!("data:{mime};base64,{encoded}")
         } else {
-          let base = escape_css_string(
-            &find_relative_path(asset.id.as_str(), bundle, bundle_graph, output_dir)
-              .unwrap_or_else(|| specifier_base.to_string()),
-          );
-          match fragment {
-            Some(f) => format!("{base}#{f}"),
-            None => base,
-          }
+          let resolved_path =
+            find_relative_path(asset.id.as_str(), bundle, bundle_graph, output_dir)
+              .unwrap_or_else(|| specifier_base.to_string());
+          append_fragment(escape_css_string(&resolved_path), fragment)
         }
       }
     };
@@ -117,6 +135,7 @@ fn mime_for_file_type(file_type: &FileType) -> &'static str {
       "eot" => "application/vnd.ms-fontobject",
       _ => "application/octet-stream",
     },
+    // All other file types (e.g. Js, Css, Html) are treated as binary blobs.
     _ => "application/octet-stream",
   }
 }
@@ -128,31 +147,18 @@ fn find_relative_path(
   bundle_graph: &dyn BundleGraph,
   output_dir: &Path,
 ) -> Option<String> {
-  let target_bundle = bundle_graph.get_bundles().into_iter().find(|b| {
-    if b.id == css_bundle.id {
-      return false;
-    }
-    if matches!(
-      b.bundle_behavior,
-      Some(BundleBehavior::Inline) | Some(BundleBehavior::InlineIsolated)
-    ) {
-      return false;
-    }
-    bundle_graph
-      .get_bundle_assets(b)
-      .ok()
-      .map(|assets| assets.iter().any(|a| a.id == asset_id))
-      .unwrap_or(false)
+  let target_bundle = bundle_graph.get_bundles().into_iter().find(|bundle| {
+    bundle.id != css_bundle.id
+      && is_non_inline_bundle_containing_asset(bundle, asset_id, bundle_graph)
   })?;
 
   let to_name = target_bundle.name.as_deref().filter(|n| !n.is_empty())?;
 
   let from_name = css_bundle.name.as_deref().unwrap_or("");
-  let from_file = output_dir.join(from_name);
-  let from_dir = from_file.parent().unwrap_or(output_dir);
+  let from_dir = output_dir.join(from_name);
+  let from_dir = from_dir.parent().unwrap_or(output_dir);
 
   let to_file = target_bundle.target.dist_dir.join(to_name);
-
   let rel = pathdiff::diff_paths(&to_file, from_dir)?;
   Some(path_to_url_string(&rel))
 }
@@ -161,9 +167,9 @@ fn path_to_url_string(path: &Path) -> String {
   path
     .components()
     .filter_map(|c| match c {
-      Component::Normal(s) => s.to_str().map(|s| s.to_string()),
-      Component::ParentDir => Some("..".to_string()),
-      Component::CurDir => Some(".".to_string()),
+      Component::Normal(s) => s.to_str(),
+      Component::ParentDir => Some(".."),
+      Component::CurDir => Some("."),
       _ => None,
     })
     .collect::<Vec<_>>()
