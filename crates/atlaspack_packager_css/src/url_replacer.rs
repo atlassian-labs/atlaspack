@@ -1,6 +1,6 @@
 use std::path::{Component, Path};
 
-use base64::Engine as _;
+use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 
 use atlaspack_core::bundle_graph::bundle_graph::BundleGraph;
@@ -46,7 +46,7 @@ pub fn replace_url_references(
   let bundle_assets = bundle_graph.get_bundle_assets(bundle)?;
 
   // Collect all non-CSS-import URL dependencies across all assets in the bundle.
-  let mut url_deps: Vec<(String, _)> = Vec::new();
+  let mut url_deps = Vec::new();
   for asset in &bundle_assets {
     for dep in bundle_graph.get_dependencies(asset)? {
       if dep.is_css_import {
@@ -155,8 +155,8 @@ fn find_relative_path(
   let to_name = target_bundle.name.as_deref().filter(|n| !n.is_empty())?;
 
   let from_name = css_bundle.name.as_deref().unwrap_or("");
-  let from_dir = output_dir.join(from_name);
-  let from_dir = from_dir.parent().unwrap_or(output_dir);
+  let from_dir_buf = output_dir.join(from_name);
+  let from_dir = from_dir_buf.parent().unwrap_or(output_dir);
 
   let to_file = target_bundle.target.dist_dir.join(to_name);
   let rel = pathdiff::diff_paths(&to_file, from_dir)?;
@@ -189,6 +189,7 @@ mod tests {
     Asset, Bundle, BundleBehavior, Dependency, DependencyBuilder, Environment, FileType, Priority,
     SpecifierType, Target,
   };
+  use base64::Engine;
   use pretty_assertions::assert_eq;
 
   use super::replace_url_references;
@@ -722,7 +723,6 @@ mod tests {
     let result = replace_url_references(&input, &css_bundle, &graph, &db, &output_dir)
       .expect("replace_url_references must succeed");
 
-    use base64::Engine;
     let encoded = base64::engine::general_purpose::STANDARD.encode(svg_content);
     let expected = format!(
       ".icon {{ background: url(data:image/svg+xml;base64,{}); }}",

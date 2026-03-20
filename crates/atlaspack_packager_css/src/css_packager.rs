@@ -74,17 +74,12 @@ fn build_module_selector_sets(
 ) -> Option<CssModuleSelectors> {
   let symbols = asset.symbols.as_ref().filter(|s| !s.is_empty())?;
 
-  let symbol_map: HashMap<&str, &str> = symbols
-    .iter()
-    .map(|s| (s.exported.as_str(), s.local.as_str()))
-    .collect();
-
   let all_module_selectors = symbols.iter().map(|s| format!(".{}", s.local)).collect();
 
-  let used_selectors = used_symbols
+  let used_selectors = symbols
     .iter()
-    .filter_map(|exported| symbol_map.get(exported.as_str()))
-    .map(|local| format!(".{local}"))
+    .filter(|symbol| used_symbols.contains(symbol.exported.as_str()))
+    .map(|symbol| format!(".{}", symbol.local))
     .collect();
 
   Some(CssModuleSelectors {
@@ -1077,7 +1072,6 @@ mod tests {
   }
 
   fn make_css_module_asset(id: &str, symbols: Vec<(&str, &str)>, should_optimize: bool) -> Asset {
-    use atlaspack_core::types::Symbol;
     Asset {
       id: id.to_string(),
       file_type: FileType::Css,
@@ -1342,8 +1336,6 @@ mod tests {
 
   #[test]
   fn default_import_disables_tree_shaking() {
-    use atlaspack_core::types::Symbol;
-
     let db = make_db();
     let css = ".foo_abc { color: red; } .bar_def { color: blue; }";
     db.put("asset_default", css.as_bytes()).unwrap();
@@ -2658,10 +2650,7 @@ mod tests {
     let asset2 = make_asset("asset_2");
 
     // Asset 2 exports 'bar' as 'bar_hashed'
-    let mut asset2_symbols = Vec::new();
-    // Atlaspack uses `Symbol` for both definitions and imports in some contexts, or `SymbolDefinition` might be missing/different?
-    // Checking `Asset` struct definition... it uses `Vec<Symbol>`.
-    asset2_symbols.push(Symbol {
+    let asset2_symbols = vec![Symbol {
       exported: "bar".to_string(),
       local: "bar_hashed".to_string(),
       loc: None,
@@ -2669,7 +2658,7 @@ mod tests {
       is_esm_export: true,
       self_referenced: false,
       is_static_binding_safe: true,
-    });
+    }];
     let mut asset2_with_symbols = asset2.clone();
     asset2_with_symbols.symbols = Some(asset2_symbols);
 
