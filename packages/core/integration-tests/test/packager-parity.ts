@@ -10,9 +10,9 @@ import {
 } from '@atlaspack/test-utils';
 
 /**
- * Normalize CSS for comparison: strip comments, collapse whitespace.
- * Used to compare JS and native packager outputs without being sensitive
- * to minor formatting differences.
+ * Normalize CSS for comparison: strip block comments, collapse whitespace.
+ * Used to compare JS and native packager outputs without sensitivity to minor
+ * formatting differences (e.g. extra newlines, whitespace inside rules).
  */
 function normalizeCss(css: string): string {
   return css
@@ -22,9 +22,22 @@ function normalizeCss(css: string): string {
 }
 
 /**
+ * Reads the first CSS bundle from a bundle graph and returns its normalised
+ * content. Normalisation strips block comments and collapses whitespace so
+ * comparisons are not sensitive to formatting differences.
+ */
+async function extractCssBundleContent(bg: any): Promise<string> {
+  const cssBundles = bg
+    .getBundles()
+    .filter((b: any) => b.type === 'css' && b.filePath);
+  assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
+  const raw = await overlayFS.readFile(cssBundles[0].filePath, 'utf8');
+  return normalizeCss(raw);
+}
+
+/**
  * Packages a CSS entry with both JS and native packagers and returns the
- * normalised CSS output for each. Normalisation strips whitespace variations
- * so structural differences are compared, not formatting.
+ * normalised CSS output for each.
  */
 async function compareCssPackagers(fixtureName: string): Promise<{
   jsCss: string;
@@ -47,18 +60,8 @@ async function compareCssPackagers(fixtureName: string): Promise<{
     featureFlags: {fullNative: true},
   });
 
-  async function extractCss(bg: any): Promise<string> {
-    const cssBundles = bg
-      .getBundles()
-      .filter((b: any) => b.type === 'css' && b.filePath);
-    assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
-    const contents = await overlayFS.readFile(cssBundles[0].filePath, 'utf8');
-    // Normalise: collapse runs of whitespace to a single space, trim.
-    return contents.replace(/\s+/g, ' ').trim();
-  }
-
-  const jsCss = await extractCss(jsBundleGraph);
-  const nativeCss = await extractCss(nativeBundleGraph);
+  const jsCss = await extractCssBundleContent(jsBundleGraph);
+  const nativeCss = await extractCssBundleContent(nativeBundleGraph);
 
   return {jsCss, nativeCss};
 }
@@ -82,27 +85,11 @@ describe('packager-parity (JS vs native CSS packager)', function () {
 
     const {jsCss, nativeCss} = await compareCssPackagers(fixtureName);
 
-    assert.ok(
-      nativeCss.includes('color: red') || nativeCss.includes('color:red'),
-      `native CSS must contain 'color: red'; got: ${nativeCss}`,
-    );
-    assert.ok(
-      nativeCss.includes('font-size') || nativeCss.includes('.heading'),
-      `native CSS must contain 'font-size' or '.heading'; got: ${nativeCss}`,
-    );
-    // Both packagers must produce output containing the same declarations.
-    assert.ok(
-      jsCss.includes('color: red') || jsCss.includes('color:red'),
-      `JS CSS must contain 'color: red'; got: ${jsCss}`,
-    );
-    // Cross-packager normalized comparison.
-    // TODO: replace with assert.strictEqual once native CSS packaging is fully
-    // activated end-to-end (bundle.type === 'css' in the JS PackageRequest path).
-    const normalizedNative = normalizeCss(nativeCss);
-    const normalizedJs = normalizeCss(jsCss);
-    assert.ok(
-      normalizedNative.includes('color') && normalizedJs.includes('color'),
-      `Both packagers must include 'color' declaration; native: ${normalizedNative}, js: ${normalizedJs}`,
+    // Both packagers must produce structurally identical normalised output.
+    assert.strictEqual(
+      nativeCss,
+      jsCss,
+      `Native and JS packagers must produce identical normalised CSS.\nNative: ${nativeCss}\nJS:     ${jsCss}`,
     );
   });
 
@@ -122,33 +109,12 @@ describe('packager-parity (JS vs native CSS packager)', function () {
 
     const {jsCss, nativeCss} = await compareCssPackagers(fixtureName);
 
-    // Both outputs must contain selectors from both source files.
-    for (const css of [jsCss, nativeCss]) {
-      assert.ok(
-        css.includes('font-family') || css.includes('font-family:'),
-        `CSS must contain 'font-family' from base.css; got: ${css}`,
-      );
-      assert.ok(
-        css.includes('.page') || css.includes('margin'),
-        `CSS must contain '.page' rule from index.css; got: ${css}`,
-      );
-    }
-    // Cross-packager normalized comparison of required declarations.
-    // TODO: replace with assert.strictEqual(normalizeCss(nativeCss), normalizeCss(jsCss))
-    // once native CSS packaging is fully activated end-to-end.
-    const normalizedNative = normalizeCss(nativeCss);
-    const normalizedJs = normalizeCss(jsCss);
-    const requiredSelectors = ['font-family', 'margin'];
-    for (const sel of requiredSelectors) {
-      assert.ok(
-        normalizedNative.includes(sel),
-        `Native output must contain '${sel}'; got: ${normalizedNative}`,
-      );
-      assert.ok(
-        normalizedJs.includes(sel),
-        `JS output must contain '${sel}'; got: ${normalizedJs}`,
-      );
-    }
+    // Both packagers must concatenate assets and produce identical output.
+    assert.strictEqual(
+      nativeCss,
+      jsCss,
+      `Native and JS packagers must produce identical normalised CSS for multi-asset bundle.\nNative: ${nativeCss}\nJS:     ${jsCss}`,
+    );
   });
 
   it('external @import with media query is hoisted to top', async function () {
@@ -164,8 +130,8 @@ describe('packager-parity (JS vs native CSS packager)', function () {
         yarn.lock:
     `;
 
-    // Only test the native packager path for this case — the native packager
-    // must hoist the external @import above local rules.
+    // Only test the native packager path — the native packager must hoist the
+    // external @import above local rules.
     const entryPath = path.join(__dirname, fixtureName, 'index.css');
     const nativeBundleGraph = await bundle(entryPath, {
       mode: 'development' as const,
@@ -174,11 +140,12 @@ describe('packager-parity (JS vs native CSS packager)', function () {
       featureFlags: {fullNative: true},
     });
 
-    const cssBundles = nativeBundleGraph
-      .getBundles()
-      .filter((b: any) => b.type === 'css' && b.filePath);
-    assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
-    const nativeCss = await overlayFS.readFile(cssBundles[0].filePath, 'utf8');
+    const nativeCss = await overlayFS.readFile(
+      nativeBundleGraph
+        .getBundles()
+        .find((b: any) => b.type === 'css' && b.filePath).filePath,
+      'utf8',
+    );
 
     assert.ok(
       nativeCss.includes('.local'),
@@ -190,16 +157,23 @@ describe('packager-parity (JS vs native CSS packager)', function () {
     const localRuleIdx = nativeCss.indexOf('.local');
     assert.ok(
       importIdx !== -1,
-      `External @import must be present in native output; got: ${nativeCss}`,
+      `External @import must be present; got: ${nativeCss}`,
     );
     assert.ok(
       importIdx < localRuleIdx,
-      `External @import must appear before local rules (hoisted); got: ${nativeCss}`,
+      `External @import must be hoisted before local rules; got: ${nativeCss}`,
     );
-    // Verify the external URL is preserved in the hoisted import.
+
+    // The external URL must be preserved verbatim.
     assert.ok(
       nativeCss.includes('fonts.googleapis.com'),
       `Hoisted @import must contain the external URL; got: ${nativeCss}`,
+    );
+
+    // The media query condition must be preserved alongside the hoisted @import.
+    assert.ok(
+      nativeCss.includes('screen') && nativeCss.includes('print'),
+      `Hoisted @import must preserve the 'screen, print' media query; got: ${nativeCss}`,
     );
   });
 
@@ -240,25 +214,34 @@ describe('packager-parity (JS vs native CSS packager)', function () {
 
       // The corresponding .map file must exist alongside the bundle.
       const mapPath = cssPath + '.map';
-      const mapExists = await overlayFS
+      const mapContent = await overlayFS
         .readFile(mapPath, 'utf8')
-        .then(() => true)
-        .catch(() => false);
+        .catch(() => null);
       assert.ok(
-        mapExists,
+        mapContent !== null,
         `Source map file must exist at ${mapPath} (fullNative=${featureFlags.fullNative})`,
+      );
+
+      // The .map file must be valid JSON with a 'sources' field.
+      let mapJson: any;
+      assert.doesNotThrow(() => {
+        mapJson = JSON.parse(mapContent!);
+      }, `Source map at ${mapPath} must be valid JSON (fullNative=${featureFlags.fullNative})`);
+      assert.ok(
+        Array.isArray(mapJson.sources) && mapJson.sources.length > 0,
+        `Source map must have a non-empty 'sources' array (fullNative=${featureFlags.fullNative}); got: ${mapContent}`,
       );
     }
   });
 
-  it('CSS Modules: renamed classes are present in output', async function () {
+  it('CSS Modules: renamed classes are present in output from both packagers', async function () {
     this.timeout(30000);
     const fixtureName = 'packager-parity-css-modules';
 
     await fsFixture(overlayFS, __dirname)`
       ${fixtureName}
         index.js:
-          import styles from './styles.module.css';
+          import * as styles from './styles.module.css';
           document.body.className = styles.title;
         styles.module.css:
           .title { font-weight: bold; }
@@ -289,14 +272,63 @@ describe('packager-parity (JS vs native CSS packager)', function () {
         'utf8',
       );
 
-      // The CSS Modules transformer renames classes — the output must contain
-      // a class selector (possibly mangled) originating from `.title`.
-      // We can't assert the exact mangled name, but we can assert the
-      // font-weight declaration is present (it belongs to the used `.title` class).
+      // Both packagers must retain the used .title class (identified by its declaration).
+      // CSS Modules renames the class, so we assert by the property value rather than
+      // the selector name.
       assert.ok(
         cssContent.includes('font-weight'),
         `CSS output must contain 'font-weight' from used .title class (fullNative=${featureFlags.fullNative}); got: ${cssContent}`,
       );
     }
+
+    // NOTE: CSS module tree-shaking (removing .unused) is a native-packager-specific
+    // feature that requires end-to-end symbol propagation from the JS transformer.
+    // It is verified in the css-modules.ts integration test suite via the
+    // 'postcss-modules-import-namespace' fixture which has the necessary setup.
+  });
+
+  // NOTE: url() reference resolution requires an asset file type that has a
+  // registered transformer (e.g. image types, SVG) or uses the raw packager.
+  // Testing this end-to-end via fsFixture is complex because fsFixture disallows
+  // binary image types and SVG goes through the SVG module transformer rather
+  // than being treated as a raw URL asset. This behaviour is covered by the
+  // url_replacer unit tests in crates/atlaspack_packager_css/src/url_replacer.rs.
+
+  it('duplicate @import is included only once in output', async function () {
+    this.timeout(30000);
+    const fixtureName = 'packager-parity-dedup-import';
+
+    await fsFixture(overlayFS, __dirname)`
+      ${fixtureName}
+        index.css:
+          @import "./shared.css";
+          @import "./other.css";
+          .page { color: blue; }
+        shared.css:
+          .shared { font-size: 1rem; }
+        other.css:
+          @import "./shared.css";
+          .other { color: green; }
+        yarn.lock:
+    `;
+
+    const entryPath = path.join(__dirname, fixtureName, 'index.css');
+    const bg = await bundle(entryPath, {
+      mode: 'production' as const,
+      inputFS: overlayFS,
+      outputFS: overlayFS,
+      featureFlags: {fullNative: true},
+    });
+
+    const nativeCss = await extractCssBundleContent(bg);
+
+    // shared.css is imported by both index.css and other.css — it must appear
+    // exactly once in the final output (deduplication).
+    const matchCount = (nativeCss.match(/font-size/g) ?? []).length;
+    assert.strictEqual(
+      matchCount,
+      1,
+      `'font-size' from shared.css must appear exactly once (deduplication); got: ${nativeCss}`,
+    );
   });
 });
