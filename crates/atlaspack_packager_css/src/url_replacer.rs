@@ -47,8 +47,21 @@ pub fn replace_url_references(
   for (token, dep) in &active {
     let resolved = bundle_graph.get_resolved_asset(dep, bundle)?;
 
+    // Extract any URL fragment (e.g. `sprite.svg#icon`) from the specifier.
+    let (specifier_base, fragment) = dep
+      .specifier
+      .split_once('#')
+      .map(|(base, frag)| (base, Some(frag)))
+      .unwrap_or((dep.specifier.as_str(), None));
+
     let replacement = match resolved {
-      None => dep.specifier.clone(),
+      None => {
+        let base = escape_css_string(specifier_base);
+        match fragment {
+          Some(f) => format!("{base}#{f}"),
+          None => base,
+        }
+      }
       Some(asset) => {
         let is_inline = matches!(
           asset.bundle_behavior,
@@ -56,14 +69,21 @@ pub fn replace_url_references(
         );
 
         if is_inline {
+          // Data URIs do not need CSS string escaping and cannot have fragments.
           let db_key = asset.content_key.as_deref().unwrap_or(asset.id.as_str());
           let bytes = db.get(db_key)?.unwrap_or_default();
           let mime = mime_for_file_type(&asset.file_type);
           let encoded = BASE64_STANDARD.encode(&bytes);
           format!("data:{mime};base64,{encoded}")
         } else {
-          find_relative_path(asset.id.as_str(), bundle, bundle_graph, output_dir)
-            .unwrap_or_else(|| dep.specifier.clone())
+          let base = escape_css_string(
+            &find_relative_path(asset.id.as_str(), bundle, bundle_graph, output_dir)
+              .unwrap_or_else(|| specifier_base.to_string()),
+          );
+          match fragment {
+            Some(f) => format!("{base}#{f}"),
+            None => base,
+          }
         }
       }
     };
@@ -72,6 +92,12 @@ pub fn replace_url_references(
   }
 
   Ok(result)
+}
+
+/// Escapes `"` and `\` in a CSS string value to prevent breaking string syntax.
+/// Mirrors `escapeString` from `CSSPackager.ts`.
+fn escape_css_string(s: &str) -> String {
+  s.replace('\\', "\\\\").replace('"', "\\\"")
 }
 
 /// Returns the MIME type string for a given `FileType`.
@@ -150,6 +176,7 @@ mod tests {
   use std::path::PathBuf;
   use std::sync::Arc;
 
+  use super::escape_css_string;
   use atlaspack_core::bundle_graph::bundle_graph::BundleGraph;
   use atlaspack_core::database::{DatabaseRef, InMemoryDatabase};
   use atlaspack_core::types::{
@@ -699,6 +726,75 @@ mod tests {
     assert_eq!(
       result, expected,
       "SVG data URI should have correct MIME type"
+    );
+  }
+
+  #[test]
+  fn escape_css_string_escapes_quotes_and_backslashes() {
+    assert_eq!(escape_css_string("normal/path.svg"), "normal/path.svg");
+    assert_eq!(escape_css_string("path/with\"quote"), "path/with\\\"quote");
+    assert_eq!(
+      escape_css_string("path\\with\\backslash"),
+      "path\\\\with\\\\backslash"
+    );
+    assert_eq!(
+      escape_css_string("both\"and\\mixed"),
+      "both\\\"and\\\\mixed"
+    );
+  }
+
+  #[test]
+  fn url_replacement_preserves_hash_fragment() {
+    let placeholder = "svg_sprite_placeholder";
+    let css_bundle = make_css_bundle("bundle_css");
+    let db = make_db();
+    let output_dir = PathBuf::from("/dist");
+
+    let image_asset = make_image_asset("asset_sprite_1", FileType::Other("svg".to_string()), None);
+    let image_bundle = make_image_bundle(
+      "bundle_sprite",
+      "asset_sprite_1",
+      "images/sprite.svg",
+      "/dist",
+    );
+
+    // Specifier includes a hash fragment.
+    let mut dep = make_url_dep("./images/sprite.svg#icon", Some(placeholder));
+    dep.specifier = "./images/sprite.svg#icon".to_string();
+
+    let css_asset = Asset {
+      id: "asset_css_1".to_string(),
+      file_type: FileType::Css,
+      env: Arc::new(Environment::default()),
+      ..Asset::default()
+    };
+
+    let mut graph = MockBundleGraph::new();
+    graph.bundles.push(css_bundle.clone());
+    graph.bundles.push(image_bundle);
+    graph
+      .assets_by_bundle
+      .insert("bundle_css".to_string(), vec![css_asset.clone()]);
+    graph
+      .assets_by_bundle
+      .insert("bundle_sprite".to_string(), vec![image_asset.clone()]);
+    graph
+      .deps_by_asset
+      .insert("asset_css_1".to_string(), vec![dep]);
+    graph.resolved.insert(placeholder.to_string(), image_asset);
+
+    let input = format!(".icon {{ background: url({placeholder}); }}");
+
+    let result = replace_url_references(&input, &css_bundle, &graph, &db, &output_dir)
+      .expect("replace_url_references must succeed");
+
+    assert!(
+      result.contains("#icon"),
+      "Hash fragment must be preserved in output; got: {result:?}"
+    );
+    assert!(
+      !result.contains(placeholder),
+      "Placeholder must be replaced; got: {result:?}"
     );
   }
 }

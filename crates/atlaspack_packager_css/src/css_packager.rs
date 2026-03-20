@@ -307,6 +307,48 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
       .get_bundle_by_id(bundle_id)
       .ok_or_else(|| anyhow::anyhow!("Bundle not found: {bundle_id}"))?;
 
+    // Short-circuit for inline style attribute bundles (e.g. `style="..."` attributes).
+    // These only need URL reference replacement on the raw asset CSS — not full concatenation.
+    // Mirrors the JS packager's early-return for `bundle.bundleBehavior === 'inline' &&
+    // entry.meta.type === 'attr'`.
+    use atlaspack_core::types::BundleBehavior;
+    if bundle.bundle_behavior == Some(BundleBehavior::Inline) {
+      if let Some(main_entry_id) = &bundle.main_entry_id {
+        let all_assets = self.bundle_graph.get_bundle_assets(bundle)?;
+        if let Some(entry) = all_assets.iter().find(|a| &a.id == main_entry_id).copied() {
+          if entry.meta.get("type").and_then(|v| v.as_str()) == Some("attr") {
+            let css = entry.code.as_str().unwrap_or("");
+            let output = url_replacer::replace_url_references(
+              css,
+              bundle,
+              self.bundle_graph.as_ref(),
+              &self.context.db,
+              &self.context.output_dir,
+            )?;
+            let size = output.len() as u64;
+            return Ok(PackageResult {
+              bundle_info: BundleInfo {
+                bundle_type: "css".to_string(),
+                size,
+                total_assets: 1,
+                hash: String::new(),
+                hash_references: vec![],
+                cache_keys: None,
+                is_large_blob: false,
+                time: None,
+                bundle_contents: Some(output.into_bytes()),
+                map_contents: None,
+              },
+              config_requests: vec![],
+              dev_dep_requests: vec![],
+              invalidations: vec![],
+              warnings: vec![],
+            });
+          }
+        }
+      }
+    }
+
     let assets = self
       .bundle_graph
       .get_bundle_assets_in_source_order(bundle)?;
@@ -350,6 +392,15 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
         css_code
       } else {
         filter_external_imports(&css_code, &asset_external_specifiers)
+      };
+
+      // Replace CSS variable references with resolved symbol names.
+      // Handles `composes:` across files in CSS Modules (JS packager: `asset.meta.hasReferences`).
+      let filtered_css = if asset.meta.get("hasReferences").and_then(|v| v.as_bool()) == Some(true)
+      {
+        apply_css_var_substitution(filtered_css, asset, bundle, self.bundle_graph.as_ref())?
+      } else {
+        filtered_css
       };
 
       let css_with_map = if bundle.env.source_map.is_some()
@@ -493,6 +544,111 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
   }
 }
 
+/// Escapes a string for use as a CSS dashed identifier (custom property name).
+/// Mirrors `escapeDashedIdent` from `CSSPackager.ts`, which follows the CSS
+/// serialisation algorithm at https://drafts.csswg.org/cssom/#serialize-an-identifier.
+fn escape_dashed_ident(name: &str) -> String {
+  let mut res = String::with_capacity(name.len());
+  for c in name.chars() {
+    let code = c as u32;
+    if code == 0 {
+      res.push('\u{FFFD}');
+    } else if (0x01..=0x1f).contains(&code) || code == 0x7f {
+      res.push_str(&format!("\\{:x} ", code));
+    } else if c.is_ascii_alphanumeric() || c == '_' || c == '-' || code >= 0x80 {
+      res.push(c);
+    } else {
+      res.push('\\');
+      res.push(c);
+    }
+  }
+  res
+}
+
+/// Replaces CSS variable names in `css` with their resolved symbol names from the bundle graph.
+/// Used for CSS Modules `composes:` cross-file references where `asset.meta.hasReferences` is true.
+fn apply_css_var_substitution(
+  css: String,
+  asset: &atlaspack_core::types::Asset,
+  bundle: &atlaspack_core::types::Bundle,
+  bundle_graph: &dyn atlaspack_core::bundle_graph::bundle_graph::BundleGraph,
+) -> anyhow::Result<String> {
+  let deps = bundle_graph.get_dependencies(asset)?;
+  let mut replacements: Vec<(String, String)> = Vec::new();
+
+  for dep in deps {
+    let Some(dep_symbols) = &dep.symbols else {
+      continue;
+    };
+    let resolved = bundle_graph.get_resolved_asset(dep, bundle)?;
+    let Some(resolved_asset) = resolved else {
+      continue;
+    };
+    for dep_sym in dep_symbols {
+      // Find the local name of this exported symbol in the resolved asset.
+      let resolved_local = resolved_asset
+        .symbols
+        .as_ref()
+        .and_then(|syms| {
+          syms
+            .iter()
+            .find(|s| s.exported == dep_sym.exported)
+            .map(|s| s.local.clone())
+        })
+        .unwrap_or_else(|| dep_sym.exported.clone());
+
+      replacements.push((dep_sym.local.clone(), escape_dashed_ident(&resolved_local)));
+    }
+  }
+
+  if replacements.is_empty() {
+    return Ok(css);
+  }
+
+  // Single-pass replacement using a HashMap to avoid double-replacing:
+  // if a resolved name happens to match another replacement key, sequential
+  // `str::replace` calls would corrupt the output.
+  let map: std::collections::HashMap<&str, &str> = replacements
+    .iter()
+    .map(|(k, v)| (k.as_str(), v.as_str()))
+    .collect();
+
+  // Walk the CSS character by character. Whenever we recognise the start of a
+  // CSS ident, check whether the full ident is a replacement key. If so, emit
+  // the replacement; otherwise emit the original characters. This guarantees
+  // each position in the source is visited exactly once.
+  let mut result = String::with_capacity(css.len());
+  let chars: Vec<char> = css.chars().collect();
+  let mut i = 0;
+  while i < chars.len() {
+    let c = chars[i];
+    // CSS idents start with a letter, `_`, `-`, or non-ASCII.
+    let ident_start = c.is_alphabetic() || c == '_' || c == '-' || c as u32 > 0x7f;
+    if ident_start {
+      let start = i;
+      // Consume the rest of the ident.
+      while i < chars.len()
+        && (chars[i].is_alphanumeric()
+          || chars[i] == '_'
+          || chars[i] == '-'
+          || chars[i] as u32 > 0x7f)
+      {
+        i += 1;
+      }
+      let ident: String = chars[start..i].iter().collect();
+      if let Some(&replacement) = map.get(ident.as_str()) {
+        result.push_str(replacement);
+      } else {
+        result.push_str(&ident);
+      }
+    } else {
+      result.push(c);
+      i += 1;
+    }
+  }
+  Ok(result)
+}
+
 /// Strips `@import` statements that match any external specifiers.
 fn filter_external_imports(css: &str, external_specifiers: &[String]) -> String {
   use lightningcss::rules::CssRule;
@@ -533,8 +689,8 @@ mod tests {
   use atlaspack_core::database::{DatabaseRef, InMemoryDatabase};
   use atlaspack_core::package_result::PackageResult;
   use atlaspack_core::types::{
-    Asset, Bundle, Dependency, DependencyBuilder, Environment, FileType, Priority, SpecifierType,
-    Target,
+    Asset, Bundle, BundleBehavior, Dependency, DependencyBuilder, Environment, FileType, Priority,
+    SpecifierType, Symbol, Target,
   };
   use serde_json::{Value, from_slice, json};
 
@@ -2366,6 +2522,32 @@ mod tests {
   }
 
   #[test]
+  fn escape_dashed_ident_normal_chars() {
+    assert_eq!(escape_dashed_ident("normal"), "normal");
+    assert_eq!(escape_dashed_ident("with-dash"), "with-dash");
+    assert_eq!(escape_dashed_ident("with_under"), "with_under");
+    assert_eq!(escape_dashed_ident("café"), "café"); // non-ASCII passthrough
+  }
+
+  #[test]
+  fn escape_dashed_ident_special_chars() {
+    assert_eq!(escape_dashed_ident("with space"), "with\\ space");
+    assert_eq!(escape_dashed_ident("with.dot"), "with\\.dot");
+  }
+
+  #[test]
+  fn escape_dashed_ident_control_chars() {
+    // Code point 0 → replacement character
+    assert_eq!(escape_dashed_ident("\0"), "\u{FFFD}");
+    // Control chars get hex escape
+    let result = escape_dashed_ident("\x01");
+    assert!(
+      result.starts_with("\\1 "),
+      "Control char must be hex-escaped; got: {result:?}"
+    );
+  }
+
+  #[test]
   fn filter_external_imports_strips_media_query_import() {
     // Also includes a comment with a semicolon inside to verify the AST-based
     // implementation correctly ignores semicolons inside comments.
@@ -2404,5 +2586,165 @@ mod tests {
       "local @import must NOT be stripped; got: {result:?}"
     );
     assert!(result.contains(".local"));
+  }
+
+  #[test]
+  fn escape_dashed_ident_starts_with_digit() {
+    assert_eq!(escape_dashed_ident("123"), "123");
+    assert_eq!(escape_dashed_ident("1a"), "1a");
+  }
+
+  #[test]
+  fn escape_dashed_ident_starts_with_dash_digit() {
+    assert_eq!(escape_dashed_ident("-123"), "-123");
+  }
+
+  #[test]
+  fn inline_style_attribute_short_circuit() {
+    let db = make_db();
+    let css = "background: url(image.png)";
+    db.put("attr_asset", css.as_bytes()).unwrap();
+
+    let mut asset = make_asset("attr_asset");
+    asset.meta.insert("type".to_string(), "attr".into());
+    asset.bundle_behavior = Some(BundleBehavior::Inline);
+    // Populate asset.code because the short-circuit reads from it directly (skipping DB)
+    asset.code = css.to_string().into();
+
+    // Create a dependency for the URL
+    let dep = make_dependency("image.png", Priority::Sync);
+
+    let mut bundle = make_bundle("attr_bundle", vec!["attr_asset"]);
+    bundle.bundle_behavior = Some(BundleBehavior::Inline);
+    bundle.main_entry_id = Some("attr_asset".to_string());
+
+    // In `make_bundle`, env is default, so output format is `Global`.
+    // The url replacer uses `find_relative_path`.
+    // We need to ensure the graph returns the resolved asset for the dependency.
+
+    let mut graph = TestBundleGraph::new();
+    graph.bundles.push(bundle.clone());
+    graph
+      .assets_by_bundle
+      .insert("attr_bundle".to_string(), vec![asset.clone()]);
+    graph
+      .deps_by_asset
+      .insert("attr_asset".to_string(), vec![dep]);
+
+    // Mock resolved asset so URL replacer works
+    let image_asset = make_asset("image_asset");
+    // Also need a bundle for the image asset if we want find_relative_path to find it,
+    // OR we can make it inline so it gets base64 encoded.
+    // If we want it to be a URL replacement to another file, that file needs to be in a bundle.
+    // Let's make the image asset inline for simplicity to test the replacement path?
+    // Actually, `replace_url_references` handles inline assets by base64 encoding them.
+    // Let's test that path as it's simpler to setup in this mock graph.
+    let mut image_asset = image_asset;
+    image_asset.bundle_behavior = Some(BundleBehavior::Inline);
+    image_asset.content_key = Some("image_content".to_string());
+    db.put("image_content", b"fake-image-data").unwrap();
+
+    graph.resolved.insert("image.png".to_string(), image_asset);
+
+    let packager = CssPackager::new(
+      CssPackagingContext {
+        db,
+        project_root: PathBuf::from("/tmp"),
+        output_dir: PathBuf::from("/tmp/dist"),
+      },
+      Arc::new(graph),
+    );
+
+    let result = packager
+      .package("attr_bundle")
+      .expect("package() must succeed");
+    let output = output_string(&result);
+
+    // It should be just the property value with replaced URL, not wrapped in a rule
+    // assert!(output.contains("background: url("), "Output should contain the CSS property");
+    assert!(
+      output.contains("background: url("),
+      "Output should contain the CSS property; got: {}",
+      output
+    );
+    assert!(!output.contains("image.png"), "URL should be replaced");
+    assert!(
+      output.contains("data:application/octet-stream;base64,"),
+      "Should contain base64 data URI; got: {}",
+      output
+    );
+  }
+
+  #[test]
+  fn apply_css_var_substitution_replaces_references() {
+    let db = make_db();
+    // Asset 1 composes 'bar' from Asset 2
+    let css = ".foo { composes: bar from \"./other.css\"; color: red; }";
+    db.put("asset_1", css.as_bytes()).unwrap();
+    db.put("asset_2", b".bar { color: blue; }").unwrap();
+
+    let mut asset1 = make_asset("asset_1");
+    asset1.meta.insert("hasReferences".to_string(), true.into());
+
+    let asset2 = make_asset("asset_2");
+
+    // Asset 2 exports 'bar' as 'bar_hashed'
+    let mut asset2_symbols = Vec::new();
+    // Atlaspack uses `Symbol` for both definitions and imports in some contexts, or `SymbolDefinition` might be missing/different?
+    // Checking `Asset` struct definition... it uses `Vec<Symbol>`.
+    asset2_symbols.push(Symbol {
+      exported: "bar".to_string(),
+      local: "bar_hashed".to_string(),
+      loc: None,
+      is_weak: false,
+      is_esm_export: true,
+      self_referenced: false,
+      is_static_binding_safe: true,
+    });
+    let mut asset2_with_symbols = asset2.clone();
+    asset2_with_symbols.symbols = Some(asset2_symbols);
+
+    // Dependency from asset 1 to asset 2
+    let mut dep = make_dependency("./other.css", Priority::Sync);
+    dep.symbols = Some(vec![Symbol {
+      exported: "bar".to_string(),
+      local: "bar".to_string(), // local name in asset 1
+      loc: None,
+      is_weak: false,
+      is_esm_export: true,
+      self_referenced: false,
+      is_static_binding_safe: true,
+    }]);
+
+    let bundle = make_bundle("bundle_1", vec!["asset_1"]);
+
+    let mut graph = TestBundleGraph::new();
+    graph.bundles.push(bundle.clone());
+    // We only care about asset 1 being packaged here, but asset 2 is needed for resolution
+    graph
+      .assets_by_bundle
+      .insert("bundle_1".to_string(), vec![asset1.clone()]);
+    graph.deps_by_asset.insert("asset_1".to_string(), vec![dep]);
+    graph
+      .resolved
+      .insert("./other.css".to_string(), asset2_with_symbols);
+
+    let packager = CssPackager::new(
+      CssPackagingContext {
+        db,
+        project_root: PathBuf::from("/tmp"),
+        output_dir: PathBuf::from("/tmp/dist"),
+      },
+      Arc::new(graph),
+    );
+
+    let result = packager.package("bundle_1").expect("should succeed");
+    let output = output_string(&result);
+
+    // "bar" should be replaced by "bar_hashed"
+    assert!(
+      output.contains("bar_hashed"),
+      "CSS var substitution should happen: 'bar' -> 'bar_hashed'"
+    );
   }
 }
