@@ -80,6 +80,13 @@ async function run({input, api, farm, rustAtlaspack}: RunInput<BundleInfo>) {
         diagnostic: error,
       });
     }
+    for (const warning of (result[0] as any)?.warnings ?? []) {
+      logger.warn({
+        message: warning.message,
+        origin: warning.origin ?? '@atlaspack/core',
+        hints: warning.hints,
+      });
+    }
     logger.verbose({
       message: JSON.stringify(packagingResult, null, 2),
       origin: '@atlaspack/core',

@@ -1,6 +1,3 @@
-// Temporarily required becuase currently this request type is not used anywhere
-#![allow(dead_code)]
-
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::path::PathBuf;

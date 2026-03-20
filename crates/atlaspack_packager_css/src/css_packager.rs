@@ -493,21 +493,34 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
   }
 }
 
-/// Strips `@import` lines for any of the given external specifiers.
+/// Strips `@import` statements that match any external specifiers.
 fn filter_external_imports(css: &str, external_specifiers: &[String]) -> String {
-  css
-    .lines()
-    .filter(|line| {
-      let trimmed = line.trim();
-      if !trimmed.starts_with("@import") {
-        return true;
-      }
+  use lightningcss::rules::CssRule;
+  use lightningcss::stylesheet::StyleSheet;
+
+  if external_specifiers.is_empty() {
+    return css.to_string();
+  }
+
+  let Ok(mut stylesheet) = StyleSheet::parse(css, ParserOptions::default()) else {
+    // Fall back to the original string on parse error to never silently lose content.
+    return css.to_string();
+  };
+
+  stylesheet.rules.0.retain(|rule| match rule {
+    CssRule::Import(import_rule) => {
+      let url: &str = import_rule.url.as_ref();
       !external_specifiers
         .iter()
-        .any(|spec| trimmed.contains(spec.as_str()))
-    })
-    .collect::<Vec<_>>()
-    .join("\n")
+        .any(|spec| url.contains(spec.as_str()))
+    }
+    _ => true,
+  });
+
+  stylesheet
+    .to_css(PrinterOptions::default())
+    .map(|res| res.code)
+    .unwrap_or_else(|_| css.to_string())
 }
 
 #[cfg(test)]
@@ -2350,5 +2363,46 @@ mod tests {
       has_original_source,
       "source map must contain original source 'foo.scss' from input map; got sources: {sources:?}"
     );
+  }
+
+  #[test]
+  fn filter_external_imports_strips_media_query_import() {
+    // Also includes a comment with a semicolon inside to verify the AST-based
+    // implementation correctly ignores semicolons inside comments.
+    let css = "@import \"https://fonts.googleapis.com/css\" /* font; load */ screen, print;\n.local { color: red; }";
+    let external = vec!["https://fonts.googleapis.com".to_string()];
+    let result = filter_external_imports(css, &external);
+    assert!(
+      !result.contains("@import"),
+      "media-query-qualified external @import (with comment containing semicolon) must be stripped; got: {result:?}"
+    );
+    assert!(
+      result.contains(".local"),
+      "local rules must be preserved; got: {result:?}"
+    );
+  }
+
+  #[test]
+  fn filter_external_imports_strips_multiline_import() {
+    let css = "@import\n  \"https://example.com/ext.css\"\n  screen;\n.keep { color: blue; }";
+    let external = vec!["https://example.com/ext.css".to_string()];
+    let result = filter_external_imports(css, &external);
+    assert!(
+      !result.contains("@import"),
+      "multi-line external @import must be stripped; got: {result:?}"
+    );
+    assert!(result.contains(".keep"));
+  }
+
+  #[test]
+  fn filter_external_imports_preserves_local_imports() {
+    let css = "@import \"./local.css\";\n.local { color: green; }";
+    let external = vec!["https://external.com".to_string()];
+    let result = filter_external_imports(css, &external);
+    assert!(
+      result.contains("@import"),
+      "local @import must NOT be stripped; got: {result:?}"
+    );
+    assert!(result.contains(".local"));
   }
 }
