@@ -2920,6 +2920,7 @@ __metadata:
     "@atlaspack/fs": "workspace:*"
     "@atlaspack/package-manager": "workspace:*"
     "@atlaspack/utils": "workspace:*"
+    "@babel/plugin-transform-runtime": "npm:^7.22.10"
     "@types/async": "npm:^3.2.6"
     async: "npm:^3.2.6"
     chalk: "npm:^4.1.0"
