@@ -1,5 +1,6 @@
 import {
   atlaspackNapiCreate,
+  atlaspackNapiBuild,
   atlaspackNapiBuildAssetGraph,
   atlaspackNapiBuildBundleGraph,
   atlaspackNapiRespondToFsEvents,
@@ -100,12 +101,29 @@ export class AtlaspackV3 {
     }
   }
 
-  buildAssetGraph(): Promise<any> {
-    return atlaspackNapiBuildAssetGraph(this._atlaspack_napi) as Promise<any>;
+  buildAssetGraph(
+    progressCallback?: (eventJson: string) => void,
+  ): Promise<any> {
+    return atlaspackNapiBuildAssetGraph(
+      this._atlaspack_napi,
+      progressCallback,
+    ) as Promise<any>;
   }
 
-  buildBundleGraph(): Promise<any> {
-    return atlaspackNapiBuildBundleGraph(this._atlaspack_napi) as Promise<any>;
+  buildBundleGraph(
+    progressCallback?: (eventJson: string) => void,
+  ): Promise<any> {
+    return atlaspackNapiBuildBundleGraph(
+      this._atlaspack_napi,
+      progressCallback,
+    ) as Promise<any>;
+  }
+
+  build(progressCallback: (eventJson: string) => void): Promise<any> {
+    return atlaspackNapiBuild(
+      this._atlaspack_napi,
+      progressCallback,
+    ) as Promise<any>;
   }
 
   loadBundleGraph(bundleGraph: BundleGraph): Promise<void> {

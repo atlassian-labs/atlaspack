@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-image",
-  "version": "16.0.0",
+  "version": "19.0.2",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -22,7 +22,7 @@
     "nullthrows": "^1.1.1"
   },
   "devDependencies": {
-    "sharp": "^0.31.1"
+    "sharp": "^0.33.5"
   },
   "peerDependencies": {
     "@atlaspack/core": "workspace:*"

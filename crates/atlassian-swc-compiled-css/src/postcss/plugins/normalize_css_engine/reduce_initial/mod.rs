@@ -149,9 +149,29 @@ static FROM_INITIAL: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
   m.insert("cursor", "auto");
   m.insert("direction", "ltr");
   m.insert("empty-cells", "show");
+  m.insert("filter", "none");
+  m.insert("flex-basis", "auto");
+  m.insert("flex-direction", "row");
+  m.insert("flex-grow", "0");
+  m.insert("flex-shrink", "1");
+  m.insert("flex-wrap", "nowrap");
+  m.insert("float", "none");
+  m.insert("font-feature-settings", "normal");
+  m.insert("font-kerning", "auto");
+  m.insert("font-language-override", "normal");
+  m.insert("font-optical-sizing", "auto");
+  m.insert("font-size", "medium");
+  m.insert("font-size-adjust", "none");
+  m.insert("font-stretch", "normal");
+  m.insert("font-style", "normal");
+  m.insert("font-variant", "normal");
+  m.insert("font-variant-alternates", "normal");
+  m.insert("font-variant-caps", "normal");
+  m.insert("font-variant-east-asian", "normal");
   m.insert("font-variant-ligatures", "normal");
   m.insert("font-variant-numeric", "normal");
   m.insert("font-variant-position", "normal");
+  m.insert("font-variation-settings", "normal");
   m.insert("font-weight", "normal");
   m.insert("forced-color-adjust", "auto");
   m.insert("grid-auto-columns", "auto");
@@ -404,12 +424,36 @@ fn is_transparent_like(value: &str) -> bool {
   false
 }
 
-fn initial_support(config_path: Option<PathBuf>) -> (bool, Vec<String>) {
-  feature_supported_for_config_path(config_path, FeatureName::from("css-initial-value"))
+fn initial_support(config_path: Option<PathBuf>, env: Option<&str>) -> (bool, Vec<String>) {
+  let (supported, seen) =
+    feature_supported_for_config_path(config_path, FeatureName::from("css-initial-value"), env);
+  // Default to false when browserslist can't resolve — matching Babel/cssnano behavior.
+  // Babel's postcss-reduce-initial resolves browserslist defaults which include browsers
+  // that don't support css-initial-value (e.g., Opera Mini), so initial_support is false.
+  if seen.is_empty()
+    || seen
+      .first()
+      .map(|s| s.starts_with("<browserslist"))
+      .unwrap_or(false)
+  {
+    return (false, seen);
+  }
+  (supported, seen)
 }
 
-pub fn is_initial_supported(config_path: Option<&Path>) -> bool {
-  feature_supported_for_config(FeatureName::from("css-initial-value"), config_path).0
+pub fn is_initial_supported(config_path: Option<&Path>, env: Option<&str>) -> bool {
+  let (supported, seen) =
+    feature_supported_for_config(FeatureName::from("css-initial-value"), config_path, env);
+  // Default to false when browserslist can't resolve — matching Babel/cssnano behavior.
+  if seen.is_empty()
+    || seen
+      .first()
+      .map(|s| s.starts_with("<browserslist"))
+      .unwrap_or(false)
+  {
+    return false;
+  }
+  supported
 }
 
 pub fn transform_value_for_hash(prop: &str, value: &str, initial_support: bool) -> String {
@@ -436,9 +480,37 @@ pub fn transform_value_for_hash(prop: &str, value: &str, initial_support: bool) 
   value.to_string()
 }
 
-pub fn plugin(config_path: Option<PathBuf>) -> pc::BuiltPlugin {
-  // Align with Babel/cssnano: enable `initial` only when the resolved browsers support it.
-  let (initial_support, _browsers) = initial_support(config_path);
+#[cfg(test)]
+#[test]
+fn transform_value_for_hash_respects_initial_support() {
+  // When initial_support is false (e.g. older browsers), keep explicit values for hash consistency with Babel.
+  assert_eq!(
+    transform_value_for_hash("box-sizing", "content-box", false),
+    "content-box"
+  );
+  assert_eq!(
+    transform_value_for_hash("text-decoration-color", "currentColor", false),
+    "currentColor"
+  );
+  // When initial_support is true, reduce to initial to match Babel/cssnano.
+  assert_eq!(
+    transform_value_for_hash("box-sizing", "content-box", true),
+    "initial"
+  );
+  assert_eq!(
+    transform_value_for_hash("text-decoration-color", "currentColor", true),
+    "initial"
+  );
+  // Expand initial to longhand when not supported (FROM_INITIAL).
+  assert_eq!(
+    transform_value_for_hash("position", "initial", false),
+    "static"
+  );
+}
+
+pub fn plugin(config_path: Option<PathBuf>, env: Option<String>) -> pc::BuiltPlugin {
+  // Align with Babel/cssnano: reduce when browserslist supports it.
+  let (initial_support, _browsers) = initial_support(config_path, env.as_deref());
 
   pc::plugin("postcss-reduce-initial")
     .once_exit(move |css, _| {
@@ -487,6 +559,7 @@ pub fn plugin(config_path: Option<PathBuf>) -> pc::BuiltPlugin {
 
 #[cfg(test)]
 mod tests {
+  use super::super::browserslist_support::BrowserslistCacheKey;
   use super::*;
   use pretty_assertions::assert_eq;
   use std::fs;
@@ -499,7 +572,10 @@ mod tests {
 
     browserslist_cache().lock().unwrap().clear();
 
-    let plugin = plugin(Some(tmp.path().to_path_buf()));
+    let plugin = plugin(
+      Some(tmp.path().to_path_buf()),
+      Some("production".to_string()),
+    );
     let processor = pc::postcss_with_plugins(vec![plugin]);
     let mut result = processor
       .process("a{background-color:transparent}")
@@ -516,7 +592,10 @@ mod tests {
     browserslist_cache()
       .lock()
       .unwrap()
-      .remove(&tmp.path().to_path_buf());
+      .remove(&BrowserslistCacheKey {
+        path: tmp.path().to_path_buf(),
+        env: Some("production".to_string()),
+      });
   }
 
   #[test]
@@ -527,7 +606,10 @@ mod tests {
 
     browserslist_cache().lock().unwrap().clear();
 
-    let plugin = plugin(Some(tmp.path().to_path_buf()));
+    let plugin = plugin(
+      Some(tmp.path().to_path_buf()),
+      Some("production".to_string()),
+    );
     let processor = pc::postcss_with_plugins(vec![plugin]);
     let mut result = processor
       .process("a{background-color:lch(0% 0 0 / 0)}")
@@ -543,6 +625,35 @@ mod tests {
     browserslist_cache()
       .lock()
       .unwrap()
-      .remove(&tmp.path().to_path_buf());
+      .remove(&BrowserslistCacheKey {
+        path: tmp.path().to_path_buf(),
+        env: Some("production".to_string()),
+      });
+  }
+
+  #[test]
+  fn converts_flex_direction_initial_to_row() {
+    // AFB-1871: flex-direction:initial should resolve to flex-direction:row
+    // to match Babel's postcss-reduce-initial behavior.
+    let result = transform_value_for_hash("flex-direction", "initial", true);
+    assert_eq!(result, "row");
+  }
+
+  #[test]
+  fn converts_flex_grow_initial_to_zero() {
+    let result = transform_value_for_hash("flex-grow", "initial", true);
+    assert_eq!(result, "0");
+  }
+
+  #[test]
+  fn converts_flex_wrap_initial_to_nowrap() {
+    let result = transform_value_for_hash("flex-wrap", "initial", true);
+    assert_eq!(result, "nowrap");
+  }
+
+  #[test]
+  fn converts_filter_initial_to_none() {
+    let result = transform_value_for_hash("filter", "initial", true);
+    assert_eq!(result, "none");
   }
 }

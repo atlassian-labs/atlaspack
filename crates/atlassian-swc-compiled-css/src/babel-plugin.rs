@@ -48,9 +48,60 @@ fn insert_sheet_declarations(module: &mut Module, state: &mut TransformState) {
     return;
   }
 
+  // Collect all existing bindings in the module to detect potential collisions
+  // with hoisted sheet identifiers (e.g., `_` from lodash, `_0` from minified code).
+  // A collision would cause the CS runtime component to receive a non-string value
+  // instead of a CSS sheet string, triggering "sheet.includes is not a function".
+  let existing_bindings = collect_module_bindings(module);
+
   let mut declarations = Vec::with_capacity(state.sheets.len());
 
   for (sheet, ident) in state.sheets.iter() {
+    let ident_name = ident.sym.as_ref();
+
+    // Check for identifier collision with existing module-level bindings
+    if existing_bindings.contains(ident_name) {
+      let filename = state.filename.clone().unwrap_or_default();
+      let message = format!(
+        "Compiled CSS sheet identifier `{}` conflicts with an existing binding in {}. \
+         This will cause the CS runtime component to receive a non-string value instead of \
+         a CSS sheet string, resulting in \"sheet.includes is not a function\" at runtime.",
+        ident_name, filename
+      );
+      eprintln!("[compiled-css] WARNING: {}", message);
+
+      state.diagnostics.push(crate::errors::create_diagnostic(
+        message,
+        module_path!(),
+        None,
+        None,
+      ));
+    }
+
+    // Validate sheet content is a non-empty CSS string
+    if sheet.trim().is_empty() || !sheet.contains('{') {
+      let filename = state.filename.clone().unwrap_or_default();
+      let message = format!(
+        "Compiled CSS sheet declared as `{}` has invalid content in {}: \
+         expected a CSS rule string containing '{{' but got: {:?}. \
+         This may cause \"sheet.includes is not a function\" at runtime.",
+        ident_name,
+        filename,
+        if sheet.len() > 80 {
+          format!("{}...", &sheet[..80])
+        } else {
+          sheet.clone()
+        }
+      );
+
+      state.diagnostics.push(crate::errors::create_diagnostic(
+        message,
+        module_path!(),
+        None,
+        None,
+      ));
+    }
+
     let binding = BindingIdent {
       id: ident.clone(),
       type_ann: None,
@@ -87,6 +138,113 @@ fn insert_sheet_declarations(module: &mut Module, state: &mut TransformState) {
   module
     .body
     .splice(insert_index..insert_index, declarations.into_iter());
+}
+
+/// Collect all top-level binding names from the module (imports, variable declarations,
+/// function declarations, class declarations) to detect potential identifier collisions
+/// with hoisted sheet declarations.
+fn collect_module_bindings(module: &Module) -> std::collections::HashSet<String> {
+  let mut bindings = std::collections::HashSet::new();
+
+  for item in &module.body {
+    match item {
+      ModuleItem::ModuleDecl(decl) => match decl {
+        ModuleDecl::Import(import) => {
+          for specifier in &import.specifiers {
+            match specifier {
+              ImportSpecifier::Named(named) => {
+                bindings.insert(named.local.sym.to_string());
+              }
+              ImportSpecifier::Default(default) => {
+                bindings.insert(default.local.sym.to_string());
+              }
+              ImportSpecifier::Namespace(ns) => {
+                bindings.insert(ns.local.sym.to_string());
+              }
+            }
+          }
+        }
+        ModuleDecl::ExportDecl(export) => {
+          collect_decl_bindings(&export.decl, &mut bindings);
+        }
+        ModuleDecl::ExportDefaultDecl(export) => match &export.decl {
+          DefaultDecl::Class(class) => {
+            if let Some(ident) = &class.ident {
+              bindings.insert(ident.sym.to_string());
+            }
+          }
+          DefaultDecl::Fn(func) => {
+            if let Some(ident) = &func.ident {
+              bindings.insert(ident.sym.to_string());
+            }
+          }
+          _ => {}
+        },
+        _ => {}
+      },
+      ModuleItem::Stmt(stmt) => {
+        if let Stmt::Decl(decl) = stmt {
+          collect_decl_bindings(decl, &mut bindings);
+        }
+      }
+    }
+  }
+
+  bindings
+}
+
+/// Extract binding names from a declaration.
+fn collect_decl_bindings(decl: &Decl, bindings: &mut std::collections::HashSet<String>) {
+  match decl {
+    Decl::Var(var_decl) => {
+      for declarator in &var_decl.decls {
+        collect_pat_bindings(&declarator.name, bindings);
+      }
+    }
+    Decl::Fn(FnDecl { ident, .. }) => {
+      bindings.insert(ident.sym.to_string());
+    }
+    Decl::Class(ClassDecl { ident, .. }) => {
+      bindings.insert(ident.sym.to_string());
+    }
+    _ => {}
+  }
+}
+
+/// Extract binding names from a pattern (handles destructuring).
+fn collect_pat_bindings(pat: &Pat, bindings: &mut std::collections::HashSet<String>) {
+  match pat {
+    Pat::Ident(binding) => {
+      bindings.insert(binding.id.sym.to_string());
+    }
+    Pat::Array(array) => {
+      for elem in array.elems.iter().flatten() {
+        collect_pat_bindings(elem, bindings);
+      }
+    }
+    Pat::Object(object) => {
+      for prop in &object.props {
+        match prop {
+          swc_core::ecma::ast::ObjectPatProp::Assign(assign) => {
+            bindings.insert(assign.key.sym.to_string());
+          }
+          swc_core::ecma::ast::ObjectPatProp::KeyValue(kv) => {
+            collect_pat_bindings(&kv.value, bindings);
+          }
+          swc_core::ecma::ast::ObjectPatProp::Rest(rest) => {
+            collect_pat_bindings(&rest.arg, bindings);
+          }
+        }
+      }
+    }
+    Pat::Rest(rest) => {
+      collect_pat_bindings(&rest.arg, bindings);
+    }
+    Pat::Assign(assign) => {
+      collect_pat_bindings(&assign.left, bindings);
+    }
+    _ => {}
+  }
 }
 
 /// Primary SWC transform that will eventually mirror `@compiled/babel-plugin`.
@@ -574,114 +732,118 @@ mod tests {
 
   #[test]
   fn preserves_leading_comments_before_runtime_imports() {
-    let source = "// @flow strict-local\nimport { styled } from '@compiled/react';\nconst Component = styled.div({ fontSize: 12 });";
+    crate::test_utils::with_globals(|| {
+      let source = "// @flow strict-local\nimport { styled } from '@compiled/react';\nconst Component = styled.div({ fontSize: 12 });";
 
-    let (mut program, cm, fm) = parse_program(source);
+      let (mut program, cm, fm) = parse_program(source);
 
-    let mut transform = CompiledCssInJsTransform::new(PluginOptions::default());
+      let mut transform = CompiledCssInJsTransform::new(PluginOptions::default());
 
-    let comment_marker = "// @flow strict-local";
-    let comment_start = source
-      .find(comment_marker)
-      .expect("comment should be present") as u32;
-    let comment_span = Span::new(
-      BytePos(fm.start_pos.0 + comment_start),
-      BytePos(fm.start_pos.0 + comment_start + comment_marker.len() as u32),
-    );
-    let comment = Comment {
-      kind: CommentKind::Line,
-      span: comment_span,
-      text: " @flow strict-local".into(),
-    };
+      let comment_marker = "// @flow strict-local";
+      let comment_start = source
+        .find(comment_marker)
+        .expect("comment should be present") as u32;
+      let comment_span = Span::new(
+        BytePos(fm.start_pos.0 + comment_start),
+        BytePos(fm.start_pos.0 + comment_start + comment_marker.len() as u32),
+      );
+      let comment = Comment {
+        kind: CommentKind::Line,
+        span: comment_span,
+        text: " @flow strict-local".into(),
+      };
 
-    {
-      let mut state = transform.state.borrow_mut();
-      state.replace_file(TransformFile::transform_compiled_with_options(
-        cm.clone(),
-        vec![comment],
-        TransformFileOptions {
-          filename: Some("test.tsx".into()),
-          ..TransformFileOptions::default()
-        },
+      {
+        let mut state = transform.state.borrow_mut();
+        state.replace_file(TransformFile::transform_compiled_with_options(
+          cm.clone(),
+          vec![comment],
+          TransformFileOptions {
+            filename: Some("test.tsx".into()),
+            ..TransformFileOptions::default()
+          },
+        ));
+      }
+
+      program.visit_mut_with(&mut transform);
+
+      let Program::Module(module) = &program else {
+        panic!("expected module program");
+      };
+
+      assert!(matches!(
+        module.body.first(),
+        Some(ModuleItem::Stmt(Stmt::Empty(_)))
       ));
-    }
 
-    program.visit_mut_with(&mut transform);
-
-    let Program::Module(module) = &program else {
-      panic!("expected module program");
-    };
-
-    assert!(matches!(
-      module.body.first(),
-      Some(ModuleItem::Stmt(Stmt::Empty(_)))
-    ));
-
-    let state = transform.state();
-    let state_ref = state.borrow();
-    assert_eq!(state_ref.file.comments.len(), 2);
-    assert!(
-      state_ref.file.comments[0]
-        .text
-        .contains("generated by @compiled/babel-plugin")
-    );
-    assert!(
-      state_ref.file.comments[1]
-        .text
-        .as_ref()
-        .contains("@flow strict-local")
-    );
+      let state = transform.state();
+      let state_ref = state.borrow();
+      assert_eq!(state_ref.file.comments.len(), 2);
+      assert!(
+        state_ref.file.comments[0]
+          .text
+          .contains("generated by @compiled/babel-plugin")
+      );
+      assert!(
+        state_ref.file.comments[1]
+          .text
+          .as_ref()
+          .contains("@flow strict-local")
+      );
+    });
   }
 
   #[test]
   fn preserves_multiple_leading_comments_in_order() {
-    let source = "// first\n// second\nimport { styled } from '@compiled/react';\nconst Component = styled.div({ fontSize: 12 });";
+    crate::test_utils::with_globals(|| {
+      let source = "// first\n// second\nimport { styled } from '@compiled/react';\nconst Component = styled.div({ fontSize: 12 });";
 
-    let (mut program, cm, fm) = parse_program(source);
+      let (mut program, cm, fm) = parse_program(source);
 
-    let mut transform = CompiledCssInJsTransform::new(PluginOptions::default());
+      let mut transform = CompiledCssInJsTransform::new(PluginOptions::default());
 
-    let comments = ["// first", "// second"];
-    let mut stored = Vec::new();
+      let comments = ["// first", "// second"];
+      let mut stored = Vec::new();
 
-    for marker in comments {
-      let start = source.find(marker).expect("comment present") as u32;
-      let span = Span::new(
-        BytePos(fm.start_pos.0 + start),
-        BytePos(fm.start_pos.0 + start + marker.len() as u32),
+      for marker in comments {
+        let start = source.find(marker).expect("comment present") as u32;
+        let span = Span::new(
+          BytePos(fm.start_pos.0 + start),
+          BytePos(fm.start_pos.0 + start + marker.len() as u32),
+        );
+        stored.push(Comment {
+          kind: CommentKind::Line,
+          span,
+          text: format!(" {}", marker.trim_start_matches("//")).into(),
+        });
+      }
+
+      {
+        let mut state = transform.state.borrow_mut();
+        state.replace_file(TransformFile::transform_compiled_with_options(
+          cm.clone(),
+          stored,
+          TransformFileOptions {
+            filename: Some("test.tsx".into()),
+            ..TransformFileOptions::default()
+          },
+        ));
+      }
+
+      program.visit_mut_with(&mut transform);
+
+      let state = transform.state();
+      let state_ref = state.borrow();
+
+      assert_eq!(state_ref.file.comments.len(), 3);
+      assert!(
+        state_ref.file.comments[0]
+          .text
+          .contains("generated by @compiled/babel-plugin")
       );
-      stored.push(Comment {
-        kind: CommentKind::Line,
-        span,
-        text: format!(" {}", marker.trim_start_matches("//")).into(),
-      });
-    }
-
-    {
-      let mut state = transform.state.borrow_mut();
-      state.replace_file(TransformFile::transform_compiled_with_options(
-        cm.clone(),
-        stored,
-        TransformFileOptions {
-          filename: Some("test.tsx".into()),
-          ..TransformFileOptions::default()
-        },
-      ));
-    }
-
-    program.visit_mut_with(&mut transform);
-
-    let state = transform.state();
-    let state_ref = state.borrow();
-
-    assert_eq!(state_ref.file.comments.len(), 3);
-    assert!(
-      state_ref.file.comments[0]
-        .text
-        .contains("generated by @compiled/babel-plugin")
-    );
-    assert!(state_ref.file.comments[1].text.as_ref().contains("first"));
-    assert!(state_ref.file.comments[2].text.as_ref().contains("second"));
+      assert!(state_ref.file.comments[1].text.as_ref().contains("first"));
+      assert!(state_ref.file.comments[2].text.as_ref().contains("second"));
+    });
   }
 
   #[test]
@@ -752,7 +914,8 @@ mod tests {
 
   #[test]
   fn hoists_keyframes_sheet_before_nullifying_binding() {
-    let source = r#"
+    crate::test_utils::with_globals(|| {
+      let source = r#"
             import { ClassNames, keyframes } from '@compiled/react';
 
             const fadeOut = keyframes({
@@ -769,83 +932,85 @@ mod tests {
             );
         "#;
 
-    let (mut program, cm, _) = parse_program(source);
+      let (mut program, cm, _) = parse_program(source);
 
-    let mut transform = CompiledCssInJsTransform::new(PluginOptions {
-      extract: Some(true),
-      ..PluginOptions::default()
-    });
-    {
-      let file = TransformFile::transform_compiled_with_options(
-        cm.clone(),
-        Vec::new(),
-        TransformFileOptions {
-          filename: Some("test.tsx".into()),
-          ..TransformFileOptions::default()
-        },
+      let mut transform = CompiledCssInJsTransform::new(PluginOptions {
+        extract: Some(true),
+        ..PluginOptions::default()
+      });
+      {
+        let file = TransformFile::transform_compiled_with_options(
+          cm.clone(),
+          Vec::new(),
+          TransformFileOptions {
+            filename: Some("test.tsx".into()),
+            ..TransformFileOptions::default()
+          },
+        );
+        let state = transform.state();
+        let mut state_ref = state.borrow_mut();
+        state_ref.replace_file(file);
+      }
+      program.visit_mut_with(&mut transform);
+
+      let Program::Module(module) = &program else {
+        panic!("expected module program");
+      };
+
+      let printed = print_module(&cm, module);
+      assert!(
+        printed.contains("const fadeOut = null;"),
+        "expected fadeOut binding to be replaced with null"
       );
-      let state = transform.state();
-      let mut state_ref = state.borrow_mut();
-      state_ref.replace_file(file);
-    }
-    program.visit_mut_with(&mut transform);
 
-    let Program::Module(module) = &program else {
-      panic!("expected module program");
-    };
+      let metadata = transform.into_metadata();
+      let keyframes_rule = metadata
+        .style_rules
+        .iter()
+        .find(|rule| rule.contains("@keyframes"))
+        .cloned()
+        .expect("expected keyframes style rule to be recorded in metadata");
+      let animation_rule = metadata
+        .style_rules
+        .iter()
+        .find(|rule| rule.contains("animation:"))
+        .cloned()
+        .expect("expected animation style rule to be recorded in metadata");
 
-    let printed = print_module(&cm, module);
-    assert!(
-      printed.contains("const fadeOut = null;"),
-      "expected fadeOut binding to be replaced with null"
-    );
+      let name_start = keyframes_rule
+        .find("@keyframes ")
+        .map(|index| index + "@keyframes ".len())
+        .expect("expected keyframes rule to include animation name");
+      let name_end = keyframes_rule[name_start..]
+        .find('{')
+        .map(|offset| name_start + offset)
+        .expect("expected keyframes rule to include body");
+      let keyframe_name = &keyframes_rule[name_start..name_end];
+      let class_start = animation_rule
+        .find('.')
+        .map(|index| index + 1)
+        .expect("expected animation rule to include class selector");
+      let class_end = animation_rule[class_start..]
+        .find('{')
+        .map(|offset| class_start + offset)
+        .expect("expected animation rule to include declarations");
+      let class_name = &animation_rule[class_start..class_end];
 
-    let metadata = transform.into_metadata();
-    let keyframes_rule = metadata
-      .style_rules
-      .iter()
-      .find(|rule| rule.contains("@keyframes"))
-      .cloned()
-      .expect("expected keyframes style rule to be recorded in metadata");
-    let animation_rule = metadata
-      .style_rules
-      .iter()
-      .find(|rule| rule.contains("animation:"))
-      .cloned()
-      .expect("expected animation style rule to be recorded in metadata");
-
-    let name_start = keyframes_rule
-      .find("@keyframes ")
-      .map(|index| index + "@keyframes ".len())
-      .expect("expected keyframes rule to include animation name");
-    let name_end = keyframes_rule[name_start..]
-      .find('{')
-      .map(|offset| name_start + offset)
-      .expect("expected keyframes rule to include body");
-    let keyframe_name = &keyframes_rule[name_start..name_end];
-    let class_start = animation_rule
-      .find('.')
-      .map(|index| index + 1)
-      .expect("expected animation rule to include class selector");
-    let class_end = animation_rule[class_start..]
-      .find('{')
-      .map(|offset| class_start + offset)
-      .expect("expected animation rule to include declarations");
-    let class_name = &animation_rule[class_start..class_end];
-
-    assert!(
-      animation_rule.contains(keyframe_name),
-      "expected animation rule to reference the keyframes name"
-    );
-    assert!(
-      printed.contains(class_name),
-      "expected transformed module to reference the animation class"
-    );
+      assert!(
+        animation_rule.contains(keyframe_name),
+        "expected animation rule to reference the keyframes name"
+      );
+      assert!(
+        printed.contains(class_name),
+        "expected transformed module to reference the animation class"
+      );
+    });
   }
 
   #[test]
   fn hoists_keyframes_sheet_for_tagged_template_before_cleanup() {
-    let source = r#"
+    crate::test_utils::with_globals(|| {
+      let source = r#"
             import { ClassNames, keyframes } from '@compiled/react';
 
             const fadeOut = keyframes`from { opacity: 1; } to { opacity: 0; }`;
@@ -859,79 +1024,80 @@ mod tests {
             );
         "#;
 
-    let (mut program, cm, _) = parse_program(source);
+      let (mut program, cm, _) = parse_program(source);
 
-    let mut transform = CompiledCssInJsTransform::new(PluginOptions {
-      extract: Some(true),
-      ..PluginOptions::default()
-    });
-    {
-      let file = TransformFile::transform_compiled_with_options(
-        cm.clone(),
-        Vec::new(),
-        TransformFileOptions {
-          filename: Some("test.tsx".into()),
-          ..TransformFileOptions::default()
-        },
+      let mut transform = CompiledCssInJsTransform::new(PluginOptions {
+        extract: Some(true),
+        ..PluginOptions::default()
+      });
+      {
+        let file = TransformFile::transform_compiled_with_options(
+          cm.clone(),
+          Vec::new(),
+          TransformFileOptions {
+            filename: Some("test.tsx".into()),
+            ..TransformFileOptions::default()
+          },
+        );
+
+        let state = transform.state();
+        let mut state_ref = state.borrow_mut();
+        state_ref.replace_file(file);
+      }
+      program.visit_mut_with(&mut transform);
+
+      let Program::Module(module) = &program else {
+        panic!("expected module program");
+      };
+
+      let printed = print_module(&cm, module);
+      assert!(
+        printed.contains("const fadeOut = null;"),
+        "expected fadeOut binding to be replaced with null"
       );
 
-      let state = transform.state();
-      let mut state_ref = state.borrow_mut();
-      state_ref.replace_file(file);
-    }
-    program.visit_mut_with(&mut transform);
+      let metadata = transform.into_metadata();
+      let keyframes_rule = metadata
+        .style_rules
+        .iter()
+        .find(|rule| rule.contains("@keyframes"))
+        .cloned()
+        .expect("expected keyframes style rule to be recorded in metadata");
+      let animation_rule = metadata
+        .style_rules
+        .iter()
+        .find(|rule| rule.contains("animation:"))
+        .cloned()
+        .expect("expected animation style rule to be recorded in metadata");
 
-    let Program::Module(module) = &program else {
-      panic!("expected module program");
-    };
+      let name_start = keyframes_rule
+        .find("@keyframes ")
+        .map(|index| index + "@keyframes ".len())
+        .expect("expected keyframes rule to include animation name");
+      let name_end = keyframes_rule[name_start..]
+        .find('{')
+        .map(|offset| name_start + offset)
+        .expect("expected keyframes rule to include body");
+      let keyframe_name = &keyframes_rule[name_start..name_end];
+      let class_start = animation_rule
+        .find('.')
+        .map(|index| index + 1)
+        .expect("expected animation rule to include class selector");
+      let class_end = animation_rule[class_start..]
+        .find('{')
+        .map(|offset| class_start + offset)
+        .expect("expected animation rule to include declarations");
+      let class_name = &animation_rule[class_start..class_end];
 
-    let printed = print_module(&cm, module);
-    assert!(
-      printed.contains("const fadeOut = null;"),
-      "expected fadeOut binding to be replaced with null"
-    );
-
-    let metadata = transform.into_metadata();
-    let keyframes_rule = metadata
-      .style_rules
-      .iter()
-      .find(|rule| rule.contains("@keyframes"))
-      .cloned()
-      .expect("expected keyframes style rule to be recorded in metadata");
-    let animation_rule = metadata
-      .style_rules
-      .iter()
-      .find(|rule| rule.contains("animation:"))
-      .cloned()
-      .expect("expected animation style rule to be recorded in metadata");
-
-    let name_start = keyframes_rule
-      .find("@keyframes ")
-      .map(|index| index + "@keyframes ".len())
-      .expect("expected keyframes rule to include animation name");
-    let name_end = keyframes_rule[name_start..]
-      .find('{')
-      .map(|offset| name_start + offset)
-      .expect("expected keyframes rule to include body");
-    let keyframe_name = &keyframes_rule[name_start..name_end];
-    let class_start = animation_rule
-      .find('.')
-      .map(|index| index + 1)
-      .expect("expected animation rule to include class selector");
-    let class_end = animation_rule[class_start..]
-      .find('{')
-      .map(|offset| class_start + offset)
-      .expect("expected animation rule to include declarations");
-    let class_name = &animation_rule[class_start..class_end];
-
-    assert!(
-      animation_rule.contains(keyframe_name),
-      "expected animation rule to reference the keyframes name"
-    );
-    assert!(
-      printed.contains(class_name),
-      "expected transformed module to reference the animation class"
-    );
+      assert!(
+        animation_rule.contains(keyframe_name),
+        "expected animation rule to reference the keyframes name"
+      );
+      assert!(
+        printed.contains(class_name),
+        "expected transformed module to reference the animation class"
+      );
+    });
   }
 
   #[test]
@@ -1015,203 +1181,211 @@ mod tests {
 
   #[test]
   fn transforms_css_prop_into_compiled_component() {
-    let source = r#"
+    crate::test_utils::with_globals(|| {
+      let source = r#"
             import { css } from '@compiled/react';
 
             const Component = () => <div css={{ color: 'red' }} />;
         "#;
 
-    let (mut program, cm, _) = parse_program(source);
+      let (mut program, cm, _) = parse_program(source);
 
-    let mut transform = CompiledCssInJsTransform::new(PluginOptions::default());
-    {
-      let file = TransformFile::transform_compiled_with_options(
-        cm.clone(),
-        Vec::new(),
-        TransformFileOptions {
-          filename: Some("test.tsx".into()),
-          ..TransformFileOptions::default()
-        },
+      let mut transform = CompiledCssInJsTransform::new(PluginOptions::default());
+      {
+        let file = TransformFile::transform_compiled_with_options(
+          cm.clone(),
+          Vec::new(),
+          TransformFileOptions {
+            filename: Some("test.tsx".into()),
+            ..TransformFileOptions::default()
+          },
+        );
+        let mut state = transform.state.borrow_mut();
+        state.replace_file(file);
+      }
+      program.visit_mut_with(&mut transform);
+
+      let Program::Module(module) = &program else {
+        panic!("expected module program");
+      };
+
+      assert!(matches!(
+        module.body.first(),
+        Some(ModuleItem::Stmt(Stmt::Empty(_)))
+      ));
+
+      let items = module_items_without_noop(module);
+      assert_eq!(
+        items.len(),
+        4,
+        "expected 4 items: react import, runtime import, sheet declaration, and component"
       );
-      let mut state = transform.state.borrow_mut();
-      state.replace_file(file);
-    }
-    program.visit_mut_with(&mut transform);
 
-    let Program::Module(module) = &program else {
-      panic!("expected module program");
-    };
+      let ModuleItem::ModuleDecl(ModuleDecl::Import(react_import)) = items[0] else {
+        panic!("expected react import");
+      };
+      assert_eq!(react_import.src.value.as_ref(), "react");
+      let ModuleItem::ModuleDecl(ModuleDecl::Import(runtime_import)) = items[1] else {
+        panic!("expected runtime import");
+      };
+      assert_eq!(runtime_import.src.value.as_ref(), "@compiled/react/runtime");
+      let specifiers: Vec<String> = runtime_import
+        .specifiers
+        .iter()
+        .map(|specifier| match specifier {
+          ImportSpecifier::Named(named) => named.local.sym.to_string(),
+          ImportSpecifier::Default(default) => default.local.sym.to_string(),
+          ImportSpecifier::Namespace(namespace) => namespace.local.sym.to_string(),
+        })
+        .collect();
+      assert_eq!(specifiers, vec!["ax", "ix", "CC", "CS"]);
 
-    assert!(matches!(
-      module.body.first(),
-      Some(ModuleItem::Stmt(Stmt::Empty(_)))
-    ));
+      // item[2] should be the hoisted sheet declaration
+      let ModuleItem::Stmt(Stmt::Decl(Decl::Var(sheet_decl))) = items[2] else {
+        panic!("expected sheet variable declaration");
+      };
+      assert_eq!(sheet_decl.decls.len(), 1);
 
-    let items = module_items_without_noop(module);
-    assert_eq!(
-      items.len(),
-      4,
-      "expected 4 items: react import, runtime import, sheet declaration, and component"
-    );
+      let ModuleItem::Stmt(Stmt::Decl(Decl::Var(var_decl))) = items[3] else {
+        panic!("expected component variable declaration");
+      };
+      assert_eq!(var_decl.decls.len(), 1);
+      let declarator = &var_decl.decls[0];
+      let Some(init) = &declarator.init else {
+        panic!("expected initializer");
+      };
 
-    let ModuleItem::ModuleDecl(ModuleDecl::Import(react_import)) = items[0] else {
-      panic!("expected react import");
-    };
-    assert_eq!(react_import.src.value.as_ref(), "react");
-    let ModuleItem::ModuleDecl(ModuleDecl::Import(runtime_import)) = items[1] else {
-      panic!("expected runtime import");
-    };
-    assert_eq!(runtime_import.src.value.as_ref(), "@compiled/react/runtime");
-    let specifiers: Vec<String> = runtime_import
-      .specifiers
-      .iter()
-      .map(|specifier| match specifier {
-        ImportSpecifier::Named(named) => named.local.sym.to_string(),
-        ImportSpecifier::Default(default) => default.local.sym.to_string(),
-        ImportSpecifier::Namespace(namespace) => namespace.local.sym.to_string(),
-      })
-      .collect();
-    assert_eq!(specifiers, vec!["ax", "ix", "CC", "CS"]);
+      let Expr::Arrow(arrow) = &**init else {
+        panic!("expected arrow expression");
+      };
+      let BlockStmtOrExpr::Expr(body_expr) = arrow.body.as_ref() else {
+        panic!("expected expression body");
+      };
+      let Expr::JSXElement(element) = &**body_expr else {
+        panic!("expected jsx element");
+      };
 
-    // item[2] should be the hoisted sheet declaration
-    let ModuleItem::Stmt(Stmt::Decl(Decl::Var(sheet_decl))) = items[2] else {
-      panic!("expected sheet variable declaration");
-    };
-    assert_eq!(sheet_decl.decls.len(), 1);
-
-    let ModuleItem::Stmt(Stmt::Decl(Decl::Var(var_decl))) = items[3] else {
-      panic!("expected component variable declaration");
-    };
-    assert_eq!(var_decl.decls.len(), 1);
-    let declarator = &var_decl.decls[0];
-    let Some(init) = &declarator.init else {
-      panic!("expected initializer");
-    };
-
-    let Expr::Arrow(arrow) = &**init else {
-      panic!("expected arrow expression");
-    };
-    let BlockStmtOrExpr::Expr(body_expr) = arrow.body.as_ref() else {
-      panic!("expected expression body");
-    };
-    let Expr::JSXElement(element) = &**body_expr else {
-      panic!("expected jsx element");
-    };
-
-    let JSXElementName::Ident(ident) = &element.opening.name else {
-      panic!("expected CC identifier");
-    };
-    assert_eq!(ident.sym.as_ref(), "CC");
+      let JSXElementName::Ident(ident) = &element.opening.name else {
+        panic!("expected CC identifier");
+      };
+      assert_eq!(ident.sym.as_ref(), "CC");
+    });
   }
 
   #[test]
   fn collects_style_rules_when_extract_enabled() {
-    let source = r#"
+    crate::test_utils::with_globals(|| {
+      let source = r#"
             import { css } from '@compiled/react';
 
             const Component = () => <div css={{ color: 'red' }} />;
         "#;
 
-    let (mut program, cm, _) = parse_program(source);
+      let (mut program, cm, _) = parse_program(source);
 
-    let mut transform = CompiledCssInJsTransform::new(PluginOptions {
-      extract: Some(true),
-      ..PluginOptions::default()
-    });
+      let mut transform = CompiledCssInJsTransform::new(PluginOptions {
+        extract: Some(true),
+        ..PluginOptions::default()
+      });
 
-    {
-      let file = TransformFile::transform_compiled_with_options(
-        cm.clone(),
-        Vec::new(),
-        TransformFileOptions {
-          filename: Some("test.tsx".into()),
-          ..TransformFileOptions::default()
-        },
+      {
+        let file = TransformFile::transform_compiled_with_options(
+          cm.clone(),
+          Vec::new(),
+          TransformFileOptions {
+            filename: Some("test.tsx".into()),
+            ..TransformFileOptions::default()
+          },
+        );
+        let mut state = transform.state.borrow_mut();
+        state.replace_file(file);
+      }
+
+      program.visit_mut_with(&mut transform);
+
+      let metadata = transform.into_metadata();
+      assert_eq!(
+        metadata.style_rules,
+        vec!["._syaz5scu{color:red}".to_string()]
       );
-      let mut state = transform.state.borrow_mut();
-      state.replace_file(file);
-    }
-
-    program.visit_mut_with(&mut transform);
-
-    let metadata = transform.into_metadata();
-    assert_eq!(
-      metadata.style_rules,
-      vec!["._syaz5scu{color:red}".to_string()]
-    );
+    });
   }
 
   #[test]
   fn processes_xcss_by_default() {
-    let source = "export {};\nconst Component = () => <div xcss={{ color: 'red' }} />;";
+    crate::test_utils::with_globals(|| {
+      let source = "export {};\nconst Component = () => <div xcss={{ color: 'red' }} />;";
 
-    let (mut program, cm, _) = parse_program(source);
-    let mut transform = CompiledCssInJsTransform::new(PluginOptions::default());
-    reset_transform_state(&mut transform, cm.clone(), "test.tsx");
+      let (mut program, cm, _) = parse_program(source);
+      let mut transform = CompiledCssInJsTransform::new(PluginOptions::default());
+      reset_transform_state(&mut transform, cm.clone(), "test.tsx");
 
-    program.visit_mut_with(&mut transform);
+      program.visit_mut_with(&mut transform);
 
-    {
-      let state = transform.state();
-      let state_ref = state.borrow();
-      assert!(state_ref.uses_xcss, "xcss should be processed by default");
-    }
+      {
+        let state = transform.state();
+        let state_ref = state.borrow();
+        assert!(state_ref.uses_xcss, "xcss should be processed by default");
+      }
 
-    let Program::Module(module) = &program else {
-      panic!("expected module program");
-    };
+      let Program::Module(module) = &program else {
+        panic!("expected module program");
+      };
 
-    let has_runtime_import = module_items_without_noop(module)
-      .iter()
-      .any(|item| match item {
-        ModuleItem::ModuleDecl(ModuleDecl::Import(import)) => {
-          import.src.value.as_ref() == "@compiled/react/runtime"
-        }
-        _ => false,
-      });
+      let has_runtime_import = module_items_without_noop(module)
+        .iter()
+        .any(|item| match item {
+          ModuleItem::ModuleDecl(ModuleDecl::Import(import)) => {
+            import.src.value.as_ref() == "@compiled/react/runtime"
+          }
+          _ => false,
+        });
 
-    assert!(
-      has_runtime_import,
-      "expected runtime import when xcss runs by default"
-    );
+      assert!(
+        has_runtime_import,
+        "expected runtime import when xcss runs by default"
+      );
+    });
   }
 
   #[test]
   fn processes_script_xcss_by_default() {
-    let source = "const Component = () => <div xcss={{ color: 'red' }} />;";
+    crate::test_utils::with_globals(|| {
+      let source = "const Component = () => <div xcss={{ color: 'red' }} />;";
 
-    let (mut program, cm, _) = parse_script(source);
-    let mut transform = CompiledCssInJsTransform::new(PluginOptions {
-      extract: Some(true),
-      ..PluginOptions::default()
-    });
-    reset_transform_state(&mut transform, cm.clone(), "script.tsx");
+      let (mut program, cm, _) = parse_script(source);
+      let mut transform = CompiledCssInJsTransform::new(PluginOptions {
+        extract: Some(true),
+        ..PluginOptions::default()
+      });
+      reset_transform_state(&mut transform, cm.clone(), "script.tsx");
 
-    program.visit_mut_with(&mut transform);
+      program.visit_mut_with(&mut transform);
 
-    match &program {
-      Program::Module(module) => {
-        let has_runtime_import = module.body.iter().any(|item| {
-          matches!(
-              item,
-              ModuleItem::ModuleDecl(ModuleDecl::Import(import))
-                  if import.src.value.as_ref() == "@compiled/react/runtime"
-          )
-        });
+      match &program {
+        Program::Module(module) => {
+          let has_runtime_import = module.body.iter().any(|item| {
+            matches!(
+                item,
+                ModuleItem::ModuleDecl(ModuleDecl::Import(import))
+                    if import.src.value.as_ref() == "@compiled/react/runtime"
+            )
+          });
 
-        assert!(
-          has_runtime_import,
-          "expected runtime import when transforming script program"
-        );
+          assert!(
+            has_runtime_import,
+            "expected runtime import when transforming script program"
+          );
+        }
+        Program::Script(_) => panic!("expected script program to be converted to a module"),
       }
-      Program::Script(_) => panic!("expected script program to be converted to a module"),
-    }
 
-    let metadata = transform.into_metadata();
-    assert!(
-      !metadata.style_rules.is_empty(),
-      "expected style rules for script xcss transform"
-    );
+      let metadata = transform.into_metadata();
+      assert!(
+        !metadata.style_rules.is_empty(),
+        "expected style rules for script xcss transform"
+      );
+    });
   }
 
   #[test]
@@ -1319,132 +1493,136 @@ mod tests {
 
   #[test]
   fn skips_react_import_when_disabled() {
-    let source = r#"
+    crate::test_utils::with_globals(|| {
+      let source = r#"
             import { css } from '@compiled/react';
 
             const Component = () => <div css={{ color: 'red' }} />;
         "#;
 
-    let (mut program, cm, _) = parse_program(source);
+      let (mut program, cm, _) = parse_program(source);
 
-    let mut transform = CompiledCssInJsTransform::new(PluginOptions {
-      import_react: Some(false),
-      ..PluginOptions::default()
-    });
+      let mut transform = CompiledCssInJsTransform::new(PluginOptions {
+        import_react: Some(false),
+        ..PluginOptions::default()
+      });
 
-    {
-      let file = TransformFile::transform_compiled_with_options(
-        cm.clone(),
-        Vec::new(),
-        TransformFileOptions {
-          filename: Some("test.tsx".into()),
-          ..TransformFileOptions::default()
-        },
+      {
+        let file = TransformFile::transform_compiled_with_options(
+          cm.clone(),
+          Vec::new(),
+          TransformFileOptions {
+            filename: Some("test.tsx".into()),
+            ..TransformFileOptions::default()
+          },
+        );
+
+        let mut state = transform.state.borrow_mut();
+        state.replace_file(file);
+      }
+
+      program.visit_mut_with(&mut transform);
+
+      let Program::Module(module) = &program else {
+        panic!("expected module program");
+      };
+
+      assert!(matches!(
+        module.body.first(),
+        Some(ModuleItem::Stmt(Stmt::Empty(_)))
+      ));
+
+      let items = module_items_without_noop(module);
+      assert_eq!(
+        items.len(),
+        3,
+        "expected 3 items: runtime import, sheet declaration, and component"
       );
 
-      let mut state = transform.state.borrow_mut();
-      state.replace_file(file);
-    }
-
-    program.visit_mut_with(&mut transform);
-
-    let Program::Module(module) = &program else {
-      panic!("expected module program");
-    };
-
-    assert!(matches!(
-      module.body.first(),
-      Some(ModuleItem::Stmt(Stmt::Empty(_)))
-    ));
-
-    let items = module_items_without_noop(module);
-    assert_eq!(
-      items.len(),
-      3,
-      "expected 3 items: runtime import, sheet declaration, and component"
-    );
-
-    let ModuleItem::ModuleDecl(ModuleDecl::Import(runtime_import)) = items[0] else {
-      panic!("expected runtime import");
-    };
-    assert_eq!(runtime_import.src.value.as_ref(), "@compiled/react/runtime");
+      let ModuleItem::ModuleDecl(ModuleDecl::Import(runtime_import)) = items[0] else {
+        panic!("expected runtime import");
+      };
+      assert_eq!(runtime_import.src.value.as_ref(), "@compiled/react/runtime");
+    });
   }
 
   #[test]
   fn transforms_styled_usage_and_inserts_display_name() {
-    let source = r#"
+    crate::test_utils::with_globals(|| {
+      let source = r#"
             import { styled } from '@compiled/react';
 
             const Component = styled.div({ color: 'red' });
         "#;
 
-    let (mut program, cm, _) = parse_program(source);
+      let (mut program, cm, _) = parse_program(source);
 
-    let mut transform = CompiledCssInJsTransform::new(PluginOptions {
-      add_component_name: Some(true),
-      ..PluginOptions::default()
-    });
+      let mut transform = CompiledCssInJsTransform::new(PluginOptions {
+        add_component_name: Some(true),
+        ..PluginOptions::default()
+      });
 
-    {
-      let file = TransformFile::transform_compiled_with_options(
-        cm.clone(),
-        Vec::new(),
-        TransformFileOptions {
-          filename: Some("test.tsx".into()),
-          ..TransformFileOptions::default()
-        },
+      {
+        let file = TransformFile::transform_compiled_with_options(
+          cm.clone(),
+          Vec::new(),
+          TransformFileOptions {
+            filename: Some("test.tsx".into()),
+            ..TransformFileOptions::default()
+          },
+        );
+
+        let mut state = transform.state.borrow_mut();
+        state.replace_file(file);
+      }
+
+      program.visit_mut_with(&mut transform);
+
+      let Program::Module(module) = &program else {
+        panic!("expected module program");
+      };
+
+      assert!(matches!(
+        module.body.first(),
+        Some(ModuleItem::Stmt(Stmt::Empty(_)))
+      ));
+
+      let items = module_items_without_noop(module);
+      assert_eq!(
+        items.len(),
+        6,
+        "expected 6 items: forwardRef, react, runtime imports, sheet declaration, styled, and display name"
       );
 
-      let mut state = transform.state.borrow_mut();
-      state.replace_file(file);
-    }
+      let ModuleItem::ModuleDecl(ModuleDecl::Import(forward_ref_import)) = items[0] else {
+        panic!("expected forwardRef import");
+      };
+      assert_eq!(forward_ref_import.src.value.as_ref(), "react");
 
-    program.visit_mut_with(&mut transform);
+      let ModuleItem::ModuleDecl(ModuleDecl::Import(react_import)) = items[1] else {
+        panic!("expected react import");
+      };
+      assert_eq!(react_import.src.value.as_ref(), "react");
 
-    let Program::Module(module) = &program else {
-      panic!("expected module program");
-    };
+      let ModuleItem::ModuleDecl(ModuleDecl::Import(runtime_import)) = items[2] else {
+        panic!("expected runtime import");
+      };
+      assert_eq!(runtime_import.src.value.as_ref(), "@compiled/react/runtime");
 
-    assert!(matches!(
-      module.body.first(),
-      Some(ModuleItem::Stmt(Stmt::Empty(_)))
-    ));
+      // item[3] should be the hoisted sheet declaration
+      let ModuleItem::Stmt(Stmt::Decl(Decl::Var(_sheet_decl))) = items[3] else {
+        panic!("expected sheet variable declaration");
+      };
 
-    let items = module_items_without_noop(module);
-    assert_eq!(
-      items.len(),
-      6,
-      "expected 6 items: forwardRef, react, runtime imports, sheet declaration, styled, and display name"
-    );
+      let ModuleItem::Stmt(Stmt::Decl(Decl::Var(var_decl))) = items[4] else {
+        panic!("expected styled variable declaration");
+      };
+      assert_eq!(var_decl.decls.len(), 1);
 
-    let ModuleItem::ModuleDecl(ModuleDecl::Import(forward_ref_import)) = items[0] else {
-      panic!("expected forwardRef import");
-    };
-    assert_eq!(forward_ref_import.src.value.as_ref(), "react");
-
-    let ModuleItem::ModuleDecl(ModuleDecl::Import(react_import)) = items[1] else {
-      panic!("expected react import");
-    };
-    assert_eq!(react_import.src.value.as_ref(), "react");
-
-    let ModuleItem::ModuleDecl(ModuleDecl::Import(runtime_import)) = items[2] else {
-      panic!("expected runtime import");
-    };
-    assert_eq!(runtime_import.src.value.as_ref(), "@compiled/react/runtime");
-
-    // item[3] should be the hoisted sheet declaration
-    let ModuleItem::Stmt(Stmt::Decl(Decl::Var(_sheet_decl))) = items[3] else {
-      panic!("expected sheet variable declaration");
-    };
-
-    let ModuleItem::Stmt(Stmt::Decl(Decl::Var(var_decl))) = items[4] else {
-      panic!("expected styled variable declaration");
-    };
-    assert_eq!(var_decl.decls.len(), 1);
-
-    let ModuleItem::Stmt(Stmt::If(_)) = items[5] else {
-      panic!("expected display name assignment");
-    };
+      let ModuleItem::Stmt(Stmt::If(_)) = items[5] else {
+        panic!("expected display name assignment");
+      };
+    });
   }
 
   #[test]
@@ -1484,21 +1662,45 @@ mod tests {
 
     let printed = print_module(&cm, module);
 
-    // The cssMap should be transformed to an object with string class names
-    // This verifies the transform completed successfully without panic
     assert!(
       printed.contains("styles"),
       "expected styles variable in output: {}",
       printed
     );
 
-    // Verify the output contains string values for the variants
-    // The printed output should not contain "cssMap" anymore after transform
-    // and should have the variants as object properties
     assert!(
       printed.contains("danger") && printed.contains("success"),
       "expected variant keys in output: {}",
       printed
+    );
+  }
+
+  #[test]
+  fn collect_module_bindings_detects_imports() {
+    let source = r#"
+      import _ from 'lodash';
+      import { foo as bar } from 'baz';
+      const x = 1;
+      function myFunc() {}
+      class MyClass {}
+    "#;
+
+    let (program, _cm, _) = parse_program(source);
+    let Program::Module(module) = &program else {
+      panic!("expected module program");
+    };
+
+    let bindings = super::collect_module_bindings(module);
+    assert!(bindings.contains("_"), "should detect default import `_`");
+    assert!(bindings.contains("bar"), "should detect named import `bar`");
+    assert!(bindings.contains("x"), "should detect variable `x`");
+    assert!(
+      bindings.contains("myFunc"),
+      "should detect function `myFunc`"
+    );
+    assert!(
+      bindings.contains("MyClass"),
+      "should detect class `MyClass`"
     );
   }
 
@@ -1541,18 +1743,64 @@ mod tests {
 
     let printed = print_module(&cm, module);
 
-    // Verify the cssMap was transformed (no panic occurred)
     assert!(
       printed.contains("styles"),
       "expected styles variable in output: {}",
       printed
     );
 
-    // Verify the container variant exists
     assert!(
       printed.contains("container"),
       "expected container variant in output: {}",
       printed
+    );
+  }
+
+  #[test]
+  fn insert_sheet_declarations_detects_identifier_collision() {
+    use indexmap::IndexMap;
+    use swc_core::atoms::Atom;
+    use swc_core::common::{DUMMY_SP, SyntaxContext};
+    use swc_core::ecma::ast::Ident;
+
+    let source = r#"
+      import _ from 'lodash';
+      const y = 2;
+    "#;
+
+    let (program, _cm, _) = parse_program(source);
+    let Program::Module(ref mut module) = program.clone() else {
+      panic!("expected module program");
+    };
+
+    let file = TransformFile::default();
+    let mut state = TransformState::new(file, PluginOptions::default());
+    state.filename = Some("test-collision.tsx".into());
+
+    let mut sheets = IndexMap::new();
+    sheets.insert(
+      "._abc{color:red}".to_string(),
+      Ident::new(Atom::from("_"), DUMMY_SP, SyntaxContext::empty()),
+    );
+    state.sheets = sheets;
+
+    super::insert_sheet_declarations(module, &mut state);
+
+    assert!(
+      !state.diagnostics.is_empty(),
+      "Should detect identifier collision between sheet `_` and lodash import"
+    );
+    assert!(
+      state.diagnostics[0].message.contains("conflicts"),
+      "Diagnostic should mention conflicts: {}",
+      state.diagnostics[0].message
+    );
+    assert!(
+      state.diagnostics[0]
+        .message
+        .contains("sheet.includes is not a function"),
+      "Diagnostic should mention the runtime error: {}",
+      state.diagnostics[0].message
     );
   }
 
@@ -1595,18 +1843,56 @@ mod tests {
 
     let printed = print_module(&cm, module);
 
-    // Verify the transform completed successfully
     assert!(
       printed.contains("buttonStyles"),
       "expected buttonStyles variable in output: {}",
       printed
     );
 
-    // Verify the primary variant exists
     assert!(
       printed.contains("primary"),
       "expected primary variant in output: {}",
       printed
+    );
+  }
+
+  #[test]
+  fn insert_sheet_declarations_no_collision_when_names_differ() {
+    use indexmap::IndexMap;
+    use swc_core::atoms::Atom;
+    use swc_core::common::{DUMMY_SP, SyntaxContext};
+    use swc_core::ecma::ast::Ident;
+
+    let source = r#"
+      import React from 'react';
+      const x = 1;
+    "#;
+
+    let (program, _cm, _) = parse_program(source);
+    let Program::Module(ref mut module) = program.clone() else {
+      panic!("expected module program");
+    };
+
+    let file = TransformFile::default();
+    let mut state = TransformState::new(file, PluginOptions::default());
+
+    let mut sheets = IndexMap::new();
+    sheets.insert(
+      "._abc{color:red}".to_string(),
+      Ident::new(Atom::from("_"), DUMMY_SP, SyntaxContext::empty()),
+    );
+    state.sheets = sheets;
+
+    super::insert_sheet_declarations(module, &mut state);
+
+    assert!(
+      state.diagnostics.is_empty(),
+      "Should not emit diagnostics when no collision: {:?}",
+      state
+        .diagnostics
+        .iter()
+        .map(|d| &d.message)
+        .collect::<Vec<_>>()
     );
   }
 
@@ -1648,39 +1934,27 @@ mod tests {
       panic!("expected module program");
     };
 
-    // Find the styles variable declaration
     let var_decl = module.body.iter().find_map(|item| match item {
-      ModuleItem::Stmt(Stmt::Decl(Decl::Var(var))) => {
-        // Find the var decl with name "styles"
-        var.decls.iter().find_map(|decl| {
-          if let Pat::Ident(binding) = &decl.name {
-            if binding.id.sym.as_ref() == "styles" {
-              return decl.init.as_ref();
-            }
+      ModuleItem::Stmt(Stmt::Decl(Decl::Var(var))) => var.decls.iter().find_map(|decl| {
+        if let Pat::Ident(binding) = &decl.name {
+          if binding.id.sym.as_ref() == "styles" {
+            return decl.init.as_ref();
           }
-          None
-        })
-      }
+        }
+        None
+      }),
       _ => None,
     });
 
     if let Some(init) = var_decl {
-      // The init should be an object literal with string values
       if let Expr::Object(obj) = init.as_ref() {
         for prop in &obj.props {
           if let swc_core::ecma::ast::PropOrSpread::Prop(prop) = prop {
             if let swc_core::ecma::ast::Prop::KeyValue(kv) = prop.as_ref() {
-              // Each value should be a string literal (the class name)
-              // or null for error cases
               match kv.value.as_ref() {
-                Expr::Lit(Lit::Str(_)) => {
-                  // This is correct - class name is a string
-                }
-                Expr::Lit(Lit::Null(_)) => {
-                  // Also acceptable for error/empty cases
-                }
+                Expr::Lit(Lit::Str(_)) => {}
+                Expr::Lit(Lit::Null(_)) => {}
                 other => {
-                  // This would cause "sheet.includes is not a function" at runtime
                   panic!(
                     "cssMap variant value must be a string literal to avoid runtime errors, got: {:?}",
                     other
@@ -1736,18 +2010,57 @@ mod tests {
 
     let printed = print_module(&cm, module);
 
-    // Verify transform completed successfully
     assert!(
       printed.contains("styles"),
       "expected styles variable in output: {}",
       printed
     );
 
-    // Verify wrapper variant exists
     assert!(
       printed.contains("wrapper"),
       "expected wrapper variant in output: {}",
       printed
+    );
+  }
+
+  #[test]
+  fn insert_sheet_declarations_detects_invalid_sheet_content() {
+    use indexmap::IndexMap;
+    use swc_core::atoms::Atom;
+    use swc_core::common::{DUMMY_SP, SyntaxContext};
+    use swc_core::ecma::ast::Ident;
+
+    let source = r#"
+      import React from 'react';
+      const x = 1;
+    "#;
+
+    let (program, _cm, _) = parse_program(source);
+    let Program::Module(ref mut module) = program.clone() else {
+      panic!("expected module program");
+    };
+
+    let file = TransformFile::default();
+    let mut state = TransformState::new(file, PluginOptions::default());
+    state.filename = Some("test-invalid-sheet.tsx".into());
+
+    let mut sheets = IndexMap::new();
+    sheets.insert(
+      "  ".to_string(),
+      Ident::new(Atom::from("_2"), DUMMY_SP, SyntaxContext::empty()),
+    );
+    state.sheets = sheets;
+
+    super::insert_sheet_declarations(module, &mut state);
+
+    assert!(
+      !state.diagnostics.is_empty(),
+      "Should detect empty sheet content"
+    );
+    assert!(
+      state.diagnostics[0].message.contains("invalid content"),
+      "Diagnostic should mention invalid content: {}",
+      state.diagnostics[0].message
     );
   }
 }

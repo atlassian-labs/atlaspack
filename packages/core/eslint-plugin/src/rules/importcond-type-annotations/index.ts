@@ -2,7 +2,7 @@
  * @file Automatically adds type annotations for conditional import (importCond) usages
  */
 
-import type {TSESTree} from '@typescript-eslint/types';
+import type {TSESTree} from '@typescript-eslint/utils';
 import {createRule} from '../../utils/index';
 
 export const RULE_NAME = 'importcond-type-annotations';

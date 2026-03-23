@@ -38,6 +38,9 @@ pub enum PathRequestOutput {
 // TODO tracing, dev deps
 #[async_trait]
 impl Request for PathRequest {
+  fn request_type(&self) -> &'static str {
+    "PathRequest"
+  }
   #[tracing::instrument(level = "trace", skip_all)]
   async fn run(
     &self,
@@ -100,9 +103,20 @@ impl Request for PathRequest {
         }) => {
           if !file_path.is_absolute() {
             return Err(diagnostic_error!(
-              "{:?} must return an absolute path, but got {}",
+              "{:?} must return an absolute path, but got {:?} (resolving specifier: {:?} from {:?})",
               resolver,
-              file_path.display()
+              file_path.display(),
+              self.dependency.specifier,
+              self
+                .dependency
+                .resolve_from
+                .as_ref()
+                .map(|p| p.display().to_string())
+                .or_else(|| self
+                  .dependency
+                  .source_path
+                  .as_ref()
+                  .map(|p| p.display().to_string()))
             ));
           }
 
@@ -273,11 +287,10 @@ mod tests {
     .run_request(request)
     .await;
 
-    assert_eq!(
-      resolution.map_err(|e| e.to_string()),
-      Err(String::from(
-        "ResolvedResolverPlugin must return an absolute path, but got ./"
-      ))
+    let err_msg = resolution.map_err(|e| e.to_string()).unwrap_err();
+    assert!(
+      err_msg.contains("must return an absolute path"),
+      "Expected 'must return an absolute path' error, got: {err_msg}"
     );
   }
 

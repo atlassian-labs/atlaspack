@@ -434,6 +434,7 @@ impl Fold for Hoist<'_> {
                     show_environment: false,
                     severity: DiagnosticSeverity::Error,
                     documentation_url: None,
+                    name: None,
                   })
                 }
               }

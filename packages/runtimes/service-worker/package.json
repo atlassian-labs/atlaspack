@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/runtime-service-worker",
-  "version": "2.15.12",
+  "version": "2.15.17",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"

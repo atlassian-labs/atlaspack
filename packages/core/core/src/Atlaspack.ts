@@ -67,6 +67,7 @@ import {AtlaspackV3, FileSystemV3} from './atlaspack-v3';
 import createAssetGraphRequestJS from './requests/AssetGraphRequest';
 import {createAssetGraphRequestRust} from './requests/AssetGraphRequestRust';
 import type {AssetGraphRequestResult} from './requests/AssetGraphRequest';
+import {getBundleGraph} from './requests/BundleGraphRequestRust';
 import {loadRustWorkerThreadDylibHack} from './rustWorkerThreadDylibHack';
 
 registerCoreWithSerializer();
@@ -171,6 +172,7 @@ export default class Atlaspack {
     let rustAtlaspack: AtlaspackV3;
     if (
       resolvedOptions.featureFlags.atlaspackV3 ||
+      resolvedOptions.featureFlags.fullNative ||
       resolvedOptions.featureFlags.nativePackager
     ) {
       // eslint-disable-next-line no-unused-vars
@@ -433,19 +435,59 @@ export default class Atlaspack {
 
       this.#requestTracker.graph.invalidateOnBuildNodes();
 
-      let request = createAtlaspackBuildRequest({
-        optionsRef: this.#optionsRef,
-        requestedAssetIds: this.#requestedAssetIds,
-        signal,
-      });
+      let bundleGraph: any;
+      let bundleInfo: Map<any, any>;
+      let changedAssets: Map<any, any>;
+      let assetRequests: Array<any>;
+      let scopeHoistingStats: any;
 
-      let {
-        bundleGraph,
-        bundleInfo,
-        changedAssets,
-        assetRequests,
-        scopeHoistingStats,
-      } = await this.#requestTracker.runRequest(request, {force: true});
+      if (getFeatureFlag('fullNative') && this.rustAtlaspack) {
+        let [result, error] = await this.rustAtlaspack.build(
+          (eventJson: string) => {
+            let event = JSON.parse(eventJson);
+            this.#reporterRunner.report(event);
+          },
+        );
+
+        if (error) {
+          throw new ThrowableDiagnostic({diagnostic: error});
+        }
+        ({bundleGraph, changedAssets} = getBundleGraph(result));
+        bundleInfo = new Map(
+          (result.bundleInfo ?? []).map(
+            (info: {
+              bundleId: string;
+              filePath: string;
+              type: string;
+              size: number;
+              time: number;
+            }) => [
+              info.bundleId,
+              {
+                filePath: toProjectPath(options.projectRoot, info.filePath),
+                bundleId: info.bundleId,
+                type: info.type,
+                stats: {size: info.size, time: info.time},
+              },
+            ],
+          ),
+        );
+        assetRequests = result.assetRequests ?? [];
+      } else {
+        let request = createAtlaspackBuildRequest({
+          optionsRef: this.#optionsRef,
+          requestedAssetIds: this.#requestedAssetIds,
+          signal,
+        });
+
+        ({
+          bundleGraph,
+          bundleInfo,
+          changedAssets,
+          assetRequests,
+          scopeHoistingStats,
+        } = await this.#requestTracker.runRequest(request, {force: true}));
+      }
 
       this.#requestedAssetIds.clear();
 

@@ -718,6 +718,7 @@ describe('transpilation', function () {
           hints: null,
           message: 'duplicate private name #x.',
           origin: '@atlaspack/transformer-js',
+          name: 'SyntaxError',
         },
       ],
     });

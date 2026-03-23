@@ -9,7 +9,6 @@ use atlaspack_core::{
   types::{Asset, Bundle, OutputFormat},
   version::atlaspack_rust_version,
 };
-use parking_lot::RwLock;
 use pathdiff::diff_paths;
 use rayon::prelude::*;
 
@@ -21,7 +20,7 @@ use super::{JsPackager, PackagingContext};
 type PackagedAsset<'a> = (&'a Asset, String);
 
 impl<B: BundleGraph + Send + Sync> JsPackager<B> {
-  pub fn new(context: PackagingContext, bundle_graph: Arc<RwLock<B>>) -> Self {
+  pub fn new(context: PackagingContext, bundle_graph: Arc<B>) -> Self {
     Self {
       context,
       bundle_graph,
@@ -29,7 +28,7 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
   }
 
   pub fn package(&self, bundle_id: &str) -> anyhow::Result<PackageResult> {
-    let graph = self.bundle_graph.read();
+    let graph = &*self.bundle_graph;
     let bundle = graph
       .get_bundle_by_id(bundle_id)
       .ok_or(anyhow::anyhow!("Bundle not found"))?;
@@ -57,15 +56,10 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       .par_iter()
       .map(|asset| {
         let span = tracing::trace_span!("read_code", asset_id = asset.id).entered();
-        let txn = self.context.db.database().read_txn()?;
-        let code = self.context.db.database().get(
-          &txn,
-          asset
-            .content_key
-            .as_ref()
-            .ok_or(anyhow::anyhow!("Asset content key not found"))?,
-        )?;
-        txn.commit()?;
+        // Use content_key if the asset has one (set by the JS side during transformation),
+        // otherwise fall back to asset.id for natively-built assets.
+        let key = asset.content_key.as_deref().unwrap_or(asset.id.as_str());
+        let code = self.context.db.get(key)?;
         span.exit();
         let asset_code =
           String::from_utf8_lossy(&code.ok_or(anyhow::anyhow!("Unable to read asset code"))?)
@@ -95,27 +89,39 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       atlaspack_rust_version()
     );
 
-    // Write bundle content to filesystem cache instead of LMDB.
-    // Large blobs are stored on the filesystem to avoid bloating LMDB.
-    self
-      .context
-      .cache
-      .set_large_blob(&content_cache_key, bundle_contents)?;
+    if let Some(cache) = &self.context.cache {
+      // This code path is temporary until everything is using the request tracker
+
+      // Write bundle content to filesystem cache instead of LMDB.
+      // Large blobs are stored on the filesystem to avoid bloating LMDB.
+      cache.set_large_blob(&content_cache_key, bundle_contents)?;
+    }
+
+    let size = bundle_contents.len() as u64;
+    let (cache_keys, bundle_contents) = match &self.context.cache {
+      Some(_) => (
+        Some(CacheKeyMap {
+          content: content_cache_key,
+          map: "TODO".to_string(), // Has to exist for JS, but won't be found in LMDB
+          info: info_cache_key,
+        }),
+        None,
+      ),
+      None => (None, Some(bundle_contents.to_owned())),
+    };
 
     Ok(PackageResult {
       bundle_info: BundleInfo {
         bundle_type: bundle.bundle_type.extension().to_string(),
-        size: bundle_contents.len() as u64,
+        size,
         total_assets: assets.len() as u64,
         hash: content_hash,
         hash_references: vec![],
-        cache_keys: CacheKeyMap {
-          content: content_cache_key,
-          map: "TODO".to_string(), // Has to exist for JS, but won't be found in LMDB
-          info: info_cache_key,
-        },
+        cache_keys,
         is_large_blob: true, // Always true for native packager - content is on filesystem
         time: Some(0),
+        bundle_contents,
+        map_contents: None,
       },
       config_requests: vec![],
       dev_dep_requests: vec![],
@@ -155,7 +161,7 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
     bundle: &Bundle,
     asset: &Asset,
   ) -> anyhow::Result<HashMap<String, Option<String>>> {
-    let bundle_graph = self.bundle_graph.read();
+    let bundle_graph = &*self.bundle_graph;
 
     // Get dependencies for asset
     let dependencies = bundle_graph.get_dependencies(asset)?;
@@ -189,7 +195,7 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
   }
 
   fn wrap_asset(&self, _bundle: &Bundle, asset: &Asset, code: String) -> anyhow::Result<String> {
-    let bundle_graph = self.bundle_graph.read();
+    let bundle_graph = &*self.bundle_graph;
     let public_id = bundle_graph
       .get_public_asset_id(&asset.id)
       .expect("Asset not found in bundle graph")
@@ -254,7 +260,7 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       .join("\n");
 
     // Build explicit require() calls for entry assets to execute them in order
-    let bundle_graph = self.bundle_graph.read();
+    let bundle_graph = &*self.bundle_graph;
     let entry_requires = bundle
       .entry_asset_ids
       .iter()
@@ -375,6 +381,7 @@ mod tests {
       pipeline: None,
       public_id: None,
       target: Default::default(),
+      is_placeholder: false,
     }
   }
 

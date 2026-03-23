@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/compressor-gzip",
-  "version": "2.13.57",
+  "version": "2.13.62",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
   "publishConfig": {

@@ -75,7 +75,16 @@ pub fn minify_value_whitespace(input: &str) -> String {
             Some(':') | Some(',') | Some('/') | Some('=') | Some(')') | Some('(') | Some('!')
           )
         };
-        if is_punct(prev) || is_punct(next) {
+        // Preserve space after `)` when followed by `+` or `-` (CSS math operators)
+        let keep_space_after_paren = prev == Some(')') && matches!(next, Some('+') | Some('-'));
+        // Preserve space before `/` when followed by a letter (keyword like /span in grid-row)
+        let keep_space_before_slash = next == Some('/') && {
+          let after_slash = chars.get(j + 1).copied();
+          matches!(after_slash, Some(c) if c.is_ascii_alphabetic())
+        };
+        if keep_space_after_paren || keep_space_before_slash {
+          out.push(' ');
+        } else if is_punct(prev) || is_punct(next) {
           // remove space
         } else {
           out.push(' ');
@@ -123,6 +132,31 @@ mod tests {
   fn preserves_calc_spacing() {
     let value = "calc(100vh - var(--topNavigationHeight, 0px) - var(--bannerHeight, 0px))";
     assert_eq!(minify_value_whitespace(value), value);
+  }
+
+  #[test]
+  fn preserves_space_before_slash_keyword_in_grid_row() {
+    // grid-row: (1 + var(--x) + var(--y)) /span 1
+    // The /span is a keyword separator, not a division operator
+    assert_eq!(
+      minify_value_whitespace("(1 + var(--x) + var(--y)) /span 1"),
+      "(1 + var(--x) + var(--y)) /span 1"
+    );
+  }
+
+  #[test]
+  fn preserves_space_after_paren_before_plus() {
+    // Spaces around + and - should be preserved when after )
+    assert_eq!(
+      minify_value_whitespace("(1 + var(--a)) + var(--b)"),
+      "(1 + var(--a)) + var(--b)"
+    );
+  }
+
+  #[test]
+  fn still_strips_space_around_paren_for_functions() {
+    // Normal function call spacing should still be stripped
+    assert_eq!(minify_value_whitespace("var( --x , 4px )"), "var(--x,4px)");
   }
 
   #[test]

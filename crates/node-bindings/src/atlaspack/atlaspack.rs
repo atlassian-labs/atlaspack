@@ -7,6 +7,7 @@ use anyhow::anyhow;
 use atlaspack::Atlaspack;
 use atlaspack::AtlaspackError;
 use atlaspack::AtlaspackInitOptions;
+use atlaspack::ReportFn;
 use atlaspack::WatchEvents;
 use atlaspack::rpc::nodejs::NodejsWorker;
 use atlaspack_core::bundle_graph::bundle_graph_from_js::BundleGraphFromJs;
@@ -16,10 +17,14 @@ use atlaspack_napi_helpers::js_callable::JsCallable;
 use lmdb_js_lite::DatabaseHandle;
 use lmdb_js_lite::LMDBJsLite;
 use napi::Env;
+use napi::JsFunction;
 use napi::JsObject;
 use napi::JsUnknown;
 use napi::bindgen_prelude::External;
 use napi::bindgen_prelude::FromNapiValue;
+use napi::threadsafe_function::{
+  ErrorStrategy, ThreadSafeCallContext, ThreadsafeFunction, ThreadsafeFunctionCallMode,
+};
 use napi_derive::napi;
 
 use atlaspack::file_system::FileSystemRef;
@@ -27,7 +32,7 @@ use atlaspack::rpc::nodejs::NodejsRpcFactory;
 use atlaspack_package_manager::PackageManagerRef;
 use parking_lot::RwLock;
 
-use crate::atlaspack::package_result_napi::JsPackageResult;
+use crate::atlaspack::package_result_napi::{JsPackageResult, JsPackagedBundleInfo};
 
 use super::file_system_napi::FileSystemNapi;
 use super::napi_result::NapiAtlaspackResult;
@@ -131,7 +136,19 @@ fn resolve_commit_ok(env: Env) -> napi::Result<JsObject> {
 pub fn atlaspack_napi_build_asset_graph(
   env: Env,
   atlaspack_napi: AtlaspackNapi,
+  progress_callback: Option<JsFunction>,
 ) -> napi::Result<JsObject> {
+  let tsfn: Option<ThreadsafeFunction<String, ErrorStrategy::Fatal>> = progress_callback
+    .map(|cb| {
+      let mut tsfn = cb.create_threadsafe_function(0, |ctx: ThreadSafeCallContext<String>| {
+        Ok(vec![ctx.env.create_string(&ctx.value)?])
+      })?;
+      // Unref so this doesn't prevent Node from exiting
+      tsfn.unref(&env)?;
+      Ok::<_, napi::Error>(tsfn)
+    })
+    .transpose()?;
+
   let (deferred, promise) = env.create_deferred()?;
   let (second_deferred, second_promise) = env.create_deferred()?;
 
@@ -144,7 +161,12 @@ pub fn atlaspack_napi_build_asset_graph(
     move || {
       let result = {
         let atlaspack = atlaspack_ref.write();
-        atlaspack.build_asset_graph()
+        let report_fn: Option<ReportFn> = tsfn.map(|tsfn| -> ReportFn {
+          Arc::new(move |event| {
+            tsfn.call(event.to_json(), ThreadsafeFunctionCallMode::NonBlocking);
+          })
+        });
+        atlaspack.build_asset_graph_with_report_fn(report_fn)
       };
 
       // "deferred.resolve" closure executes on the JavaScript thread.
@@ -221,7 +243,19 @@ pub fn atlaspack_napi_respond_to_fs_events(
 pub fn atlaspack_napi_build_bundle_graph(
   env: Env,
   atlaspack_napi: AtlaspackNapi,
+  progress_callback: Option<JsFunction>,
 ) -> napi::Result<JsObject> {
+  let tsfn: Option<ThreadsafeFunction<String, ErrorStrategy::Fatal>> = progress_callback
+    .map(|cb| {
+      let mut tsfn = cb.create_threadsafe_function(0, |ctx: ThreadSafeCallContext<String>| {
+        Ok(vec![ctx.env.create_string(&ctx.value)?])
+      })?;
+      // Unref so this doesn't prevent Node from exiting
+      tsfn.unref(&env)?;
+      Ok::<_, napi::Error>(tsfn)
+    })
+    .transpose()?;
+
   let (deferred, promise) = env.create_deferred()?;
   let (second_deferred, second_promise) = env.create_deferred()?;
 
@@ -234,7 +268,13 @@ pub fn atlaspack_napi_build_bundle_graph(
     move || {
       let result = {
         let atlaspack = atlaspack_ref.write();
-        atlaspack.build_bundle_graph()
+
+        let report_fn: Option<ReportFn> = tsfn.map(|tsfn| -> ReportFn {
+          Arc::new(move |event| {
+            tsfn.call(event.to_json(), ThreadsafeFunctionCallMode::NonBlocking);
+          })
+        });
+        atlaspack.build_bundle_graph_with_report_fn(report_fn)
       };
 
       let mut commit_deferred_opt = Some(second_deferred);
@@ -267,6 +307,71 @@ pub fn atlaspack_napi_build_bundle_graph(
   });
 
   Ok(js_result)
+}
+
+#[tracing::instrument(level = "info", skip_all)]
+#[napi]
+pub fn atlaspack_napi_build(
+  env: Env,
+  atlaspack_napi: AtlaspackNapi,
+  progress_callback: JsFunction,
+) -> napi::Result<JsObject> {
+  let mut tsfn: ThreadsafeFunction<String, ErrorStrategy::Fatal> = progress_callback
+    .create_threadsafe_function(0, |ctx: ThreadSafeCallContext<String>| {
+      Ok(vec![ctx.env.create_string(&ctx.value)?])
+    })?;
+  // Unref so this doesn't prevent Node from exiting
+  tsfn.unref(&env)?;
+
+  let (deferred, promise) = env.create_deferred()?;
+
+  thread::spawn({
+    let atlaspack_ref = atlaspack_napi.clone();
+    move || {
+      let result = {
+        let atlaspack = atlaspack_ref.write();
+
+        let report_fn: ReportFn = Arc::new(move |event| {
+          tsfn.call(event.to_json(), ThreadsafeFunctionCallMode::NonBlocking);
+        });
+        atlaspack.build_with_report_fn(Some(report_fn))
+      };
+
+      deferred.resolve(move |env| match result {
+        Ok(build_output) => {
+          let serialize_result = serialize_bundle_graph(
+            &env,
+            &build_output.bundle_graph.bundle_graph,
+            build_output.bundle_graph.had_previous_graph,
+          )?;
+
+          let bundle_info: Vec<JsPackagedBundleInfo> = build_output
+            .packaging
+            .bundles
+            .into_iter()
+            .map(|(bundle_id, out)| JsPackagedBundleInfo {
+              bundle_id,
+              file_path: out.file_path.to_string_lossy().into_owned(),
+              r#type: out.bundle_type.extension().to_owned(),
+              size: out.size as u32,
+              time: out.time as u32,
+            })
+            .collect();
+
+          let mut js_result = serialize_result;
+          js_result.set_named_property("bundleInfo", env.to_js_value(&bundle_info)?)?;
+
+          NapiAtlaspackResult::ok(&env, js_result)
+        }
+        Err(error) => {
+          let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
+          NapiAtlaspackResult::error(&env, js_object)
+        }
+      })
+    }
+  });
+
+  Ok(promise)
 }
 
 #[napi]

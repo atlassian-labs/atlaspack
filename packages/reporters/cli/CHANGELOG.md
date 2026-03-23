@@ -1,5 +1,64 @@
 # @atlaspack/reporter-cli
 
+## 2.18.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.4.2
+  - @atlaspack/types@2.15.50
+  - @atlaspack/plugin@2.14.60
+
+## 2.18.1
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.4.1
+  - @atlaspack/types@2.15.49
+  - @atlaspack/plugin@2.14.59
+
+## 2.18.0
+
+### Minor Changes
+
+- [#1053](https://github.com/atlassian-labs/atlaspack/pull/1053) [`71981ea`](https://github.com/atlassian-labs/atlaspack/commit/71981eac258f7e6dfb40ec4b202d194f71c64ff1) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add native build progress reporting.
+
+  Fires `BuildProgressEvent` from Rust requests back to JS reporters via a fire-and-forget
+  `ThreadsafeFunction` callback. Works in both `atlaspackV3` and `fullNative` build paths.
+
+  Events:
+  - `building` — per-asset progress from AssetGraphRequest (completeAssets / totalAssets)
+  - `bundling` — once from BuildRequest before bundle graph creation
+  - `packagingAndOptimizing` — ready for when native packaging is wired up
+
+  Adds `BuildingProgressEvent` type and CLI reporter handling.
+
+### Patch Changes
+
+- Updated dependencies [[`71981ea`](https://github.com/atlassian-labs/atlaspack/commit/71981eac258f7e6dfb40ec4b202d194f71c64ff1)]:
+  - @atlaspack/utils@3.4.0
+  - @atlaspack/plugin@2.14.58
+  - @atlaspack/types@2.15.48
+
+## 2.17.39
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.3.9
+  - @atlaspack/plugin@2.14.57
+  - @atlaspack/types@2.15.47
+
+## 2.17.38
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.3.8
+  - @atlaspack/plugin@2.14.56
+  - @atlaspack/types@2.15.46
+
 ## 2.17.37
 
 ### Patch Changes

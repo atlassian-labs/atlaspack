@@ -44,6 +44,17 @@ pub struct Bundle {
   ///
   pub is_splittable: Option<bool>,
 
+  /// Whether this bundle is a placeholder — it will not be written to disk, but its
+  /// `hash_reference` must still be resolvable by other bundles that embed it.
+  ///
+  /// Mirrors the `isPlaceholder` field in the JS `InternalBundle` type. The JS
+  /// `WriteBundlesRequest` handles these by pre-populating `hashRefToNameHash` with a stable
+  /// name hash (derived from the bundle ID) before any packaging runs. We must do the same so
+  /// that any non-placeholder bundle whose content contains a placeholder bundle's
+  /// `HASH_REF_*` string can resolve it during hash substitution.
+  #[serde(default)]
+  pub is_placeholder: bool,
+
   /// The main entry of the bundle, which will provide the bundle exports
   ///
   /// Some bundles, such as shared bundles, may not have a main entry.
@@ -83,6 +94,17 @@ pub enum BundleBehavior {
 
   /// An Inline asset that is also isolated
   InlineIsolated,
+}
+
+impl BundleBehavior {
+  /// Returns true if this behavior creates a bundle boundary
+  /// (Inline, Isolated, or InlineIsolated).
+  pub fn is_boundary(&self) -> bool {
+    matches!(
+      self,
+      BundleBehavior::Inline | BundleBehavior::Isolated | BundleBehavior::InlineIsolated
+    )
+  }
 }
 
 pub type MaybeBundleBehavior = Option<BundleBehavior>;

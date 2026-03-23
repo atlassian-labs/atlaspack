@@ -19,14 +19,15 @@ import type {
 } from '@atlaspack/types';
 import type {FeatureFlags} from '@atlaspack/feature-flags';
 import {parentPort} from 'worker_threads';
+import logger from '@atlaspack/logger';
 import * as module from 'module';
 
 import {jsCallable} from '../jsCallable';
+import {PluginLogger} from '@atlaspack/logger';
 import {
   Environment,
   Dependency,
   PluginConfig,
-  PluginLogger,
   PluginTracer,
   PluginOptions,
   MutableAsset,
@@ -130,7 +131,7 @@ export class AtlaspackWorker {
       const dependency = new Dependency(napiDependency, env);
 
       const defaultOptions = {
-        logger: new PluginLogger(),
+        logger: new PluginLogger({origin: key}),
         tracer: new PluginTracer(),
         options: new PluginOptions(this.options),
       } as const;
@@ -173,15 +174,24 @@ export class AtlaspackWorker {
           resolution: {type: 'excluded'},
         };
       }
+      // A resolver may return a result without filePath to indicate it didn't
+      // resolve the dependency (equivalent to returning null). The JS-side
+      // PathRequest treats this as "try the next resolver".
+      if (!result.filePath) {
+        return {
+          invalidations: [],
+          resolution: {type: 'unresolved'},
+        };
+      }
 
       return {
         invalidations: [],
         resolution: {
           type: 'resolved',
-          filePath: result.filePath || '',
+          filePath: result.filePath,
           canDefer: result.canDefer || false,
           sideEffects: result.sideEffects ?? true,
-          code: result.code || undefined,
+          code: result.code ?? undefined,
           meta: result.meta || undefined,
           pipeline: result.pipeline || undefined,
           priority: dependencyPriorityMap.intoNullable(result.priority),
@@ -227,7 +237,7 @@ export class AtlaspackWorker {
 
     const pluginOptions = new PluginOptions(this.options);
     const defaultOptions = {
-      logger: new PluginLogger(),
+      logger: new PluginLogger({origin: key}),
       tracer: new PluginTracer(),
       options: pluginOptions,
     } as const;
@@ -394,7 +404,7 @@ export class AtlaspackWorker {
 
     if (transformer.setup) {
       let setupResult = await transformer.setup({
-        logger: new PluginLogger(),
+        logger: new PluginLogger({origin: specifier}),
         options: new PluginOptions({
           ...this.options,
           shouldAutoInstall: false,
@@ -438,6 +448,12 @@ export class AtlaspackWorker {
     return setup;
   }
 }
+
+// Forward all logger events from this worker thread to the main thread so
+// they are re-emitted into the main-thread logger and reach reporters.
+logger.onLog((event) => {
+  parentPort?.postMessage({type: 'logEvent', event});
+});
 
 // Create napi worker and send it back to main thread
 const worker = new AtlaspackWorker();

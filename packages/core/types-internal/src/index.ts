@@ -2140,6 +2140,17 @@ export type TransformingProgressEvent = {
 };
 
 /**
+ * The asset graph is being built.
+ * @section reporter
+ */
+export type BuildingProgressEvent = {
+  readonly type: 'buildProgress';
+  readonly phase: 'building';
+  readonly completeAssets: number;
+  readonly totalAssets: number;
+};
+
+/**
  * The BundleGraph is generated.
  * @section reporter
  */
@@ -2192,6 +2203,7 @@ export type OptimizingProgressEvent = {
 export type BuildProgressEvent =
   | ResolvingProgressEvent
   | TransformingProgressEvent
+  | BuildingProgressEvent
   | BundlingProgressEvent
   | BundledProgressEvent
   | PackagingProgressEvent

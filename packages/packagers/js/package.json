@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/packager-js",
-  "version": "2.25.1",
+  "version": "2.25.6",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -24,9 +24,9 @@
     "@atlaspack/source-map": "workspace:*",
     "@atlaspack/types": "workspace:*",
     "@atlaspack/utils": "workspace:*",
-    "globals": "^13.2.0",
+    "globals": "^15.15.0",
     "nullthrows": "^1.1.1",
-    "outdent": "^0.8.0"
+    "outdent": "^0.7.1"
   },
   "type": "commonjs",
   "scripts": {

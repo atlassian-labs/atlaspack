@@ -15,7 +15,7 @@ use rayon::prelude::*;
 
 use crate::bundle_graph::BundleGraph;
 use crate::bundle_graph::bundle_graph_from_js::types::AssetNode;
-use crate::types::{Asset, Bundle, Dependency, Environment};
+use crate::types::{Asset, Bundle, BundleBehavior, Dependency, Environment};
 
 type BundleGraphNodeId = String;
 
@@ -429,6 +429,82 @@ impl BundleGraph for BundleGraphFromJs {
     Ok(type_matched_fallback.or(first_fallback))
   }
 
+  fn get_referenced_bundle_ids(&self, bundle: &Bundle) -> Vec<String> {
+    let Some(bundle_node_idx) = self.nodes_by_key.get(&bundle.id) else {
+      return vec![];
+    };
+
+    // Mirror the JS getReferencedBundles DFS: follow outgoing References edges from the bundle
+    // node and collect any bundle targets, including via a bundle → dependency → bundle two-hop
+    // (the pattern produced by createAssetReference + markDependencyReferenceable).
+    //
+    // NOTE: Some cross-type dependencies (e.g. JS importing an SVG as a URL) do not produce any
+    // edge at all in the bundle graph. Those bundles end up in the same topo level and receive
+    // only the nameHashForFilename(bundle.id) fallback, which will be incorrect when
+    // shouldContentHash is true. Fixing this requires the bundler to emit the missing References
+    // edge, or adopting a two-phase packaging approach.
+    let mut result = Vec::new();
+    for e in self
+      .graph
+      .edges_directed(*bundle_node_idx, Direction::Outgoing)
+    {
+      if *e.weight() != BundleGraphEdgeType::References {
+        continue;
+      }
+      match self.graph.node_weight(e.target()) {
+        // Direct bundle → bundle References edge (skip self-references, mirroring JS DFS).
+        Some(BundleGraphNode::Bundle(b)) if b.id != bundle.id => {
+          result.push(b.id.clone());
+        }
+        // Two-hop: bundle → dependency → bundle.  Follow each outgoing References edge from
+        // the dependency node and collect any bundle targets.
+        Some(BundleGraphNode::Dependency(_)) => {
+          for dep_e in self.graph.edges_directed(e.target(), Direction::Outgoing) {
+            if *dep_e.weight() != BundleGraphEdgeType::References {
+              continue;
+            }
+            if let Some(BundleGraphNode::Bundle(b)) = self.graph.node_weight(dep_e.target())
+              && b.id != bundle.id
+            {
+              result.push(b.id.clone());
+            }
+          }
+        }
+        _ => {}
+      }
+    }
+    result
+  }
+
+  fn get_inline_bundle_ids(&self, bundle: &Bundle) -> Vec<String> {
+    let Some(bundle_node_idx) = self.nodes_by_key.get(&bundle.id) else {
+      return vec![];
+    };
+    self
+      .graph
+      .edges_directed(*bundle_node_idx, Direction::Outgoing)
+      .filter_map(|e| {
+        let edge_type = *e.weight();
+        if edge_type != BundleGraphEdgeType::Contains
+          && edge_type != BundleGraphEdgeType::References
+        {
+          return None;
+        }
+        match self.graph.node_weight(e.target())? {
+          BundleGraphNode::Bundle(b)
+            if matches!(
+              b.value.bundle_behavior,
+              Some(BundleBehavior::Inline) | Some(BundleBehavior::InlineIsolated)
+            ) =>
+          {
+            Some(b.id.clone())
+          }
+          _ => None,
+        }
+      })
+      .collect()
+  }
+
   fn is_dependency_skipped(&self, dependency: &Dependency) -> bool {
     let dependency_node = self.nodes_by_key.get(&dependency.id).unwrap();
     let node = self.graph.node_weight(*dependency_node).unwrap();
@@ -436,6 +512,149 @@ impl BundleGraph for BundleGraphFromJs {
       return false;
     };
     dependency.deferred || dependency.excluded
+  }
+
+  fn get_incoming_dependencies(&self, asset: &Asset) -> anyhow::Result<Vec<&Dependency>> {
+    let asset_node_idx = self
+      .nodes_by_key
+      .get(&asset.id)
+      .ok_or_else(|| anyhow!("Asset {} not found in bundle graph", asset.id))?;
+
+    self
+      .graph
+      .edges_directed(*asset_node_idx, Direction::Incoming)
+      .filter(|edge| *edge.weight() == BundleGraphEdgeType::Null)
+      .map(|edge| {
+        let node = self
+          .graph
+          .node_weight(edge.source())
+          .ok_or_else(|| anyhow!("Source node not found for incoming edge"))?;
+        match node {
+          BundleGraphNode::Dependency(dep) => Ok(&dep.value),
+          other => Err(anyhow!(
+            "Expected dependency node on incoming Null edge, got {:?}",
+            other
+          )),
+        }
+      })
+      .collect()
+  }
+
+  fn get_bundle_assets_in_source_order(&self, bundle: &Bundle) -> anyhow::Result<Vec<&Asset>> {
+    let bundle_node_idx = self
+      .nodes_by_key
+      .get(&bundle.id)
+      .ok_or_else(|| anyhow!("Bundle {} not found in bundle graph", bundle.id))?;
+
+    // Collect all asset node indices contained in this bundle.
+    let bundle_asset_indices: HashSet<NodeIndex> = self
+      .graph
+      .edges_directed(*bundle_node_idx, Direction::Outgoing)
+      .filter_map(|e| {
+        if *e.weight() == BundleGraphEdgeType::Contains
+          && matches!(
+            self.graph.node_weight(e.target()),
+            Some(BundleGraphNode::Asset(_))
+          )
+        {
+          Some(e.target())
+        } else {
+          None
+        }
+      })
+      .collect();
+
+    // DFS post-order traversal following Null edges between bundle assets.
+    // Post-order means dependencies appear before dependents — correct CSS cascade order.
+    let mut result: Vec<&Asset> = Vec::with_capacity(bundle_asset_indices.len());
+    let mut visited: HashSet<NodeIndex> = HashSet::new();
+
+    // Find entry assets: bundle assets with no incoming Null edge from another bundle asset.
+    // To ensure deterministic ordering, prefer bundle.entry_asset_ids order first,
+    // then fall back to any remaining roots sorted by their node index.
+    let is_root = |idx: NodeIndex| -> bool {
+      !self
+        .graph
+        .edges_directed(idx, Direction::Incoming)
+        .any(|e| {
+          if *e.weight() != BundleGraphEdgeType::Null {
+            return false;
+          }
+          // The source of this Null edge goes asset→dep→asset; we need to check
+          // if any dependency pointing to this asset is itself pointed to by a
+          // bundle asset. Walk: asset_idx ← (Null) ← dep ← (Null) ← source_asset
+          let dep_idx = e.source();
+          self
+            .graph
+            .edges_directed(dep_idx, Direction::Incoming)
+            .any(|dep_in_edge| {
+              *dep_in_edge.weight() == BundleGraphEdgeType::Null
+                && bundle_asset_indices.contains(&dep_in_edge.source())
+            })
+        })
+    };
+
+    // Seed with entry assets in bundle.entry_asset_ids order (stable, matches JS traversal).
+    let mut seen_entries: HashSet<NodeIndex> = HashSet::new();
+    let mut entry_indices: Vec<NodeIndex> = bundle
+      .entry_asset_ids
+      .iter()
+      .filter_map(|id| self.nodes_by_key.get(id).copied())
+      .filter(|&idx| bundle_asset_indices.contains(&idx) && is_root(idx))
+      .inspect(|&idx| {
+        seen_entries.insert(idx);
+      })
+      .collect();
+
+    // Append any remaining roots not in entry_asset_ids, sorted by NodeIndex for stability.
+    let mut remaining_roots: Vec<NodeIndex> = bundle_asset_indices
+      .iter()
+      .filter(|&&idx| is_root(idx) && !seen_entries.contains(&idx))
+      .copied()
+      .collect();
+    remaining_roots.sort_unstable();
+    entry_indices.extend(remaining_roots);
+
+    // Iterative DFS post-order.
+    // Stack entries: (node_index, has_been_expanded)
+    let mut stack: Vec<(NodeIndex, bool)> = entry_indices.iter().map(|&idx| (idx, false)).collect();
+
+    while let Some((idx, expanded)) = stack.pop() {
+      if expanded {
+        // Post-order: emit on the way back up.
+        if let Some(BundleGraphNode::Asset(an)) = self.graph.node_weight(idx) {
+          result.push(&an.value);
+        }
+        continue;
+      }
+
+      if visited.contains(&idx) {
+        continue;
+      }
+      visited.insert(idx);
+
+      // Push self again as "expanded" marker.
+      stack.push((idx, true));
+
+      // Push children (assets reachable via Null → dep → asset within this bundle).
+      for dep_edge in self.graph.edges_directed(idx, Direction::Outgoing) {
+        if *dep_edge.weight() != BundleGraphEdgeType::Null {
+          continue;
+        }
+        let dep_idx = dep_edge.target();
+        for asset_edge in self.graph.edges_directed(dep_idx, Direction::Outgoing) {
+          if *asset_edge.weight() != BundleGraphEdgeType::Null {
+            continue;
+          }
+          let child_idx = asset_edge.target();
+          if bundle_asset_indices.contains(&child_idx) && !visited.contains(&child_idx) {
+            stack.push((child_idx, false));
+          }
+        }
+      }
+    }
+
+    Ok(result)
   }
 }
 
@@ -464,6 +683,7 @@ mod tests {
       needs_stable_name: Some(false),
       pipeline: None,
       public_id: None,
+      is_placeholder: false,
       target: Target::default(),
     }
   }
@@ -1077,5 +1297,304 @@ mod tests {
     let err_msg = result.unwrap_err().to_string();
     assert!(err_msg.contains("is not an asset"));
     assert!(err_msg.contains("bundle1"));
+  }
+
+  #[test]
+  fn test_get_referenced_bundle_ids_direct_references_edge() {
+    // bundle(JS) →[References]→ bundle(SVG): direct bundle-to-bundle References edge.
+    let js_bundle = create_test_bundle_node("js1", "main.js");
+    let svg_bundle = create_test_bundle_node("svg1", "icon.svg");
+
+    let nodes = vec![
+      BundleGraphNode::Bundle(js_bundle.clone()),
+      BundleGraphNode::Bundle(svg_bundle.clone()),
+    ];
+    // js1 → svg1 via References
+    let edges = vec![(0, 1, BundleGraphEdgeType::References)];
+
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![]);
+    let referenced = graph.get_referenced_bundle_ids(&js_bundle.value);
+
+    assert_eq!(referenced, vec!["svg1"]);
+  }
+
+  #[test]
+  fn test_get_referenced_bundle_ids_two_hop_via_dependency() {
+    // Mirrors the JS createAssetReference + markDependencyReferenceable pattern for URL deps:
+    //   bundle(JS) →[References]→ dependency →[References]→ bundle(SVG)
+    //
+    // This is the common case for SVG/image imports from JS. The previous implementation only
+    // checked direct bundle → bundle edges and missed this path entirely.
+    let js_bundle = create_test_bundle_node("js1", "ErrorApp.js");
+    let svg_bundle = create_test_bundle_node("svg1", "something-went-wrong.svg");
+    let dep = create_test_dependency_node("dep1");
+
+    let nodes = vec![
+      BundleGraphNode::Bundle(js_bundle.clone()),
+      BundleGraphNode::Dependency(dep.clone()),
+      BundleGraphNode::Bundle(svg_bundle.clone()),
+    ];
+    // js1 → dep1 via References (markDependencyReferenceable)
+    // dep1 → svg1 via References (createAssetReference)
+    let edges = vec![
+      (0, 1, BundleGraphEdgeType::References),
+      (1, 2, BundleGraphEdgeType::References),
+    ];
+
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![]);
+    let referenced = graph.get_referenced_bundle_ids(&js_bundle.value);
+
+    assert_eq!(referenced, vec!["svg1"]);
+  }
+
+  #[test]
+  fn test_get_referenced_bundle_ids_two_hop_excludes_self_references() {
+    // Even via the two-hop path, self-references must not be returned.
+    let js_bundle = create_test_bundle_node("js1", "main.js");
+    let dep = create_test_dependency_node("dep1");
+
+    let nodes = vec![
+      BundleGraphNode::Bundle(js_bundle.clone()),
+      BundleGraphNode::Dependency(dep.clone()),
+    ];
+    // js1 → dep1 → js1 (self-loop through a dependency; should be filtered)
+    let edges = vec![
+      (0, 1, BundleGraphEdgeType::References),
+      (1, 0, BundleGraphEdgeType::References),
+    ];
+
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![]);
+    let referenced = graph.get_referenced_bundle_ids(&js_bundle.value);
+
+    assert!(
+      referenced.is_empty(),
+      "self-references via dependency hop must be excluded, got: {referenced:?}"
+    );
+  }
+
+  #[test]
+  fn test_get_referenced_bundle_ids_non_references_dep_edge_ignored() {
+    // A dependency reachable only via a non-References edge should not be followed.
+    let js_bundle = create_test_bundle_node("js1", "main.js");
+    let svg_bundle = create_test_bundle_node("svg1", "icon.svg");
+    let dep = create_test_dependency_node("dep1");
+
+    let nodes = vec![
+      BundleGraphNode::Bundle(js_bundle.clone()),
+      BundleGraphNode::Dependency(dep.clone()),
+      BundleGraphNode::Bundle(svg_bundle.clone()),
+    ];
+    // js1 → dep1 via Null (not References), dep1 → svg1 via References
+    // The dep should not be followed because the first hop is not a References edge.
+    let edges = vec![
+      (0, 1, BundleGraphEdgeType::Null),
+      (1, 2, BundleGraphEdgeType::References),
+    ];
+
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![]);
+    let referenced = graph.get_referenced_bundle_ids(&js_bundle.value);
+
+    assert!(
+      referenced.is_empty(),
+      "non-References first-hop must not be followed, got: {referenced:?}"
+    );
+  }
+
+  #[test]
+  fn test_get_incoming_dependencies_returns_deps_pointing_to_asset() {
+    // Two separate assets each have a dependency edge pointing at `asset_target`.
+    // Layout:
+    //   asset_a --[Null]--> dep1 --[Null]--> asset_target
+    //   asset_b --[Null]--> dep2 --[Null]--> asset_target
+    // get_incoming_dependencies(asset_target) must return [dep1, dep2].
+    let asset_target = create_test_asset_node("asset_target");
+    let asset_a = create_test_asset_node("asset_a");
+    let asset_b = create_test_asset_node("asset_b");
+    let dep1 = create_test_dependency_node("dep1");
+    let dep2 = create_test_dependency_node("dep2");
+
+    // Node indices: 0=asset_target, 1=asset_a, 2=asset_b, 3=dep1, 4=dep2
+    let nodes = vec![
+      BundleGraphNode::Asset(asset_target.clone()),
+      BundleGraphNode::Asset(asset_a.clone()),
+      BundleGraphNode::Asset(asset_b.clone()),
+      BundleGraphNode::Dependency(dep1.clone()),
+      BundleGraphNode::Dependency(dep2.clone()),
+    ];
+    let edges = vec![
+      (1, 3, BundleGraphEdgeType::Null), // asset_a -> dep1
+      (3, 0, BundleGraphEdgeType::Null), // dep1 -> asset_target
+      (2, 4, BundleGraphEdgeType::Null), // asset_b -> dep2
+      (4, 0, BundleGraphEdgeType::Null), // dep2 -> asset_target
+    ];
+
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![]);
+    let incoming = graph
+      .get_incoming_dependencies(&asset_target.value)
+      .unwrap();
+
+    assert_eq!(incoming.len(), 2);
+    let incoming_ids: Vec<&str> = incoming.iter().map(|d| d.id.as_str()).collect();
+    assert!(incoming_ids.contains(&"dep1"));
+    assert!(incoming_ids.contains(&"dep2"));
+  }
+
+  #[test]
+  fn test_get_incoming_dependencies_excludes_non_null_edges() {
+    // A References edge from a dependency to asset_target must NOT be returned —
+    // only Null (dependency-resolution) edges count as incoming dependencies.
+    let asset_target = create_test_asset_node("asset_target");
+    let dep_null = create_test_dependency_node("dep_null");
+    let dep_ref = create_test_dependency_node("dep_ref");
+
+    // Node indices: 0=asset_target, 1=dep_null, 2=dep_ref
+    let nodes = vec![
+      BundleGraphNode::Asset(asset_target.clone()),
+      BundleGraphNode::Dependency(dep_null.clone()),
+      BundleGraphNode::Dependency(dep_ref.clone()),
+    ];
+    let edges = vec![
+      (1, 0, BundleGraphEdgeType::Null), // dep_null -> asset_target (should be included)
+      (2, 0, BundleGraphEdgeType::References), // dep_ref -> asset_target (must be excluded)
+    ];
+
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![]);
+    let incoming = graph
+      .get_incoming_dependencies(&asset_target.value)
+      .unwrap();
+
+    assert_eq!(incoming.len(), 1);
+    assert_eq!(incoming[0].id, "dep_null");
+  }
+
+  #[test]
+  fn test_get_incoming_dependencies_empty_for_root_asset() {
+    // An asset with no incoming dependency edges returns an empty vec.
+    let lone_asset = create_test_asset_node("lone_asset");
+
+    let nodes = vec![BundleGraphNode::Asset(lone_asset.clone())];
+    let edges = vec![];
+
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![]);
+    let incoming = graph.get_incoming_dependencies(&lone_asset.value).unwrap();
+
+    assert!(
+      incoming.is_empty(),
+      "expected no incoming deps for a root asset, got: {incoming:?}"
+    );
+  }
+
+  #[test]
+  fn test_get_bundle_assets_in_source_order_respects_import_order() {
+    // 3-asset chain: A imports B, B imports C.
+    // DFS post-order (exit on the way out) yields [C, B, A].
+    // Graph layout:
+    //   bundle --[Contains]--> asset_a, asset_b, asset_c
+    //   asset_a --[Null]--> dep_ab --[Null]--> asset_b
+    //   asset_b --[Null]--> dep_bc --[Null]--> asset_c
+    let bundle_node = create_test_bundle_node("bundle1", "main.css");
+    let asset_a = create_test_asset_node("asset_a"); // entry: imports B
+    let asset_b = create_test_asset_node("asset_b"); // imports C
+    let asset_c = create_test_asset_node("asset_c"); // leaf
+    let dep_ab = create_test_dependency_node("dep_ab");
+    let dep_bc = create_test_dependency_node("dep_bc");
+
+    // Node indices: 0=bundle, 1=asset_a, 2=asset_b, 3=asset_c, 4=dep_ab, 5=dep_bc
+    let nodes = vec![
+      BundleGraphNode::Bundle(bundle_node.clone()),
+      BundleGraphNode::Asset(asset_a.clone()),
+      BundleGraphNode::Asset(asset_b.clone()),
+      BundleGraphNode::Asset(asset_c.clone()),
+      BundleGraphNode::Dependency(dep_ab.clone()),
+      BundleGraphNode::Dependency(dep_bc.clone()),
+    ];
+    let edges = vec![
+      (0, 1, BundleGraphEdgeType::Contains), // bundle contains asset_a
+      (0, 2, BundleGraphEdgeType::Contains), // bundle contains asset_b
+      (0, 3, BundleGraphEdgeType::Contains), // bundle contains asset_c
+      (1, 4, BundleGraphEdgeType::Null),     // asset_a -> dep_ab
+      (4, 2, BundleGraphEdgeType::Null),     // dep_ab -> asset_b
+      (2, 5, BundleGraphEdgeType::Null),     // asset_b -> dep_bc
+      (5, 3, BundleGraphEdgeType::Null),     // dep_bc -> asset_c
+    ];
+
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![]);
+    let ordered = graph
+      .get_bundle_assets_in_source_order(&bundle_node.value)
+      .unwrap();
+
+    let ids: Vec<&str> = ordered.iter().map(|a| a.id.as_str()).collect();
+    assert_eq!(
+      ids,
+      vec!["asset_c", "asset_b", "asset_a"],
+      "DFS post-order must place dependencies before the assets that import them"
+    );
+  }
+
+  #[test]
+  fn test_get_bundle_assets_in_source_order_handles_diamond() {
+    // Diamond: A imports B and C, both B and C import D.
+    // D must appear exactly once in the output.
+    // Expected post-order: [D, B, C, A]  or  [D, C, B, A] (either DFS traversal order is valid)
+    // but D must appear before B and C, and B and C must appear before A, and D appears only once.
+    let bundle_node = create_test_bundle_node("bundle1", "main.css");
+    let asset_a = create_test_asset_node("asset_a");
+    let asset_b = create_test_asset_node("asset_b");
+    let asset_c = create_test_asset_node("asset_c");
+    let asset_d = create_test_asset_node("asset_d");
+    let dep_ab = create_test_dependency_node("dep_ab");
+    let dep_ac = create_test_dependency_node("dep_ac");
+    let dep_bd = create_test_dependency_node("dep_bd");
+    let dep_cd = create_test_dependency_node("dep_cd");
+
+    // Indices: 0=bundle,1=a,2=b,3=c,4=d,5=dep_ab,6=dep_ac,7=dep_bd,8=dep_cd
+    let nodes = vec![
+      BundleGraphNode::Bundle(bundle_node.clone()),
+      BundleGraphNode::Asset(asset_a.clone()),
+      BundleGraphNode::Asset(asset_b.clone()),
+      BundleGraphNode::Asset(asset_c.clone()),
+      BundleGraphNode::Asset(asset_d.clone()),
+      BundleGraphNode::Dependency(dep_ab.clone()),
+      BundleGraphNode::Dependency(dep_ac.clone()),
+      BundleGraphNode::Dependency(dep_bd.clone()),
+      BundleGraphNode::Dependency(dep_cd.clone()),
+    ];
+    let edges = vec![
+      (0, 1, BundleGraphEdgeType::Contains),
+      (0, 2, BundleGraphEdgeType::Contains),
+      (0, 3, BundleGraphEdgeType::Contains),
+      (0, 4, BundleGraphEdgeType::Contains),
+      (1, 5, BundleGraphEdgeType::Null), // a -> dep_ab
+      (5, 2, BundleGraphEdgeType::Null), // dep_ab -> b
+      (1, 6, BundleGraphEdgeType::Null), // a -> dep_ac
+      (6, 3, BundleGraphEdgeType::Null), // dep_ac -> c
+      (2, 7, BundleGraphEdgeType::Null), // b -> dep_bd
+      (7, 4, BundleGraphEdgeType::Null), // dep_bd -> d
+      (3, 8, BundleGraphEdgeType::Null), // c -> dep_cd
+      (8, 4, BundleGraphEdgeType::Null), // dep_cd -> d
+    ];
+
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![]);
+    let ordered = graph
+      .get_bundle_assets_in_source_order(&bundle_node.value)
+      .unwrap();
+
+    let ids: Vec<&str> = ordered.iter().map(|a| a.id.as_str()).collect();
+
+    // D must appear exactly once
+    assert_eq!(
+      ids.iter().filter(|&&id| id == "asset_d").count(),
+      1,
+      "diamond-shared asset must appear exactly once, got: {ids:?}"
+    );
+    // D must come before B and C
+    let pos_d = ids.iter().position(|&id| id == "asset_d").unwrap();
+    let pos_b = ids.iter().position(|&id| id == "asset_b").unwrap();
+    let pos_c = ids.iter().position(|&id| id == "asset_c").unwrap();
+    let pos_a = ids.iter().position(|&id| id == "asset_a").unwrap();
+    assert!(pos_d < pos_b, "D must come before B");
+    assert!(pos_d < pos_c, "D must come before C");
+    assert!(pos_b < pos_a, "B must come before A");
+    assert!(pos_c < pos_a, "C must come before A");
   }
 }

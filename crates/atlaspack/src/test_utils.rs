@@ -4,6 +4,7 @@ use std::sync::Arc;
 use atlaspack_config::atlaspack_config_fixtures::default_config;
 use atlaspack_core::{
   config_loader::ConfigLoader,
+  database::InMemoryDatabase,
   plugin::{PluginContext, PluginLogger, PluginOptions},
   types::AtlaspackOptions,
 };
@@ -72,6 +73,15 @@ fn create_test_cache() -> CacheRef {
 }
 
 pub(crate) fn request_tracker(options: RequestTrackerTestOptions) -> RequestTracker {
+  request_tracker_with_db(options, Arc::new(InMemoryDatabase::default()))
+}
+
+/// Like [`request_tracker`], but accepts a caller-provided [`DatabaseRef`] so
+/// tests can inspect database contents after requests complete.
+pub(crate) fn request_tracker_with_db(
+  options: RequestTrackerTestOptions,
+  db: atlaspack_core::database::DatabaseRef,
+) -> RequestTracker {
   let RequestTrackerTestOptions {
     fs,
     plugins,
@@ -107,11 +117,13 @@ pub(crate) fn request_tracker(options: RequestTrackerTestOptions) -> RequestTrac
   let cache = create_test_cache();
 
   RequestTracker::new(
+    db,
     Arc::clone(&config_loader),
     fs,
     Arc::new(atlaspack_options),
     plugins,
     project_root,
     cache,
+    None,
   )
 }

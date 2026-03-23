@@ -9,6 +9,7 @@ workspace = true
 
 [dependencies]
 atlaspack_core = { path = "../atlaspack_core" }
+atlaspack_memoization_cache = { path = "../atlaspack_memoization_cache" }
 lmdb-js-lite = { path = "../lmdb-js-lite" }
 anyhow = { workspace = true }
 oxc_allocator = { workspace = true }

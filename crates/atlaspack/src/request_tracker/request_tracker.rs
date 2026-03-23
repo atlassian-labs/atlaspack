@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::mpsc::Sender;
 
+use atlaspack_core::database::DatabaseRef;
 use atlaspack_core::types::Invalidation;
 use petgraph::graph::NodeIndex;
 use petgraph::stable_graph::StableDiGraph;
@@ -32,7 +33,7 @@ use super::RequestId;
 use super::RequestNode;
 use super::ResultAndInvalidations;
 use super::RunRequestError;
-use super::{RunRequestContext, RunRequestMessage};
+use super::{ReportFn, RunRequestContext, RunRequestMessage};
 
 /// [`RequestTracker`] runs atlaspack work items and constructs a graph of their dependencies.
 ///
@@ -47,6 +48,7 @@ use super::{RunRequestContext, RunRequestMessage};
 /// This will be used to trigger cache invalidations.
 pub struct RequestTracker {
   config_loader: ConfigLoaderRef,
+  db: DatabaseRef,
   file_system: FileSystemRef,
   graph: RequestGraph,
   options: Arc<AtlaspackOptions>,
@@ -56,16 +58,20 @@ pub struct RequestTracker {
   invalidations: HashMap<PathBuf, NodeIndex>,
   invalid_nodes: HashSet<NodeIndex>,
   pub cache: CacheRef,
+  report_fn: Option<ReportFn>,
 }
 
 impl RequestTracker {
+  #[allow(clippy::too_many_arguments)]
   pub fn new(
+    db: DatabaseRef,
     config_loader: ConfigLoaderRef,
     file_system: FileSystemRef,
     options: Arc<AtlaspackOptions>,
     plugins: PluginsRef,
     project_root: PathBuf,
     cache: CacheRef,
+    report_fn: Option<ReportFn>,
   ) -> Self {
     let mut graph = StableDiGraph::<RequestNode, RequestEdgeType>::new();
 
@@ -73,6 +79,7 @@ impl RequestTracker {
 
     RequestTracker {
       config_loader,
+      db,
       file_system,
       graph,
       plugins,
@@ -82,6 +89,7 @@ impl RequestTracker {
       invalid_nodes: HashSet::new(),
       options,
       cache,
+      report_fn,
     }
   }
 
@@ -137,7 +145,8 @@ impl RequestTracker {
           tx,
         } => {
           let request_id = request.id();
-          tracing::trace!(?request_id, ?parent_request_id, "Run request");
+          let request_type = request.request_type();
+          tracing::trace!(?request_id, ?parent_request_id, request_type, "Run request");
 
           if let Some(previous_result) = self.prepare_request(request_id)? {
             self.link_request_to_parent(request_id, parent_request_id)?;
@@ -151,6 +160,7 @@ impl RequestTracker {
 
           // Request needs to be executed
           let context = RunRequestContext::new(
+            self.db.clone(),
             self.config_loader.clone(),
             self.file_system.clone(),
             self.options.clone(),
@@ -167,6 +177,7 @@ impl RequestTracker {
                   .unwrap();
               }
             }),
+            self.report_fn.clone(),
           );
 
           tokio::spawn({
@@ -440,6 +451,10 @@ impl RequestTracker {
     !nodes_to_invalidate.is_empty() ||
     // or if there are still any remaining invalid nodes (e.g. Failed requests)
     !self.invalid_nodes.is_empty()
+  }
+
+  pub fn set_report_fn(&mut self, report_fn: Option<ReportFn>) {
+    self.report_fn = report_fn;
   }
 }
 

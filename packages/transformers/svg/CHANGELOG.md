@@ -1,5 +1,45 @@
 # @atlaspack/transformer-svg
 
+## 2.14.60
+
+### Patch Changes
+
+- Updated dependencies [[`7d1839c`](https://github.com/atlassian-labs/atlaspack/commit/7d1839cc7cf0225dd35afecb68109a11fd931f2b)]:
+  - @atlaspack/rust@3.28.0
+  - @atlaspack/plugin@2.14.60
+
+## 2.14.59
+
+### Patch Changes
+
+- Updated dependencies [[`a958853`](https://github.com/atlassian-labs/atlaspack/commit/a958853ae3de2812bfd032357e9fa7cab6a1ddb6), [`0f5c1ef`](https://github.com/atlassian-labs/atlaspack/commit/0f5c1eff9138728168231efa66202a8d844c33ef)]:
+  - @atlaspack/rust@3.27.0
+  - @atlaspack/plugin@2.14.59
+
+## 2.14.58
+
+### Patch Changes
+
+- Updated dependencies [[`ffa1e42`](https://github.com/atlassian-labs/atlaspack/commit/ffa1e4276c22cc48b6be45ac81df8adde85f2237), [`ea9730d`](https://github.com/atlassian-labs/atlaspack/commit/ea9730dd953d0512c2ab97cbba810e7a297a29a6), [`939d5bd`](https://github.com/atlassian-labs/atlaspack/commit/939d5bd41b3bcb5508f58ca41165d48122762e26), [`71981ea`](https://github.com/atlassian-labs/atlaspack/commit/71981eac258f7e6dfb40ec4b202d194f71c64ff1), [`0bb5830`](https://github.com/atlassian-labs/atlaspack/commit/0bb5830d1a7800e673f21ab020cd86bef873df9c), [`cba96b1`](https://github.com/atlassian-labs/atlaspack/commit/cba96b1a15c07703ee104bf2a2888cc715575cbd)]:
+  - @atlaspack/rust@3.26.0
+  - @atlaspack/plugin@2.14.58
+
+## 2.14.57
+
+### Patch Changes
+
+- Updated dependencies [[`c80be61`](https://github.com/atlassian-labs/atlaspack/commit/c80be618e42014208fed60b7a2dccc2e47d53aed), [`2d3c616`](https://github.com/atlassian-labs/atlaspack/commit/2d3c616bb2ebef55d6850e8ca9eedf13c72f5386)]:
+  - @atlaspack/rust@3.25.0
+  - @atlaspack/plugin@2.14.57
+
+## 2.14.56
+
+### Patch Changes
+
+- Updated dependencies [[`f7878b2`](https://github.com/atlassian-labs/atlaspack/commit/f7878b2f19a0a3bbd0e79d0b4a4e1479646043b7), [`22bb49c`](https://github.com/atlassian-labs/atlaspack/commit/22bb49c5708798d259f98c8b5c10850b2f4f5f1b), [`bddd21a`](https://github.com/atlassian-labs/atlaspack/commit/bddd21a5313974ca333c02b2da1c6f85d1afaaea), [`de388ff`](https://github.com/atlassian-labs/atlaspack/commit/de388ff76d39dece97ad475fcccdb6efb6283bfc)]:
+  - @atlaspack/rust@3.24.1
+  - @atlaspack/plugin@2.14.56
+
 ## 2.14.55
 
 ### Patch Changes

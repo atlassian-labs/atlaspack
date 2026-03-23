@@ -23,6 +23,7 @@ import {tracer} from '@atlaspack/profiler';
 import {requestTypes} from '../RequestTracker';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {fromEnvironmentId} from '../EnvironmentManager';
+import {tracer as atlaspackTracer} from '@atlaspack/logger';
 
 type AtlaspackBuildRequestInput = {
   optionsRef: SharedReference;
@@ -144,6 +145,8 @@ async function run({
   });
 
   let packagingMeasurement = tracer.createMeasurement('packaging');
+  const span = atlaspackTracer.enter('writeBundles');
+
   let writeBundlesRequest = createWriteBundlesRequest({
     bundleGraph,
     optionsRef,
@@ -152,6 +155,7 @@ async function run({
   let {bundleInfo, scopeHoistingStats} =
     await api.runRequest(writeBundlesRequest);
   packagingMeasurement && packagingMeasurement.end();
+  atlaspackTracer.exit(span);
   assertSignalNotAborted(signal);
 
   return {

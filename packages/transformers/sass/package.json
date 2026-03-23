@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-sass",
-  "version": "2.15.16",
+  "version": "2.15.21",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"

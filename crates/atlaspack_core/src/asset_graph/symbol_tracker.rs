@@ -49,22 +49,29 @@ pub struct FinalSymbolLocation {
 
 fn dep_has_symbol(dep: &Dependency, symbol: &Symbol) -> bool {
   dep.symbols.as_ref().is_some_and(|dep_symbols| {
-    dep_symbols
-      .iter()
-      .any(|s| s.exported == symbol.exported || is_star_reexport_symbol(s))
+    dep_symbols.iter().any(|s| {
+      s.exported == symbol.exported || matches!(classify_symbol_export(s), SymbolExportType::Star)
+    })
   })
 }
 
-/// Returns true if this symbol represents a star re-export (`export * from './dep'`).
-/// Star re-exports have both `exported` and `local` set to "*".
-fn is_star_reexport_symbol(symbol: &Symbol) -> bool {
-  symbol.exported == "*" && symbol.local == "*"
+enum SymbolExportType {
+  /// A normal export with a specific name (e.g. `export {foo}` or `export {foo as bar}`)
+  Named,
+  /// A star re-export that forwards all symbols (e.g. `export * from './dep'`)
+  Star,
+  /// A namespace re-export that creates a namespace object (e.g. `export * as ns from './dep'`)
+  Namespace,
 }
 
-/// Returns true if this symbol represents a namespace re-export (`export * as ns from './dep'`).
-/// Namespace re-exports have `exported` set to "*" but `local` is the namespace name (not "*").
-fn is_namespace_reexport_symbol(symbol: &Symbol) -> bool {
-  symbol.exported == "*" && symbol.local != "*"
+fn classify_symbol_export(symbol: &Symbol) -> SymbolExportType {
+  if symbol.exported != "*" {
+    SymbolExportType::Named
+  } else if symbol.local == "*" {
+    SymbolExportType::Star
+  } else {
+    SymbolExportType::Namespace
+  }
 }
 
 /// Represents a symbol request from an incoming dependency.
@@ -132,41 +139,66 @@ fn find_exported_name_for_local(asset: &Asset, mangled_local: &str) -> Option<St
 }
 
 impl SymbolTracker {
-  /// Handles the tracking of symbols for a given asset.
+  /// Checks whether a dependency has any symbols requested from it.
   ///
-  /// This looks at both the dependencies this asset has, to register symbols
-  /// that it needs to find, and the symbols that this asset provides, to
-  /// satisfy any outstanding requirements from above.
+  /// This replaces the `get_requested_symbols().is_some_and(|s| !s.is_empty())`
+  /// check that `handle_path_result` uses to decide whether to defer a dependency.
+  pub fn has_requested_symbols(&self, dependency_id: &DependencyId) -> bool {
+    self
+      .requirements_by_dep
+      .get(dependency_id)
+      .is_some_and(|reqs| !reqs.is_empty())
+  }
+
+  /// Tracks symbols for an asset and propagates requested symbols to its outgoing
+  /// dependencies, returning any dependencies that need to be un-deferred.
+  ///
+  /// This combines the work of `track_symbols` (registering requirements and
+  /// satisfying them) with the propagation logic from `propagate_requested_symbols`
+  /// (forwarding symbol requests to outgoing dependencies and signaling un-deferral).
   pub fn track_symbols(
     &mut self,
     asset_graph: &AssetGraph,
     asset: &Arc<Asset>,
     dependencies: &[Dependency],
-    // TODO: This should actually return a list of the new requests that need to
-    // be kicked off, what `propagate_requested_symbols` does at the moment
-  ) -> anyhow::Result<()> {
-    // Collect symbols requested from this asset by incoming dependencies
+  ) -> anyhow::Result<Vec<DependencyId>> {
     let incoming_requested_symbols = self.get_incoming_requested_symbols(asset_graph, asset);
 
-    // Track all of the symbols that are being requested by dependencies of this
-    // asset
     for dep in dependencies {
-      let Some(symbols) = &dep.symbols else {
-        continue;
-      };
+      self.track_dependency_symbols(asset, &incoming_requested_symbols, dep)?;
+    }
 
-      // Check if this dependency is a star re-export
-      let is_star_dep = symbols.iter().any(is_star_reexport_symbol);
+    self.satisfy_provided_symbols(asset_graph, asset)?;
 
-      for symbol in symbols {
-        // Skip star re-export markers (exported="*", local="*") - these are handled
-        // separately below via speculative forwarding.
-        // But do NOT skip namespace re-exports (exported="*", local="ns") - these are
-        // concrete requirements that need to be satisfied by the target asset's namespace.
-        if is_star_reexport_symbol(symbol) {
+    // Returns a Vec of the dependencies that now need to be processed
+    self.propagate_to_outgoing_dependencies(asset_graph, asset, dependencies)
+  }
+
+  fn track_dependency_symbols(
+    &mut self,
+    asset: &Arc<Asset>,
+    incoming_requested_symbols: &Vec<IncomingSymbolRequest>,
+    dep: &Dependency,
+  ) -> anyhow::Result<()> {
+    let Some(symbols) = &dep.symbols else {
+      return Ok(());
+    };
+
+    // Check if this dependency is a star re-export
+    let mut is_star_dep = false;
+
+    for symbol in symbols {
+      // Skip star re-export markers (exported="*", local="*") - these are handled
+      // separately below via speculative forwarding.
+      // But do NOT skip namespace re-exports (exported="*", local="ns") - these are
+      // concrete requirements that need to be satisfied by the target asset's namespace.
+      match classify_symbol_export(symbol) {
+        SymbolExportType::Star => {
+          // Star re-export: skip for now, handled separately below
+          is_star_dep = true;
           continue;
         }
-        if is_namespace_reexport_symbol(symbol) {
+        SymbolExportType::Namespace => {
           // Namespace re-export: register a "*" requirement on this dependency.
           // This will be satisfied when the target asset is processed.
           self.add_required_symbol(
@@ -179,71 +211,72 @@ impl SymbolTracker {
           );
           continue;
         }
-        self.add_required_symbol(
-          &dep.id,
-          SymbolRequirement {
-            symbol: symbol.clone(),
-            final_location: None,
-            speculation_group_id: None,
-          },
-        );
-      }
-
-      // For star re-export dependencies, propagate all symbols requested from
-      // this asset down to the star dependency. This is how `export * from './dep'`
-      // forwards symbol requests to the target module.
-      if !is_star_dep {
-        continue;
-      }
-
-      for request in &incoming_requested_symbols {
-        // Don't add duplicate requirements
-        if symbols.iter().any(|s| s.exported == request.symbol) {
-          continue;
-        }
-        // Don't forward symbols through star deps if the current asset already
-        // provides them as a named export (e.g. via a namespace re-export like
-        // `export * as ns from './dep'` which creates an "ns" export on the asset).
-        // These symbols are handled directly, not via star forwarding.
-        if asset
-          .symbols
-          .as_ref()
-          .is_some_and(|syms| syms.iter().any(|s| s.exported == request.symbol))
-        {
-          continue;
-        }
-        // Create a forwarded requirement for this symbol
-        // Mark as speculative since this star dep might not provide this symbol
-        // (another star dep sibling might provide it instead)
-        // The speculation_group_id links all speculative requirements for the same
-        // symbol from the same parent dependency, so we can clean up siblings when
-        // one is satisfied.
-        let speculation_group_id = format!("{}:{}", request.source_dep_id, request.symbol);
-
-        // Register this dependency as containing a member of this speculation group
-        self
-          .speculation_group_locations
-          .entry(speculation_group_id.clone())
-          .or_default()
-          .push(dep.id.clone());
-
-        self.add_required_symbol(
-          &dep.id,
-          SymbolRequirement {
-            symbol: Symbol {
-              exported: request.symbol.clone(),
-              local: "*".to_string(), // Mark as coming from star re-export
-              is_weak: true,
-              ..Default::default()
+        SymbolExportType::Named => {
+          self.add_required_symbol(
+            &dep.id,
+            SymbolRequirement {
+              symbol: symbol.clone(),
+              final_location: None,
+              speculation_group_id: None,
             },
-            final_location: None,
-            speculation_group_id: Some(speculation_group_id),
-          },
-        );
+          );
+        }
       }
     }
 
-    self.satisfy_provided_symbols(asset_graph, asset)
+    // For star re-export dependencies, propagate all symbols requested from
+    // this asset down to the star dependency. This is how `export * from './dep'`
+    // forwards symbol requests to the target module.
+    if !is_star_dep {
+      return Ok(());
+    }
+
+    for request in incoming_requested_symbols {
+      // Don't add duplicate requirements
+      if symbols.iter().any(|s| s.exported == request.symbol) {
+        continue;
+      }
+      // Don't forward symbols through star deps if the current asset already
+      // provides them as a named export (e.g. via a namespace re-export like
+      // `export * as ns from './dep'` which creates an "ns" export on the asset).
+      // These symbols are handled directly, not via star forwarding.
+      if asset
+        .symbols
+        .as_ref()
+        .is_some_and(|syms| syms.iter().any(|s| s.exported == request.symbol))
+      {
+        continue;
+      }
+      // Create a forwarded requirement for this symbol
+      // Mark as speculative since this star dep might not provide this symbol
+      // (another star dep sibling might provide it instead)
+      // The speculation_group_id links all speculative requirements for the same
+      // symbol from the same parent dependency, so we can clean up siblings when
+      // one is satisfied.
+      let speculation_group_id = format!("{}:{}", request.source_dep_id, request.symbol);
+
+      // Register this dependency as containing a member of this speculation group
+      self
+        .speculation_group_locations
+        .entry(speculation_group_id.clone())
+        .or_default()
+        .push(dep.id.clone());
+
+      self.add_required_symbol(
+        &dep.id,
+        SymbolRequirement {
+          symbol: Symbol {
+            exported: request.symbol.clone(),
+            local: "*".to_string(), // Mark as coming from star re-export
+            is_weak: true,
+            ..Default::default()
+          },
+          final_location: None,
+          speculation_group_id: Some(speculation_group_id),
+        },
+      );
+    }
+    Ok(())
   }
 
   /// Satisfies outstanding symbol requirements using the symbols provided by this asset.
@@ -275,9 +308,9 @@ impl SymbolTracker {
     for incoming_dep in &incoming_deps {
       if let Some(dep_symbols) = &incoming_dep.symbols {
         for dep_sym in dep_symbols {
-          if !is_namespace_reexport_symbol(dep_sym) {
+          let SymbolExportType::Namespace = classify_symbol_export(dep_sym) else {
             continue;
-          }
+          };
 
           // This asset's entire namespace satisfies the "*" requirement
           let final_location = FinalSymbolLocation {
@@ -356,13 +389,21 @@ impl SymbolTracker {
             continue;
           }
 
-          // If the requirement is already satisfied, and we have a new location that
-          // matches, we have a conflict
-          if required.final_location.is_some() {
+          // If the requirement is already satisfied, check whether it's the same
+          // location (idempotent re-processing, e.g. from replicate_existing_edges
+          // in diamond patterns) or a genuine conflict.
+          if let Some(ref existing) = required.final_location {
+            if existing == located_symbol {
+              // Same location — skip (idempotent)
+              continue;
+            }
             return Err(anyhow!(
-              "Required symbol {} for dep [{}] has already been located",
+              "Required symbol {} for dep [{}] has already been located at {:?}, \
+               but a new location was found: {:?}",
               required.symbol.exported,
-              dep.id
+              dep.id,
+              existing,
+              located_symbol
             ));
           }
 
@@ -454,17 +495,34 @@ impl SymbolTracker {
         if let Some(requirements) = self.requirements_by_dep.get_mut(&dep_id) {
           requirements.retain(|req| {
             // Keep if not part of this speculation group
-            req.speculation_group_id.as_ref() != Some(&group_id)
+            if req.speculation_group_id.as_ref() != Some(&group_id) {
+              return true;
+            }
+            // Keep if already satisfied — removing a satisfied requirement
+            // would break the resolution chain in multi-level star re-exports
+            req.final_location.is_some()
           });
         }
 
-        // Check if there are any speculation groups that were sourced from this dep
-        // (i.e., groups with ID starting with "{dep_id}:")
-        // These need to be cleaned up too since their source was removed
+        // Find which symbols were removed from this dep. For each removed symbol,
+        // any downstream speculation groups sourced from this dep for that symbol
+        // are now orphaned and need cleanup.
+        // Groups are keyed as "{dep_id}:{symbol}", so we can match precisely.
+        let remaining_symbols: Vec<String> = self
+          .requirements_by_dep
+          .get(&dep_id)
+          .map(|reqs| reqs.iter().map(|r| r.symbol.exported.clone()).collect())
+          .unwrap_or_default();
+
         let orphaned_groups: Vec<String> = self
           .speculation_group_locations
           .keys()
-          .filter(|g| g.starts_with(&format!("{dep_id}:")))
+          .filter(|g| {
+            // Match groups sourced from this dep
+            // Only orphan if this specific symbol is no longer required on the dep
+            g.strip_prefix(&format!("{dep_id}:"))
+              .is_some_and(|symbol| !remaining_symbols.contains(&symbol.to_string()))
+          })
           .cloned()
           .collect();
 
@@ -477,6 +535,41 @@ impl SymbolTracker {
         }
       }
     }
+  }
+
+  /// Checks each outgoing dependency of the asset to determine if any need
+  /// to be un-deferred. A dependency needs un-deferral when:
+  /// 1. It has requirements registered on it (symbols are being requested)
+  /// 2. It has no outgoing edges in the graph (hasn't been resolved yet)
+  ///
+  /// Dependencies that already have resolved assets don't need un-deferral —
+  /// their symbols will be propagated naturally when those assets are processed.
+  fn propagate_to_outgoing_dependencies(
+    &self,
+    asset_graph: &AssetGraph,
+    _asset: &Arc<Asset>,
+    dependencies: &[Dependency],
+  ) -> anyhow::Result<Vec<DependencyId>> {
+    let mut undeferred = Vec::new();
+
+    for dep in dependencies {
+      if !self.has_requested_symbols(&dep.id) {
+        continue;
+      }
+
+      let Some(dep_node_id) = asset_graph.get_node_id_by_content_key(dep.id.as_str()) else {
+        continue;
+      };
+
+      let has_resolved_asset = !asset_graph.get_outgoing_neighbors(dep_node_id).is_empty();
+      if has_resolved_asset {
+        continue;
+      }
+
+      undeferred.push(dep.id.clone());
+    }
+
+    Ok(undeferred)
   }
 
   fn add_required_symbol(&mut self, dep_id: &str, question: SymbolRequirement) {
@@ -576,7 +669,10 @@ impl SymbolTracker {
         // these are forwarding markers, not actual symbols that need to be satisfied.
         // But keep namespace re-export requirements (exported="*", local!="*") -
         // these are real requirements that should have been satisfied.
-        if is_star_reexport_symbol(&requirement.symbol) {
+        if matches!(
+          classify_symbol_export(&requirement.symbol),
+          SymbolExportType::Star
+        ) {
           continue;
         }
 
@@ -1121,10 +1217,12 @@ mod tests {
     ctx.assert_finalize_panics("was not satisfied");
   }
 
+  // NOTE: Manual graph construction required — this test calls track_symbols on the
+  // same asset twice to verify idempotent re-processing, which the macro cannot express.
   #[test]
-  fn track_symbols_errors_on_duplicate_symbol_resolution() {
-    // This test needs manual setup because the macro auto-tracks,
-    // and we need to track the same asset twice
+  fn track_symbols_idempotent_when_same_asset_processed_twice() {
+    // When the same asset is processed twice (e.g. via replicate_existing_edges),
+    // the same symbol resolves to the same location — this should be a no-op.
     let mut graph = AssetGraph::new();
 
     let entry_dep = make_entry_dependency();
@@ -1148,11 +1246,56 @@ mod tests {
       .unwrap();
     tracker.track_symbols(&graph, &asset_a, &[]).unwrap();
 
-    // Trying to satisfy again should error
+    // Processing the same asset again should be idempotent (same location)
     let result = tracker.track_symbols(&graph, &asset_a, &[]);
     assert!(
+      result.is_ok(),
+      "Re-processing the same asset should be idempotent, but got: {:?}",
+      result.unwrap_err()
+    );
+  }
+
+  // NOTE: Manual graph construction required — this test links two different assets
+  // to the same dependency node to test conflict detection, which the macro cannot express.
+  #[test]
+  fn track_symbols_errors_on_conflicting_symbol_resolution() {
+    // When two DIFFERENT assets provide the same symbol to the same dependency,
+    // the second resolution should error because the locations differ.
+    let mut graph = AssetGraph::new();
+
+    let entry_dep = make_entry_dependency();
+    let entry_dep_node = graph.add_entry_dependency(entry_dep, false);
+
+    let entry_asset = make_asset("entry.js", vec![]);
+    let entry_asset_node = graph.add_asset(entry_asset.clone(), false);
+    graph.add_edge(&entry_dep_node, &entry_asset_node);
+
+    let dep_a = make_dependency(&entry_asset, "./a.js", vec![("a", "a", false)]);
+    let dep_a_node = graph.add_dependency(dep_a.clone(), false);
+    graph.add_edge(&entry_asset_node, &dep_a_node);
+
+    // First asset provides "a"
+    let asset_a = make_asset("a.js", vec![("a", "a", false)]);
+    let asset_a_node = graph.add_asset(asset_a.clone(), false);
+    graph.add_edge(&dep_a_node, &asset_a_node);
+
+    // Second, different asset also provides "a" (different asset ID)
+    let asset_b = make_asset("b.js", vec![("a", "a", false)]);
+    let asset_b_node = graph.add_asset(asset_b.clone(), false);
+    graph.add_edge(&dep_a_node, &asset_b_node);
+
+    let mut tracker = SymbolTracker::default();
+    tracker
+      .track_symbols(&graph, &entry_asset, &[dep_a])
+      .unwrap();
+    // First asset satisfies the requirement
+    tracker.track_symbols(&graph, &asset_a, &[]).unwrap();
+
+    // Second, different asset tries to satisfy the same requirement — conflict!
+    let result = tracker.track_symbols(&graph, &asset_b, &[]);
+    assert!(
       result.is_err(),
-      "Should error when symbol is resolved twice"
+      "Conflicting symbol resolution should error"
     );
     assert!(
       result
@@ -1264,6 +1407,138 @@ mod tests {
     };
 
     ctx.assert_symbol_resolved("./barrel.js", "foo", "shared.js", "foo");
+    ctx.assert_finalize_ok();
+  }
+
+  // NOTE: Manual graph construction required — this test calls track_symbols on
+  // the shared asset twice to simulate replicate_existing_edges, which the macro
+  // cannot express (it processes each asset exactly once).
+  #[test]
+  fn track_symbols_handles_diamond_pattern_with_replicated_edges() {
+    // Simulates what happens when replicate_existing_edges calls track_symbols
+    // a second time for the shared asset in a diamond pattern.
+    //
+    // In a real build: left.js and right.js both resolve to the same shared.js.
+    // The first path processes shared.js normally; the second path triggers
+    // replicate_existing_edges which calls track_symbols(shared.js) again.
+    let mut graph = AssetGraph::new();
+    let mut deps: HashMap<String, Dependency> = HashMap::new();
+    let mut assets: HashMap<String, Arc<Asset>> = HashMap::new();
+
+    // Build the diamond graph
+    let entry_dep = make_entry_dependency();
+    let entry_dep_node = graph.add_entry_dependency(entry_dep, false);
+
+    let index = make_asset("index.js", vec![]);
+    let index_node = graph.add_asset(index.clone(), false);
+    graph.add_edge(&entry_dep_node, &index_node);
+    assets.insert("index.js".to_string(), index.clone());
+
+    let dep_barrel = make_dependency(
+      &index,
+      "./barrel.js",
+      vec![("$index$import$foo", "foo", false)],
+    );
+    let dep_barrel_node = graph.add_dependency(dep_barrel.clone(), false);
+    graph.add_edge(&index_node, &dep_barrel_node);
+    deps.insert("./barrel.js".to_string(), dep_barrel.clone());
+
+    let barrel = make_asset("barrel.js", vec![("*", "*", true)]);
+    let barrel_node = graph.add_asset(barrel.clone(), false);
+    graph.add_edge(&dep_barrel_node, &barrel_node);
+    assets.insert("barrel.js".to_string(), barrel.clone());
+
+    let dep_left = make_dependency(&barrel, "./left.js", vec![("*", "*", true)]);
+    let dep_left_node = graph.add_dependency(dep_left.clone(), false);
+    graph.add_edge(&barrel_node, &dep_left_node);
+    deps.insert("./left.js".to_string(), dep_left.clone());
+
+    let left = make_asset("left.js", vec![("*", "*", true)]);
+    let left_node = graph.add_asset(left.clone(), false);
+    graph.add_edge(&dep_left_node, &left_node);
+    assets.insert("left.js".to_string(), left.clone());
+
+    let dep_right = make_dependency(&barrel, "./right.js", vec![("*", "*", true)]);
+    let dep_right_node = graph.add_dependency(dep_right.clone(), false);
+    graph.add_edge(&barrel_node, &dep_right_node);
+    deps.insert("./right.js".to_string(), dep_right.clone());
+
+    let right = make_asset("right.js", vec![("*", "*", true)]);
+    let right_node = graph.add_asset(right.clone(), false);
+    graph.add_edge(&dep_right_node, &right_node);
+    assets.insert("right.js".to_string(), right.clone());
+
+    // shared.js is the SAME asset, reached via two different deps
+    let shared = make_asset("shared.js", vec![("foo", "foo", false)]);
+    let shared_node = graph.add_asset(shared.clone(), false);
+    assets.insert("shared.js".to_string(), shared.clone());
+
+    let dep_left_shared = make_dependency(&left, "./left-shared.js", vec![("*", "*", true)]);
+    let dep_left_shared_node = graph.add_dependency(dep_left_shared.clone(), false);
+    graph.add_edge(&left_node, &dep_left_shared_node);
+    graph.add_edge(&dep_left_shared_node, &shared_node);
+    deps.insert("./left-shared.js".to_string(), dep_left_shared.clone());
+
+    let dep_right_shared = make_dependency(&right, "./right-shared.js", vec![("*", "*", true)]);
+    let dep_right_shared_node = graph.add_dependency(dep_right_shared.clone(), false);
+    graph.add_edge(&right_node, &dep_right_shared_node);
+    graph.add_edge(&dep_right_shared_node, &shared_node);
+    deps.insert("./right-shared.js".to_string(), dep_right_shared.clone());
+
+    // Process in order, simulating the real build
+    let mut tracker = SymbolTracker::default();
+    tracker
+      .track_symbols(&graph, &index, std::slice::from_ref(&dep_barrel))
+      .unwrap();
+    tracker
+      .track_symbols(&graph, &barrel, &[dep_left.clone(), dep_right.clone()])
+      .unwrap();
+    tracker
+      .track_symbols(&graph, &left, std::slice::from_ref(&dep_left_shared))
+      .unwrap();
+    tracker
+      .track_symbols(&graph, &right, std::slice::from_ref(&dep_right_shared))
+      .unwrap();
+    // First call: shared.js processed via left path
+    tracker.track_symbols(&graph, &shared, &[]).unwrap();
+    // Second call: replicate_existing_edges triggers track_symbols again for shared.js
+    // This simulates what happens when the right path connects to the already-processed shared.js
+    tracker.track_symbols(&graph, &shared, &[]).unwrap();
+
+    // Should still resolve correctly
+    let ctx = SymbolTrackerTestCtx {
+      tracker,
+      deps,
+      assets,
+    };
+    ctx.assert_symbol_resolved("./barrel.js", "foo", "shared.js", "foo");
+    ctx.assert_finalize_ok();
+  }
+
+  #[test]
+  fn track_symbols_handles_chained_star_reexports() {
+    // index.js imports {foo, bar} from barrel
+    // barrel.js: export * from './foo'; export * from './bar'
+    // foo.js: export * from './sub-foo'; export function topLevelFoo
+    // sub-foo.js: export function foo; export function unusedFoo
+    // bar.js: export const bar; export const unusedBar
+    let ctx = symbol_tracker_test! {
+      entry "index.js" provides [] {
+        dep "./barrel.js" imports [("$index$import$foo", "foo", false), ("$index$import$bar", "bar", false)]
+          from "barrel.js" provides [("*", "*", true)] {
+          dep "./foo.js" imports [("*", "*", true)]
+            from "foo.js" provides [("topLevelFoo", "topLevelFoo", false), ("*", "*", true)] {
+            dep "./sub-foo.js" imports [("*", "*", true)]
+              from "sub-foo.js" provides [("foo", "foo", false), ("unusedFoo", "unusedFoo", false)] {}
+          }
+          dep "./bar.js" imports [("*", "*", true)]
+            from "bar.js" provides [("bar", "bar", false), ("unusedBar", "unusedBar", false)] {}
+        }
+      }
+    };
+
+    ctx.assert_symbol_resolved("./barrel.js", "foo", "sub-foo.js", "foo");
+    ctx.assert_symbol_resolved("./barrel.js", "bar", "bar.js", "bar");
     ctx.assert_finalize_ok();
   }
 
@@ -1402,5 +1677,110 @@ mod tests {
     ctx.assert_symbol_resolved("./barrel.js", "nsFoo", "foo.js", "*");
     ctx.assert_symbol_resolved("./barrel.js", "nsBar", "bar.js", "*");
     ctx.assert_finalize_ok();
+  }
+
+  // ============================================================
+  // has_requested_symbols unit tests
+  //
+  // NOTE: Manual construction required — these test SymbolTracker
+  // internals directly without an asset graph.
+  // ============================================================
+
+  #[test]
+  fn has_requested_symbols_returns_false_for_unknown_dep() {
+    let tracker = SymbolTracker::default();
+    assert!(!tracker.has_requested_symbols(&"nonexistent".to_string()));
+  }
+
+  #[test]
+  fn has_requested_symbols_returns_false_for_empty_requirements() {
+    let mut tracker = SymbolTracker::default();
+    tracker
+      .requirements_by_dep
+      .insert("dep1".to_string(), Vec::new());
+    assert!(!tracker.has_requested_symbols(&"dep1".to_string()));
+  }
+
+  #[test]
+  fn has_requested_symbols_returns_true_when_requirements_exist() {
+    let mut tracker = SymbolTracker::default();
+    tracker.add_required_symbol(
+      "dep1",
+      SymbolRequirement {
+        symbol: Symbol {
+          exported: "foo".to_string(),
+          local: "foo".to_string(),
+          ..Default::default()
+        },
+        final_location: None,
+        speculation_group_id: None,
+      },
+    );
+    assert!(tracker.has_requested_symbols(&"dep1".to_string()));
+  }
+
+  // NOTE: Manual graph construction required — this test intentionally leaves a
+  // dependency without a resolved asset to test un-deferral signaling, which the
+  // macro cannot express (it always creates an asset for each dependency).
+  #[test]
+  fn track_symbols_returns_undeferred_for_unresolved_deps() {
+    // Build a graph where index.js imports "a" from ./a.js,
+    // but ./a.js has NO resolved asset (no outgoing edge from dep node).
+    // track_symbols should signal that this dep needs un-deferral.
+    let mut graph = AssetGraph::new();
+
+    let entry_dep = make_entry_dependency();
+    let entry_dep_node = graph.add_entry_dependency(entry_dep, false);
+
+    let entry_asset = make_asset("index.js", vec![]);
+    let entry_asset_node = graph.add_asset(entry_asset.clone(), false);
+    graph.add_edge(&entry_dep_node, &entry_asset_node);
+
+    // Create dep to a.js but do NOT add an asset for it (unresolved)
+    let dep_a = make_dependency(&entry_asset, "./a.js", vec![("a", "a", false)]);
+    let dep_a_node = graph.add_dependency(dep_a.clone(), false);
+    graph.add_edge(&entry_asset_node, &dep_a_node);
+
+    let mut tracker = SymbolTracker::default();
+    let undeferred = tracker
+      .track_symbols(&graph, &entry_asset, std::slice::from_ref(&dep_a))
+      .unwrap();
+
+    assert_eq!(undeferred, vec![dep_a.id()]);
+  }
+
+  #[test]
+  fn track_symbols_does_not_undefer_resolved_deps() {
+    // Build a graph where index.js imports "a" from ./a.js,
+    // and ./a.js IS resolved (has an outgoing edge to an asset).
+    // track_symbols should NOT signal un-deferral.
+    let ctx = symbol_tracker_test! {
+      entry "index.js" provides [] {
+        dep "./a.js" imports [("a", "a", false)] from "a.js" provides [("a", "a", false)] {}
+      }
+    };
+
+    // The macro resolves deps, so un-deferral should not be signaled.
+    // Verify by checking that the symbol was resolved (meaning the dep was
+    // already connected to a resolved asset, so no un-deferral needed).
+    ctx.assert_symbol_resolved("./a.js", "a", "a.js", "a");
+  }
+
+  #[test]
+  fn track_symbols_does_not_undefer_deps_without_requirements() {
+    // A dep with no symbols (e.g., side-effect import `import './setup'`)
+    // should never be un-deferred by the symbol tracker.
+    let ctx = symbol_tracker_test! {
+      entry "index.js" provides [] {
+        dep "./setup.js" imports [] from "setup.js" provides [] {}
+      }
+    };
+
+    // With no symbols imported, no requirements should exist
+    let dep = ctx.deps.get("./setup.js").unwrap();
+    assert!(
+      !ctx.tracker.has_requested_symbols(&dep.id),
+      "Should not have requested symbols for a side-effect import"
+    );
   }
 }

@@ -74,9 +74,14 @@ impl ReduceInitial {
   }
 
   fn resolve_initial_support(&self, ctx: &TransformContext<'_>) -> bool {
-    self
-      .initial_support
-      .unwrap_or_else(|| detect_initial_support(ctx.options.browserslist_config_path.as_deref()))
+    // When explicitly set (e.g. in tests), use that.
+    if let Some(b) = self.initial_support {
+      return b;
+    }
+    detect_initial_support(
+      ctx.options.browserslist_config_path.as_deref(),
+      ctx.options.browserslist_env.as_deref(),
+    )
   }
 
   fn process_stylesheet(&self, stylesheet: &mut Stylesheet, initial_support: bool) {
@@ -183,28 +188,39 @@ pub fn reduce_initial() -> ReduceInitial {
   ReduceInitial::new()
 }
 
-fn detect_initial_support(config_path: Option<&Path>) -> bool {
+fn detect_initial_support(config_path: Option<&Path>, env: Option<&str>) -> bool {
   let mut opts = Opts::default();
   if let Some(path) = config_path {
     opts.path = Some(path.to_string_lossy().into_owned());
   }
+  opts.env = env.map(String::from);
 
+  // When browserslist resolution fails or is missing, default to false (do NOT
+  // convert longhand values to `initial`) to match Babel's postcss-reduce-initial
+  // output. Both JS browserslist and oxc_browserslist defaults include browsers
+  // that don't support `css-initial-value` (e.g., Opera Mini, UC Browser), so
+  // `isSupported('css-initial-value', defaults)` returns false in Babel too.
   execute(&opts)
     .map(|entries| {
+      if entries.is_empty() {
+        return false;
+      }
       entries.into_iter().all(|entry| {
         let browser = entry.name().to_ascii_lowercase();
         let version = entry.version().to_ascii_lowercase();
         css_initial_supported(&browser, &version)
       })
     })
-    .unwrap_or(true)
+    .unwrap_or(false)
 }
 
 fn css_initial_supported(browser: &str, version: &str) -> bool {
+  // Unknown browsers (not in our stats) are treated as not supporting the initial
+  // keyword so we expand to longhand values and match Babel/postcss-reduce-initial.
   CSS_INITIAL_VALUE_SUPPORT
     .get(browser)
     .map(|versions| versions.contains(version))
-    .unwrap_or(true)
+    .unwrap_or(false)
 }
 
 #[cfg(test)]

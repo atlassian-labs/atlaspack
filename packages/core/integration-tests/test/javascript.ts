@@ -4682,6 +4682,7 @@ describe('javascript', function () {
         name: 'BuildError',
         diagnostics: [
           {
+            name: 'SyntaxError',
             origin: '@atlaspack/transformer-js',
             message: 'Unexpected token `}`. Expected identifier',
             hints: null,

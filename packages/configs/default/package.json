@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/config-default",
-  "version": "16.0.0",
+  "version": "19.0.2",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
   "publishConfig": {

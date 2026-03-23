@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/reporter-compiled-css-in-js-migration-map",
-  "version": "0.0.17",
+  "version": "0.0.22",
   "license": "MIT",
   "publishConfig": {
     "access": "public"

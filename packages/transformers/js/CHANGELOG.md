@@ -1,5 +1,87 @@
 # @atlaspack/transformer-js
 
+## 19.0.2
+
+### Patch Changes
+
+- Updated dependencies [[`7d1839c`](https://github.com/atlassian-labs/atlaspack/commit/7d1839cc7cf0225dd35afecb68109a11fd931f2b)]:
+  - @atlaspack/rust@3.28.0
+  - @atlaspack/core@2.38.2
+  - @atlaspack/source-map@3.3.4
+  - @atlaspack/utils@3.4.2
+  - @atlaspack/workers@2.14.60
+  - @atlaspack/plugin@2.14.60
+
+## 19.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`a958853`](https://github.com/atlassian-labs/atlaspack/commit/a958853ae3de2812bfd032357e9fa7cab6a1ddb6), [`0f5c1ef`](https://github.com/atlassian-labs/atlaspack/commit/0f5c1eff9138728168231efa66202a8d844c33ef), [`1c767e4`](https://github.com/atlassian-labs/atlaspack/commit/1c767e4907664dd490a56276d6562f79dbeea3fb)]:
+  - @atlaspack/rust@3.27.0
+  - @atlaspack/core@2.38.1
+  - @atlaspack/source-map@3.3.3
+  - @atlaspack/utils@3.4.1
+  - @atlaspack/workers@2.14.59
+  - @atlaspack/plugin@2.14.59
+
+## 19.0.0
+
+### Minor Changes
+
+- [#1057](https://github.com/atlassian-labs/atlaspack/pull/1057) [`939d5bd`](https://github.com/atlassian-labs/atlaspack/commit/939d5bd41b3bcb5508f58ca41165d48122762e26) Thanks [@marcins](https://github.com/marcins)! - Set `SyntaxError` as the diagnostic name for parse/syntax errors from the JS and Tokens transformers.
+
+  Parse and syntax errors from the JS Transformer and Tokens Transformer now set `diagnostic.name` to `"SyntaxError"`, so consumers can reliably detect syntax/parse failures (e.g. for reporting or error handling). The Rust diagnostic type and NAPI `JsDiagnostic` include an optional `name` field; `error_buffer_to_diagnostics` sets it to `"SyntaxError"` for SWC parse errors, and both transformers pass it through to the thrown diagnostic. Integration tests assert that the first diagnostic has `name === 'SyntaxError'` for tokens and JS parse-error cases.
+
+### Patch Changes
+
+- [#1058](https://github.com/atlassian-labs/atlaspack/pull/1058) [`ea9730d`](https://github.com/atlassian-labs/atlaspack/commit/ea9730dd953d0512c2ab97cbba810e7a297a29a6) Thanks [@JakeLane](https://github.com/JakeLane)! - Improve SWC compiled CSS-in-JS browserslist resolution, behaviour correctness, and diagnostics.
+  - Add `browserslistEnv` config option so autoprefixer and cssnano plugins resolve
+    the correct browserslist environment (e.g. "development" vs "production"),
+    matching Babel's behavior.
+  - Cache resolved `@compiled/css` package path per-process to avoid repeated
+    filesystem walks. This is required to align with postcss browserlist resolution behaviour.
+  - Detect sheet identifier collisions with existing module bindings and emit
+    diagnostics to prevent "sheet.includes is not a function" runtime errors.
+  - Validate sheet content is a non-empty CSS rule string.
+  - Add vendor autoprefixer support for mask-composite, appearance, and
+    general selector pseudo-class variants (e.g. :read-only, :read-write).
+  - Add cssnano normalize plugins: discard-comments, minify-gradients,
+    normalize-timing-functions, and calc reduction.
+
+- Updated dependencies [[`ffa1e42`](https://github.com/atlassian-labs/atlaspack/commit/ffa1e4276c22cc48b6be45ac81df8adde85f2237), [`ea9730d`](https://github.com/atlassian-labs/atlaspack/commit/ea9730dd953d0512c2ab97cbba810e7a297a29a6), [`939d5bd`](https://github.com/atlassian-labs/atlaspack/commit/939d5bd41b3bcb5508f58ca41165d48122762e26), [`71981ea`](https://github.com/atlassian-labs/atlaspack/commit/71981eac258f7e6dfb40ec4b202d194f71c64ff1), [`0bb5830`](https://github.com/atlassian-labs/atlaspack/commit/0bb5830d1a7800e673f21ab020cd86bef873df9c), [`cba96b1`](https://github.com/atlassian-labs/atlaspack/commit/cba96b1a15c07703ee104bf2a2888cc715575cbd)]:
+  - @atlaspack/core@2.38.0
+  - @atlaspack/rust@3.26.0
+  - @atlaspack/utils@3.4.0
+  - @atlaspack/source-map@3.3.2
+  - @atlaspack/plugin@2.14.58
+  - @atlaspack/workers@2.14.58
+
+## 18.0.0
+
+### Patch Changes
+
+- Updated dependencies [[`c80be61`](https://github.com/atlassian-labs/atlaspack/commit/c80be618e42014208fed60b7a2dccc2e47d53aed), [`2d3c616`](https://github.com/atlassian-labs/atlaspack/commit/2d3c616bb2ebef55d6850e8ca9eedf13c72f5386)]:
+  - @atlaspack/feature-flags@2.31.0
+  - @atlaspack/core@2.37.0
+  - @atlaspack/rust@3.25.0
+  - @atlaspack/build-cache@2.13.14
+  - @atlaspack/utils@3.3.9
+  - @atlaspack/source-map@3.3.1
+  - @atlaspack/workers@2.14.57
+  - @atlaspack/plugin@2.14.57
+
+## 17.0.0
+
+### Patch Changes
+
+- Updated dependencies [[`f7878b2`](https://github.com/atlassian-labs/atlaspack/commit/f7878b2f19a0a3bbd0e79d0b4a4e1479646043b7), [`22bb49c`](https://github.com/atlassian-labs/atlaspack/commit/22bb49c5708798d259f98c8b5c10850b2f4f5f1b), [`bddd21a`](https://github.com/atlassian-labs/atlaspack/commit/bddd21a5313974ca333c02b2da1c6f85d1afaaea), [`de388ff`](https://github.com/atlassian-labs/atlaspack/commit/de388ff76d39dece97ad475fcccdb6efb6283bfc)]:
+  - @atlaspack/rust@3.24.1
+  - @atlaspack/core@2.36.0
+  - @atlaspack/source-map@3.3.0
+  - @atlaspack/utils@3.3.8
+  - @atlaspack/workers@2.14.56
+  - @atlaspack/plugin@2.14.56
+
 ## 16.0.0
 
 ### Patch Changes

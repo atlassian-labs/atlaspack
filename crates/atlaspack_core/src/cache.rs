@@ -17,6 +17,8 @@ pub trait Cache {
 
   /// Get a large blob from the filesystem cache.
   fn get_large_blob(&self, key: &str) -> anyhow::Result<Vec<u8>>;
+
+  fn get(&self, key: &str) -> anyhow::Result<Vec<u8>>;
 }
 
 /// Convert a cache key to a safe filesystem path.
@@ -65,5 +67,9 @@ impl Cache for FsCache {
   fn get_large_blob(&self, key: &str) -> anyhow::Result<Vec<u8>> {
     let file_path = get_file_key(&self.cache_dir, key);
     Ok(fs::read(&file_path)?)
+  }
+
+  fn get(&self, _key: &str) -> anyhow::Result<Vec<u8>> {
+    Err(anyhow::anyhow!("Not implemented"))
   }
 }

@@ -6,8 +6,7 @@ import path from 'path';
 import clone from 'clone';
 import json5 from 'json5';
 import {parse as toml} from '@iarna/toml';
-// @ts-expect-error TS7016
-import LRU from 'lru-cache';
+import {LRUCache as LRU} from 'lru-cache';
 
 export type ConfigOutput = {
   config: ConfigResult;
@@ -95,7 +94,7 @@ export async function loadConfig(
 }
 
 loadConfig.clear = () => {
-  configCache.reset();
+  configCache.clear();
   resolveCache.clear();
 };
 

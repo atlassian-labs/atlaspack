@@ -1,3 +1,6 @@
+use atlaspack_core::database::DatabaseRef;
+#[cfg(test)]
+use atlaspack_core::database::InMemoryDatabase;
 use atlaspack_memoization_cache::CacheHandler;
 use atlaspack_memoization_cache::CacheHandlerTrait;
 use atlaspack_memoization_cache::InMemoryReaderWriter;
@@ -74,6 +77,8 @@ pub struct RunRequestMessage {
 
 type RunRequestFn = Box<dyn Fn(RunRequestMessage) + Send + Sync>;
 
+pub type ReportFn = Arc<dyn Fn(atlaspack_core::build_progress::BuildProgressEvent) + Send + Sync>;
+
 /// A future that represents an executing request
 pub struct ExecuteRequestFuture {
   queue_result: anyhow::Result<()>,
@@ -104,6 +109,7 @@ impl Future for ExecuteRequestFuture {
 /// We want to avoid exposing internals of the request tracker to the implementations so that we
 /// can change this.
 pub struct RunRequestContext {
+  pub db: DatabaseRef,
   config_loader: ConfigLoaderRef,
   file_system: FileSystemRef,
   pub cache: CacheRef,
@@ -112,6 +118,7 @@ pub struct RunRequestContext {
   plugins: PluginsRef,
   pub project_root: PathBuf,
   run_request_fn: RunRequestFn,
+  report_fn: Option<ReportFn>,
 }
 
 impl RunRequestContext {
@@ -130,6 +137,7 @@ impl RunRequestContext {
     });
 
     Self {
+      db: Arc::new(InMemoryDatabase::default()),
       cache: Arc::new(DynCacheHandler::InMemory(CacheHandler::new(
         InMemoryReaderWriter::default(),
         CacheMode::Off,
@@ -141,6 +149,7 @@ impl RunRequestContext {
       plugins,
       project_root: PathBuf::default(),
       run_request_fn: Box::new(|_| {}),
+      report_fn: None,
     }
   }
 }
@@ -148,6 +157,7 @@ impl RunRequestContext {
 impl RunRequestContext {
   #[allow(clippy::too_many_arguments)]
   pub(crate) fn new(
+    db: DatabaseRef,
     config_loader: ConfigLoaderRef,
     file_system: FileSystemRef,
     options: Arc<AtlaspackOptions>,
@@ -156,8 +166,10 @@ impl RunRequestContext {
     project_root: PathBuf,
     cache: CacheRef,
     run_request_fn: RunRequestFn,
+    report_fn: Option<ReportFn>,
   ) -> Self {
     Self {
+      db,
       cache,
       config_loader,
       file_system,
@@ -166,8 +178,16 @@ impl RunRequestContext {
       plugins,
       project_root,
       run_request_fn,
+      report_fn,
     }
   }
+
+  pub fn report(&self, event: atlaspack_core::build_progress::BuildProgressEvent) {
+    if let Some(report_fn) = &self.report_fn {
+      report_fn(event);
+    }
+  }
+
   /// Run a child request to the current request
   pub fn queue_request(
     &mut self,
@@ -228,6 +248,14 @@ pub trait Request: DynHash + Send + Sync + Debug + 'static {
     std::any::type_name::<Self>().hash(&mut hasher);
     self.dyn_hash(&mut hasher);
     hasher.finish()
+  }
+
+  /// Returns a short, stable name for this request type used in tracing and diagnostics.
+  ///
+  /// The default implementation uses [`std::any::type_name`], which returns the fully-qualified
+  /// Rust path. Override this to return a shorter, more readable name.
+  fn request_type(&self) -> &'static str {
+    std::any::type_name::<Self>()
   }
 
   async fn run(

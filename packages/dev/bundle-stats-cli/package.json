@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/bundle-stats",
-  "version": "2.14.56",
+  "version": "2.14.61",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -27,12 +27,12 @@
     "@atlaspack/query": "workspace:*",
     "@atlaspack/reporter-bundle-stats": "workspace:*",
     "@atlaspack/utils": "workspace:*",
-    "commander": "^7.0.0"
+    "commander": "^8.3.0"
   },
   "devDependencies": {
     "@atlaspack/babel-register": "workspace:*",
     "@atlaspack/types": "workspace:*",
-    "rimraf": "^5.0.5"
+    "rimraf": "^3.0.2"
   },
   "type": "commonjs"
 }

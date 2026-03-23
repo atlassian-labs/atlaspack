@@ -40,23 +40,23 @@ program
       const resolvedCacheDir = path.resolve(process.cwd(), cacheDir);
       const outputDir = path.resolve(process.cwd(), options.output);
 
-      // Build bundle filter if specified
-      let bundleFilter: ((bundle: any) => boolean) | undefined;
-      if (options.bundleType || options.bundleName) {
-        bundleFilter = (bundle: any) => {
-          if (options.bundleType && bundle.type !== options.bundleType) {
-            return false;
-          }
-          if (options.bundleName) {
-            if (!bundle.name || !bundle.name.startsWith(options.bundleName)) {
+      try {
+        // Build bundle filter if specified
+        let bundleFilter: ((bundle: any) => boolean) | undefined;
+        if (options.bundleType || options.bundleName) {
+          bundleFilter = (bundle: any) => {
+            if (options.bundleType && bundle.type !== options.bundleType) {
               return false;
             }
-          }
-          return true;
-        };
-      }
+            if (options.bundleName) {
+              if (!bundle.name || !bundle.name.startsWith(options.bundleName)) {
+                return false;
+              }
+            }
+            return true;
+          };
+        }
 
-      try {
         const result = await runPackagingTest({
           cacheDir: resolvedCacheDir,
           outputDir,

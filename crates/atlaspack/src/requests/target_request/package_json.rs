@@ -88,7 +88,7 @@ where
   let browser = Option::<BrowserField>::deserialize(deserializer)?;
 
   if let Some(browser_field) = browser.as_ref() {
-    let allowed_extensions = vec!["cjs", "js", "mjs"];
+    let allowed_extensions = vec!["cjs", "js", "mjs", "ts", "tsx"];
 
     match browser_field {
       BrowserField::EntryPoint(dist) => {
@@ -152,7 +152,11 @@ fn main_field<'de, D>(deserializer: D) -> Result<Option<PathBuf>, D::Error>
 where
   D: Deserializer<'de>,
 {
-  parse_builtin_dist(deserializer, "main", vec!["cjs", "mjs", "js", "jsx"])
+  parse_builtin_dist(
+    deserializer,
+    "main",
+    vec!["cjs", "mjs", "js", "jsx", "ts", "tsx"],
+  )
 }
 
 fn main_target<'de, D>(deserializer: D) -> Result<Option<BuiltInTargetDescriptor>, D::Error>
@@ -166,7 +170,7 @@ fn module_field<'de, D>(deserializer: D) -> Result<Option<PathBuf>, D::Error>
 where
   D: Deserializer<'de>,
 {
-  parse_builtin_dist(deserializer, "module", vec!["js", "mjs"])
+  parse_builtin_dist(deserializer, "module", vec!["js", "mjs", "ts", "tsx"])
 }
 
 fn module_target<'de, D>(deserializer: D) -> Result<Option<BuiltInTargetDescriptor>, D::Error>

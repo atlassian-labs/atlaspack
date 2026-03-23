@@ -722,10 +722,16 @@ pub fn build_styled_component(
 
   let runtime_call = build_runtime_call(helper, class_array);
 
+  // COMPAT(AFB-1871): Filter out empty/invalid sheets before hoisting. When all
+  // property values in a styled component are dynamic (CSS variables), the
+  // unconditional CSS can be skeletal (e.g. ";&:hover { ; }") which transform_css
+  // atomifies into an empty string. These empty sheets must not be hoisted as they
+  // cause "sheet.includes is not a function" at runtime.
   let sheets: Vec<String> = css_result
     .sheets
     .into_iter()
     .chain(conditional_output.sheets.into_iter())
+    .filter(|s| !s.trim().is_empty() && s.contains('{'))
     .collect();
   let cs_child = build_cs_element(sheets, meta, nonce.as_ref());
 
@@ -844,176 +850,182 @@ mod tests {
 
   #[test]
   fn builds_forward_ref_structure() {
-    let _guard = ENV_MUTEX.lock().unwrap();
-    unsafe {
-      std::env::set_var("NODE_ENV", "test");
-      std::env::remove_var("BABEL_ENV");
-    }
-
-    let meta = metadata();
-    let tag = Tag {
-      name: "div".into(),
-      tag_type: TagType::InBuiltComponent,
-    };
-    let expr = build_styled_component(tag, css_output(), &meta, None);
-
-    match expr {
-      Expr::Call(call) => {
-        assert_eq!(call.args.len(), 1);
-        match &*call.args[0].expr {
-          Expr::Arrow(arrow) => match &*arrow.body {
-            BlockStmtOrExpr::BlockStmt(block) => {
-              assert!(matches!(block.stmts[0], Stmt::If(_)));
-              assert!(matches!(block.stmts.last(), Some(Stmt::Return(_))));
-            }
-            _ => panic!("expected block statement"),
-          },
-          _ => panic!("expected arrow expression"),
-        }
+    crate::test_utils::with_globals(|| {
+      let _guard = ENV_MUTEX.lock().unwrap();
+      unsafe {
+        std::env::set_var("NODE_ENV", "test");
+        std::env::remove_var("BABEL_ENV");
       }
-      _ => panic!("expected call expression"),
-    }
+
+      let meta = metadata();
+      let tag = Tag {
+        name: "div".into(),
+        tag_type: TagType::InBuiltComponent,
+      };
+      let expr = build_styled_component(tag, css_output(), &meta, None);
+
+      match expr {
+        Expr::Call(call) => {
+          assert_eq!(call.args.len(), 1);
+          match &*call.args[0].expr {
+            Expr::Arrow(arrow) => match &*arrow.body {
+              BlockStmtOrExpr::BlockStmt(block) => {
+                assert!(matches!(block.stmts[0], Stmt::If(_)));
+                assert!(matches!(block.stmts.last(), Some(Stmt::Return(_))));
+              }
+              _ => panic!("expected block statement"),
+            },
+            _ => panic!("expected arrow expression"),
+          }
+        }
+        _ => panic!("expected call expression"),
+      }
+    });
   }
 
   #[test]
   fn destructures_invalid_dom_props() {
-    let meta = metadata();
-    let parent_expr = Expr::Array(ArrayLit {
-      span: DUMMY_SP,
-      elems: vec![
-        Some(ExprOrSpread {
-          spread: None,
-          expr: Box::new(member_expression(PROPS_IDENTIFIER_NAME, "children")),
-        }),
-        Some(ExprOrSpread {
-          spread: None,
-          expr: Box::new(member_expression(PROPS_IDENTIFIER_NAME, "textSize")),
-        }),
-      ],
-    });
-    let meta = meta.with_parent_expr(Some(&parent_expr));
+    crate::test_utils::with_globals(|| {
+      let meta = metadata();
+      let parent_expr = Expr::Array(ArrayLit {
+        span: DUMMY_SP,
+        elems: vec![
+          Some(ExprOrSpread {
+            spread: None,
+            expr: Box::new(member_expression(PROPS_IDENTIFIER_NAME, "children")),
+          }),
+          Some(ExprOrSpread {
+            spread: None,
+            expr: Box::new(member_expression(PROPS_IDENTIFIER_NAME, "textSize")),
+          }),
+        ],
+      });
+      let meta = meta.with_parent_expr(Some(&parent_expr));
 
-    let tag = Tag {
-      name: "div".into(),
-      tag_type: TagType::InBuiltComponent,
-    };
-    let expr = build_styled_component(tag, css_output(), &meta, None);
+      let tag = Tag {
+        name: "div".into(),
+        tag_type: TagType::InBuiltComponent,
+      };
+      let expr = build_styled_component(tag, css_output(), &meta, None);
 
-    if let Expr::Call(call) = expr {
-      if let Expr::Arrow(arrow) = &*call.args[0].expr {
-        if let BlockStmtOrExpr::BlockStmt(block) = &*arrow.body {
-          assert!(block.stmts.iter().any(|stmt| matches!(stmt, Stmt::Decl(_))));
+      if let Expr::Call(call) = expr {
+        if let Expr::Arrow(arrow) = &*call.args[0].expr {
+          if let BlockStmtOrExpr::BlockStmt(block) = &*arrow.body {
+            assert!(block.stmts.iter().any(|stmt| matches!(stmt, Stmt::Decl(_))));
+          }
         }
       }
-    }
+    });
   }
 
   #[test]
   fn injects_component_name_when_enabled() {
-    let _guard = ENV_MUTEX.lock().unwrap();
-    unsafe {
-      std::env::set_var("NODE_ENV", "development");
-      std::env::remove_var("BABEL_ENV");
-    }
+    crate::test_utils::with_globals(|| {
+      let _guard = ENV_MUTEX.lock().unwrap();
+      unsafe {
+        std::env::set_var("NODE_ENV", "development");
+        std::env::remove_var("BABEL_ENV");
+      }
 
-    let meta = metadata();
-    {
-      let mut state = meta.state_mut();
-      state.opts.add_component_name = Some(true);
-    }
+      let meta = metadata();
+      {
+        let mut state = meta.state_mut();
+        state.opts.add_component_name = Some(true);
+      }
 
-    let source_map = {
-      let state = meta.state();
-      state.file().source_map.clone()
-    };
-    let file = source_map.new_source_file(
-      FileName::Custom("component.tsx".into()).into(),
-      "const FooBar = styled.div``;".to_string(),
-    );
-    let start = file.start_pos + BytePos(6);
-    let span = Span::new(start, start + BytePos(6));
-    let meta = meta.with_parent_span(Some(span));
+      let source_map = {
+        let state = meta.state();
+        state.file().source_map.clone()
+      };
+      let file = source_map.new_source_file(
+        FileName::Custom("component.tsx".into()).into(),
+        "const FooBar = styled.div``;".to_string(),
+      );
+      let start = file.start_pos + BytePos(6);
+      let span = Span::new(start, start + BytePos(6));
+      let meta = meta.with_parent_span(Some(span));
 
-    let tag = Tag {
-      name: "div".into(),
-      tag_type: TagType::InBuiltComponent,
-    };
-    let expr = build_styled_component(tag, css_output(), &meta, Some("FooBar"));
+      let tag = Tag {
+        name: "div".into(),
+        tag_type: TagType::InBuiltComponent,
+      };
+      let expr = build_styled_component(tag, css_output(), &meta, Some("FooBar"));
 
-    let call = match expr {
-      Expr::Call(call) => call,
-      other => panic!("expected call expression, received {other:?}"),
-    };
-    let arrow = match &*call.args[0].expr {
-      Expr::Arrow(arrow) => arrow,
-      other => panic!("expected arrow expression, received {other:?}"),
-    };
-    let block = match &*arrow.body {
-      BlockStmtOrExpr::BlockStmt(block) => block,
-      other => panic!("expected block statement, received {other:?}"),
-    };
-    let return_stmt = block
-      .stmts
-      .iter()
-      .find_map(|stmt| match stmt {
-        Stmt::Return(ret) => Some(ret),
-        _ => None,
-      })
-      .expect("expected return statement");
-    let element = match return_stmt.arg.as_ref().expect("return value").as_ref() {
-      Expr::JSXElement(element) => element,
-      other => panic!("expected JSX element, received {other:?}"),
-    };
+      let call = match expr {
+        Expr::Call(call) => call,
+        other => panic!("expected call expression, received {other:?}"),
+      };
+      let arrow = match &*call.args[0].expr {
+        Expr::Arrow(arrow) => arrow,
+        other => panic!("expected arrow expression, received {other:?}"),
+      };
+      let block = match &*arrow.body {
+        BlockStmtOrExpr::BlockStmt(block) => block,
+        other => panic!("expected block statement, received {other:?}"),
+      };
+      let return_stmt = block
+        .stmts
+        .iter()
+        .find_map(|stmt| match stmt {
+          Stmt::Return(ret) => Some(ret),
+          _ => None,
+        })
+        .expect("expected return statement");
+      let element = match return_stmt.arg.as_ref().expect("return value").as_ref() {
+        Expr::JSXElement(element) => element,
+        other => panic!("expected JSX element, received {other:?}"),
+      };
 
-    let class_attr = element
-            .children
-            .iter()
-            .filter_map(|child| match child {
-                JSXElementChild::JSXElement(element) => Some(element),
-                _ => None,
-            })
-            .find(|child| matches!(child.opening.name, JSXElementName::Ident(ref ident) if ident.sym.as_ref() == "C"))
-            .and_then(|child| {
-                child.opening.attrs.iter().find_map(|attr| match attr {
-                    JSXAttrOrSpread::JSXAttr(attr)
-                        if matches!(attr.name, JSXAttrName::Ident(ref name) if name.sym.as_ref() == "className") =>
-                    {
-                        attr.value.as_ref()
-                    }
-                    _ => None,
-                })
-            })
-            .expect("expected className attribute");
+      let class_attr = element
+              .children
+              .iter()
+              .filter_map(|child| match child {
+                  JSXElementChild::JSXElement(element) => Some(element),
+                  _ => None,
+              })
+              .find(|child| matches!(child.opening.name, JSXElementName::Ident(ref ident) if ident.sym.as_ref() == "C"))
+              .and_then(|child| {
+                  child.opening.attrs.iter().find_map(|attr| match attr {
+                      JSXAttrOrSpread::JSXAttr(attr)
+                          if matches!(attr.name, JSXAttrName::Ident(ref name) if name.sym.as_ref() == "className") =>
+                      {
+                          attr.value.as_ref()
+                      }
+                      _ => None,
+                  })
+              })
+              .expect("expected className attribute");
 
-    let container = match class_attr {
-      JSXAttrValue::JSXExprContainer(container) => container,
-      other => panic!("expected JSX expression container, received {other:?}"),
-    };
-    let runtime_call = match &container.expr {
-      JSXExpr::Expr(expr) => expr.as_ref(),
-      other => panic!("expected expression, received {other:?}"),
-    };
-    let call = match runtime_call {
-      Expr::Call(call) => call,
-      other => panic!("expected runtime call, received {other:?}"),
-    };
-    let class_array = match &*call.args[0].expr {
-      Expr::Array(array) => array,
-      other => panic!("expected class array, received {other:?}"),
-    };
-    let first = class_array
-      .elems
-      .first()
-      .and_then(|elem| elem.as_ref())
-      .expect("expected first class entry");
+      let container = match class_attr {
+        JSXAttrValue::JSXExprContainer(container) => container,
+        other => panic!("expected JSX expression container, received {other:?}"),
+      };
+      let runtime_call = match &container.expr {
+        JSXExpr::Expr(expr) => expr.as_ref(),
+        other => panic!("expected expression, received {other:?}"),
+      };
+      let call = match runtime_call {
+        Expr::Call(call) => call,
+        other => panic!("expected runtime call, received {other:?}"),
+      };
+      let class_array = match &*call.args[0].expr {
+        Expr::Array(array) => array,
+        other => panic!("expected class array, received {other:?}"),
+      };
+      let first = class_array
+        .elems
+        .first()
+        .and_then(|elem| elem.as_ref())
+        .expect("expected first class entry");
 
-    match first.expr.as_ref() {
-      Expr::Lit(Lit::Str(str_lit)) => assert_eq!(str_lit.value.as_ref(), "c_FooBar"),
-      other => panic!("expected string literal, received {other:?}"),
-    }
+      match first.expr.as_ref() {
+        Expr::Lit(Lit::Str(str_lit)) => assert_eq!(str_lit.value.as_ref(), "c_FooBar"),
+        other => panic!("expected string literal, received {other:?}"),
+      }
 
-    unsafe {
-      std::env::remove_var("NODE_ENV");
-    }
+      unsafe {
+        std::env::remove_var("NODE_ENV");
+      }
+    });
   }
 }

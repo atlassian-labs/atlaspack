@@ -295,6 +295,7 @@ dependencies = [
  "atlaspack_filesystem",
  "atlaspack_memoization_cache",
  "atlaspack_package_manager",
+ "atlaspack_packager_css",
  "atlaspack_packager_js",
  "atlaspack_plugin_resolver",
  "atlaspack_plugin_rpc",
@@ -489,8 +490,15 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "atlaspack_core",
+ "criterion",
+ "fixedbitset",
  "petgraph",
+ "pretty_assertions",
+ "rand 0.8.5",
+ "serde",
  "serde_json",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -551,6 +559,7 @@ dependencies = [
  "dyn-hash",
  "mockall",
  "nodejs-semver",
+ "parking_lot",
  "petgraph",
  "pretty_assertions",
  "rayon",
@@ -671,11 +680,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "atlaspack_packager_css"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "atlaspack_core",
+ "base64",
+ "lightningcss",
+ "mockall",
+ "parking_lot",
+ "pathdiff",
+ "pretty_assertions",
+ "rayon",
+]
+
+[[package]]
 name = "atlaspack_packager_js"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "atlaspack_core",
+ "atlaspack_memoization_cache",
  "glob",
  "lmdb-js-lite",
  "oxc_allocator",

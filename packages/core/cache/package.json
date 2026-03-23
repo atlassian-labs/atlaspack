@@ -1,7 +1,7 @@
 {
   "name": "@atlaspack/cache",
   "description": "Interface for defining caches and file-system, IDB and LMDB implementations.",
-  "version": "3.2.50",
+  "version": "3.2.55",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
   "publishConfig": {
@@ -31,7 +31,7 @@
     "ncp": "^2.0.0"
   },
   "devDependencies": {
-    "idb": "^5.0.8"
+    "idb": "^8.0.0"
   },
   "browser": {
     "./src/IDBCache.js": "./src/IDBCache.browser.js"

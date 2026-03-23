@@ -21,11 +21,14 @@ use tokio::runtime::Runtime;
 use tokio::sync::RwLock;
 
 use crate::WatchEvents;
+use crate::database::LmdbDatabase;
 use crate::plugins::{PluginsRef, config_plugins::ConfigPlugins};
 use crate::project_root::infer_project_root;
+use crate::request_tracker::ReportFn;
 use crate::request_tracker::{DynCacheHandler, RequestNode, RequestTracker};
 use crate::requests::{
-  AssetGraphRequest, BundleGraphRequest, BundleGraphRequestOutput, RequestResult,
+  AssetGraphRequest, BuildRequest, BuildRequestOutput, BundleGraphRequest,
+  BundleGraphRequestOutput, RequestResult,
 };
 use atlaspack_core::debug_tools::DebugTools;
 pub struct AtlaspackInitOptions {
@@ -49,8 +52,9 @@ pub struct Atlaspack {
   pub request_tracker: Arc<RwLock<RequestTracker>>,
   /// The bundle graph deserialised from JS. Used temporarily until we have a native
   /// bundle graph implementation. Starts empty and is populated via `load_bundle_graph`.
-  /// Uses non-async RwLock so the packager (and any Rayon threads) can take a read lock when needed.
-  pub bundle_graph: Arc<parking_lot::RwLock<BundleGraphFromJs>>,
+  /// Writers (load_bundle_graph, update_bundle_graph) replace the inner Arc under a Mutex;
+  /// readers (package) cheaply clone the Arc without locking.
+  pub bundle_graph: parking_lot::Mutex<Arc<BundleGraphFromJs>>,
   pub debug_tools: DebugTools,
 }
 
@@ -156,6 +160,7 @@ impl Atlaspack {
     };
 
     let request_tracker = RequestTracker::new(
+      Arc::new(LmdbDatabase(db.clone())),
       config_loader.clone(),
       fs.clone(),
       Arc::new(resolved_options.clone()),
@@ -165,6 +170,7 @@ impl Atlaspack {
         LmdbCacheReaderWriter::new(db.clone()),
         cache_mode,
       ))),
+      None,
     );
 
     let debug_tools = DebugTools::from_env();
@@ -180,7 +186,7 @@ impl Atlaspack {
       config_loader,
       plugins,
       request_tracker: Arc::new(RwLock::new(request_tracker)),
-      bundle_graph: Arc::new(parking_lot::RwLock::new(BundleGraphFromJs::default())),
+      bundle_graph: parking_lot::Mutex::new(Arc::new(BundleGraphFromJs::default())),
       debug_tools,
     })
   }
@@ -190,6 +196,13 @@ impl Atlaspack {
   pub fn build_asset_graph(
     &self,
   ) -> anyhow::Result<(Option<FinalizedSymbolTracker>, Arc<AssetGraph>, bool)> {
+    self.build_asset_graph_with_report_fn(None)
+  }
+
+  pub fn build_asset_graph_with_report_fn(
+    &self,
+    report_fn: Option<ReportFn>,
+  ) -> anyhow::Result<(Option<FinalizedSymbolTracker>, Arc<AssetGraph>, bool)> {
     self.runtime.block_on(async move {
       // Notify all resolver plugins that a new build is starting
       for resolver in self.plugins.resolvers()? {
@@ -197,6 +210,10 @@ impl Atlaspack {
       }
 
       let mut request_tracker = self.request_tracker.write().await;
+
+      // Set the report_fn for this build, cleared at the end to release
+      // the ThreadsafeFunction reference promptly.
+      request_tracker.set_report_fn(report_fn);
 
       let prev_asset_graph = request_tracker
         .get_cached_request_result(AssetGraphRequest::default())
@@ -243,6 +260,9 @@ impl Atlaspack {
       let asset_graph = asset_graph_request_output.graph.clone();
       let symbol_tracker = asset_graph_request_output.symbol_tracker.clone();
 
+      // Clear the report_fn to release the ThreadsafeFunction reference
+      request_tracker.set_report_fn(None);
+
       Ok((symbol_tracker, asset_graph, had_previous_graph))
     })
   }
@@ -259,32 +279,54 @@ impl Atlaspack {
     public_id_by_asset_id: HashMap<String, String>,
     environments: Vec<Environment>,
   ) -> anyhow::Result<()> {
-    *self.bundle_graph.write() =
-      BundleGraphFromJs::new(nodes, edges, public_id_by_asset_id, environments);
+    *self.bundle_graph.lock() = Arc::new(BundleGraphFromJs::new(
+      nodes,
+      edges,
+      public_id_by_asset_id,
+      environments,
+    ));
     Ok(())
   }
 
   /// Returns the bundle graph's environment map
   pub fn get_bundle_graph_environments(&self) -> Vec<Arc<Environment>> {
-    self.bundle_graph.read().get_environments()
+    self.bundle_graph.lock().get_environments()
   }
 
   /// Updates existing asset nodes in the bundle graph. `nodes` are pre-deserialized
   /// at the node-bindings level using the graph's existing environment map.
   #[tracing::instrument(level = "info", skip_all, fields(node_count = nodes.len()))]
   pub fn update_bundle_graph(&self, nodes: Vec<AssetNode>) -> anyhow::Result<()> {
-    let mut graph = self.bundle_graph.write();
-    graph.update_assets(nodes)
+    // update_assets requires mutable access; since we own the Arc exclusively during
+    // the write window (no packaging runs concurrently), get_mut succeeds in practice.
+    // If it doesn't (shouldn't happen), fall back to a full clone.
+    let mut guard = self.bundle_graph.lock();
+    match Arc::get_mut(&mut *guard) {
+      Some(graph) => graph.update_assets(nodes),
+      None => {
+        // Safety fallback: shouldn't occur given the JS interop contract that packaging
+        // never runs concurrently with bundle graph updates.
+        anyhow::bail!("update_bundle_graph: bundle graph Arc has outstanding references");
+      }
+    }
   }
 
   #[tracing::instrument(level = "info", skip_all)]
   pub fn build_bundle_graph(
     &self,
   ) -> anyhow::Result<(Arc<AssetGraph>, BundleGraphRequestOutput, bool)> {
+    self.build_bundle_graph_with_report_fn(None)
+  }
+
+  pub fn build_bundle_graph_with_report_fn(
+    &self,
+    report_fn: Option<ReportFn>,
+  ) -> anyhow::Result<(Arc<AssetGraph>, BundleGraphRequestOutput, bool)> {
     // First, build the asset graph
     // Eventually we will pass the symbol tracker into bundling to acces
     // directly, but for now it is ignored
-    let (_symbol_tracker, asset_graph, had_previous_graph) = self.build_asset_graph()?;
+    let (_symbol_tracker, asset_graph, had_previous_graph) =
+      self.build_asset_graph_with_report_fn(report_fn.clone())?;
 
     // Then run the bundle graph request
     let asset_graph_for_request = asset_graph.clone();
@@ -292,6 +334,8 @@ impl Atlaspack {
       tracing::debug!("build_bundle_graph_with_asset_graph: running BundleGraphRequest");
 
       let mut request_tracker = self.request_tracker.write().await;
+
+      request_tracker.set_report_fn(report_fn);
 
       let request_result = request_tracker
         .run_request(BundleGraphRequest {
@@ -303,6 +347,9 @@ impl Atlaspack {
         anyhow::bail!("Unexpected request result from BundleGraphRequest");
       };
 
+      // Clear the report_fn to release the ThreadsafeFunction reference
+      request_tracker.set_report_fn(None);
+
       Ok::<_, anyhow::Error>(bundle_graph_output.clone())
     })?;
 
@@ -310,20 +357,49 @@ impl Atlaspack {
   }
 
   #[tracing::instrument(level = "info", skip_all)]
+  pub fn build(&self) -> anyhow::Result<BuildRequestOutput> {
+    self.build_with_report_fn(None)
+  }
+
+  pub fn build_with_report_fn(
+    &self,
+    report_fn: Option<ReportFn>,
+  ) -> anyhow::Result<BuildRequestOutput> {
+    self.runtime.block_on(async move {
+      let mut request_tracker = self.request_tracker.write().await;
+
+      request_tracker.set_report_fn(report_fn);
+
+      let request_result = request_tracker.run_request(BuildRequest {}).await?;
+
+      // Clear the report_fn to release the ThreadsafeFunction reference
+      request_tracker.set_report_fn(None);
+
+      let RequestResult::Build(build_output) = request_result.as_ref() else {
+        anyhow::bail!("Unexpected request result from BuildRequest");
+      };
+
+      Ok(build_output.clone())
+    })
+  }
+
+  #[tracing::instrument(level = "info", skip_all)]
   pub fn package(&self, bundle_id: String) -> anyhow::Result<PackageResult> {
     // This possibly could be persistent between pacakges? But right now with SSR builds only we're talking about a few packages at most
     // so we can worry about that refactor later.
+
+    let bundle_graph = Arc::clone(&*self.bundle_graph.lock());
     let packager = JsPackager::new(
       atlaspack_packager_js::PackagingContext {
-        db: Arc::clone(&self.db),
-        cache: Arc::new(crate::cache::LmdbCache::new(
+        db: Arc::new(LmdbDatabase(Arc::clone(&self.db))),
+        cache: Some(Arc::new(crate::cache::LmdbCache::new(
           Arc::clone(&self.db),
           Arc::new(OsFileSystem),
-        )),
+        ))),
         project_root: self.project_root.clone(),
         debug_tools: self.debug_tools.clone(),
       },
-      Arc::clone(&self.bundle_graph),
+      bundle_graph,
     );
     packager.package(&bundle_id)
   }

@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/bundler-default",
-  "version": "3.4.27",
+  "version": "3.4.32",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
   "publishConfig": {

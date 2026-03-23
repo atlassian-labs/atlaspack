@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-compiled",
-  "version": "0.5.0",
+  "version": "0.5.5",
   "description": "Atlaspack transformer for Compiled CSS-in-JS (insourced from @compiled/parcel-transformer)",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {

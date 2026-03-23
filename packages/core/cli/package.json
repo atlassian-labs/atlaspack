@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/cli",
-  "version": "2.15.16",
+  "version": "2.15.21",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
@@ -37,12 +37,12 @@
     "@atlaspack/reporter-tracer": "workspace:*",
     "@atlaspack/utils": "workspace:*",
     "chalk": "^4.1.0",
-    "commander": "^7.0.0",
-    "get-port": "^4.2.0"
+    "commander": "^8.3.0",
+    "get-port": "^5.1.1"
   },
   "devDependencies": {
     "@atlaspack/babel-register": "workspace:*",
     "@babel/core": "^7.22.11",
-    "rimraf": "^5.0.5"
+    "rimraf": "^3.0.2"
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/reporter-bundle-stats",
-  "version": "2.14.56",
+  "version": "2.14.61",
   "publishConfig": {
     "access": "public"
   },

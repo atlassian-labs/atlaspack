@@ -337,6 +337,7 @@ impl EnvReplacer<'_> {
       show_environment: false,
       severity: DiagnosticSeverity::SourceError,
       documentation_url: None,
+      name: None,
     });
   }
 }

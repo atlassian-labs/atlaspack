@@ -1,5 +1,45 @@
 # @atlaspack/transformer-compiled-external
 
+## 0.2.14
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.3.4
+  - @atlaspack/plugin@2.14.60
+
+## 0.2.13
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.3.3
+  - @atlaspack/plugin@2.14.59
+
+## 0.2.12
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.3.2
+  - @atlaspack/plugin@2.14.58
+
+## 0.2.11
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.3.1
+  - @atlaspack/plugin@2.14.57
+
+## 0.2.10
+
+### Patch Changes
+
+- Updated dependencies [[`de388ff`](https://github.com/atlassian-labs/atlaspack/commit/de388ff76d39dece97ad475fcccdb6efb6283bfc)]:
+  - @atlaspack/source-map@3.3.0
+  - @atlaspack/plugin@2.14.56
+
 ## 0.2.9
 
 ### Patch Changes

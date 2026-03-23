@@ -1,5 +1,114 @@
 # @atlaspack/rust
 
+## 3.28.0
+
+### Minor Changes
+
+- [#1062](https://github.com/atlassian-labs/atlaspack/pull/1062) [`7d1839c`](https://github.com/atlassian-labs/atlaspack/commit/7d1839cc7cf0225dd35afecb68109a11fd931f2b) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Implement native CSS packaging core
+
+## 3.27.0
+
+### Minor Changes
+
+- [#1061](https://github.com/atlassian-labs/atlaspack/pull/1061) [`a958853`](https://github.com/atlassian-labs/atlaspack/commit/a958853ae3de2812bfd032357e9fa7cab6a1ddb6) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Implement native CSS packager scaffolding
+
+### Patch Changes
+
+- [#1067](https://github.com/atlassian-labs/atlaspack/pull/1067) [`0f5c1ef`](https://github.com/atlassian-labs/atlaspack/commit/0f5c1eff9138728168231efa66202a8d844c33ef) Thanks [@JakeLane](https://github.com/JakeLane)! - Fix Compiled SWC plugin binding collisions in some cases.
+
+## 3.26.0
+
+### Minor Changes
+
+- [#1054](https://github.com/atlassian-labs/atlaspack/pull/1054) [`ffa1e42`](https://github.com/atlassian-labs/atlaspack/commit/ffa1e4276c22cc48b6be45ac81df8adde85f2237) Thanks [@marcins](https://github.com/marcins)! - - Implement plumbing to ensure data flows back out of build request that JS expects
+  - Implement a temporary namer to get an end-to-end test working
+
+- [#1057](https://github.com/atlassian-labs/atlaspack/pull/1057) [`939d5bd`](https://github.com/atlassian-labs/atlaspack/commit/939d5bd41b3bcb5508f58ca41165d48122762e26) Thanks [@marcins](https://github.com/marcins)! - Set `SyntaxError` as the diagnostic name for parse/syntax errors from the JS and Tokens transformers.
+
+  Parse and syntax errors from the JS Transformer and Tokens Transformer now set `diagnostic.name` to `"SyntaxError"`, so consumers can reliably detect syntax/parse failures (e.g. for reporting or error handling). The Rust diagnostic type and NAPI `JsDiagnostic` include an optional `name` field; `error_buffer_to_diagnostics` sets it to `"SyntaxError"` for SWC parse errors, and both transformers pass it through to the thrown diagnostic. Integration tests assert that the first diagnostic has `name === 'SyntaxError'` for tokens and JS parse-error cases.
+
+- [#1053](https://github.com/atlassian-labs/atlaspack/pull/1053) [`71981ea`](https://github.com/atlassian-labs/atlaspack/commit/71981eac258f7e6dfb40ec4b202d194f71c64ff1) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add native build progress reporting.
+
+  Fires `BuildProgressEvent` from Rust requests back to JS reporters via a fire-and-forget
+  `ThreadsafeFunction` callback. Works in both `atlaspackV3` and `fullNative` build paths.
+
+  Events:
+  - `building` — per-asset progress from AssetGraphRequest (completeAssets / totalAssets)
+  - `bundling` — once from BuildRequest before bundle graph creation
+  - `packagingAndOptimizing` — ready for when native packaging is wired up
+
+  Adds `BuildingProgressEvent` type and CLI reporter handling.
+
+- [#1052](https://github.com/atlassian-labs/atlaspack/pull/1052) [`cba96b1`](https://github.com/atlassian-labs/atlaspack/commit/cba96b1a15c07703ee104bf2a2888cc715575cbd) Thanks [@marcins](https://github.com/marcins)! - Implement a native CommitRequest to commit asset contents to the database for reading during packaging. Currently does not purge the asset contents from memory, we can make that optimisation later.
+
+### Patch Changes
+
+- [#1058](https://github.com/atlassian-labs/atlaspack/pull/1058) [`ea9730d`](https://github.com/atlassian-labs/atlaspack/commit/ea9730dd953d0512c2ab97cbba810e7a297a29a6) Thanks [@JakeLane](https://github.com/JakeLane)! - Improve SWC compiled CSS-in-JS browserslist resolution, behaviour correctness, and diagnostics.
+  - Add `browserslistEnv` config option so autoprefixer and cssnano plugins resolve
+    the correct browserslist environment (e.g. "development" vs "production"),
+    matching Babel's behavior.
+  - Cache resolved `@compiled/css` package path per-process to avoid repeated
+    filesystem walks. This is required to align with postcss browserlist resolution behaviour.
+  - Detect sheet identifier collisions with existing module bindings and emit
+    diagnostics to prevent "sheet.includes is not a function" runtime errors.
+  - Validate sheet content is a non-empty CSS rule string.
+  - Add vendor autoprefixer support for mask-composite, appearance, and
+    general selector pseudo-class variants (e.g. :read-only, :read-write).
+  - Add cssnano normalize plugins: discard-comments, minify-gradients,
+    normalize-timing-functions, and calc reduction.
+
+- [#1056](https://github.com/atlassian-labs/atlaspack/pull/1056) [`0bb5830`](https://github.com/atlassian-labs/atlaspack/commit/0bb5830d1a7800e673f21ab020cd86bef873df9c) Thanks [@marcins](https://github.com/marcins)! - Fix native config loader rejecting TypeScript entry points in package.json.
+
+  The Rust package.json deserializer rejected `.ts` and `.tsx` extensions in builtin target fields
+  (`main`, `browser`, `module`), causing builds to fail with "Unexpected file type" errors when a
+  package.json uses TypeScript source entry points (e.g. `"main": "index.ts"`).
+
+  Additionally fixes EntryRequest to resolve the package path using `cwd()` instead of `project_root`,
+  matching the JS-side behavior for correct target resolution in monorepo setups.
+
+## 3.25.0
+
+### Minor Changes
+
+- [#1050](https://github.com/atlassian-labs/atlaspack/pull/1050) [`c80be61`](https://github.com/atlassian-labs/atlaspack/commit/c80be618e42014208fed60b7a2dccc2e47d53aed) Thanks [@marcins](https://github.com/marcins)! - Add native PackagingRequest, implement temporary JS version for testing.
+
+### Patch Changes
+
+- [#1051](https://github.com/atlassian-labs/atlaspack/pull/1051) [`2d3c616`](https://github.com/atlassian-labs/atlaspack/commit/2d3c616bb2ebef55d6850e8ca9eedf13c72f5386) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add native end-to-end build pipeline via BuildRequest.
+
+  When the `fullNative` feature flag is enabled, the entire build pipeline (asset graph, bundle graph,
+  packaging) runs natively in Rust via a single NAPI call, bypassing the JS request tracker.
+
+  Key changes:
+  - Add `BuildRequest` composing `AssetGraphRequest` and `BundleGraphRequest` with a packaging stub
+  - Add `Atlaspack::build()` method and `atlaspack_napi_build` NAPI binding
+  - Add `fullNative` feature flag gating the native path in `Atlaspack.ts._build()`
+  - Packaging step is a no-op pending PackagingRequest implementation
+
+## 3.24.1
+
+### Patch Changes
+
+- [#1025](https://github.com/atlassian-labs/atlaspack/pull/1025) [`f7878b2`](https://github.com/atlassian-labs/atlaspack/commit/f7878b2f19a0a3bbd0e79d0b4a4e1479646043b7) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add native ideal graph bundling algorithm behind nativeBundling feature flag
+
+- [#1049](https://github.com/atlassian-labs/atlaspack/pull/1049) [`22bb49c`](https://github.com/atlassian-labs/atlaspack/commit/22bb49c5708798d259f98c8b5c10850b2f4f5f1b) Thanks [@marcins](https://github.com/marcins)! - Implement a basic pacakge_request for native
+
+- [#1045](https://github.com/atlassian-labs/atlaspack/pull/1045) [`bddd21a`](https://github.com/atlassian-labs/atlaspack/commit/bddd21a5313974ca333c02b2da1c6f85d1afaaea) Thanks [@benjervis](https://github.com/benjervis)! - Replace `propagate_requested_symbols` with SymbolTracker-based propagation in native symbol propagation.
+
+  The SymbolTracker now handles both symbol tracking and propagation in a single unified flow via
+  `track_symbols()`, which returns dependency IDs that need un-deferral. This replaces the separate
+  `propagate_requested_symbols` function when the `rustSymbolTracker` feature flag is enabled.
+
+  Key changes:
+  - `track_symbols()` now returns `Vec<DependencyId>` of dependencies needing un-deferral
+  - New `propagate_to_outgoing_dependencies()` method determines which deps need un-deferral
+  - New `has_requested_symbols()` method replaces graph-based deferral checks
+  - Extracted `track_dependency_symbols()` for cleaner separation of concerns
+  - Replaced `is_star_reexport_symbol`/`is_namespace_reexport_symbol` with `classify_symbol_export()` enum
+  - Feature-flagged integration in `asset_graph_request.rs` with `track_and_propagate_symbols()` helper
+
+- [#1047](https://github.com/atlassian-labs/atlaspack/pull/1047) [`de388ff`](https://github.com/atlassian-labs/atlaspack/commit/de388ff76d39dece97ad475fcccdb6efb6283bfc) Thanks [@marcins](https://github.com/marcins)! - Change approach to source map offset for hashRefs - use a streaming approach to avoid loading large sourcemaps into memory.
+
 ## 3.24.0
 
 ### Minor Changes

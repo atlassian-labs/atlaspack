@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/inspector",
-  "version": "0.0.40",
+  "version": "0.0.45",
   "license": "(MIT OR Apache-2.0)",
   "authors": [
     "Pedro Tacla Yamada"
@@ -43,7 +43,7 @@
     "@atlaspack/core": "workspace:*",
     "@atlaspack/feature-flags": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.13.0",
-    "commander": "^7.0.0",
+    "commander": "^8.3.0",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "pino": "^9.7.0",

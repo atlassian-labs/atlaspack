@@ -166,7 +166,10 @@ export async function _report(
       }
 
       if (!isTTY && logLevelFilter != logLevels.verbose) {
-        if (event.phase == 'transforming' && !seenPhases.has('transforming')) {
+        if (
+          (event.phase == 'transforming' && !seenPhases.has('transforming')) ||
+          (event.phase == 'building' && !seenPhases.has('building'))
+        ) {
           updateSpinner('Building...');
         } else if (event.phase == 'bundling' && !seenPhases.has('bundling')) {
           updateSpinner('Bundling...');

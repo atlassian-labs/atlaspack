@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/types-internal",
-  "version": "2.24.0",
+  "version": "2.25.2",
   "license": "(MIT OR Apache-2.0)",
   "main": "./lib/index.js",
   "source": "./src/index.ts",

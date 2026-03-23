@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/utils",
-  "version": "3.3.7",
+  "version": "3.4.2",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
@@ -50,13 +50,13 @@
     "is-glob": "^4.0.0",
     "is-url": "^1.2.2",
     "json5": "^2.2.0",
-    "lru-cache": "^6.0.0",
+    "lru-cache": "^10.4.3",
     "micromatch": "^4.0.4",
     "node-forge": "^1.2.1",
     "nullthrows": "^1.1.1",
-    "open": "^7.0.3",
+    "open": "^8.4.2",
     "snarkdown": "^2.0.0",
-    "strip-ansi": "^6.0.0",
+    "strip-ansi": "^5.2.0",
     "terminal-link": "^2.1.1"
   },
   "devDependencies": {

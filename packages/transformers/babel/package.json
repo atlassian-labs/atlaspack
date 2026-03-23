@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-babel",
-  "version": "2.15.16",
+  "version": "2.15.21",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -28,7 +28,7 @@
   "devDependencies": {
     "@atlaspack/types": "workspace:*",
     "@babel/core": "^7.22.11",
-    "@babel/preset-env": "^7.22.14",
+    "@babel/preset-env": "^7.26.9",
     "@babel/types": "^7.22.11"
   },
   "type": "commonjs",

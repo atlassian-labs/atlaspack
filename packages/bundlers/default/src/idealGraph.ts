@@ -613,7 +613,10 @@ export function createIdealGraph(
       },
     },
     null,
-    {skipUnusedDependencies: true},
+    {
+      skipUnusedDependencies:
+        process.env.ATLASPACK_SKIP_UNUSED_DEPENDENCIES !== 'false',
+    },
   );
 
   // Strip MSBs of entries
@@ -747,7 +750,10 @@ export function createIdealGraph(
         return;
       },
       root,
-      {skipUnusedDependencies: true},
+      {
+        skipUnusedDependencies:
+          process.env.ATLASPACK_SKIP_UNUSED_DEPENDENCIES !== 'false',
+      },
     );
   }
 

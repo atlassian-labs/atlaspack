@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/packager-html",
-  "version": "2.15.37",
+  "version": "2.15.42",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"

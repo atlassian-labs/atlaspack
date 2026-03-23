@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/resolver-tesseract",
-  "version": "2.15.28",
+  "version": "2.15.33",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"

@@ -1,5 +1,40 @@
 # @atlaspack/packager-wasm
 
+## 2.14.60
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.60
+
+## 2.14.59
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.59
+
+## 2.14.58
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.58
+
+## 2.14.57
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.57
+
+## 2.14.56
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.56
+
 ## 2.14.55
 
 ### Patch Changes

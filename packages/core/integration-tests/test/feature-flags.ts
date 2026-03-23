@@ -1,6 +1,7 @@
 import assert from 'assert';
 import path from 'path';
-import {rimraf} from 'rimraf';
+import _rimraf from 'rimraf';
+import {promisify} from 'util';
 import {
   bundle,
   describe,
@@ -9,6 +10,8 @@ import {
   overlayFS,
   fsFixture,
 } from '@atlaspack/test-utils';
+
+const rimraf = promisify(_rimraf);
 
 // TODO: V3 JavaScript plugins need to use the real filesystem or properly use the overlayFS + package manager
 describe.v2('feature flags', () => {
