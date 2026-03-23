@@ -6,7 +6,7 @@ import path from 'path';
 import clone from 'clone';
 import json5 from 'json5';
 import {parse as toml} from '@iarna/toml';
-import LRU from 'lru-cache';
+import {LRUCache as LRU} from 'lru-cache';
 
 export type ConfigOutput = {
   config: ConfigResult;
@@ -18,7 +18,6 @@ export type ConfigOptions = {
   parser?: (arg1: string) => any;
 };
 
-// @ts-expect-error TS2351
 const configCache = new LRU<FilePath, ConfigOutput>({max: 500});
 const resolveCache = new Map();
 
@@ -95,7 +94,7 @@ export async function loadConfig(
 }
 
 loadConfig.clear = () => {
-  configCache.reset();
+  configCache.clear();
   resolveCache.clear();
 };
 
