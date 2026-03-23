@@ -126,6 +126,7 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       config_requests: vec![],
       dev_dep_requests: vec![],
       invalidations: vec![],
+      warnings: vec![],
     })
   }
 
