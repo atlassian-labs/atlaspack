@@ -1,5 +1,12 @@
 # @atlaspack/babel-register
 
+## 2.14.5
+
+### Patch Changes
+
+- Updated dependencies [[`e898fda`](https://github.com/atlassian-labs/atlaspack/commit/e898fda7511d98e5597d847c4a32c028a8a24d6c)]:
+  - @atlaspack/babel-preset@2.14.5
+
 ## 2.14.4
 
 ### Patch Changes

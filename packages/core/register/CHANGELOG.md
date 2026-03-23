@@ -1,5 +1,15 @@
 # @atlaspack/register
 
+## 2.14.64
+
+### Patch Changes
+
+- Updated dependencies [[`e898fda`](https://github.com/atlassian-labs/atlaspack/commit/e898fda7511d98e5597d847c4a32c028a8a24d6c)]:
+  - @atlaspack/core@2.38.3
+  - @atlaspack/package-manager@2.14.61
+  - @atlaspack/config-default@19.0.3
+  - @atlaspack/fs@2.15.56
+
 ## 2.14.63
 
 ### Patch Changes

@@ -1,5 +1,16 @@
 # @atlaspack/transformer-compiled-css-in-js
 
+## 0.3.6
+
+### Patch Changes
+
+- Updated dependencies [[`e898fda`](https://github.com/atlassian-labs/atlaspack/commit/e898fda7511d98e5597d847c4a32c028a8a24d6c), [`5256d37`](https://github.com/atlassian-labs/atlaspack/commit/5256d37a88334554ae78456622389c97f66a2196)]:
+  - @atlaspack/utils@3.4.3
+  - @atlaspack/rust@3.29.0
+  - @atlaspack/transformer-js@19.0.3
+  - @atlaspack/source-map@3.3.5
+  - @atlaspack/plugin@2.14.61
+
 ## 0.3.5
 
 ### Patch Changes

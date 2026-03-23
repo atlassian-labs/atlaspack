@@ -1,5 +1,18 @@
 # @atlaspack/packaging-test-harness
 
+## 0.0.12
+
+### Patch Changes
+
+- [#1065](https://github.com/atlassian-labs/atlaspack/pull/1065) [`e898fda`](https://github.com/atlassian-labs/atlaspack/commit/e898fda7511d98e5597d847c4a32c028a8a24d6c) Thanks [@at-nathan](https://github.com/at-nathan)! - Update third-party dependencies to align with AFM
+
+- Updated dependencies [[`e898fda`](https://github.com/atlassian-labs/atlaspack/commit/e898fda7511d98e5597d847c4a32c028a8a24d6c), [`5256d37`](https://github.com/atlassian-labs/atlaspack/commit/5256d37a88334554ae78456622389c97f66a2196)]:
+  - @atlaspack/cache@3.2.56
+  - @atlaspack/core@2.38.3
+  - @atlaspack/rust@3.29.0
+  - @atlaspack/package-manager@2.14.61
+  - @atlaspack/fs@2.15.56
+
 ## 0.0.11
 
 ### Patch Changes

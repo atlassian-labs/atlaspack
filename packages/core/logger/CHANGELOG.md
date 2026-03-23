@@ -1,5 +1,13 @@
 # @atlaspack/logger
 
+## 2.14.53
+
+### Patch Changes
+
+- Updated dependencies [[`5256d37`](https://github.com/atlassian-labs/atlaspack/commit/5256d37a88334554ae78456622389c97f66a2196)]:
+  - @atlaspack/rust@3.29.0
+  - @atlaspack/types-internal@2.25.3
+
 ## 2.14.52
 
 ### Patch Changes

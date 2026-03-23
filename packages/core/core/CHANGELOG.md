@@ -1,5 +1,25 @@
 # @atlaspack/core
 
+## 2.38.3
+
+### Patch Changes
+
+- [#1065](https://github.com/atlassian-labs/atlaspack/pull/1065) [`e898fda`](https://github.com/atlassian-labs/atlaspack/commit/e898fda7511d98e5597d847c4a32c028a8a24d6c) Thanks [@at-nathan](https://github.com/at-nathan)! - Update third-party dependencies to align with AFM
+
+- Updated dependencies [[`e898fda`](https://github.com/atlassian-labs/atlaspack/commit/e898fda7511d98e5597d847c4a32c028a8a24d6c), [`5256d37`](https://github.com/atlassian-labs/atlaspack/commit/5256d37a88334554ae78456622389c97f66a2196)]:
+  - @atlaspack/cache@3.2.56
+  - @atlaspack/utils@3.4.3
+  - @atlaspack/rust@3.29.0
+  - @atlaspack/package-manager@2.14.61
+  - @atlaspack/profiler@2.15.22
+  - @atlaspack/workers@2.14.61
+  - @atlaspack/fs@2.15.56
+  - @atlaspack/logger@2.14.53
+  - @atlaspack/source-map@3.3.5
+  - @atlaspack/graph@3.6.23
+  - @atlaspack/types@2.15.51
+  - @atlaspack/plugin@2.14.61
+
 ## 2.38.2
 
 ### Patch Changes

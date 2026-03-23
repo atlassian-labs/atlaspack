@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/dist-differ",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "license": "(MIT OR Apache-2.0)",
   "private": true,
   "repository": {
@@ -26,7 +26,7 @@
     "zod": "^3"
   },
   "devDependencies": {
-    "@atlaspack/babel-register": "2.14.4",
+    "@atlaspack/babel-register": "2.14.5",
     "rimraf": "^3.0.2"
   },
   "type": "commonjs"
