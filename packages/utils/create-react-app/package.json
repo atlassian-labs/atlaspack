@@ -37,9 +37,8 @@
     "v8-compile-cache": "^2.0.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.22.11",
-    "@atlaspack/babel-register": "2.14.4",
-    "rimraf": "^3.0.2"
+    "@atlaspack/babel-register": "workspace:*",
+    "@babel/core": "^7.22.11"
   },
   "type": "commonjs"
 }

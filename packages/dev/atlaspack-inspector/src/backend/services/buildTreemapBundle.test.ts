@@ -4,7 +4,16 @@ import fs from 'fs';
 import path from 'path';
 import {buildTreemapBundle} from './buildTreemap';
 
-jest.mock('../config/logger');
+// Explicit mock required: Jest's automocking doesn't properly handle named const exports
+// with TypeScript's "module": "NodeNext" configuration. See loadCacheData.test.ts for details.
+jest.mock('../config/logger', () => ({
+  logger: {
+    info: jest.fn(),
+    debug: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+  },
+}));
 
 describe('buildTreemapBundle', function () {
   let sandbox: sinon.SinonSandbox;

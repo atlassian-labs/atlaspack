@@ -16,14 +16,14 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/feature-flags": "2.31.0",
-    "@atlaspack/transformer-js": "19.0.2",
-    "@atlaspack/types-internal": "2.25.2",
-    "@atlaspack/plugin": "2.14.60",
-    "@atlaspack/rust": "3.28.0",
-    "@atlaspack/utils": "3.4.2",
-    "@atlaspack/source-map": "3.3.4"
+    "@atlaspack/diagnostic": "workspace:*",
+    "@atlaspack/feature-flags": "workspace:*",
+    "@atlaspack/plugin": "workspace:*",
+    "@atlaspack/rust": "workspace:*",
+    "@atlaspack/source-map": "workspace:*",
+    "@atlaspack/transformer-js": "workspace:*",
+    "@atlaspack/types-internal": "workspace:*",
+    "@atlaspack/utils": "workspace:*"
   },
   "type": "commonjs",
   "scripts": {

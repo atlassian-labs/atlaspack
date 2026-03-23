@@ -26,7 +26,7 @@
     "zod": "^3"
   },
   "devDependencies": {
-    "@atlaspack/babel-register": "2.14.4",
+    "@atlaspack/babel-register": "workspace:*",
     "rimraf": "^3.0.2"
   },
   "type": "commonjs"

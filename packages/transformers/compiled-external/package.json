@@ -21,11 +21,11 @@
     "src"
   ],
   "dependencies": {
-    "@atlaspack/plugin": "2.14.60",
-    "@atlaspack/source-map": "3.3.4"
+    "@atlaspack/plugin": "workspace:*",
+    "@atlaspack/source-map": "workspace:*"
   },
   "devDependencies": {
-    "@atlaspack/types": "2.15.50"
+    "@atlaspack/types": "workspace:*"
   },
   "type": "commonjs",
   "scripts": {

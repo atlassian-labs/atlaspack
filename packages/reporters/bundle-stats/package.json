@@ -14,12 +14,12 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/core": "2.38.2",
-    "@atlaspack/plugin": "2.14.60",
-    "@atlaspack/utils": "3.4.2"
+    "@atlaspack/core": "workspace:*",
+    "@atlaspack/plugin": "workspace:*",
+    "@atlaspack/utils": "workspace:*"
   },
   "devDependencies": {
-    "@atlaspack/types": "2.15.50"
+    "@atlaspack/types": "workspace:*"
   },
   "type": "commonjs",
   "scripts": {

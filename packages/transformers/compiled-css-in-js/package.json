@@ -20,15 +20,14 @@
     "src"
   ],
   "dependencies": {
-    "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/feature-flags": "2.31.0",
-    "@atlaspack/plugin": "2.14.60",
-    "@atlaspack/rust": "3.28.0",
-    "@atlaspack/source-map": "3.3.4",
-    "@atlaspack/transformer-js": "19.0.2",
-    "@atlaspack/utils": "3.4.2"
+    "@atlaspack/diagnostic": "workspace:*",
+    "@atlaspack/feature-flags": "workspace:*",
+    "@atlaspack/plugin": "workspace:*",
+    "@atlaspack/rust": "workspace:*",
+    "@atlaspack/source-map": "workspace:*",
+    "@atlaspack/transformer-js": "workspace:*",
+    "@atlaspack/utils": "workspace:*"
   },
-  "devDependencies": {},
   "type": "commonjs",
   "scripts": {
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
