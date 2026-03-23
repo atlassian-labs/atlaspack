@@ -24,6 +24,7 @@
     "@atlaspack/fs": "workspace:*",
     "@atlaspack/package-manager": "workspace:*",
     "@atlaspack/utils": "workspace:*",
+    "@babel/plugin-transform-runtime": "^7.22.10",
     "@types/async": "^3.2.6",
     "async": "^3.2.6",
     "chalk": "^4.1.0",
