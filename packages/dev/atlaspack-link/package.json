@@ -19,7 +19,7 @@
     "@atlaspack/fs": "2.15.55",
     "@atlaspack/utils": "3.4.2",
     "@atlaspack/rust": "3.28.0",
-    "commander": "^7.0.0",
+    "commander": "^8.3.0",
     "nullthrows": "^1.1.1"
   },
   "type": "commonjs"

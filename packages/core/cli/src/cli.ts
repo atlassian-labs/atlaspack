@@ -4,7 +4,7 @@ import {openInBrowser} from '@atlaspack/utils';
 import {Disposable} from '@atlaspack/events';
 import {INTERNAL_ORIGINAL_CONSOLE} from '@atlaspack/logger';
 import chalk from 'chalk';
-import commander from 'commander';
+import {Command} from 'commander';
 import path from 'path';
 import {version} from '../package.json';
 import {applyOptions} from './applyOptions';
@@ -16,7 +16,7 @@ import {
 } from './handleUncaughtException';
 import {commonOptions, hmrOptions} from './options';
 
-const program = new commander.Command();
+const program = new Command();
 
 // Exit codes in response to signals are traditionally
 // 128 + signal value
@@ -95,7 +95,8 @@ program.on('--help', function () {
 });
 
 // Override to output option description if argument was missing
-commander.Command.prototype.optionMissingArgument = function (option: any) {
+// @ts-expect-error optionMissingArgument is not in commander 8 typings but exists at runtime
+Command.prototype.optionMissingArgument = function (option: any) {
   INTERNAL_ORIGINAL_CONSOLE.error(
     "error: option `%s' argument missing",
     option.flags,

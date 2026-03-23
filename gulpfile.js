@@ -2,7 +2,7 @@ const {Transform} = require('stream');
 const babel = require('gulp-babel');
 const gulp = require('gulp');
 const path = require('path');
-const {rimraf} = require('rimraf');
+const rimraf = require('util').promisify(require('rimraf'));
 const babelConfig = require('./babel.config.json');
 
 const cwd = process.cwd();
