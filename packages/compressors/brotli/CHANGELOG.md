@@ -1,5 +1,12 @@
 # @atlaspack/compressor-brotli
 
+## 2.13.63
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.61
+
 ## 2.13.62
 
 ### Patch Changes

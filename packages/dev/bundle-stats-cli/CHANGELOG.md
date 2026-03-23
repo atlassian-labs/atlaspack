@@ -1,5 +1,17 @@
 # @atlaspack/bundle-stats
 
+## 2.14.62
+
+### Patch Changes
+
+- [#1065](https://github.com/atlassian-labs/atlaspack/pull/1065) [`e898fda`](https://github.com/atlassian-labs/atlaspack/commit/e898fda7511d98e5597d847c4a32c028a8a24d6c) Thanks [@at-nathan](https://github.com/at-nathan)! - Update third-party dependencies to align with AFM
+
+- Updated dependencies [[`e898fda`](https://github.com/atlassian-labs/atlaspack/commit/e898fda7511d98e5597d847c4a32c028a8a24d6c)]:
+  - @atlaspack/utils@3.4.3
+  - @atlaspack/core@2.38.3
+  - @atlaspack/query@2.14.62
+  - @atlaspack/reporter-bundle-stats@2.14.62
+
 ## 2.14.61
 
 ### Patch Changes

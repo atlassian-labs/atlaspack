@@ -1,5 +1,11 @@
 # @atlaspack/rust
 
+## 3.29.0
+
+### Minor Changes
+
+- [#1064](https://github.com/atlassian-labs/atlaspack/pull/1064) [`5256d37`](https://github.com/atlassian-labs/atlaspack/commit/5256d37a88334554ae78456622389c97f66a2196) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Add proper URL handling to native CSS packaging
+
 ## 3.28.0
 
 ### Minor Changes

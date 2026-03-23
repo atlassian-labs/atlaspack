@@ -1,5 +1,12 @@
 # @atlaspack/types-internal
 
+## 2.25.3
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.3.5
+
 ## 2.25.2
 
 ### Patch Changes

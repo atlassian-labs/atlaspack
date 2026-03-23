@@ -1,5 +1,13 @@
 # @atlaspack/resolver-default
 
+## 2.14.61
+
+### Patch Changes
+
+- Updated dependencies [[`e898fda`](https://github.com/atlassian-labs/atlaspack/commit/e898fda7511d98e5597d847c4a32c028a8a24d6c)]:
+  - @atlaspack/node-resolver-core@3.7.32
+  - @atlaspack/plugin@2.14.61
+
 ## 2.14.60
 
 ### Patch Changes
