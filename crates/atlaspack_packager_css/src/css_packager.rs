@@ -352,6 +352,8 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
         filter_external_imports(&css_code, &asset_external_specifiers)
       };
 
+      // If source maps are enabled and the asset has a map, inline it as a
+      // sourceMappingURL data URL comment so Lightning CSS can merge them.
       let css_with_map = if bundle.env.source_map.is_some()
         && let Some(ref asset_map) = asset.map
         && let Ok(data_url) = asset_map.clone().to_data_url(None)
