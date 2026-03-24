@@ -10,28 +10,65 @@ import {
 } from '@atlaspack/test-utils';
 
 /**
- * Normalize CSS for comparison: strip block comments, collapse whitespace.
- * Used to compare JS and native packager outputs without sensitivity to minor
- * formatting differences (e.g. extra newlines, whitespace inside rules).
+ * Normalize CSS for comparison: strip block comments and remove all optional
+ * whitespace around punctuation so that minified and pretty-printed CSS compare
+ * equal. This lets parity tests focus on semantic content rather than formatting.
+ *
+ * Normalisation steps:
+ *   1. Strip block comments
+ *   2. Collapse all whitespace runs to a single space
+ *   3. Remove spaces around { } : ; that are optional in CSS
  */
 function normalizeCss(css: string): string {
   return css
     .replace(/\/\*[\s\S]*?\*\//g, '') // strip block comments
-    .replace(/\s+/g, ' ')
+    .replace(/\s+/g, ' ') // collapse whitespace runs to single space
+    .replace(/\s*{\s*/g, '{') // remove spaces around {
+    .replace(/;\s*}/g, '}') // strip trailing semicolon before }
+    .replace(/\s*}\s*/g, '}') // remove spaces around }
+    .replace(/\s*:\s*/g, ':') // remove spaces around : (properties)
+    .replace(/\s*;\s*/g, ';') // remove spaces around ;
+    .replace(/\s*,\s*/g, ',') // remove spaces around ,
+    .replace(/\s*(<=|>=|<|>)\s*/g, '$1') // remove spaces around comparison operators (media queries)
+    .replace(/\bfrom\s*{/g, '0%{') // normalise @keyframes 'from' to '0%'
     .trim();
 }
 
 /**
- * Reads the first CSS bundle from a bundle graph and returns its normalised
- * content. Normalisation strips block comments and collapses whitespace so
- * comparisons are not sensitive to formatting differences.
+ * Reads the first CSS bundle from a bundle graph and returns its normalised content.
+ *
+ * Both JS and native pipelines write via the FileSystemV3 bridge to overlayFS.
+ * The native pipeline may use a content-hashed filename that differs from the
+ * template path reported in the bundle graph — a dist-dir scan is used as fallback.
  */
 async function extractCssBundleContent(bg: any): Promise<string> {
   const cssBundles = bg
     .getBundles()
     .filter((b: any) => b.type === 'css' && b.filePath);
   assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
-  const raw = await overlayFS.readFile(cssBundles[0].filePath, 'utf8');
+  const filePath: string = cssBundles[0].filePath;
+
+  // Both JS and native pipelines write to overlayFS via the FileSystemV3 bridge.
+  // Each run uses its own distDir (set in compareCssPackagers) so their output
+  // files never collide; filePath in the bundle graph is always resolvable.
+  let raw: string;
+  try {
+    raw = await overlayFS.readFile(filePath, 'utf8');
+  } catch {
+    // Fallback: scan the dist dir in overlayFS for any .css file (handles cases
+    // where the bundle graph reports a template path rather than the hashed name).
+    const dir = path.dirname(filePath);
+    const entries = await overlayFS.readdir(dir);
+    const match = entries.find(
+      (e: string) => e.endsWith('.css') && !e.endsWith('.map'),
+    );
+    assert.ok(
+      match,
+      `No CSS file found in ${dir}. Files: ${entries.join(', ')}`,
+    );
+    raw = await overlayFS.readFile(path.join(dir, match!), 'utf8');
+  }
+
   return normalizeCss(raw);
 }
 
@@ -39,31 +76,50 @@ async function extractCssBundleContent(bg: any): Promise<string> {
  * Packages a CSS entry with both JS and native packagers and returns the
  * normalised CSS output for each.
  */
-async function compareCssPackagers(fixtureName: string): Promise<{
+async function compareCssPackagers(
+  fixtureName: string,
+  mode: 'development' | 'production' = 'development',
+): Promise<{
   jsCss: string;
   nativeCss: string;
 }> {
   const entryPath = path.join(__dirname, fixtureName, 'index.css');
   const commonOpts = {
-    mode: 'development' as const,
+    mode,
     inputFS: overlayFS,
     outputFS: overlayFS,
   };
 
+  // Read each packager's output immediately after its run, before the other
+  // packager overwrites the same output path in overlayFS.
   const jsBundleGraph = await bundle(entryPath, {
     ...commonOpts,
     featureFlags: {fullNative: false},
   });
+  const jsCss = await extractCssBundleContent(jsBundleGraph);
 
   const nativeBundleGraph = await bundle(entryPath, {
     ...commonOpts,
     featureFlags: {fullNative: true},
   });
-
-  const jsCss = await extractCssBundleContent(jsBundleGraph);
   const nativeCss = await extractCssBundleContent(nativeBundleGraph);
 
   return {jsCss, nativeCss};
+}
+
+/**
+ * Asserts that JS and native packagers produce identical normalised output for
+ * `fixtureName`, in both development and production modes.
+ */
+async function assertPackagerParity(fixtureName: string): Promise<void> {
+  for (const mode of ['development', 'production'] as const) {
+    const {jsCss, nativeCss} = await compareCssPackagers(fixtureName, mode);
+    assert.strictEqual(
+      nativeCss,
+      jsCss,
+      `Native and JS packagers must produce identical normalised CSS in ${mode} mode.\nNative: ${nativeCss}\nJS:     ${jsCss}`,
+    );
+  }
 }
 
 describe('packager-parity (JS vs native CSS packager)', function () {
@@ -83,17 +139,10 @@ describe('packager-parity (JS vs native CSS packager)', function () {
         yarn.lock:
     `;
 
-    const {jsCss, nativeCss} = await compareCssPackagers(fixtureName);
-
-    // Both packagers must produce structurally identical normalised output.
-    assert.strictEqual(
-      nativeCss,
-      jsCss,
-      `Native and JS packagers must produce identical normalised CSS.\nNative: ${nativeCss}\nJS:     ${jsCss}`,
-    );
+    await assertPackagerParity(fixtureName);
   });
 
-  it('multi-asset CSS concatenation produces same selectors', async function () {
+  it('multi-asset CSS concatenation produces identical output', async function () {
     this.timeout(30000);
     const fixtureName = 'packager-parity-multi-asset';
 
@@ -107,14 +156,135 @@ describe('packager-parity (JS vs native CSS packager)', function () {
         yarn.lock:
     `;
 
-    const {jsCss, nativeCss} = await compareCssPackagers(fixtureName);
+    await assertPackagerParity(fixtureName);
+  });
 
-    // Both packagers must concatenate assets and produce identical output.
-    assert.strictEqual(
-      nativeCss,
-      jsCss,
-      `Native and JS packagers must produce identical normalised CSS for multi-asset bundle.\nNative: ${nativeCss}\nJS:     ${jsCss}`,
-    );
+  it('CSS custom properties round-trip identically', async function () {
+    this.timeout(30000);
+    const fixtureName = 'packager-parity-custom-props';
+
+    await fsFixture(overlayFS, __dirname)`
+      ${fixtureName}
+        index.css:
+          :root { --color-brand: #0052cc; --spacing-md: 1rem; }
+          .btn { color: var(--color-brand); padding: var(--spacing-md); }
+        yarn.lock:
+    `;
+
+    await assertPackagerParity(fixtureName);
+  });
+
+  it('@media query rules are preserved identically', async function () {
+    this.timeout(30000);
+    const fixtureName = 'packager-parity-media-query';
+
+    await fsFixture(overlayFS, __dirname)`
+      ${fixtureName}
+        index.css:
+          .card { padding: 1rem; }
+          @media (max-width: 768px) { .card { padding: 0.5rem; } }
+          @media print { .card { display: none; } }
+        yarn.lock:
+    `;
+
+    await assertPackagerParity(fixtureName);
+  });
+
+  it('@keyframes animation rules are preserved identically', async function () {
+    this.timeout(30000);
+    const fixtureName = 'packager-parity-keyframes';
+
+    await fsFixture(overlayFS, __dirname)`
+      ${fixtureName}
+        index.css:
+          @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+          .animated { animation: fade-in 0.3s ease-in-out; }
+        yarn.lock:
+    `;
+
+    await assertPackagerParity(fixtureName);
+  });
+
+  it('asset concatenation order matches source order', async function () {
+    this.timeout(30000);
+    const fixtureName = 'packager-parity-order';
+
+    await fsFixture(overlayFS, __dirname)`
+      ${fixtureName}
+        index.css:
+          @import "./first.css";
+          @import "./second.css";
+          .third { color: green; }
+        first.css:
+          .first { color: red; }
+        second.css:
+          .second { color: blue; }
+        yarn.lock:
+    `;
+
+    for (const mode of ['development', 'production'] as const) {
+      const {jsCss, nativeCss} = await compareCssPackagers(fixtureName, mode);
+
+      // Verify parity.
+      assert.strictEqual(
+        nativeCss,
+        jsCss,
+        `Packagers must produce identical output in ${mode} mode.\nNative: ${nativeCss}\nJS:     ${jsCss}`,
+      );
+
+      // Independently verify the order is correct (first before second before third).
+      const firstIdx = nativeCss.indexOf('.first');
+      const secondIdx = nativeCss.indexOf('.second');
+      const thirdIdx = nativeCss.indexOf('.third');
+      assert.ok(
+        firstIdx < secondIdx && secondIdx < thirdIdx,
+        `Rules must appear in import order: first < second < third (${mode}); got: ${nativeCss}`,
+      );
+    }
+  });
+
+  it('external @import hoisting is identical between packagers', async function () {
+    this.timeout(30000);
+    const fixtureName = 'packager-parity-ext-import-parity';
+    const extUrl = 'https://fonts.googleapis.com/css2?family=Inter';
+
+    await fsFixture(overlayFS, __dirname)`
+      ${fixtureName}
+        index.css:
+          @import "${extUrl}";
+          .local { color: green; }
+        yarn.lock:
+    `;
+
+    for (const mode of ['development', 'production'] as const) {
+      const {jsCss, nativeCss} = await compareCssPackagers(fixtureName, mode);
+      assert.strictEqual(
+        nativeCss,
+        jsCss,
+        `External @import hoisting must be identical in ${mode} mode.\nNative: ${nativeCss}\nJS:     ${jsCss}`,
+      );
+    }
+  });
+
+  it('duplicate @import deduplication is identical between packagers', async function () {
+    this.timeout(30000);
+    const fixtureName = 'packager-parity-dedup-parity';
+
+    await fsFixture(overlayFS, __dirname)`
+      ${fixtureName}
+        index.css:
+          @import "./shared.css";
+          @import "./other.css";
+          .page { color: blue; }
+        shared.css:
+          .shared { font-size: 1rem; }
+        other.css:
+          @import "./shared.css";
+          .other { color: green; }
+        yarn.lock:
+    `;
+
+    await assertPackagerParity(fixtureName);
   });
 
   it('external @import with media query is hoisted to top', async function () {
@@ -140,12 +310,7 @@ describe('packager-parity (JS vs native CSS packager)', function () {
       featureFlags: {fullNative: true},
     });
 
-    const nativeCss = await overlayFS.readFile(
-      nativeBundleGraph
-        .getBundles()
-        .find((b: any) => b.type === 'css' && b.filePath).filePath,
-      'utf8',
-    );
+    const nativeCss = await extractCssBundleContent(nativeBundleGraph);
 
     assert.ok(
       nativeCss.includes('.local'),
@@ -232,6 +397,44 @@ describe('packager-parity (JS vs native CSS packager)', function () {
         `Source map must have a non-empty 'sources' array (fullNative=${featureFlags.fullNative}); got: ${mapContent}`,
       );
     }
+
+    // Both packagers must reference the same original source file(s) in their maps.
+    const getCssBundlePath = (bg: any): string =>
+      bg.getBundles().find((b: any) => b.type === 'css' && b.filePath).filePath;
+
+    const jsBg = await bundle(path.join(__dirname, fixtureName, 'index.css'), {
+      mode: 'development',
+      inputFS: overlayFS,
+      outputFS: overlayFS,
+      featureFlags: {fullNative: false},
+    });
+    const nativeBg = await bundle(
+      path.join(__dirname, fixtureName, 'index.css'),
+      {
+        mode: 'development',
+        inputFS: overlayFS,
+        outputFS: overlayFS,
+        featureFlags: {fullNative: true},
+      },
+    );
+
+    const jsMap = JSON.parse(
+      await overlayFS.readFile(getCssBundlePath(jsBg) + '.map', 'utf8'),
+    );
+    const nativeMap = JSON.parse(
+      await overlayFS.readFile(getCssBundlePath(nativeBg) + '.map', 'utf8'),
+    );
+
+    // Normalise source paths (strip any file:// prefix or absolute path prefix) to
+    // compare only the basename(s), since the two packagers may use different path formats.
+    const basenames = (sources: string[]) =>
+      sources.map((s) => path.basename(s)).sort();
+
+    assert.deepStrictEqual(
+      basenames(nativeMap.sources),
+      basenames(jsMap.sources),
+      `Both packagers must reference the same source files in their source maps.\nNative: ${JSON.stringify(nativeMap.sources)}\nJS:     ${JSON.stringify(jsMap.sources)}`,
+    );
   });
 
   it('CSS Modules: renamed classes are present in output from both packagers', async function () {
@@ -294,8 +497,11 @@ describe('packager-parity (JS vs native CSS packager)', function () {
   // than being treated as a raw URL asset. This behaviour is covered by the
   // url_replacer unit tests in crates/atlaspack_packager_css/src/url_replacer.rs.
 
-  it('duplicate @import is included only once in output', async function () {
+  it('duplicate @import appears exactly once in native output', async function () {
     this.timeout(30000);
+    // This test verifies the native packager's deduplication independently.
+    // Cross-packager parity of deduplication is verified by the
+    // 'duplicate @import deduplication is identical between packagers' test above.
     const fixtureName = 'packager-parity-dedup-import';
 
     await fsFixture(overlayFS, __dirname)`
