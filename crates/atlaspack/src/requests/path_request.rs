@@ -87,7 +87,7 @@ impl Request for PathRequest {
         Resolution::Unresolved => continue,
         Resolution::Excluded => {
           return Ok(ResultAndInvalidations {
-            invalidations: Vec::new(),
+            invalidations,
             result: RequestResult::Path(PathRequestOutput::Excluded),
           });
         }
