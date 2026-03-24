@@ -2038,6 +2038,7 @@ __metadata:
     command-exists: "npm:^1.2.6"
     core-js: "npm:^3.2.1"
     cross-env: "npm:^7.0.0"
+    date-fns: "npm:^4.1.0"
     esbuild: "npm:^0.23.1"
     esbuild-register: "npm:^3.5.0"
     exif-reader: "npm:^1.0.3"
@@ -17108,6 +17109,13 @@ __metadata:
   version: 1.4.0
   resolution: "dataloader@npm:1.4.0::__archiveUrl=https%3A%2F%2Fregistry.npmjs.org%2Fdataloader%2F-%2Fdataloader-1.4.0.tgz"
   checksum: 10c0/5fa4c843b9e60195092f1fc7e2acaff318ed46886dc670ddff683bc560f12d4079e6d1e77749501b7e111a8582d26a2aa2a2fbe6d7d5e1520cef64f4e1fd242d
+  languageName: node
+  linkType: hard
+
+"date-fns@npm:^4.1.0":
+  version: 4.1.0
+  resolution: "date-fns@npm:4.1.0"
+  checksum: 10c0/b79ff32830e6b7faa009590af6ae0fb8c3fd9ffad46d930548fbb5acf473773b4712ae887e156ba91a7b3dc30591ce0f517d69fd83bd9c38650fdc03b4e0bac8
   languageName: node
   linkType: hard
 
