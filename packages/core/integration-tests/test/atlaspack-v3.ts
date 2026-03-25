@@ -470,6 +470,131 @@ describe.v3('AtlaspackV3', function () {
     });
   });
 
+  describe('native CSS packager', () => {
+    it('emits a source map alongside a CSS bundle in development mode', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        native-css-sourcemap
+          index.css:
+            body { color: blue; }
+          yarn.lock:
+      `;
+
+      const bg = await bundle(
+        join(__dirname, 'native-css-sourcemap/index.css'),
+        {
+          mode: 'development',
+          inputFS: overlayFS,
+          outputFS: overlayFS,
+          featureFlags: {fullNative: true},
+        },
+      );
+
+      const cssBundles = bg
+        .getBundles()
+        .filter((b: any) => b.type === 'css' && b.filePath);
+      assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
+
+      const cssPath: string = cssBundles[0].filePath;
+      const cssContent = await overlayFS.readFile(cssPath, 'utf8');
+
+      assert.ok(
+        cssContent.includes('sourceMappingURL'),
+        `CSS bundle must contain a sourceMappingURL comment; got: ${cssContent}`,
+      );
+
+      const mapContent = await overlayFS.readFile(cssPath + '.map', 'utf8');
+      const mapJson = JSON.parse(mapContent);
+
+      assert.ok(
+        Array.isArray(mapJson.sources) && mapJson.sources.length > 0,
+        `Source map must have a non-empty 'sources' array; got: ${mapContent}`,
+      );
+    });
+
+    // Both packagers reconstruct hoisted external @imports from the dependency specifier
+    // (URL only). Media query conditions (e.g. `screen, print`) are not preserved by
+    // either packager — this is a known limitation of the current hoisting approach.
+    it('hoists external @import URL above local rules', async () => {
+      const extUrl = 'https://fonts.googleapis.com/css2?family=Roboto';
+
+      await fsFixture(overlayFS, __dirname)`
+        native-css-ext-import-mq
+          index.css:
+            @import "${extUrl}" screen, print;
+            .local { color: green; }
+          yarn.lock:
+      `;
+
+      const bg = await bundle(
+        join(__dirname, 'native-css-ext-import-mq/index.css'),
+        {
+          mode: 'development',
+          inputFS: overlayFS,
+          outputFS: overlayFS,
+          featureFlags: {fullNative: true},
+        },
+      );
+
+      const cssBundles = bg
+        .getBundles()
+        .filter((b: any) => b.type === 'css' && b.filePath);
+      assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
+      const css = await overlayFS.readFile(cssBundles[0].filePath, 'utf8');
+
+      assert.ok(
+        css.includes(extUrl),
+        `Hoisted @import must contain the external URL; got: ${css}`,
+      );
+      assert.ok(
+        css.includes('.local'),
+        `Native CSS must preserve local rules; got: ${css}`,
+      );
+      assert.ok(
+        css.indexOf('@import') < css.indexOf('.local'),
+        `External @import must be hoisted before local rules; got: ${css}`,
+      );
+    });
+
+    // CSS Modules tree-shaking intentionally diverges between packagers: the native
+    // packager removes unused classes via lightningcss AST while the JS packager uses
+    // PostCSS. The outputs cannot be strict-equaled, so this test only verifies that
+    // the native packager retains the used class in production mode.
+    it('CSS Modules: used class is retained in native production output', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        native-css-modules
+          index.js:
+            import * as styles from './styles.module.css';
+            document.body.className = styles.title;
+          styles.module.css:
+            .title { font-weight: bold; }
+            .unused { display: none; }
+          yarn.lock:
+      `;
+
+      const bg = await bundle(join(__dirname, 'native-css-modules/index.js'), {
+        mode: 'production',
+        inputFS: overlayFS,
+        outputFS: overlayFS,
+        featureFlags: {fullNative: true},
+      });
+
+      const cssBundles = bg
+        .getBundles()
+        .filter((b: any) => b.type === 'css' && b.filePath);
+      assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
+      const css = await overlayFS.readFile(cssBundles[0].filePath, 'utf8');
+
+      assert.ok(
+        css.includes('font-weight'),
+        `Native CSS must retain the used .title class; got: ${css}`,
+      );
+      assert.ok(
+        !css.includes('display'),
+        `Native CSS must tree-shake the unused .unused class; got: ${css}`,
+      );
+    });
+  });
+
   describe('worker thread logging', () => {
     // The v3 plugin host (AtlaspackWorker) runs inside a real worker_threads
     // Worker spawned by NapiWorkerPool. Log events are forwarded to the main
