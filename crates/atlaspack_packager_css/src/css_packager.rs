@@ -104,7 +104,7 @@ fn remove_unused_class_rules(
 
   remove_unused_from_rule_list(&mut stylesheet.rules, all_module_selectors, used_selectors);
 
-  match stylesheet.to_css(Default::default()) {
+  match stylesheet.to_css(PrinterOptions::default()) {
     Ok(result) => result.code,
     Err(_) => css.to_string(),
   }
@@ -121,7 +121,7 @@ fn remove_unused_from_rule_list<'i>(
     if let CssRule::Style(style_rule) = rule {
       let all_unused = style_rule.selectors.0.iter().all(|selector| {
         let selector_str = selector
-          .to_css_string(Default::default())
+          .to_css_string(PrinterOptions::default())
           .unwrap_or_default();
         all_module_selectors.contains(&selector_str) && !used_selectors.contains(&selector_str)
       });
@@ -236,7 +236,9 @@ fn expand_composes_selectors<'i>(
       };
 
       let rule_is_used = style_rule.selectors.0.iter().any(|sel| {
-        let s = sel.to_css_string(Default::default()).unwrap_or_default();
+        let s = sel
+          .to_css_string(PrinterOptions::default())
+          .unwrap_or_default();
         used_selectors.contains(&s)
       });
 
@@ -413,7 +415,11 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
       let css_code = if asset_external_specifiers.is_empty() {
         css_code
       } else {
-        filter_external_imports(&css_code, &asset_external_specifiers)
+        filter_external_imports(
+          &css_code,
+          &asset_external_specifiers,
+          bundle.env.should_optimize,
+        )
       };
 
       // Replace CSS variable references with resolved symbol names.
@@ -430,7 +436,8 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
         && let Some(ref asset_map) = asset.map
         && let Ok(data_url) = asset_map.clone().to_data_url(None)
       {
-        format!("{css_code}\n/*# sourceMappingURL={data_url} */")
+        let separator = if css_code.ends_with('\n') { "" } else { "\n" };
+        format!("{css_code}{separator}/*# sourceMappingURL={data_url} */\n")
       } else {
         css_code
       };
@@ -489,6 +496,7 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
 
     let result = stylesheet
       .to_css(PrinterOptions {
+        minify: bundle.env.should_optimize,
         source_map: source_map.as_mut(),
         project_root: self.context.project_root.to_str(),
         ..PrinterOptions::default()
@@ -499,8 +507,8 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
     if !hoisted_imports.is_empty() {
       let hoisted_count = hoisted_imports.len() as i64;
       let hoisted = hoisted_imports.join("\n");
-      css = format!("{hoisted}\n{css}");
-      // Shift all source map mappings down by the number of prepended @import lines.
+      let separator = if bundle.env.should_optimize { "" } else { "\n" };
+      css = format!("{hoisted}{separator}{css}");
       if let Some(ref mut sm) = source_map {
         sm.offset_lines(0, hoisted_count)
           .map_err(|e| anyhow::anyhow!("source map offset_lines failed: {:?}", e))?;
@@ -517,7 +525,10 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
 
     let map_bytes: Option<Vec<u8>> = if let Some(ref mut sm) = source_map {
       let bundle_name = bundle.name.as_deref().unwrap_or("output.css");
-      css.push_str(&format!("\n/*# sourceMappingURL={bundle_name}.map */"));
+      let separator = if css.ends_with('\n') { "" } else { "\n" };
+      css.push_str(&format!(
+        "{separator}/*# sourceMappingURL={bundle_name}.map */\n"
+      ));
       let map_json = sm
         .to_json(None)
         .map_err(|e| anyhow::anyhow!("source map serialisation failed: {:?}", e))?;
@@ -617,7 +628,7 @@ fn apply_css_var_substitution(
 }
 
 /// Strips `@import` statements whose URL matches any of the given external specifiers.
-fn filter_external_imports(css: &str, external_specifiers: &[String]) -> String {
+fn filter_external_imports(css: &str, external_specifiers: &[String], minify: bool) -> String {
   if external_specifiers.is_empty() {
     return css.to_string();
   }
@@ -638,7 +649,10 @@ fn filter_external_imports(css: &str, external_specifiers: &[String]) -> String 
   });
 
   stylesheet
-    .to_css(PrinterOptions::default())
+    .to_css(PrinterOptions {
+      minify,
+      ..PrinterOptions::default()
+    })
     .map(|res| res.code)
     .unwrap_or_else(|_| css.to_string())
 }
@@ -2513,7 +2527,7 @@ mod tests {
     // implementation correctly ignores semicolons inside comments.
     let css = "@import \"https://fonts.googleapis.com/css\" /* font; load */ screen, print;\n.local { color: red; }";
     let external = vec!["https://fonts.googleapis.com".to_string()];
-    let result = filter_external_imports(css, &external);
+    let result = filter_external_imports(css, &external, false);
     assert!(
       !result.contains("@import"),
       "media-query-qualified external @import (with comment containing semicolon) must be stripped; got: {result:?}"
@@ -2528,7 +2542,7 @@ mod tests {
   fn filter_external_imports_strips_multiline_import() {
     let css = "@import\n  \"https://example.com/ext.css\"\n  screen;\n.keep { color: blue; }";
     let external = vec!["https://example.com/ext.css".to_string()];
-    let result = filter_external_imports(css, &external);
+    let result = filter_external_imports(css, &external, false);
     assert!(
       !result.contains("@import"),
       "multi-line external @import must be stripped; got: {result:?}"
@@ -2540,12 +2554,50 @@ mod tests {
   fn filter_external_imports_preserves_local_imports() {
     let css = "@import \"./local.css\";\n.local { color: green; }";
     let external = vec!["https://external.com".to_string()];
-    let result = filter_external_imports(css, &external);
+    let result = filter_external_imports(css, &external, false);
     assert!(
       result.contains("@import"),
       "local @import must NOT be stripped; got: {result:?}"
     );
     assert!(result.contains(".local"));
+  }
+
+  #[test]
+  fn filter_external_imports_minifies_output_when_flag_is_true() {
+    // A non-matching specifier forces the full parse/print path while keeping all rules.
+    let css = ".keep {\n  color: red;\n  font-size: 1rem;\n}";
+    let external = vec!["https://fonts.googleapis.com".to_string()];
+    let result = filter_external_imports(css, &external, true);
+    // Minified output must not contain newlines or indentation whitespace.
+    assert!(
+      !result.contains('\n'),
+      "minified output must not contain newlines; got: {result:?}"
+    );
+    assert!(
+      !result.contains("  "),
+      "minified output must not contain indentation whitespace; got: {result:?}"
+    );
+    assert!(
+      result.contains("color:red"),
+      "minified output must collapse 'color: red' to 'color:red'; got: {result:?}"
+    );
+  }
+
+  #[test]
+  fn filter_external_imports_preserves_whitespace_when_flag_is_false() {
+    // A non-matching specifier forces the full parse/print path while keeping all rules.
+    let css = ".keep {\n  color: red;\n}";
+    let external = vec!["https://fonts.googleapis.com".to_string()];
+    let result = filter_external_imports(css, &external, false);
+    // Non-minified output must keep declarations on separate indented lines.
+    assert!(
+      result.contains('\n'),
+      "non-minified output must contain newlines; got: {result:?}"
+    );
+    assert!(
+      result.contains("color: red"),
+      "non-minified output must preserve space in 'color: red'; got: {result:?}"
+    );
   }
 
   #[test]

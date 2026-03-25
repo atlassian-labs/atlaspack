@@ -390,6 +390,86 @@ describe.v3('AtlaspackV3', function () {
     await inputFS.rimraf(dir);
   });
 
+  describe('CSS minification', () => {
+    it('minifies CSS output in production mode', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        css-minify-prod
+          index.css:
+            body {
+              color: red;
+              background: white;
+            }
+            .heading {
+              font-size: 2em;
+              font-weight: bold;
+            }
+          yarn.lock:
+      `;
+
+      const bg = await bundle(join(__dirname, 'css-minify-prod/index.css'), {
+        mode: 'production',
+        inputFS: overlayFS,
+        featureFlags: {fullNative: true},
+      });
+
+      const cssBundles = bg
+        .getBundles()
+        .filter((b: any) => b.type === 'css' && b.filePath);
+      assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
+      const css = await outputFS.readFile(cssBundles[0].filePath, 'utf8');
+
+      // Minified output must not contain runs of whitespace between tokens.
+      // A non-minified rule like `body {\n  color: red;\n}` becomes `body{color:red}`.
+      assert.ok(
+        !css.includes('  '),
+        `Production CSS must not contain indentation whitespace; got: ${css}`,
+      );
+      assert.ok(
+        !css.includes('{\n'),
+        `Production CSS must not contain newlines after '{'; got: ${css}`,
+      );
+    });
+
+    it('does not minify CSS output in development mode', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        css-minify-dev
+          index.css:
+            body {
+              color: red;
+              background: white;
+            }
+            .heading {
+              font-size: 2em;
+              font-weight: bold;
+            }
+          yarn.lock:
+      `;
+
+      const bg = await bundle(join(__dirname, 'css-minify-dev/index.css'), {
+        mode: 'development',
+        inputFS: overlayFS,
+        featureFlags: {fullNative: true},
+      });
+
+      const cssBundles = bg
+        .getBundles()
+        .filter((b: any) => b.type === 'css' && b.filePath);
+      assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
+      const css = await outputFS.readFile(cssBundles[0].filePath, 'utf8');
+
+      // Development output must preserve whitespace — rules should be on
+      // separate lines and properties should be indented.
+      assert.ok(
+        css.includes('\n'),
+        `Development CSS must contain newlines (not minified); got: ${css}`,
+      );
+      assert.ok(
+        css.includes('color'),
+        `Development CSS must contain the 'color' property; got: ${css}`,
+      );
+    });
+  });
+
   describe('worker thread logging', () => {
     // The v3 plugin host (AtlaspackWorker) runs inside a real worker_threads
     // Worker spawned by NapiWorkerPool. Log events are forwarded to the main

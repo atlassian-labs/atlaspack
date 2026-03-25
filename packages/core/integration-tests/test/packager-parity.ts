@@ -10,31 +10,6 @@ import {
 } from '@atlaspack/test-utils';
 
 /**
- * Normalize CSS for comparison: strip block comments and remove all optional
- * whitespace around punctuation so that minified and pretty-printed CSS compare
- * equal. This lets parity tests focus on semantic content rather than formatting.
- *
- * Normalisation steps:
- *   1. Strip block comments
- *   2. Collapse all whitespace runs to a single space
- *   3. Remove spaces around { } : ; that are optional in CSS
- */
-function normalizeCss(css: string): string {
-  return css
-    .replace(/\/\*[\s\S]*?\*\//g, '') // strip block comments
-    .replace(/\s+/g, ' ') // collapse whitespace runs to single space
-    .replace(/\s*{\s*/g, '{') // remove spaces around {
-    .replace(/;\s*}/g, '}') // strip trailing semicolon before }
-    .replace(/\s*}\s*/g, '}') // remove spaces around }
-    .replace(/\s*:\s*/g, ':') // remove spaces around : (properties)
-    .replace(/\s*;\s*/g, ';') // remove spaces around ;
-    .replace(/\s*,\s*/g, ',') // remove spaces around ,
-    .replace(/\s*(<=|>=|<|>)\s*/g, '$1') // remove spaces around comparison operators (media queries)
-    .replace(/\bfrom\s*{/g, '0%{') // normalise @keyframes 'from' to '0%'
-    .trim();
-}
-
-/**
  * Reads the first CSS bundle from a bundle graph and returns its normalised content.
  *
  * Both JS and native pipelines write via the FileSystemV3 bridge to overlayFS.
@@ -51,9 +26,9 @@ async function extractCssBundleContent(bg: any): Promise<string> {
   // Both JS and native pipelines write to overlayFS via the FileSystemV3 bridge.
   // Each run uses its own distDir (set in compareCssPackagers) so their output
   // files never collide; filePath in the bundle graph is always resolvable.
-  let raw: string;
+  let css: string;
   try {
-    raw = await overlayFS.readFile(filePath, 'utf8');
+    css = await overlayFS.readFile(filePath, 'utf8');
   } catch {
     // Fallback: scan the dist dir in overlayFS for any .css file (handles cases
     // where the bundle graph reports a template path rather than the hashed name).
@@ -66,10 +41,10 @@ async function extractCssBundleContent(bg: any): Promise<string> {
       match,
       `No CSS file found in ${dir}. Files: ${entries.join(', ')}`,
     );
-    raw = await overlayFS.readFile(path.join(dir, match!), 'utf8');
+    css = await overlayFS.readFile(path.join(dir, match!), 'utf8');
   }
 
-  return normalizeCss(raw);
+  return css;
 }
 
 /**
@@ -117,7 +92,7 @@ async function assertPackagerParity(fixtureName: string): Promise<void> {
     assert.strictEqual(
       nativeCss,
       jsCss,
-      `Native and JS packagers must produce identical normalised CSS in ${mode} mode.\nNative: ${nativeCss}\nJS:     ${jsCss}`,
+      `Native and JS packagers must produce identical normalised CSS in ${mode} mode.`,
     );
   }
 }
@@ -229,7 +204,7 @@ describe('packager-parity (JS vs native CSS packager)', function () {
       assert.strictEqual(
         nativeCss,
         jsCss,
-        `Packagers must produce identical output in ${mode} mode.\nNative: ${nativeCss}\nJS:     ${jsCss}`,
+        `Packagers must produce identical output in ${mode} mode.`,
       );
 
       // Independently verify the order is correct (first before second before third).
@@ -261,7 +236,7 @@ describe('packager-parity (JS vs native CSS packager)', function () {
       assert.strictEqual(
         nativeCss,
         jsCss,
-        `External @import hoisting must be identical in ${mode} mode.\nNative: ${nativeCss}\nJS:     ${jsCss}`,
+        `External @import hoisting must be identical in ${mode} mode.`,
       );
     }
   });
