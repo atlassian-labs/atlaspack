@@ -2,6 +2,17 @@ use std::path::{Component, Path};
 
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
+use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
+
+/// Mirrors JS `fixedEncodeURIComponent`: encode everything except `A-Z a-z 0-9 - _ . ~`.
+///
+/// Standard `encodeURIComponent` leaves `- _ . ! ~ * ' ( )` unencoded; `fixedEncodeURIComponent`
+/// additionally encodes `! * ' ( )`, leaving only the four RFC-3986 unreserved non-alphanum chars.
+const FIXED_ENCODE_URI_COMPONENT: &AsciiSet = &NON_ALPHANUMERIC
+  .remove(b'-')
+  .remove(b'_')
+  .remove(b'.')
+  .remove(b'~');
 
 use atlaspack_core::bundle_graph::bundle_graph::BundleGraph;
 use atlaspack_core::database::DatabaseRef;
@@ -95,8 +106,19 @@ pub fn replace_url_references(
           let db_key = asset.content_key.as_deref().unwrap_or(asset.id.as_str());
           let bytes = db.get(db_key)?.unwrap_or_default();
           let mime = mime_for_file_type(&asset.file_type);
-          let encoded = BASE64_STANDARD.encode(&bytes);
-          format!("data:{mime};base64,{encoded}")
+          // Mirror @atlaspack/optimizer-data-url: text (valid UTF-8) → percent-encode,
+          // binary → base64. SVG and other text formats are percent-encoded; PNG/WebP/etc
+          // are base64-encoded.
+          match std::str::from_utf8(&bytes) {
+            Ok(text) => {
+              let encoded = utf8_percent_encode(text, FIXED_ENCODE_URI_COMPONENT);
+              format!("data:{mime},{encoded}")
+            }
+            Err(_) => {
+              let encoded = BASE64_STANDARD.encode(&bytes);
+              format!("data:{mime};base64,{encoded}")
+            }
+          }
         } else {
           let resolved_path =
             find_relative_path(asset.id.as_str(), bundle, bundle_graph, output_dir)
@@ -189,7 +211,6 @@ mod tests {
     Asset, Bundle, BundleBehavior, Dependency, DependencyBuilder, Environment, FileType, Priority,
     SpecifierType, Target,
   };
-  use base64::Engine;
   use pretty_assertions::assert_eq;
 
   use super::{
@@ -500,58 +521,6 @@ mod tests {
   }
 
   #[test]
-  fn inline_asset_replaced_with_base64_data_uri() {
-    let placeholder = "ccc3333333333333";
-    let css_bundle = make_css_bundle("bundle_css");
-    let db = make_db();
-    let output_dir = PathBuf::from("/dist");
-
-    let fake_png_bytes: &[u8] = b"\x89PNG\r\n\x1a\n";
-    db.put("asset_img_inline", fake_png_bytes).unwrap();
-
-    let inline_asset = Asset {
-      id: "asset_img_inline".to_string(),
-      file_type: FileType::Png,
-      bundle_behavior: Some(BundleBehavior::Inline),
-      env: Arc::new(Environment::default()),
-      ..Asset::default()
-    };
-
-    let dep = make_url_dep("./inline.png", Some(placeholder));
-
-    let css_asset = Asset {
-      id: "asset_css_1".to_string(),
-      file_type: FileType::Css,
-      env: Arc::new(Environment::default()),
-      ..Asset::default()
-    };
-
-    let mut graph = MockBundleGraph::new();
-    graph.bundles.push(css_bundle.clone());
-    graph
-      .assets_by_bundle
-      .insert("bundle_css".to_string(), vec![css_asset.clone()]);
-    graph
-      .deps_by_asset
-      .insert("asset_css_1".to_string(), vec![dep]);
-    graph.resolved.insert(placeholder.to_string(), inline_asset);
-
-    let input = format!(".icon {{ background: url({placeholder}); }}");
-
-    let result = replace_url_references(&input, &css_bundle, &graph, &db, &output_dir)
-      .expect("replace_url_references must succeed");
-
-    assert!(
-      result.contains("data:image/png;base64,"),
-      "Expected data URI with 'data:image/png;base64,' in output, got: {result:?}"
-    );
-    assert!(
-      !result.contains(placeholder),
-      "Placeholder must be removed from output, got: {result:?}"
-    );
-  }
-
-  #[test]
   fn unresolvable_url_falls_back_to_specifier() {
     let placeholder = "ddd4444444444444";
     let specifier = "./missing-image.png";
@@ -685,12 +654,15 @@ mod tests {
   }
 
   #[test]
-  fn inline_svg_asset_replaced_with_correct_mime_type() {
+  fn inline_svg_asset_replaced_with_percent_encoded_data_uri() {
+    // SVG is valid UTF-8, so it must be percent-encoded (not base64), matching
+    // @atlaspack/optimizer-data-url behaviour.
     let placeholder = "svg_placeholder";
     let css_bundle = make_css_bundle("bundle_css");
     let db = make_db();
     let output_dir = PathBuf::from("/dist");
-    let svg_content = "<svg>...</svg>";
+    let svg_content =
+      "<svg xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"8\" height=\"8\"/></svg>";
     db.put("svg_content", svg_content.as_bytes()).unwrap();
 
     let svg_asset = Asset {
@@ -726,15 +698,72 @@ mod tests {
     let result = replace_url_references(&input, &css_bundle, &graph, &db, &output_dir)
       .expect("replace_url_references must succeed");
 
-    let encoded = base64::engine::general_purpose::STANDARD.encode(svg_content);
-    let expected = format!(
-      ".icon {{ background: url(data:image/svg+xml;base64,{}); }}",
-      encoded
+    // Must be percent-encoded, not base64.
+    assert!(
+      result.contains("data:image/svg+xml,%3Csvg"),
+      "SVG data URI must be percent-encoded; got: {result:?}"
     );
+    assert!(
+      !result.contains("base64"),
+      "SVG (text) must not be base64-encoded; got: {result:?}"
+    );
+    assert!(
+      !result.contains(placeholder),
+      "Placeholder must be replaced; got: {result:?}"
+    );
+  }
 
-    assert_eq!(
-      result, expected,
-      "SVG data URI should have correct MIME type"
+  #[test]
+  fn inline_binary_asset_replaced_with_base64_data_uri() {
+    // Binary content (not valid UTF-8) must be base64-encoded, matching
+    // @atlaspack/optimizer-data-url behaviour.
+    let placeholder = "ccc3333333333333";
+    let css_bundle = make_css_bundle("bundle_css");
+    let db = make_db();
+    let output_dir = PathBuf::from("/dist");
+
+    let fake_png_bytes: &[u8] = b"\x89PNG\r\n\x1a\n";
+    db.put("asset_img_inline", fake_png_bytes).unwrap();
+
+    let inline_asset = Asset {
+      id: "asset_img_inline".to_string(),
+      file_type: FileType::Png,
+      bundle_behavior: Some(BundleBehavior::Inline),
+      env: Arc::new(Environment::default()),
+      ..Asset::default()
+    };
+
+    let dep = make_url_dep("./inline.png", Some(placeholder));
+
+    let css_asset = Asset {
+      id: "asset_css_1".to_string(),
+      file_type: FileType::Css,
+      env: Arc::new(Environment::default()),
+      ..Asset::default()
+    };
+
+    let mut graph = MockBundleGraph::new();
+    graph.bundles.push(css_bundle.clone());
+    graph
+      .assets_by_bundle
+      .insert("bundle_css".to_string(), vec![css_asset.clone()]);
+    graph
+      .deps_by_asset
+      .insert("asset_css_1".to_string(), vec![dep]);
+    graph.resolved.insert(placeholder.to_string(), inline_asset);
+
+    let input = format!(".icon {{ background: url({placeholder}); }}");
+
+    let result = replace_url_references(&input, &css_bundle, &graph, &db, &output_dir)
+      .expect("replace_url_references must succeed");
+
+    assert!(
+      result.contains("data:image/png;base64,"),
+      "Binary PNG must be base64-encoded; got: {result:?}"
+    );
+    assert!(
+      !result.contains(placeholder),
+      "Placeholder must be removed from output, got: {result:?}"
     );
   }
 

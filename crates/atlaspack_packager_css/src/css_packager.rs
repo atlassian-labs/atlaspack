@@ -11,7 +11,8 @@ use lightningcss::printer::PrinterOptions;
 use lightningcss::properties::custom::{Token, TokenOrValue};
 use lightningcss::properties::{Property, PropertyId};
 use lightningcss::rules::{CssRule, CssRuleList};
-use lightningcss::stylesheet::{ParserOptions, StyleSheet};
+use lightningcss::stylesheet::{MinifyOptions, ParserOptions, StyleSheet};
+use lightningcss::targets::Browsers;
 use lightningcss::traits::ToCss;
 use parcel_sourcemap_ext::SourceMap as ParcelSourceMap;
 
@@ -430,13 +431,28 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
       );
     }
 
-    let result = stylesheet
-      .to_css(PrinterOptions {
-        minify: bundle.env.should_optimize,
-        source_map: source_map.as_mut(),
-        project_root: self.context.project_root.to_str(),
-        ..PrinterOptions::default()
+    let targets = Browsers::from_browserslist(["last 2 Chrome versions"])
+      .expect("Failed to parse browserslist")
+      .unwrap_or_default()
+      .into();
+
+    let printer_options = PrinterOptions {
+      targets,
+      minify: bundle.env.should_optimize,
+      source_map: source_map.as_mut(),
+      project_root: self.context.project_root.to_str(),
+      ..PrinterOptions::default()
+    };
+
+    stylesheet
+      .minify(MinifyOptions {
+        targets,
+        ..Default::default()
       })
+      .unwrap();
+
+    let result = stylesheet
+      .to_css(printer_options)
       .map_err(|e| anyhow::anyhow!("lightningcss printing failed: {:?}", e))?;
     let css = result.code;
 
@@ -2559,8 +2575,8 @@ mod tests {
     );
     assert!(!output.contains("image.png"), "URL should be replaced");
     assert!(
-      output.contains("data:application/octet-stream;base64,"),
-      "Should contain base64 data URI; got: {}",
+      output.contains("data:application/octet-stream,"),
+      "Should contain percent-encoded data URI; got: {}",
       output
     );
   }

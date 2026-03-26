@@ -691,6 +691,7 @@ dependencies = [
  "parcel_sourcemap",
  "parking_lot",
  "pathdiff",
+ "percent-encoding 2.3.2",
  "pretty_assertions",
  "rayon",
  "serde_json",
