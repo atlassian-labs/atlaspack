@@ -6,7 +6,7 @@ use anyhow::Result;
 use atlaspack_core::bundle_graph::bundle_graph::BundleGraph;
 use atlaspack_core::package_result::{BundleInfo, PackageResult};
 use atlaspack_core::types::{Asset, Bundle, BundleBehavior, Diagnostic, Priority};
-use lightningcss::bundler::{Bundler, SourceProvider};
+use lightningcss::bundler::{Bundler, ResolveResult, SourceProvider};
 use lightningcss::printer::PrinterOptions;
 use lightningcss::properties::custom::{Token, TokenOrValue};
 use lightningcss::properties::{Property, PropertyId};
@@ -52,8 +52,12 @@ impl SourceProvider for InMemoryCssProvider {
     )
   }
 
-  fn resolve(&self, specifier: &str, _originating_file: &Path) -> Result<PathBuf, Self::Error> {
-    Ok(PathBuf::from(specifier))
+  fn resolve(
+    &self,
+    specifier: &str,
+    _originating_file: &Path,
+  ) -> std::result::Result<ResolveResult, std::io::Error> {
+    Ok(ResolveResult::File(PathBuf::from(specifier)))
   }
 }
 
