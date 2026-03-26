@@ -5,6 +5,8 @@ pub struct PackageResult {
   pub config_requests: Vec<()>, // TODO only here for compat with JS orchestrator
   pub dev_dep_requests: Vec<()>, // TODO only here for compat with JS orchestrator
   pub invalidations: Vec<()>,   // TODO only here for compat with JS orchestrator
+  /// Non-fatal diagnostics emitted during packaging (e.g. tree-shaking warnings).
+  pub warnings: Vec<crate::types::Diagnostic>,
 }
 
 #[derive(Debug, Clone)]
