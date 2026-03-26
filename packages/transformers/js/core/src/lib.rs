@@ -85,9 +85,7 @@ use swc_core::common::errors::Handler;
 use swc_core::common::pass::Optional;
 use swc_core::common::source_map::SourceMapGenConfig;
 use swc_core::common::sync::Lrc;
-use swc_core::ecma::ast::ImportSpecifier;
 use swc_core::ecma::ast::Module;
-use swc_core::ecma::ast::ModuleDecl;
 use swc_core::ecma::ast::ModuleItem;
 use swc_core::ecma::ast::Program;
 use swc_core::ecma::codegen::text_writer::JsWriter;
@@ -439,10 +437,6 @@ pub fn transform(
                   // Only strip JSX pragmas and replacement imports for files that actually use @compiled/react.
                   if should_run_compiled_css {
                     remove_jsx_pragma_comments(&comments);
-                    if let Program::Module(ref mut m) = module {
-                      m.body
-                        .retain(|item| !is_compiled_jsx_replacement_import(item));
-                    }
                   }
 
                   result.style_rules = Some(style_rules.into_iter().collect());
@@ -956,18 +950,6 @@ pub fn emit(
   }
 
   Ok((buf, src_map_buf))
-}
-
-/// Matches `import { jsx } from 'react/jsx-runtime'` inserted by the compiled CSS transform
-fn is_compiled_jsx_replacement_import(item: &ModuleItem) -> bool {
-  if let ModuleItem::ModuleDecl(ModuleDecl::Import(import)) = item
-    && import.src.value == "react/jsx-runtime"
-    && import.specifiers.len() == 1
-    && let Some(ImportSpecifier::Named(named)) = import.specifiers.first()
-  {
-    return named.local.sym == "jsx";
-  }
-  false
 }
 
 fn collect_comments_for_transform(comments: &SingleThreadedComments) -> Vec<Comment> {
