@@ -27,6 +27,9 @@ const HASH_REF_PREFIX: &str = "HASH_REF_";
 const HASH_REF_HASH_LEN: usize = 16;
 /// Total length of a hash reference placeholder: prefix + hash chars.
 const HASH_REF_PLACEHOLDER_LEN: usize = HASH_REF_PREFIX.len() + HASH_REF_HASH_LEN;
+/// Number of hex characters used in output filenames.
+/// Matches `NAME_HASH_DISPLAY_LEN` in `packages/core/core/src/requests/WriteBundlesRequest.ts`.
+const NAME_HASH_DISPLAY_LEN: usize = 8;
 
 /// Output produced by a successfully packaged bundle.
 #[derive(Debug, Clone, PartialEq)]
@@ -177,6 +180,18 @@ fn apply_hash_substitution(
   Ok(result)
 }
 
+/// Truncate a full content hash to the display length used in output filenames.
+///
+/// Mirrors `nameHashForFilename()` in `WriteBundlesRequest.ts`:
+/// use the last `NAME_HASH_DISPLAY_LEN` chars so filenames stay short.
+fn name_hash_for_filename(hash: &str) -> &str {
+  if hash.len() <= NAME_HASH_DISPLAY_LEN {
+    hash
+  } else {
+    &hash[hash.len() - NAME_HASH_DISPLAY_LEN..]
+  }
+}
+
 /// Derive the output filename for a bundle by substituting its own hash
 /// reference placeholder with the content hash produced by the packager.
 ///
@@ -190,7 +205,7 @@ fn resolve_bundle_name(bundle: &Bundle, content_hash: &str) -> anyhow::Result<St
     .as_deref()
     .ok_or_else(|| anyhow!("Bundle has no name"))?;
   if !bundle.hash_reference.is_empty() && name.contains(&bundle.hash_reference) {
-    Ok(name.replace(&bundle.hash_reference, content_hash))
+    Ok(name.replace(&bundle.hash_reference, name_hash_for_filename(content_hash)))
   } else {
     Ok(name.to_string())
   }
@@ -281,10 +296,47 @@ impl<B: BundleGraph + Send + Sync + 'static> Request for PackageRequest<B> {
       //     invalidations: vec![],
       //   })
       // }
-      _ => Err(anyhow!(
-        "Unsupported bundle type: {:?}",
-        self.bundle.bundle_type
-      )),
+      // Raw passthrough: read the first asset's content from the DB and emit
+      // it unchanged. Mirrors @atlaspack/packager-raw for asset types that do
+      // not yet have a native packager implementation (e.g. SVG, images).
+      _ => {
+        use atlaspack_core::hash::hash_bytes;
+        use atlaspack_core::package_result::BundleInfo;
+
+        let bundle = self
+          .bundle_graph
+          .get_bundle_by_id(&self.bundle.id)
+          .ok_or_else(|| anyhow!("Bundle not found: {}", self.bundle.id))?;
+
+        let assets = self.bundle_graph.get_bundle_assets(bundle)?;
+        let asset = assets
+          .first()
+          .ok_or_else(|| anyhow!("Bundle has no assets: {}", bundle.id))?;
+
+        let db_key = asset.content_key.as_deref().unwrap_or(asset.id.as_str());
+        let content = request_context.db.get(db_key)?.unwrap_or_default();
+
+        let hash = hash_bytes(&content);
+
+        Ok(PackageResult {
+          bundle_info: BundleInfo {
+            bundle_type: self.bundle.bundle_type.extension().to_string(),
+            size: content.len() as u64,
+            total_assets: assets.len() as u64,
+            hash,
+            hash_references: vec![],
+            cache_keys: None,
+            is_large_blob: false,
+            time: None,
+            bundle_contents: Some(content),
+            map_contents: None,
+          },
+          config_requests: vec![],
+          dev_dep_requests: vec![],
+          invalidations: vec![],
+          warnings: vec![],
+        })
+      }
     };
 
     let package_result = package_result?;
@@ -308,7 +360,7 @@ impl<B: BundleGraph + Send + Sync + 'static> Request for PackageRequest<B> {
     if !self.bundle.hash_reference.is_empty() {
       hash_ref_map
         .entry(self.bundle.hash_reference.clone())
-        .or_insert_with(|| content_hash.clone());
+        .or_insert_with(|| name_hash_for_filename(&content_hash).to_string());
     }
 
     // Apply hash substitution. All placeholders must be resolvable.
