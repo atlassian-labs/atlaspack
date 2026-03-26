@@ -434,7 +434,10 @@ pub fn transform(
                     };
                   }
 
-                  remove_jsx_pragma_comments(&comments);
+                  // Only strip JSX pragmas and replacement imports for files that actually use @compiled/react.
+                  if should_run_compiled_css {
+                    remove_jsx_pragma_comments(&comments);
+                  }
 
                   result.style_rules = Some(style_rules.into_iter().collect());
                 }

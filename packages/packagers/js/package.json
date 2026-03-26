@@ -24,9 +24,9 @@
     "@atlaspack/source-map": "3.3.4",
     "@atlaspack/types": "2.15.50",
     "@atlaspack/utils": "3.4.2",
-    "globals": "^13.2.0",
+    "globals": "^15.15.0",
     "nullthrows": "^1.1.1",
-    "outdent": "^0.8.0"
+    "outdent": "^0.7.1"
   },
   "type": "commonjs",
   "scripts": {

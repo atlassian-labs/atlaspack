@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "@atlaspack/babel-register": "2.14.4",
-    "rimraf": "^5.0.5"
+    "rimraf": "^3.0.2"
   },
   "type": "commonjs"
 }

@@ -48,7 +48,7 @@ export default async function openInBrowser(url: string, browser: string) {
   try {
     const options =
       typeof browser === 'string' && browser.length > 0
-        ? {app: [getAppName(browser)]}
+        ? {app: {name: getAppName(browser)}}
         : undefined;
 
     await open(url, options);

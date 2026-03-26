@@ -2,13 +2,14 @@ import {createProgram as _createProgram} from '@atlaspack/link';
 import {describe, fsFixture, it, overlayFS} from '@atlaspack/test-utils';
 
 import assert from 'assert';
+import type {Command} from 'commander';
 import path from 'path';
 import sinon from 'sinon';
 
 function createProgram(opts) {
   const program = _createProgram(opts).exitOverride();
 
-  function cli(command: string = ''): Promise<void> {
+  function cli(command: string = ''): Promise<Command> {
     return program.parseAsync(command.split(/\s+/), {from: 'user'});
   }
 
@@ -36,7 +37,7 @@ describe('@atlaspack/link', () => {
 
   it('prints help text', async () => {
     const cli = createProgram({fs: overlayFS});
-    await assert.throws(() => cli('--help'), /\(outputHelp\)/);
+    await assert.rejects(() => cli('--help'), /\(outputHelp\)/);
   });
 
   it('links by default', async () => {
