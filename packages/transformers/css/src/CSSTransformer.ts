@@ -225,6 +225,10 @@ export default new Transformer({
 
     if (res.dependencies) {
       for (let dep of res.dependencies) {
+        if (dep.type !== 'import' && dep.type !== 'url') {
+          continue;
+        }
+
         let loc = convertLoc(dep.loc);
         if (originalMap) {
           loc = remapSourceLocation(loc, originalMap, options.projectRoot);
