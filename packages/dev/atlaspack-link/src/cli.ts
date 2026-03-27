@@ -7,13 +7,13 @@ import {version} from '../package.json';
 import {createLinkCommand} from './link';
 import {createUnlinkCommand} from './unlink';
 
-import commander from 'commander';
+import {Command} from 'commander';
 
 export type ProgramOptions = LinkCommandOptions & UnlinkCommandOptions;
 
-export function createProgram(opts?: ProgramOptions): commander.Command {
+export function createProgram(opts?: ProgramOptions): Command {
   let {fs, log = console.log, link, unlink} = opts ?? {};
-  return new commander.Command()
+  return new Command()
     .version(version, '-V, --version')
     .description('A tool for linking a dev copy of Parcel into an app')
     .addHelpText('after', `\nThe link command is the default command.`)

@@ -42,7 +42,7 @@
     "base-x": "^3.0.8",
     "browserslist": "^4.6.6",
     "clone": "^2.1.1",
-    "dotenv": "^7.0.0",
+    "dotenv": "^12.0.4",
     "dotenv-expand": "^5.1.0",
     "json5": "^2.2.0",
     "msgpackr": "^1.9.9",

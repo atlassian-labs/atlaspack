@@ -342,14 +342,40 @@ fn process_compiled_css_in_js(
     ) {
       Ok(result) => result,
       Err(_parsing_errors) => {
-        let diagnostics = error_buffer_to_diagnostics(&error_buffer, &source_map);
-        let error_msg = diagnostics
-          .iter()
-          .map(|d| &d.message)
-          .cloned()
-          .collect::<Vec<_>>()
-          .join("\n");
-        return Err(anyhow!("Parse error: {}", error_msg));
+        let mut diagnostics = error_buffer_to_diagnostics(&error_buffer, &source_map);
+
+        // If no diagnostics were captured in the error buffer, create a
+        // fallback so the user still sees *something* actionable.
+        if diagnostics.is_empty() {
+          diagnostics.push(Diagnostic {
+            message: format!(
+              "Failed to parse {} — the file contains a syntax error",
+              &input.filename,
+            ),
+            code_highlights: None,
+            hints: None,
+            show_environment: false,
+            severity: DiagnosticSeverity::Error,
+            documentation_url: None,
+            name: Some("SyntaxError".into()),
+          });
+        } else {
+          // Prepend the filename to each diagnostic message so the user
+          // can locate the offending file even when code highlights are
+          // not rendered (e.g. in CI logs or minimal reporters).
+          for d in &mut diagnostics {
+            d.message = format!("{}: {}", &input.filename, d.message);
+          }
+        }
+
+        let js_diagnostics = convert_diagnostics(diagnostics);
+        return Ok(CompiledCssInJsPluginResult {
+          code: code.to_string(),
+          map: None,
+          style_rules: Vec::new(),
+          diagnostics: js_diagnostics,
+          bail_out: true,
+        });
       }
     };
 
@@ -878,14 +904,28 @@ const bar = 2; const str = "// not comment"; const tpl = `/* not comment */`; "#
     "#};
 
     let result = process_compiled_css_in_js(invalid_code, &config);
-    assert!(result.is_err(), "Invalid syntax should result in an error");
-    let error = result.unwrap_err();
-    let error_string = error.to_string();
-    // Just verify an error occurred - the exact error message format can vary
     assert!(
-      error_string.contains("Parse error") || !error_string.is_empty(),
-      "Expected some error message, got: {}",
-      error_string
+      result.is_ok(),
+      "Parse errors should return Ok with diagnostics, not Err"
+    );
+    let output = result.unwrap();
+    assert!(output.bail_out, "Should bail out on parse error");
+    assert!(
+      !output.diagnostics.is_empty(),
+      "Should contain at least one diagnostic for the parse error"
+    );
+
+    let first_diagnostic = &output.diagnostics[0];
+    assert_eq!(
+      first_diagnostic.severity, "Error",
+      "Parse error diagnostic should have Error severity"
+    );
+    // The diagnostic message should contain the filename so the user can
+    // locate the offending file even in minimal log output.
+    assert!(
+      first_diagnostic.message.contains("test.tsx"),
+      "Diagnostic message should include the filename, got: {}",
+      first_diagnostic.message
     );
   }
 

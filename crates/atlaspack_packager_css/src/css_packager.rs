@@ -21,6 +21,8 @@ use crate::{CssPackager, CssPackagingContext, url_replacer};
 
 /// In-memory [`SourceProvider`] for lightningcss. Stores CSS by path key so
 /// `read<'a>` can return `&'a str` without unsafe code.
+/// In-memory [`SourceProvider`] for lightningcss. Stores CSS by path key so
+/// `read<'a>` can return `&'a str` without unsafe code.
 struct InMemoryCssProvider {
   strings: Vec<String>,
   index: HashMap<PathBuf, usize>,
@@ -43,6 +45,7 @@ impl SourceProvider for InMemoryCssProvider {
   type Error = std::io::Error;
 
   fn read<'a>(&'a self, file: &Path) -> Result<&'a str, Self::Error> {
+    // Unknown files (e.g. external URLs) are treated as empty.
     // Unknown files (e.g. external URLs) are treated as empty.
     Ok(
       self
@@ -323,6 +326,247 @@ fn asset_has_default_import(asset: &Asset, bundle_graph: &dyn BundleGraph) -> bo
     .unwrap_or(false)
 }
 
+#[cfg(test)]
+/// Removes rules for unused CSS Module classes from a CSS string via the lightningcss AST.
+/// A grouped selector rule is only removed if ALL selectors in the group are unused module
+/// classes. Falls back to the original string on parse/serialization failure.
+fn remove_unused_class_rules(
+  css: &str,
+  all_module_selectors: &std::collections::HashSet<String>,
+  used_selectors: &std::collections::HashSet<String>,
+) -> String {
+  use lightningcss::stylesheet::StyleSheet;
+
+  let mut stylesheet = match StyleSheet::parse(css, Default::default()) {
+    Ok(ss) => ss,
+    Err(_) => return css.to_string(),
+  };
+
+  remove_unused_from_rule_list(&mut stylesheet.rules, all_module_selectors, used_selectors);
+
+  match stylesheet.to_css(Default::default()) {
+    Ok(result) => result.code,
+    Err(_) => css.to_string(),
+  }
+}
+
+fn remove_unused_from_rule_list<'i>(
+  rule_list: &mut lightningcss::rules::CssRuleList<'i>,
+  all_module_selectors: &std::collections::HashSet<String>,
+  used_selectors: &std::collections::HashSet<String>,
+) {
+  use lightningcss::rules::CssRule;
+  use lightningcss::traits::ToCss;
+
+  rule_list.0.retain_mut(|rule| match rule {
+    CssRule::Style(style_rule) => {
+      let all_unused = style_rule.selectors.0.iter().all(|selector| {
+        let selector_str = selector
+          .to_css_string(Default::default())
+          .unwrap_or_default();
+        all_module_selectors.contains(&selector_str) && !used_selectors.contains(&selector_str)
+      });
+      !all_unused
+    }
+    CssRule::Media(media_rule) => {
+      remove_unused_from_rule_list(&mut media_rule.rules, all_module_selectors, used_selectors);
+      true
+    }
+    CssRule::Supports(supports_rule) => {
+      remove_unused_from_rule_list(
+        &mut supports_rule.rules,
+        all_module_selectors,
+        used_selectors,
+      );
+      true
+    }
+    CssRule::LayerBlock(layer_rule) => {
+      remove_unused_from_rule_list(&mut layer_rule.rules, all_module_selectors, used_selectors);
+      true
+    }
+    CssRule::StartingStyle(starting_style_rule) => {
+      remove_unused_from_rule_list(
+        &mut starting_style_rule.rules,
+        all_module_selectors,
+        used_selectors,
+      );
+      true
+    }
+    CssRule::Container(container_rule) => {
+      remove_unused_from_rule_list(
+        &mut container_rule.rules,
+        all_module_selectors,
+        used_selectors,
+      );
+      true
+    }
+    CssRule::Scope(scope_rule) => {
+      remove_unused_from_rule_list(&mut scope_rule.rules, all_module_selectors, used_selectors);
+      true
+    }
+    _ => true,
+  });
+}
+
+#[cfg(test)]
+/// Applies CSS Module tree-shaking to a CSS string. No-op for non-module assets
+/// (no symbols), dev builds, or assets with no symbols.
+pub(crate) fn apply_css_module_tree_shaking(
+  css: &str,
+  asset: &atlaspack_core::types::Asset,
+  used_symbols: &std::collections::HashSet<String>,
+) -> String {
+  use std::collections::HashSet;
+
+  if !asset.env.should_optimize {
+    return css.to_string();
+  }
+
+  // CSS Modules are identified by a non-empty symbols list (no dedicated is_module field).
+  let symbols = match asset.symbols.as_ref() {
+    Some(s) if !s.is_empty() => s,
+    _ => return css.to_string(),
+  };
+
+  let symbol_map: std::collections::HashMap<String, String> = symbols
+    .iter()
+    .map(|s| (s.exported.clone(), s.local.clone()))
+    .collect();
+
+  let all_module_selectors: HashSet<String> =
+    symbols.iter().map(|s| format!(".{}", s.local)).collect();
+
+  let used_selectors: HashSet<String> = used_symbols
+    .iter()
+    .filter_map(|exported| symbol_map.get(exported))
+    .map(|local| format!(".{}", local))
+    .collect();
+
+  remove_unused_class_rules(css, &all_module_selectors, &used_selectors)
+}
+
+/// Applies CSS Module tree-shaking directly on the post-bundling AST in-place,
+/// avoiding a redundant parse/print cycle.
+fn apply_css_module_tree_shaking_ast<'i>(
+  rules: &mut lightningcss::rules::CssRuleList<'i>,
+  asset: &atlaspack_core::types::Asset,
+  used_symbols: &std::collections::HashSet<String>,
+) {
+  use std::collections::HashSet;
+
+  let symbols = match asset.symbols.as_ref() {
+    Some(s) if !s.is_empty() => s,
+    _ => return,
+  };
+
+  let symbol_map: std::collections::HashMap<String, String> = symbols
+    .iter()
+    .map(|s| (s.exported.clone(), s.local.clone()))
+    .collect();
+
+  let all_module_selectors: HashSet<String> =
+    symbols.iter().map(|s| format!(".{}", s.local)).collect();
+
+  let mut used_selectors: HashSet<String> = used_symbols
+    .iter()
+    .filter_map(|exported| symbol_map.get(exported))
+    .map(|local| format!(".{}", local))
+    .collect();
+
+  // Expand used_selectors to include classes composed-from by already-used classes.
+  // The bundle graph may not always propagate composed-from symbols, so we fall back
+  // to parsing `composes:` declarations from the AST.
+  expand_composes_selectors(rules, &all_module_selectors, &mut used_selectors);
+
+  remove_unused_from_rule_list(rules, &all_module_selectors, &used_selectors);
+}
+
+/// Expands `used_selectors` to a fixed point by following `composes:` declarations in the AST.
+fn expand_composes_selectors<'i>(
+  rules: &lightningcss::rules::CssRuleList<'i>,
+  all_module_selectors: &std::collections::HashSet<String>,
+  used_selectors: &mut std::collections::HashSet<String>,
+) {
+  use lightningcss::properties::Property;
+  use lightningcss::rules::CssRule;
+  use lightningcss::traits::ToCss;
+
+  loop {
+    let mut added_any = false;
+
+    for rule in &rules.0 {
+      let style_rule = match rule {
+        CssRule::Style(s) => s,
+        _ => continue,
+      };
+
+      let rule_is_used = style_rule.selectors.0.iter().any(|sel| {
+        let s = sel.to_css_string(Default::default()).unwrap_or_default();
+        used_selectors.contains(&s)
+      });
+
+      if !rule_is_used {
+        continue;
+      }
+
+      // lightningcss parses `composes: foo;` as `Property::Unparsed` (known property name,
+      // value not further typed in non-CSS-modules mode) rather than `Property::Custom`.
+      for decl in &style_rule.declarations.declarations {
+        use lightningcss::properties::PropertyId;
+        use lightningcss::properties::custom::{Token, TokenOrValue};
+        let raw_value: Option<String> = match decl {
+          Property::Unparsed(unparsed) if unparsed.property_id == PropertyId::Composes => {
+            let s = unparsed
+              .value
+              .0
+              .iter()
+              .filter_map(|tok| match tok {
+                TokenOrValue::Token(Token::Ident(ident)) => Some(ident.as_ref().to_string()),
+                _ => None,
+              })
+              .collect::<Vec<_>>()
+              .join(" ");
+            Some(s)
+          }
+          Property::Composes(composes) => {
+            let names = composes
+              .names
+              .iter()
+              .map(|n| n.as_ref().to_string())
+              .collect::<Vec<_>>()
+              .join(" ");
+            Some(names)
+          }
+          _ => None,
+        };
+
+        let Some(value) = raw_value else {
+          continue;
+        };
+
+        // Parse: `<name>+ [from "<file>"|global]`
+        // Take all tokens before the first `from` keyword.
+        let names_part = value
+          .split_whitespace()
+          .take_while(|tok| !tok.eq_ignore_ascii_case("from"))
+          .collect::<Vec<_>>();
+
+        for name in names_part {
+          let selector = format!(".{}", name);
+          if all_module_selectors.contains(&selector) && !used_selectors.contains(&selector) {
+            used_selectors.insert(selector);
+            added_any = true;
+          }
+        }
+      }
+    }
+
+    if !added_any {
+      break;
+    }
+  }
+}
+
 impl<B: BundleGraph + Send + Sync> CssPackager<B> {
   pub fn new(context: CssPackagingContext, bundle_graph: Arc<B>) -> Self {
     Self {
@@ -365,6 +609,7 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
     let mut hoisted_imports: Vec<String> = Vec::new();
     let mut entry_contents = String::new();
     let mut css_code_map: HashMap<String, String> = HashMap::new();
+    let project_root_str = self.context.project_root.to_string_lossy().into_owned();
 
     for asset in &assets {
       entry_contents.push_str(&format!("@import \"{}\";\n", asset.id));
@@ -465,6 +710,18 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
       &self.context.db,
       &self.context.output_dir,
     )?;
+
+    let map_bytes: Option<Vec<u8>> = if let Some(ref mut sm) = lc_source_map_opt {
+      let bundle_name = bundle.name.as_deref().unwrap_or("output.css");
+      let map_name = format!("{}.map", bundle_name);
+      css.push_str(&format!("\n/*# sourceMappingURL={} */", map_name));
+      let map_json = sm
+        .to_json(None)
+        .map_err(|e| anyhow::anyhow!("source map serialisation failed: {:?}", e))?;
+      Some(map_json.into_bytes())
+    } else {
+      None
+    };
 
     let map_bytes = generate_map_bytes(&mut css, bundle, source_map.as_mut())?;
 
@@ -689,6 +946,8 @@ mod tests {
     skipped: HashSet<String>,
     used_symbols_by_asset: HashMap<String, HashSet<String>>,
     incoming_deps_by_asset: HashMap<String, Vec<Dependency>>,
+    used_symbols_by_asset: HashMap<String, HashSet<String>>,
+    incoming_deps_by_asset: HashMap<String, Vec<Dependency>>,
   }
 
   impl TestBundleGraph {
@@ -699,6 +958,8 @@ mod tests {
         deps_by_asset: HashMap::new(),
         resolved: HashMap::new(),
         skipped: HashSet::new(),
+        used_symbols_by_asset: HashMap::new(),
+        incoming_deps_by_asset: HashMap::new(),
         used_symbols_by_asset: HashMap::new(),
         incoming_deps_by_asset: HashMap::new(),
       }
@@ -752,6 +1013,16 @@ mod tests {
 
     fn is_dependency_skipped(&self, dependency: &Dependency) -> bool {
       self.skipped.contains(dependency.specifier.as_str())
+    }
+
+    fn get_incoming_dependencies(&self, asset: &Asset) -> anyhow::Result<Vec<&Dependency>> {
+      Ok(
+        self
+          .incoming_deps_by_asset
+          .get(&asset.id)
+          .map(|v| v.iter().collect())
+          .unwrap_or_default(),
+      )
     }
 
     fn get_incoming_dependencies(&self, asset: &Asset) -> anyhow::Result<Vec<&Dependency>> {

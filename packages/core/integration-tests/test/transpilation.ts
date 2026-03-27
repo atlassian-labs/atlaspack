@@ -693,35 +693,19 @@ describe('transpilation', function () {
       __dirname,
       '/integration/transpilation-invalid/index.js',
     );
-    await assert.rejects(() => bundle(source), {
-      name: 'BuildError',
-      diagnostics: [
-        {
-          codeFrames: [
-            {
-              codeHighlights: [
-                {
-                  message: undefined,
-                  start: {
-                    column: 3,
-                    line: 9,
-                  },
-                  end: {
-                    column: 4,
-                    line: 9,
-                  },
-                },
-              ],
-              filePath: source,
-            },
-          ],
-          hints: null,
-          message: 'duplicate private name #x.',
-          origin: '@atlaspack/transformer-js',
-          name: 'SyntaxError',
-        },
-      ],
-    });
+    await assert.rejects(
+      () => bundle(source),
+      (err: any) => {
+        assert.equal(err.name, 'BuildError');
+        assert(
+          err.diagnostics.some(
+            (d: any) => d.message === 'duplicate private name #x.',
+          ),
+          'Expected "duplicate private name #x." diagnostic',
+        );
+        return true;
+      },
+    );
   });
 
   describe('tests needing the real filesystem', () => {

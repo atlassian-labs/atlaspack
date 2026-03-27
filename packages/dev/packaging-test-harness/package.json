@@ -23,14 +23,14 @@
     "@atlaspack/fs": "2.15.55",
     "@atlaspack/package-manager": "2.14.60",
     "@atlaspack/rust": "3.28.0",
-    "commander": "^7.0.0",
+    "commander": "^8.3.0",
     "nullthrows": "^1.1.1",
     "v8-compile-cache": "^2.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.22.11",
     "@atlaspack/babel-register": "2.14.4",
-    "rimraf": "^5.0.5"
+    "rimraf": "^3.0.2"
   },
   "type": "commonjs"
 }
