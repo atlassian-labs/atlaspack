@@ -9,6 +9,7 @@ use atlaspack_core::types::Priority;
 use lightningcss::bundler::{Bundler, SourceProvider};
 use lightningcss::printer::PrinterOptions;
 use lightningcss::stylesheet::ParserOptions;
+use parcel_sourcemap_ext::SourceMap as ParcelSourceMap;
 
 use crate::{CssPackager, CssPackagingContext, url_replacer};
 
@@ -313,6 +314,7 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
     let mut hoisted_imports: Vec<String> = Vec::new();
     let mut entry_contents = String::new();
     let mut css_code_map: HashMap<String, String> = HashMap::new();
+    let project_root_str = self.context.project_root.to_string_lossy().into_owned();
 
     for asset in &assets {
       entry_contents.push_str(&format!("@import \"{}\";\n", asset.id));
@@ -350,15 +352,35 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
         filter_external_imports(&css_code, &asset_external_specifiers)
       };
 
-      css_code_map.insert(asset.id.clone(), filtered_css);
+      // If source maps are enabled and the asset has a map, inline it as a
+      // sourceMappingURL data URL comment so Lightning CSS can merge them.
+      let css_with_map = if bundle.env.source_map.is_some()
+        && let Some(ref asset_map) = asset.map
+        && let Ok(data_url) = asset_map.clone().to_data_url(None)
+      {
+        format!("{}\n/*# sourceMappingURL={} */", filtered_css, data_url)
+      } else {
+        filtered_css
+      };
+      css_code_map.insert(asset.id.clone(), css_with_map);
     }
 
     // Use a reserved prefix for the synthetic entry key to avoid collisions with asset IDs.
     let entry_path = format!("__atlaspack_entry_{}.css", bundle_id);
     css_code_map.insert(entry_path.clone(), entry_contents);
 
+    let mut lc_source_map_opt: Option<ParcelSourceMap> = if bundle.env.source_map.is_some() {
+      Some(ParcelSourceMap::new(&project_root_str))
+    } else {
+      None
+    };
+
     let provider = InMemoryCssProvider::new(css_code_map);
-    let mut bundler = Bundler::new(&provider, None, ParserOptions::default());
+    let mut bundler = Bundler::new(
+      &provider,
+      lc_source_map_opt.as_mut(),
+      ParserOptions::default(),
+    );
     let mut stylesheet = bundler
       .bundle(Path::new(&entry_path))
       .map_err(|e| anyhow::anyhow!("lightningcss bundling failed: {:?}", e))?;
@@ -411,23 +433,45 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
     }
 
     let result = stylesheet
-      .to_css(PrinterOptions::default())
+      .to_css(PrinterOptions {
+        source_map: lc_source_map_opt.as_mut(),
+        project_root: self.context.project_root.to_str(),
+        ..PrinterOptions::default()
+      })
       .map_err(|e| anyhow::anyhow!("lightningcss printing failed: {:?}", e))?;
     let mut css = result.code;
 
     if !hoisted_imports.is_empty() {
+      let hoisted_count = hoisted_imports.len() as i64;
       let hoisted = hoisted_imports.join("\n");
       css = format!("{hoisted}\n{css}");
+      // Shift all source map mappings down by the number of prepended @import lines.
+      if let Some(ref mut sm) = lc_source_map_opt {
+        sm.offset_lines(0, hoisted_count)
+          .map_err(|e| anyhow::anyhow!("source map offset_lines failed: {:?}", e))?;
+      }
     }
 
     let output_dir = &self.context.output_dir;
-    let css = url_replacer::replace_url_references(
+    let mut css = url_replacer::replace_url_references(
       &css,
       bundle,
       self.bundle_graph.as_ref(),
       &self.context.db,
       output_dir,
     )?;
+
+    let map_bytes: Option<Vec<u8>> = if let Some(ref mut sm) = lc_source_map_opt {
+      let bundle_name = bundle.name.as_deref().unwrap_or("output.css");
+      let map_name = format!("{}.map", bundle_name);
+      css.push_str(&format!("\n/*# sourceMappingURL={} */", map_name));
+      let map_json = sm
+        .to_json(None)
+        .map_err(|e| anyhow::anyhow!("source map serialisation failed: {:?}", e))?;
+      Some(map_json.into_bytes())
+    } else {
+      None
+    };
 
     let size = css.len() as u64;
     Ok(PackageResult {
@@ -441,7 +485,7 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
         is_large_blob: false,
         time: None,
         bundle_contents: Some(css.into_bytes()),
-        map_contents: None,
+        map_contents: map_bytes,
       },
       config_requests: vec![],
       dev_dep_requests: vec![],
@@ -481,6 +525,7 @@ mod tests {
     Asset, Bundle, Dependency, DependencyBuilder, Environment, FileType, Priority, SpecifierType,
     Target,
   };
+  use serde_json::{Value, from_slice, json};
 
   use super::*;
 
@@ -1761,6 +1806,252 @@ mod tests {
     );
   }
 
+  fn make_bundle_with_name(id: &str, entry_asset_ids: Vec<&str>, name: &str) -> Bundle {
+    Bundle {
+      name: Some(name.to_string()),
+      ..make_bundle(id, entry_asset_ids)
+    }
+  }
+
+  fn make_env_with_source_map() -> Environment {
+    use atlaspack_core::types::TargetSourceMapOptions;
+    Environment {
+      source_map: Some(TargetSourceMapOptions::default()),
+      ..Environment::default()
+    }
+  }
+
+  #[test]
+  fn source_map_absent_when_source_map_env_disabled() {
+    let db = make_db();
+    db.put("asset_sm1", b".foo { color: red; }").unwrap();
+
+    let asset = make_asset("asset_sm1");
+    let bundle = make_bundle("bundle_sm1", vec!["asset_sm1"]);
+
+    let mut graph = TestBundleGraph::new();
+    graph.bundles.push(bundle);
+    graph
+      .assets_by_bundle
+      .insert("bundle_sm1".to_string(), vec![asset]);
+
+    let packager = CssPackager::new(
+      CssPackagingContext {
+        db,
+        project_root: PathBuf::from("/tmp"),
+        output_dir: PathBuf::from("/tmp/dist"),
+      },
+      Arc::new(graph),
+    );
+
+    let result = packager
+      .package("bundle_sm1")
+      .expect("package() must succeed");
+
+    assert!(
+      result.bundle_info.map_contents.is_none(),
+      "map_contents must be None when source_map env option is disabled"
+    );
+
+    let css = output_string(&result);
+    assert!(
+      !css.contains("sourceMappingURL"),
+      "CSS output must not contain sourceMappingURL when source maps are disabled; got: {css:?}"
+    );
+  }
+
+  #[test]
+  fn source_map_emitted_when_source_map_env_enabled() {
+    let db = make_db();
+    db.put("asset_sm2", b".foo { color: red; }").unwrap();
+
+    let asset = Asset {
+      id: "asset_sm2".to_string(),
+      file_type: FileType::Css,
+      env: Arc::new(make_env_with_source_map()),
+      ..Asset::default()
+    };
+
+    let mut bundle = make_bundle_with_name("bundle_sm2", vec!["asset_sm2"], "output.css");
+    bundle.env = make_env_with_source_map();
+
+    let mut graph = TestBundleGraph::new();
+    graph.bundles.push(bundle);
+    graph
+      .assets_by_bundle
+      .insert("bundle_sm2".to_string(), vec![asset]);
+
+    let packager = CssPackager::new(
+      CssPackagingContext {
+        db,
+        project_root: PathBuf::from("/tmp"),
+        output_dir: PathBuf::from("/tmp/dist"),
+      },
+      Arc::new(graph),
+    );
+
+    let result = packager
+      .package("bundle_sm2")
+      .expect("package() must succeed");
+
+    let map_bytes = result
+      .bundle_info
+      .map_contents
+      .as_ref()
+      .expect("map_contents must be Some when source maps are enabled");
+
+    let map_json: Value = from_slice(map_bytes).expect("map_contents must be valid JSON");
+
+    assert_eq!(
+      map_json["version"],
+      json!(3),
+      "source map version must be 3; got: {map_json:?}"
+    );
+
+    let sources = map_json["sources"]
+      .as_array()
+      .expect("source map must have a 'sources' array");
+    assert!(
+      !sources.is_empty(),
+      "source map 'sources' must be non-empty; got: {map_json:?}"
+    );
+
+    let mappings = map_json["mappings"]
+      .as_str()
+      .expect("source map must have a 'mappings' string");
+    assert!(
+      !mappings.is_empty(),
+      "source map 'mappings' must be non-empty; got: {map_json:?}"
+    );
+
+    let css = output_string(&result);
+    assert!(
+      css.contains("/*# sourceMappingURL=") && css.contains(".map */"),
+      "CSS must contain a sourceMappingURL comment ending with '.map */'; got: {css:?}"
+    );
+  }
+
+  #[test]
+  fn source_map_line_offset_correct_for_hoisted_imports() {
+    let db = make_db();
+    let ext_url = "https://fonts.googleapis.com/css?family=Roboto";
+    let css_content = format!("@import \"{ext_url}\";\n.foo {{ color: red; }}");
+    db.put("asset_sm3", css_content.as_bytes()).unwrap();
+
+    let asset = Asset {
+      id: "asset_sm3".to_string(),
+      file_type: FileType::Css,
+      env: Arc::new(make_env_with_source_map()),
+      ..Asset::default()
+    };
+
+    let mut bundle = make_bundle_with_name("bundle_sm3", vec!["asset_sm3"], "output.css");
+    bundle.env = make_env_with_source_map();
+
+    let ext_dep = make_dependency(ext_url, Priority::Sync);
+
+    let mut graph = TestBundleGraph::new();
+    graph.bundles.push(bundle);
+    graph
+      .assets_by_bundle
+      .insert("bundle_sm3".to_string(), vec![asset]);
+    graph
+      .deps_by_asset
+      .insert("asset_sm3".to_string(), vec![ext_dep]);
+
+    let packager = CssPackager::new(
+      CssPackagingContext {
+        db,
+        project_root: PathBuf::from("/tmp"),
+        output_dir: PathBuf::from("/tmp/dist"),
+      },
+      Arc::new(graph),
+    );
+
+    let result = packager
+      .package("bundle_sm3")
+      .expect("package() must succeed");
+
+    let map_bytes = result
+      .bundle_info
+      .map_contents
+      .as_ref()
+      .expect("map_contents must be Some when source maps are enabled");
+
+    let map_json: Value = from_slice(map_bytes).expect("map_contents must be valid JSON");
+
+    let mappings = map_json["mappings"]
+      .as_str()
+      .expect("source map must have a 'mappings' string");
+
+    // Semicolon indicates the first generated line (containing the @import) has no mappings.
+    assert!(
+      mappings.starts_with(';'),
+      "mappings must start with ';' to indicate the first line is skipped due to hoisting; \
+       got mappings: {mappings:?}"
+    );
+  }
+
+  #[test]
+  fn source_map_sources_contain_expected_paths() {
+    let db = make_db();
+    db.put("asset_sm4", b".bar { margin: 0; }").unwrap();
+
+    let asset = Asset {
+      id: "asset_sm4".to_string(),
+      file_type: FileType::Css,
+      env: Arc::new(make_env_with_source_map()),
+      ..Asset::default()
+    };
+
+    let mut bundle = make_bundle_with_name("bundle_sm4", vec!["asset_sm4"], "output.css");
+    bundle.env = make_env_with_source_map();
+
+    let mut graph = TestBundleGraph::new();
+    graph.bundles.push(bundle);
+    graph
+      .assets_by_bundle
+      .insert("bundle_sm4".to_string(), vec![asset]);
+
+    let packager = CssPackager::new(
+      CssPackagingContext {
+        db,
+        project_root: PathBuf::from("/tmp"),
+        output_dir: PathBuf::from("/tmp/dist"),
+      },
+      Arc::new(graph),
+    );
+
+    let result = packager
+      .package("bundle_sm4")
+      .expect("package() must succeed");
+
+    let map_bytes = result
+      .bundle_info
+      .map_contents
+      .as_ref()
+      .expect("map_contents must be Some when source maps are enabled");
+
+    let map_json: Value = from_slice(map_bytes).expect("map_contents must be valid JSON");
+
+    let sources = map_json["sources"]
+      .as_array()
+      .expect("source map must have a 'sources' array");
+
+    assert!(
+      !sources.is_empty(),
+      "source map 'sources' must be non-empty; got: {map_json:?}"
+    );
+
+    let has_asset_source = sources
+      .iter()
+      .any(|s| s.as_str().map(|p| p.contains("asset_sm4")).unwrap_or(false));
+    assert!(
+      has_asset_source,
+      "source map 'sources' must contain a path referencing 'asset_sm4'; got sources: {sources:?}"
+    );
+  }
+
   #[test]
   fn default_import_emits_structured_warning_in_package_result() {
     use atlaspack_core::types::Symbol;
@@ -1832,6 +2123,234 @@ mod tests {
     assert!(
       warning_msg.contains("default specifier"),
       "Warning message must mention 'default specifier'; got: {warning_msg:?}"
+    );
+  }
+
+  #[test]
+  fn source_map_handles_multiple_assets() {
+    let db = make_db();
+    db.put("asset_a", b".a { color: red; }").unwrap();
+    db.put("asset_b", b".b { color: blue; }").unwrap();
+
+    let asset_a = Asset {
+      id: "asset_a".to_string(),
+      file_type: FileType::Css,
+      env: Arc::new(make_env_with_source_map()),
+      ..Asset::default()
+    };
+    let asset_b = Asset {
+      id: "asset_b".to_string(),
+      file_type: FileType::Css,
+      env: Arc::new(make_env_with_source_map()),
+      ..Asset::default()
+    };
+
+    let mut bundle = make_bundle_with_name("bundle_ab", vec!["asset_a", "asset_b"], "output.css");
+    bundle.env = make_env_with_source_map();
+
+    let mut graph = TestBundleGraph::new();
+    graph.bundles.push(bundle.clone());
+    graph
+      .assets_by_bundle
+      .insert("bundle_ab".to_string(), vec![asset_a, asset_b]);
+
+    let packager = CssPackager::new(
+      CssPackagingContext {
+        db,
+        project_root: PathBuf::from("/tmp"),
+        output_dir: PathBuf::from("/tmp/dist"),
+      },
+      Arc::new(graph),
+    );
+
+    let result = packager
+      .package("bundle_ab")
+      .expect("package() must succeed");
+
+    let map_bytes = result
+      .bundle_info
+      .map_contents
+      .as_ref()
+      .expect("map_contents must be Some");
+
+    let map_json: Value = from_slice(map_bytes).unwrap();
+    let sources = map_json["sources"].as_array().unwrap();
+
+    let has_a = sources
+      .iter()
+      .any(|s| s.as_str().unwrap().contains("asset_a"));
+    let has_b = sources
+      .iter()
+      .any(|s| s.as_str().unwrap().contains("asset_b"));
+
+    assert!(has_a, "source map must contain asset_a");
+    assert!(has_b, "source map must contain asset_b");
+  }
+
+  #[test]
+  fn source_map_offsets_not_updated_after_url_replacement() {
+    // This test documents a known limitation: URL replacement happens after source map generation,
+    // so if the URL length changes, column offsets in the source map will be slightly incorrect
+    // for the remainder of the line. We verify this by showing that two bundles with different
+    // URL replacement lengths produce identical source map mappings.
+
+    let db = make_db();
+    let css_content = ".foo { background: url(icon.png); }";
+    db.put("asset_url", css_content.as_bytes()).unwrap();
+
+    // Common setup
+    let make_package_result = |target_dist_dir: &str| -> PackageResult {
+      let asset = Asset {
+        id: "asset_url".to_string(),
+        file_type: FileType::Css,
+        env: Arc::new(make_env_with_source_map()),
+        ..Asset::default()
+      };
+
+      // CSS Bundle at /dist/css/style.css
+      let mut bundle = make_bundle_with_name("bundle_css", vec!["asset_url"], "style.css");
+      bundle.env = make_env_with_source_map();
+      bundle.target = Target {
+        dist_dir: PathBuf::from("/dist/css"),
+        ..Target::default()
+      };
+
+      // Image Bundle at `target_dist_dir` (e.g. /dist/css/ (same dir) or /dist/img/ (nested))
+      // We simulate the resolved asset being in a different bundle.
+      let image_asset = Asset {
+        id: "asset_img".to_string(),
+        file_type: FileType::Png,
+        ..Asset::default()
+      };
+      let image_bundle = Bundle {
+        id: "bundle_img".to_string(),
+        bundle_type: FileType::Png,
+        entry_asset_ids: vec!["asset_img".to_string()],
+        name: Some("icon.png".to_string()),
+        target: Target {
+          dist_dir: PathBuf::from(target_dist_dir),
+          ..Target::default()
+        },
+        ..make_bundle("bundle_img", vec!["asset_img"])
+      };
+
+      let dep = make_dependency("icon.png", Priority::Sync);
+
+      let mut graph = TestBundleGraph::new();
+      graph.bundles.push(bundle.clone());
+      graph.bundles.push(image_bundle.clone());
+      graph
+        .assets_by_bundle
+        .insert("bundle_css".to_string(), vec![asset.clone()]);
+      graph
+        .assets_by_bundle
+        .insert("bundle_img".to_string(), vec![image_asset.clone()]);
+      graph
+        .deps_by_asset
+        .insert("asset_url".to_string(), vec![dep.clone()]);
+      graph.resolved.insert("icon.png".to_string(), image_asset);
+
+      let packager = CssPackager::new(
+        CssPackagingContext {
+          db: db.clone(),
+          project_root: PathBuf::from("/tmp"),
+          output_dir: PathBuf::from("/dist/css"), // Outputting to css dir
+        },
+        Arc::new(graph),
+      );
+
+      packager
+        .package("bundle_css")
+        .expect("package() must succeed")
+    };
+
+    // Case 1: Image is in same directory (/dist/css). Relative URL should be "icon.png" (len 8).
+    // Original "icon.png" is len 8. replacement is len 8.
+    let result_short = make_package_result("/dist/css");
+    let css_short = output_string(&result_short);
+
+    // Case 2: Image is in deep directory (/dist/assets/images). Relative URL should be "../assets/images/icon.png" (longer).
+    let result_long = make_package_result("/dist/assets/images");
+    let css_long = output_string(&result_long);
+
+    assert_ne!(
+      css_short, css_long,
+      "CSS output should differ due to URL paths"
+    );
+
+    let map_short =
+      from_slice::<Value>(result_short.bundle_info.map_contents.as_ref().unwrap()).unwrap();
+    let map_long =
+      from_slice::<Value>(result_long.bundle_info.map_contents.as_ref().unwrap()).unwrap();
+
+    assert_eq!(
+      map_short["mappings"], map_long["mappings"],
+      "Mappings should be identical despite URL length difference (proving offsets are not updated)"
+    );
+  }
+
+  #[test]
+  fn source_map_composes_per_asset_input_map() {
+    let db = make_db();
+    let css_content = ".foo { color: red; }";
+    db.put("asset_input_map", css_content.as_bytes()).unwrap();
+
+    // Create a SourceMap that represents an upstream transformation (e.g. from Sass)
+    // We map the CSS content to "foo.scss"
+    let mut sm = atlaspack_core::types::SourceMap::new(Path::new("/tmp"));
+    sm.add_empty_map("foo.scss", css_content, 0)
+      .expect("failed to add empty map");
+
+    let asset = Asset {
+      id: "asset_input_map".to_string(),
+      file_type: FileType::Css,
+      env: Arc::new(make_env_with_source_map()),
+      map: Some(sm),
+      ..Asset::default()
+    };
+
+    let mut bundle =
+      make_bundle_with_name("bundle_input_map", vec!["asset_input_map"], "output.css");
+    bundle.env = make_env_with_source_map();
+
+    let mut graph = TestBundleGraph::new();
+    graph.bundles.push(bundle);
+    graph
+      .assets_by_bundle
+      .insert("bundle_input_map".to_string(), vec![asset]);
+
+    let packager = CssPackager::new(
+      CssPackagingContext {
+        db,
+        project_root: PathBuf::from("/tmp"),
+        output_dir: PathBuf::from("/tmp/dist"),
+      },
+      Arc::new(graph),
+    );
+
+    let result = packager
+      .package("bundle_input_map")
+      .expect("package() must succeed");
+
+    let map_bytes = result
+      .bundle_info
+      .map_contents
+      .as_ref()
+      .expect("map_contents must be Some when source maps are enabled");
+
+    let map_json: Value = from_slice(map_bytes).expect("map_contents must be valid JSON");
+
+    let sources = map_json["sources"]
+      .as_array()
+      .expect("source map must have a 'sources' array");
+
+    let has_original_source = sources
+      .iter()
+      .any(|s| s.as_str().map(|p| p.contains("foo.scss")).unwrap_or(false));
+
+    assert!(
+      has_original_source,
+      "source map must contain original source 'foo.scss' from input map; got sources: {sources:?}"
     );
   }
 }
