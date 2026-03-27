@@ -1001,9 +1001,9 @@ mod tests {
     let db = make_db();
     // asset_1 imports asset_2.
     // asset_2 has specific content we can track.
-    db.put("asset_1", b"@import \"asset_2\";\n.asset1 {}")
+    db.put("asset_1", b"@import \"asset_2\";\n.asset1 { color: red; }")
       .unwrap();
-    db.put("asset_2", b".asset2 {}").unwrap();
+    db.put("asset_2", b".asset2 { color: blue; }").unwrap();
 
     let asset1 = make_asset("asset_1");
     let asset2 = make_asset("asset_2");
@@ -1086,7 +1086,7 @@ mod tests {
   fn handles_empty_asset_content() {
     let db = make_db();
     db.put("empty", b"").unwrap();
-    db.put("normal", b".normal {}").unwrap();
+    db.put("normal", b".normal { margin: 0; }").unwrap();
 
     let asset_empty = make_asset("empty");
     let asset_normal = make_asset("normal");
@@ -2648,6 +2648,329 @@ mod tests {
     assert!(
       output.contains("bar_hashed"),
       "CSS var substitution should happen: 'bar' -> 'bar_hashed'"
+    );
+  }
+
+  // When "foo" is a prefix of "foobar" and both are replacement keys, a naive
+  // sequential str::replace would corrupt "foobar" into "foo_resolvedbar".
+  // The char-by-char ident scanner must treat each token atomically.
+  #[test]
+  fn apply_css_var_substitution_no_double_replace_for_overlapping_keys() {
+    let db = make_db();
+    let css = ".a { composes: foo foobar; color: red; }";
+    db.put("asset_overlap", css.as_bytes()).unwrap();
+
+    let mut asset = make_asset("asset_overlap");
+    asset.meta.insert("hasReferences".to_string(), true.into());
+
+    let mut dep = make_dependency("./other.css", Priority::Sync);
+    dep.symbols = Some(vec![
+      Symbol {
+        exported: "foo".to_string(),
+        local: "foo".to_string(),
+        loc: None,
+        is_weak: false,
+        is_esm_export: false,
+        self_referenced: false,
+        is_static_binding_safe: true,
+      },
+      Symbol {
+        exported: "foobar".to_string(),
+        local: "foobar".to_string(),
+        loc: None,
+        is_weak: false,
+        is_esm_export: false,
+        self_referenced: false,
+        is_static_binding_safe: true,
+      },
+    ]);
+
+    let mut resolved = make_asset("other");
+    resolved.symbols = Some(vec![
+      Symbol {
+        exported: "foo".to_string(),
+        local: "foo_resolved".to_string(),
+        loc: None,
+        is_weak: false,
+        is_esm_export: false,
+        self_referenced: false,
+        is_static_binding_safe: true,
+      },
+      Symbol {
+        exported: "foobar".to_string(),
+        local: "foobar_resolved".to_string(),
+        loc: None,
+        is_weak: false,
+        is_esm_export: false,
+        self_referenced: false,
+        is_static_binding_safe: true,
+      },
+    ]);
+
+    let bundle = make_bundle("bundle_overlap", vec!["asset_overlap"]);
+    let mut graph = TestBundleGraph::new();
+    graph.bundles.push(bundle.clone());
+    graph
+      .assets_by_bundle
+      .insert("bundle_overlap".to_string(), vec![asset]);
+    graph
+      .deps_by_asset
+      .insert("asset_overlap".to_string(), vec![dep]);
+    graph.resolved.insert("./other.css".to_string(), resolved);
+
+    let packager = CssPackager::new(
+      CssPackagingContext {
+        db,
+        project_root: PathBuf::from("/tmp"),
+        output_dir: PathBuf::from("/tmp/dist"),
+      },
+      Arc::new(graph),
+    );
+
+    let result = packager.package("bundle_overlap").expect("should succeed");
+    let output = output_string(&result);
+
+    assert!(
+      output.contains("foo_resolved"),
+      "'foo' must be replaced with 'foo_resolved'; got: {output:?}"
+    );
+    assert!(
+      output.contains("foobar_resolved"),
+      "'foobar' must be replaced with 'foobar_resolved'; got: {output:?}"
+    );
+    // Sequential str::replace("foo", "foo_resolved") would corrupt "foobar"
+    // into "foo_resolvedbar". The single-pass scanner must not produce that.
+    assert!(
+      !output.contains("foo_resolvedbar"),
+      "double-replace corruption must not occur; got: {output:?}"
+    );
+  }
+
+  // Three-level composes chain (.a → .b → .c) where rules appear in reverse
+  // declaration order so that depth > 1 requires the outer fixed-point while
+  // loop to restart before .b's own composes: is discovered.
+  #[test]
+  fn composes_chained_three_levels_retains_all() {
+    let db = make_db();
+    // Rules deliberately in reverse order so the first pass only discovers .b;
+    // the second pass discovers .c via .b's composes.
+    let css =
+      ".c { color: green; } .b { composes: c; color: blue; } .a { composes: b; color: red; }";
+    db.put("asset_chain", css.as_bytes()).unwrap();
+
+    let asset = make_css_module_asset(
+      "asset_chain",
+      vec![("a", "a"), ("b", "b"), ("c", "c")],
+      true,
+    );
+
+    let mut bundle = make_bundle("bundle_chain", vec!["asset_chain"]);
+    bundle.env.should_optimize = true;
+
+    let mut graph = TestBundleGraph::new();
+    graph.bundles.push(bundle.clone());
+    graph
+      .assets_by_bundle
+      .insert("bundle_chain".to_string(), vec![asset]);
+
+    let mut used_syms = HashSet::new();
+    used_syms.insert("a".to_string());
+    graph
+      .used_symbols_by_asset
+      .insert("asset_chain".to_string(), used_syms);
+
+    let packager = CssPackager::new(
+      CssPackagingContext {
+        db,
+        project_root: PathBuf::from("/tmp"),
+        output_dir: PathBuf::from("/tmp/dist"),
+      },
+      Arc::new(graph),
+    );
+
+    let result = packager.package("bundle_chain").expect("should succeed");
+    let output = output_string(&result);
+
+    assert!(
+      output.contains(".a"),
+      ".a (directly used) must be retained; got: {output:?}"
+    );
+    assert!(
+      output.contains(".b"),
+      ".b (composed by .a, first expansion pass) must be retained; got: {output:?}"
+    );
+    assert!(
+      output.contains(".c"),
+      ".c (composed by .b, second expansion pass) must be retained via fixed-point; got: {output:?}"
+    );
+  }
+
+  // An inline bundle whose main entry does NOT carry `meta["type"] = "attr"`
+  // must fall through to the standard lightningcss bundling path rather than
+  // the attr-specific short-circuit.
+  #[test]
+  fn non_attr_inline_bundle_falls_through_to_standard_path() {
+    let db = make_db();
+    db.put("inline_asset_notype", b".foo { color: red; }")
+      .unwrap();
+
+    let mut asset = make_asset("inline_asset_notype");
+    // Inline bundle behavior but no "type": "attr" meta key.
+    asset.bundle_behavior = Some(BundleBehavior::Inline);
+
+    let mut bundle = make_bundle("inline_bundle_notype", vec!["inline_asset_notype"]);
+    bundle.bundle_behavior = Some(BundleBehavior::Inline);
+    bundle.main_entry_id = Some("inline_asset_notype".to_string());
+
+    let mut graph = TestBundleGraph::new();
+    graph.bundles.push(bundle.clone());
+    graph
+      .assets_by_bundle
+      .insert("inline_bundle_notype".to_string(), vec![asset]);
+
+    let packager = CssPackager::new(
+      CssPackagingContext {
+        db,
+        project_root: PathBuf::from("/tmp"),
+        output_dir: PathBuf::from("/tmp/dist"),
+      },
+      Arc::new(graph),
+    );
+
+    let result = packager
+      .package("inline_bundle_notype")
+      .expect("package() must succeed");
+    let output = output_string(&result);
+
+    assert!(
+      output.contains(".foo"),
+      "Non-attr inline bundle must be processed by the standard lightningcss path; got: {output:?}"
+    );
+  }
+
+  #[test]
+  fn package_returns_error_for_unknown_bundle_id() {
+    let db = make_db();
+    let graph = TestBundleGraph::new();
+
+    let packager = CssPackager::new(
+      CssPackagingContext {
+        db,
+        project_root: PathBuf::from("/tmp"),
+        output_dir: PathBuf::from("/tmp/dist"),
+      },
+      Arc::new(graph),
+    );
+
+    let result = packager.package("nonexistent_bundle_id");
+    assert!(
+      result.is_err(),
+      "package() must return Err for an unknown bundle ID"
+    );
+    let err_msg = result.unwrap_err().to_string();
+    assert!(
+      err_msg.contains("nonexistent_bundle_id"),
+      "Error message must name the unknown bundle ID; got: {err_msg:?}"
+    );
+  }
+
+  #[test]
+  fn hoist_imports_minified_no_newline_separator() {
+    let db = make_db();
+    let ext_url = "https://fonts.googleapis.com/css?family=Roboto";
+    let css_content = format!("@import \"{ext_url}\";\nbody {{ color: red; }}");
+    db.put("asset_hoist_min", css_content.as_bytes()).unwrap();
+
+    let asset = make_asset("asset_hoist_min");
+    let ext_dep = make_dependency(ext_url, Priority::Sync);
+
+    let mut bundle = make_bundle("bundle_hoist_min", vec!["asset_hoist_min"]);
+    bundle.env.should_optimize = true;
+
+    let mut graph = TestBundleGraph::new();
+    graph.bundles.push(bundle.clone());
+    graph
+      .assets_by_bundle
+      .insert("bundle_hoist_min".to_string(), vec![asset]);
+    graph
+      .deps_by_asset
+      .insert("asset_hoist_min".to_string(), vec![ext_dep]);
+
+    let packager = CssPackager::new(
+      CssPackagingContext {
+        db,
+        project_root: PathBuf::from("/tmp"),
+        output_dir: PathBuf::from("/tmp/dist"),
+      },
+      Arc::new(graph),
+    );
+
+    let result = packager
+      .package("bundle_hoist_min")
+      .expect("should succeed");
+    let output = output_string(&result);
+
+    let import_stmt = format!("@import \"{ext_url}\";");
+    let import_end = output
+      .find(&import_stmt)
+      .expect("hoisted @import must appear in output")
+      + import_stmt.len();
+
+    let next_char = output[import_end..].chars().next();
+    assert_ne!(
+      next_char,
+      Some('\n'),
+      "In minified mode the hoisted @import must not be followed by a newline; got: {output:?}"
+    );
+  }
+
+  #[test]
+  fn hoist_imports_non_minified_newline_separator() {
+    let db = make_db();
+    let ext_url = "https://fonts.googleapis.com/css?family=Open+Sans";
+    let css_content = format!("@import \"{ext_url}\";\nbody {{ color: blue; }}");
+    db.put("asset_hoist_nomin", css_content.as_bytes()).unwrap();
+
+    let asset = make_asset("asset_hoist_nomin");
+    let ext_dep = make_dependency(ext_url, Priority::Sync);
+
+    // should_optimize defaults to false via make_bundle
+    let bundle = make_bundle("bundle_hoist_nomin", vec!["asset_hoist_nomin"]);
+
+    let mut graph = TestBundleGraph::new();
+    graph.bundles.push(bundle.clone());
+    graph
+      .assets_by_bundle
+      .insert("bundle_hoist_nomin".to_string(), vec![asset]);
+    graph
+      .deps_by_asset
+      .insert("asset_hoist_nomin".to_string(), vec![ext_dep]);
+
+    let packager = CssPackager::new(
+      CssPackagingContext {
+        db,
+        project_root: PathBuf::from("/tmp"),
+        output_dir: PathBuf::from("/tmp/dist"),
+      },
+      Arc::new(graph),
+    );
+
+    let result = packager
+      .package("bundle_hoist_nomin")
+      .expect("should succeed");
+    let output = output_string(&result);
+
+    let import_stmt = format!("@import \"{ext_url}\";");
+    let import_end = output
+      .find(&import_stmt)
+      .expect("hoisted @import must appear in output")
+      + import_stmt.len();
+
+    let next_char = output[import_end..].chars().next();
+    assert_eq!(
+      next_char,
+      Some('\n'),
+      "In non-minified mode the hoisted @import must be followed by a newline; got: {output:?}"
     );
   }
 }

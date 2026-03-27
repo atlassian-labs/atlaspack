@@ -9,6 +9,12 @@ import {
   setupV3Flags,
 } from '@atlaspack/test-utils';
 
+const BuildMode = {
+  DEVELOPMENT: 'development',
+  PRODUCTION: 'production',
+} as const;
+type BuildMode = (typeof BuildMode)[keyof typeof BuildMode];
+
 /// Reads the CSS bundles from a bundle graph and returns their content.
 function extractCssBundleContents(bg: any): Promise<string[]> {
   const cssBundles = bg
@@ -24,11 +30,15 @@ function extractCssBundleContents(bg: any): Promise<string[]> {
 /// Builds `entry` via both JS and native packagers and returns each CSS output.
 async function compareCssPackagers(
   fixtureName: string,
-  mode: 'development' | 'production' = 'development',
-  entries: string[] = ['index.css'],
+  build_mode: BuildMode,
+  entries: string[],
 ): Promise<{jsContents: string[]; nativeContents: string[]}> {
   const entryPaths = entries.map((e) => path.join(__dirname, fixtureName, e));
-  const commonOpts = {mode, inputFS: overlayFS, outputFS: overlayFS};
+  const commonOpts = {
+    mode: build_mode,
+    inputFS: overlayFS,
+    outputFS: overlayFS,
+  };
 
   const jsBundleGraph = await bundle(entryPaths, {
     ...commonOpts,
@@ -48,9 +58,12 @@ async function compareCssPackagers(
 /// Asserts JS and native produce identical CSS in both dev and production modes.
 async function assertPackagerParity(
   fixtureName: string,
-  entries: string[] = ['index.css'],
+  {
+    entries = ['index.css'],
+    build_modes = [BuildMode.DEVELOPMENT, BuildMode.PRODUCTION],
+  } = {},
 ): Promise<void> {
-  for (const mode of ['development', 'production'] as const) {
+  for (const mode of build_modes) {
     const {jsContents, nativeContents} = await compareCssPackagers(
       fixtureName,
       mode,
@@ -237,19 +250,9 @@ describe('packager-parity (JS vs native CSS packager)', function () {
         yarn.lock:
     `;
 
-    // Development mode only — see note above.
-    const {jsContents, nativeContents} = await compareCssPackagers(
-      fixtureName,
-      'development',
-    );
-    assert.strictEqual(nativeContents.length, jsContents.length);
-    for (let i = 0; i < jsContents.length; i++) {
-      assert.strictEqual(
-        nativeContents[i],
-        jsContents[i],
-        `CSS bundle #${i} must be identical in development mode.`,
-      );
-    }
+    await assertPackagerParity(fixtureName, {
+      build_modes: [BuildMode.DEVELOPMENT],
+    });
   });
 
   it('url() inline data URI is identical between packagers', async function () {
@@ -275,19 +278,9 @@ describe('packager-parity (JS vs native CSS packager)', function () {
         yarn.lock:
     `;
 
-    // Development mode only — see note above.
-    const {jsContents, nativeContents} = await compareCssPackagers(
-      fixtureName,
-      'development',
-    );
-    assert.strictEqual(nativeContents.length, jsContents.length);
-    for (let i = 0; i < jsContents.length; i++) {
-      assert.strictEqual(
-        nativeContents[i],
-        jsContents[i],
-        `CSS bundle #${i} must be identical in development mode.`,
-      );
-    }
+    await assertPackagerParity(fixtureName, {
+      build_modes: [BuildMode.DEVELOPMENT],
+    });
   });
 
   it('@font-face with local url() references is packaged identically', async function () {
@@ -415,7 +408,7 @@ describe('packager-parity (JS vs native CSS packager)', function () {
         yarn.lock:
     `;
 
-    await assertPackagerParity(fixtureName, ['index.js']);
+    await assertPackagerParity(fixtureName, {entries: ['index.js']});
   });
 
   it('multiple CSS bundles from separate JS entries are packaged identically', async function () {
@@ -444,8 +437,53 @@ describe('packager-parity (JS vs native CSS packager)', function () {
         yarn.lock:
     `;
 
-    const entries = ['entry-a.js', 'entry-b.js'];
+    await assertPackagerParity(fixtureName, {
+      entries: ['entry-a.js', 'entry-b.js'],
+    });
+  });
 
-    await assertPackagerParity(fixtureName, entries);
+  it('CSS Modules wildcard import retains all classes identically in development mode', async function () {
+    // In production mode the JS packager activates its processCSSModule (PostCSS) path
+    // while the native packager uses lightningcss, producing different whitespace.
+    // Development mode passes the raw transformer output through both packagers unchanged,
+    // so strict equality holds.
+    this.timeout(30000);
+    const fixtureName = 'packager-parity-css-modules-wildcard';
+
+    await fsFixture(overlayFS, __dirname)`
+      ${fixtureName}
+        index.js:
+          import * as styles from './styles.module.css';
+          document.body.className = styles.foo;
+        styles.module.css:
+          .foo { color: red; }
+          .bar { color: blue; }
+        yarn.lock:
+    `;
+
+    await assertPackagerParity(fixtureName, {
+      entries: ['index.js'],
+      build_modes: [BuildMode.DEVELOPMENT],
+    });
+  });
+
+  it('@import media query conditions are stripped identically by both packagers', async function () {
+    // Both packagers reconstruct hoisted external @imports using only the URL —
+    // media query conditions (e.g. `screen, print`) are not preserved by either packager.
+    // This test guards against one packager accidentally preserving conditions
+    // while the other strips them, causing a divergence.
+    this.timeout(30000);
+    const fixtureName = 'packager-parity-ext-import-mq-conditions';
+    const extUrl = 'https://fonts.googleapis.com/css2?family=Lato';
+
+    await fsFixture(overlayFS, __dirname)`
+      ${fixtureName}
+        index.css:
+          @import "${extUrl}" screen, print;
+          .local { color: green; }
+        yarn.lock:
+    `;
+
+    await assertPackagerParity(fixtureName);
   });
 });
