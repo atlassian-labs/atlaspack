@@ -96,7 +96,11 @@ impl Plugins for ConfigPlugins {
   }
 
   /// Resolve and load transformer plugins for a given path.
-  async fn transformers(&self, asset: &Asset) -> Result<TransformerPipeline, anyhow::Error> {
+  async fn transformers(
+    &self,
+    asset: &Asset,
+    allow_empty: bool,
+  ) -> Result<TransformerPipeline, anyhow::Error> {
     let mut transformers: Vec<Arc<dyn TransformerPlugin>> = Vec::new();
     let named_pattern = asset.pipeline.as_ref().map(|pipeline| NamedPattern {
       pipeline,
@@ -180,6 +184,22 @@ impl Plugins for ConfigPlugins {
     }
 
     if transformers.is_empty() {
+      if allow_empty {
+        // No transformer matched, but the caller permits a fallback (e.g. a
+        // URL-type asset like a font or binary file referenced from CSS). Use the
+        // raw transformer as a pass-through, mirroring the JS `url:*` →
+        // `@atlaspack/transformer-raw` config entry and `allowEmpty` / `isURL`
+        // behaviour in `getTransformers`.
+        let raw =
+          self
+            .plugin_cache
+            .get_or_init_transformer("@atlaspack/transformer-raw", async || {
+              Ok(Arc::new(AtlaspackRawTransformerPlugin::new(&self.ctx))
+                as Arc<dyn TransformerPlugin>)
+            })
+            .await?;
+        return Ok(TransformerPipeline::new(vec![raw]));
+      }
       return match asset.pipeline {
         None => Err(self.missing_plugin(&asset.file_path, "transformers")),
         Some(ref pipeline) => {
@@ -227,7 +247,7 @@ mod tests {
     .unwrap();
 
     let pipeline = config_plugins(ctx)
-      .transformers(&asset)
+      .transformers(&asset, false)
       .await
       .expect("Not to panic");
 

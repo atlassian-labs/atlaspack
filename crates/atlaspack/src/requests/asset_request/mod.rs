@@ -42,6 +42,10 @@ pub struct AssetRequest {
   pub pipeline: Option<String>,
   pub query: Option<String>,
   pub side_effects: bool,
+  /// Whether this asset was reached via a URL dependency (`specifierType: 'url'`).
+  /// When true and no transformer matches, the asset is passed through unchanged
+  /// (matching the JS `allowEmpty` / `isURL` behaviour in `getTransformers`).
+  pub is_url: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -105,7 +109,7 @@ impl Request for AssetRequest {
       }
     }
 
-    let mut result = run_pipelines(asset, request_context).await?;
+    let mut result = run_pipelines(asset, self.is_url, request_context).await?;
 
     // TODO: Commit the asset with a project path now, as transformers rely on an absolute path
     // result.asset.file_path = to_project_path(&self.project_root, &result.asset.file_path);
@@ -143,16 +147,21 @@ impl Request for AssetRequest {
 #[tracing::instrument(level = "trace", skip_all)]
 async fn run_pipelines(
   input: Asset,
+  is_url: bool,
   request_context: RunRequestContext,
 ) -> anyhow::Result<TransformResult> {
   let plugins = request_context.plugins();
   let mut all_invalidations = vec![];
+  // Each queue entry carries (asset_with_deps, resolved_pipeline, allow_empty).
+  // `allow_empty` is `true` only for the initial URL asset so that missing
+  // transformers produce a no-op pass-through instead of an error.
   let mut asset_queue = VecDeque::from([(
     AssetWithDependencies {
       asset: input,
       dependencies: Vec::new(),
     },
     None,
+    is_url,
   )]);
   let mut initial_asset: Option<Asset> = None;
   let mut initial_asset_dependencies = None;
@@ -164,6 +173,7 @@ async fn run_pipelines(
       dependencies: prev_dependencies,
     },
     pipeline,
+    allow_empty,
   )) = asset_queue.pop_front()
   {
     let pipeline = if let Some(pipeline_info) = pipeline {
@@ -172,7 +182,7 @@ async fn run_pipelines(
       let mut file_path = asset_to_modify.file_path.clone();
       file_path.set_extension(asset_to_modify.file_type.extension());
 
-      plugins.transformers(&asset_to_modify).await?
+      plugins.transformers(&asset_to_modify, allow_empty).await?
     };
 
     let RunPipelineOutput {
@@ -197,7 +207,7 @@ async fn run_pipelines(
     asset_queue.extend(
       discovered_assets
         .into_iter()
-        .map(|discovered_asset| (discovered_asset, None)),
+        .map(|discovered_asset| (discovered_asset, None, false)),
     );
 
     match result {
@@ -216,7 +226,9 @@ async fn run_pipelines(
         };
       }
       PipelineResult::TypeChange(asset, mut dependencies) => {
-        let next_pipeline = plugins.transformers(&asset).await?;
+        // Type-change follow-up pipeline always uses allow_empty=false:
+        // if a type-changed asset has no transformer, that's an error.
+        let next_pipeline = plugins.transformers(&asset, false).await?;
         dependencies.extend(prev_dependencies);
 
         asset_queue.push_front((
@@ -225,6 +237,7 @@ async fn run_pipelines(
             dependencies,
           },
           Some(next_pipeline),
+          false,
         ));
       }
     }
@@ -274,7 +287,7 @@ mod tests {
   #[tokio::test(flavor = "multi_thread")]
   async fn test_run_pipelines_works() {
     let mut plugins = MockPlugins::new();
-    plugins.expect_transformers().returning(move |_| {
+    plugins.expect_transformers().returning(move |_, _| {
       Ok(TransformerPipeline::new(vec![
         make_transformer(MockTrasformerOptions {
           label: "transformer1",
@@ -289,7 +302,7 @@ mod tests {
 
     let asset = Asset::default();
     let request_context = RunRequestContext::new_for_testing(Arc::new(plugins));
-    let result = run_pipelines(asset, request_context).await.unwrap();
+    let result = run_pipelines(asset, false, request_context).await.unwrap();
 
     assert_code(&result.asset, "::transformer1::transformer2");
   }
@@ -299,8 +312,10 @@ mod tests {
     let mut plugins = MockPlugins::new();
     plugins
       .expect_transformers()
-      .withf(|asset: &Asset| asset.file_path.extension().is_some_and(|ext| ext == "js"))
-      .returning(move |_| {
+      .withf(|asset: &Asset, _allow_empty: &bool| {
+        asset.file_path.extension().is_some_and(|ext| ext == "js")
+      })
+      .returning(move |_, _| {
         Ok(TransformerPipeline::new(vec![
           make_transformer(MockTrasformerOptions {
             label: "js-1",
@@ -317,7 +332,7 @@ mod tests {
     let asset = make_asset("index.js", FileType::Js);
     let expected_invalidations = vec![PathBuf::from("./tmp")];
     let request_context = RunRequestContext::new_for_testing(Arc::new(plugins));
-    let result = run_pipelines(asset, request_context).await.unwrap();
+    let result = run_pipelines(asset, false, request_context).await.unwrap();
 
     assert_code(&result.asset, "::js-1::js-2");
     assert_eq!(result.invalidate_on_file_change, expected_invalidations);
@@ -328,8 +343,10 @@ mod tests {
     let mut plugins = MockPlugins::new();
     plugins
       .expect_transformers()
-      .withf(|asset: &Asset| asset.file_path.extension().is_some_and(|ext| ext == "json"))
-      .returning(move |_| {
+      .withf(|asset: &Asset, _allow_empty: &bool| {
+        asset.file_path.extension().is_some_and(|ext| ext == "json")
+      })
+      .returning(move |_, _| {
         Ok(TransformerPipeline::new(vec![make_transformer(
           MockTrasformerOptions {
             label: "json",
@@ -342,8 +359,8 @@ mod tests {
 
     plugins
       .expect_transformers()
-      .withf(|asset: &Asset| asset.file_type == FileType::Js)
-      .returning(move |_| {
+      .withf(|asset: &Asset, _allow_empty: &bool| asset.file_type == FileType::Js)
+      .returning(move |_, _| {
         Ok(TransformerPipeline::new(vec![make_transformer(
           MockTrasformerOptions {
             label: "js",
@@ -354,7 +371,7 @@ mod tests {
 
     let asset = make_asset("index.json", FileType::Json);
     let request_context = RunRequestContext::new_for_testing(Arc::new(plugins));
-    let result = run_pipelines(asset, request_context).await.unwrap();
+    let result = run_pipelines(asset, false, request_context).await.unwrap();
 
     assert_eq!(
       result.asset.clone(),
@@ -372,8 +389,10 @@ mod tests {
     let mut plugins = MockPlugins::new();
     plugins
       .expect_transformers()
-      .withf(|asset: &Asset| asset.file_path.extension().is_some_and(|ext| ext == "js"))
-      .returning(move |_| {
+      .withf(|asset: &Asset, _allow_empty: &bool| {
+        asset.file_path.extension().is_some_and(|ext| ext == "js")
+      })
+      .returning(move |_, _| {
         Ok(TransformerPipeline::new(vec![
           make_transformer(MockTrasformerOptions {
             label: "js-1",
@@ -390,7 +409,7 @@ mod tests {
     let asset = make_asset("index.js", FileType::Js);
     let expected_dependencies = vec![Dependency::default()];
     let request_context = RunRequestContext::new_for_testing(Arc::new(plugins));
-    let result = run_pipelines(asset, request_context).await.unwrap();
+    let result = run_pipelines(asset, false, request_context).await.unwrap();
 
     assert_code(&result.asset, "::js-1::js-2");
     assert_eq!(result.dependencies, expected_dependencies);
@@ -402,8 +421,10 @@ mod tests {
 
     plugins
       .expect_transformers()
-      .withf(|asset: &Asset| asset.file_path.extension().is_some_and(|ext| ext == "js"))
-      .returning(move |_| {
+      .withf(|asset: &Asset, _allow_empty: &bool| {
+        asset.file_path.extension().is_some_and(|ext| ext == "js")
+      })
+      .returning(move |_, _| {
         Ok(TransformerPipeline::new(vec![
           make_transformer(MockTrasformerOptions {
             label: "js-1",
@@ -422,8 +443,10 @@ mod tests {
 
     plugins
       .expect_transformers()
-      .withf(|asset: &Asset| asset.file_path.extension().is_some_and(|ext| ext == "css"))
-      .returning(move |_| {
+      .withf(|asset: &Asset, _allow_empty: &bool| {
+        asset.file_path.extension().is_some_and(|ext| ext == "css")
+      })
+      .returning(move |_, _| {
         Ok(TransformerPipeline::new(vec![
           make_transformer(MockTrasformerOptions {
             label: "css-1",
@@ -439,7 +462,7 @@ mod tests {
 
     let asset = make_asset("index.js", FileType::Js);
     let request_context = RunRequestContext::new_for_testing(Arc::new(plugins));
-    let result = run_pipelines(asset, request_context).await.unwrap();
+    let result = run_pipelines(asset, false, request_context).await.unwrap();
 
     assert_code(&result.asset, "::js-1::js-2");
     assert_eq!(result.discovered_assets.len(), 1);
