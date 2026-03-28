@@ -34,6 +34,17 @@ let hasMismatches = false;
 for (const [pkgPath, pkg] of packages.entries()) {
   for (const [packageName, version] of Object.entries(pkg.dependencies || {})) {
     const current = packagesVersions.get(packageName);
+
+    if (packageName.startsWith('@atlaspack/')) {
+      if (current && version !== 'workspace:*') {
+        console.log(
+          `Miss\n\tInternal packages should use "workspace:*"\n\tGot      ${packageName}@${version}\n\t${pkgPath}`,
+        );
+      }
+
+      continue;
+    }
+
     if (current && version !== '*' && version != current) {
       hasMismatches = true;
       console.log(
@@ -46,6 +57,17 @@ for (const [pkgPath, pkg] of packages.entries()) {
     pkg.devDependencies || {},
   )) {
     const current = packagesVersions.get(packageName);
+
+    if (packageName.startsWith('@atlaspack/')) {
+      if (current && version !== 'workspace:*') {
+        console.log(
+          `Miss\n\tInternal packages should use "workspace:*"\n\tGot      ${packageName}@${version}\n\t${pkgPath}`,
+        );
+      }
+
+      continue;
+    }
+
     if (current && version !== '*' && version != current) {
       hasMismatches = true;
       console.log(
@@ -58,6 +80,17 @@ for (const [pkgPath, pkg] of packages.entries()) {
     pkg.optionalDependencies || {},
   )) {
     const current = packagesVersions.get(packageName);
+
+    if (packageName.startsWith('@atlaspack/')) {
+      if (current && version !== 'workspace:*') {
+        console.log(
+          `Miss\n\tInternal packages should use "workspace:*"\n\tGot      ${packageName}@${version}\n\t${pkgPath}`,
+        );
+      }
+
+      continue;
+    }
+
     if (current && version !== '*' && version != current) {
       hasMismatches = true;
       console.log(

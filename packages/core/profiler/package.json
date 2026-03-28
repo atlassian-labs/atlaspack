@@ -20,11 +20,11 @@
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
-    "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/events": "2.14.4",
-    "@atlaspack/types-internal": "2.25.2",
-    "@atlaspack/logger": "2.14.52",
-    "@atlaspack/utils": "3.4.2",
+    "@atlaspack/diagnostic": "workspace:*",
+    "@atlaspack/events": "workspace:*",
+    "@atlaspack/logger": "workspace:*",
+    "@atlaspack/types-internal": "workspace:*",
+    "@atlaspack/utils": "workspace:*",
     "chalk": "^4.1.2",
     "chrome-trace-event": "^1.0.2"
   },

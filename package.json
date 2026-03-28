@@ -67,7 +67,7 @@
     "tag:release": "lerna version --exact --force-publish=* --no-git-tag-version --no-push",
     "release": "lerna publish -y from-package --pre-dist-tag=next --no-git-tag-version --no-push",
     "prepare": "husky install",
-    "postinstall": "patch-package",
+    "postinstall": "yarn patch-package",
     "type-coverage": "type-coverage -b tsconfig.paths.json"
   },
   "devDependencies": {
@@ -78,12 +78,13 @@
     "@compiled/parcel-transformer": "^0.19.0",
     "@napi-rs/cli": "2.18.3",
     "@sentry/cli": "^2.45.0",
+    "@types/async": "^3.2.25",
     "@types/mocha": "^10.0.10",
     "@types/node": ">= 18",
     "@types/sinon": "^17.0.4",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
     "@typescript-eslint/parser": "^8.31.1",
-    "buffer": "mischnic/buffer#b8a4fa94",
+    "buffer": "mischnic/buffer#b8a4fa94c96973a5321a95c75e0b16967f0745f3",
     "cross-env": "^7.0.0",
     "eslint": "^8.57.0",
     "glob": "^7.1.6",
@@ -94,6 +95,7 @@
     "lint-staged": "^10.2.11",
     "mocha": "^8.3.0",
     "nyc": "^17.1.0",
+    "playwright": "1.50.0",
     "prettier": "^3.0.0",
     "punycode": "^2.3.1",
     "rfdc": "^1.4.1",
@@ -116,10 +118,10 @@
     "*.{json,md}": "prettier --write",
     "*.rs": "rustfmt"
   },
-  "packageManager": "yarn@1.22.19",
+  "packageManager": "yarn@4.8.1",
   "browser": {
-    "react-dom": "preact/compat",
     "react": "preact/compat",
+    "react-dom": "preact/compat",
     "scheduler": false
   },
   "dependencies": {

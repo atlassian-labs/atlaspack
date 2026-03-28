@@ -4,7 +4,16 @@ import request from 'supertest';
 import {errorHandlingMiddleware} from './errorHandlingMiddleware';
 import {HTTPError} from '../../errors/HTTPError';
 
-jest.mock('../logger');
+// Explicit mock required: Jest's automocking doesn't properly handle named const exports
+// with TypeScript's "module": "NodeNext" configuration. See loadCacheData.test.ts for details.
+jest.mock('../logger', () => ({
+  logger: {
+    info: jest.fn(),
+    debug: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+  },
+}));
 
 describe('errorHandlingMiddleware integration', function () {
   let app: express.Express;
@@ -37,7 +46,6 @@ describe('errorHandlingMiddleware integration', function () {
 
   it('should handle regular Error as 500 internal server error', async () => {
     const response = await request(app).get('/server-error').expect(500);
-
     assert.deepEqual(response.body, {
       error: 'Internal server error',
       status: 500,

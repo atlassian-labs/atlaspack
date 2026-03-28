@@ -16,9 +16,9 @@
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
-    "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/feature-flags": "2.31.0",
-    "@atlaspack/source-map": "3.3.4",
+    "@atlaspack/diagnostic": "workspace:*",
+    "@atlaspack/feature-flags": "workspace:*",
+    "@atlaspack/source-map": "workspace:*",
     "utility-types": "^3.10.0"
   },
   "type": "commonjs"

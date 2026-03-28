@@ -16,9 +16,9 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/types-internal": "2.25.2",
-    "@atlaspack/plugin": "2.14.60",
-    "@atlaspack/source-map": "3.3.4",
+    "@atlaspack/plugin": "workspace:*",
+    "@atlaspack/source-map": "workspace:*",
+    "@atlaspack/types-internal": "workspace:*",
     "less": "^4.1.1"
   },
   "type": "commonjs",

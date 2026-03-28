@@ -61,7 +61,7 @@ function runTypeCoverage(commitSha = null) {
 
       // Reinstall dependencies and rebuild if needed
       console.log('Installing dependencies for baseline...');
-      execSync('yarn install --frozen-lockfile', {
+      execSync('yarn install --immutable', {
         cwd: WORKSPACE_PATH,
         stdio: 'inherit',
       });
@@ -114,7 +114,7 @@ function runTypeCoverage(commitSha = null) {
 
         // Reinstall dependencies for current state
         console.log('Reinstalling dependencies for current state...');
-        execSync('yarn install --frozen-lockfile', {
+        execSync('yarn install --immutable', {
           cwd: WORKSPACE_PATH,
           stdio: 'inherit',
         });

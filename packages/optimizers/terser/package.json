@@ -16,10 +16,10 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/plugin": "2.14.60",
-    "@atlaspack/source-map": "3.3.4",
-    "@atlaspack/utils": "3.4.2",
+    "@atlaspack/diagnostic": "workspace:*",
+    "@atlaspack/plugin": "workspace:*",
+    "@atlaspack/source-map": "workspace:*",
+    "@atlaspack/utils": "workspace:*",
     "nullthrows": "^1.1.1",
     "terser": "^5.2.0"
   },
