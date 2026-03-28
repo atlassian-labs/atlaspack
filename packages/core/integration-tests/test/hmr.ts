@@ -601,7 +601,7 @@ module.hot.dispose((data) => {
         assert.equal(outputs.length, 1);
         let url = new URL(outputs[0]);
         assert(/test\.[0-9a-f]+\.txt/, url.pathname);
-        assert(!isNaN(url.search.slice(1)));
+        assert.equal(url.search, '');
         search = url.search;
         return {
           'test.txt': 'yo',
@@ -611,7 +611,7 @@ module.hot.dispose((data) => {
       assert.equal(outputs.length, 2);
       let url = new URL(outputs[1]);
       assert(/test\.[0-9a-f]+\.txt/, url.pathname);
-      assert(!isNaN(url.search.slice(1)));
+      assert.equal(url.search, '?t=1');
       assert.notEqual(url.search, search);
     });
 
@@ -624,7 +624,7 @@ module.hot.dispose((data) => {
             assert.equal(outputs.length, 1);
             let url = new URL(outputs[0]);
             assert(/test\.[0-9a-f]+\.txt/, url.pathname);
-            assert(!isNaN(url.search.slice(1)));
+            assert.equal(url.search, '');
             search = url.search;
             return {
               'index.js': 'output("yo"); module.hot.accept();',
@@ -643,8 +643,51 @@ module.hot.dispose((data) => {
         assert.equal(outputs.length, 3);
         let url = new URL(outputs[2]);
         assert(/test\.[0-9a-f]+\.txt/, url.pathname);
-        assert(!isNaN(url.search.slice(1)));
+        assert.equal(url.search, '?t=2');
         assert.notEqual(url.search, search);
+      },
+    );
+
+    it.v2(
+      'should reuse one bundle version for all URL references in a single HMR cycle',
+      async function () {
+        let firstSearch;
+        let {outputs} = await testHMRClient('hmr-url-multiple', [
+          (outputs: Array<any>) => {
+            assert.equal(outputs.length, 2);
+            let firstUrl = new URL(outputs[0]);
+            let secondUrl = new URL(outputs[1]);
+            assert(/a\.[0-9a-f]+\.txt/.test(firstUrl.pathname));
+            assert(/b\.[0-9a-f]+\.txt/.test(secondUrl.pathname));
+            assert.equal(firstUrl.search, '');
+            assert.equal(secondUrl.search, '');
+
+            return {
+              'a.txt': 'updated-a',
+            };
+          },
+          (outputs: Array<any>) => {
+            assert.equal(outputs.length, 4);
+            let firstUpdatedUrl = new URL(outputs[2]);
+            let secondUpdatedUrl = new URL(outputs[3]);
+            assert.equal(firstUpdatedUrl.search, '?t=1');
+            assert.equal(secondUpdatedUrl.search, '?t=1');
+            assert.equal(firstUpdatedUrl.search, secondUpdatedUrl.search);
+            firstSearch = firstUpdatedUrl.search;
+
+            return {
+              'b.txt': 'updated-b',
+            };
+          },
+        ]);
+
+        assert.equal(outputs.length, 6);
+        let firstUpdatedUrl = new URL(outputs[4]);
+        let secondUpdatedUrl = new URL(outputs[5]);
+        assert.equal(firstUpdatedUrl.search, '?t=2');
+        assert.equal(secondUpdatedUrl.search, '?t=2');
+        assert.equal(firstUpdatedUrl.search, secondUpdatedUrl.search);
+        assert.notEqual(firstUpdatedUrl.search, firstSearch);
       },
     );
 

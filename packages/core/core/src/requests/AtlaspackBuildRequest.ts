@@ -29,6 +29,7 @@ type AtlaspackBuildRequestInput = {
   optionsRef: SharedReference;
   requestedAssetIds: Set<string>;
   signal?: AbortSignal;
+  skipChangedAssets?: boolean;
 };
 
 export type AtlaspackBuildRequestResult = {
@@ -72,7 +73,7 @@ async function run({
   options,
   rustAtlaspack,
 }: RunInput<AtlaspackBuildRequestResult>) {
-  let {optionsRef, requestedAssetIds, signal} = input;
+  let {optionsRef, requestedAssetIds, signal, skipChangedAssets} = input;
 
   let bundleGraphRequest =
     getFeatureFlag('nativeBundling') && rustAtlaspack
@@ -136,12 +137,14 @@ async function run({
         NamedBundle.get(bundle, bundleGraph, options),
       options,
     ),
-    changedAssets: new Map(
-      Array.from(changedAssets).map(([id, asset]: [any, any]) => [
-        id,
-        assetFromValue(asset, options),
-      ]),
-    ),
+    changedAssets: skipChangedAssets
+      ? new Map()
+      : new Map(
+          Array.from(changedAssets).map(([id, asset]: [any, any]) => [
+            id,
+            assetFromValue(asset, options),
+          ]),
+        ),
   });
 
   let packagingMeasurement = tracer.createMeasurement('packaging');
@@ -161,7 +164,7 @@ async function run({
   return {
     bundleGraph,
     bundleInfo,
-    changedAssets,
+    changedAssets: skipChangedAssets ? new Map() : changedAssets,
     assetRequests,
     scopeHoistingStats,
   };

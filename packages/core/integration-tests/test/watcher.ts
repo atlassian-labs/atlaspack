@@ -51,6 +51,7 @@ describe('watcher', function () {
     subscription = await b.watch();
     let buildEvent = await getNextBuild(b);
     assert(buildEvent.type === 'buildSuccess');
+    assert.equal(buildEvent.changedAssets.size, 0);
 
     let output = await run(buildEvent.bundleGraph);
     assert.equal(output, 'hello');
@@ -62,6 +63,7 @@ describe('watcher', function () {
     );
     buildEvent = await getNextBuild(b);
     assert(buildEvent.type === 'buildSuccess');
+    assert.equal(buildEvent.changedAssets.size, 1);
 
     output = await run(buildEvent.bundleGraph);
     assert.equal(output, 'something else');

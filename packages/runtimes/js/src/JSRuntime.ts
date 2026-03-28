@@ -1276,11 +1276,21 @@ function getRelativePathExpr(
   let res = JSON.stringify(relativePath);
   if (getFeatureFlag('hmrImprovements')) {
     if (isURL && options.hmrOptions) {
-      res += ' + "?" + Date.now()';
+      res +=
+        ' + (globalThis.__parcel__hmrBundleVersion == null' +
+        ' ? ""' +
+        ' : (' +
+        JSON.stringify(relativePath) +
+        '.includes("?") ? "&" : "?") + "t=" + globalThis.__parcel__hmrBundleVersion)';
     }
   } else {
     if (options.hmrOptions) {
-      res += ' + "?" + Date.now()';
+      res +=
+        ' + (globalThis.__parcel__hmrBundleVersion == null' +
+        ' ? ""' +
+        ' : (' +
+        JSON.stringify(relativePath) +
+        '.includes("?") ? "&" : "?") + "t=" + globalThis.__parcel__hmrBundleVersion)';
     }
   }
 

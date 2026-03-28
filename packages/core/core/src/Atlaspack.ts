@@ -116,6 +116,7 @@ export default class Atlaspack {
   #watcherSubscription: AsyncSubscription | null | undefined;
   #watcherCount: number = 0;
   #requestedAssetIds: Set<string> = new Set();
+  #hasCompletedBuild: boolean = false;
 
   rustAtlaspack: AtlaspackV3 | null | undefined;
 
@@ -413,6 +414,7 @@ export default class Atlaspack {
     /*::...null*/
   }): Promise<BuildEvent> {
     let options = nullthrows(this.#resolvedOptions);
+    let skipChangedAssets = !this.#hasCompletedBuild;
     try {
       if (options.shouldProfile) {
         await this.startProfiling();
@@ -478,6 +480,7 @@ export default class Atlaspack {
           optionsRef: this.#optionsRef,
           requestedAssetIds: this.#requestedAssetIds,
           signal,
+          skipChangedAssets,
         });
 
         ({
@@ -487,6 +490,10 @@ export default class Atlaspack {
           assetRequests,
           scopeHoistingStats,
         } = await this.#requestTracker.runRequest(request, {force: true}));
+      }
+
+      if (skipChangedAssets) {
+        changedAssets = new Map();
       }
 
       this.#requestedAssetIds.clear();
@@ -571,6 +578,7 @@ export default class Atlaspack {
 
       // @ts-expect-error TS2345
       await this.#reporterRunner.report(event);
+      this.#hasCompletedBuild = true;
       await this.#requestTracker.runRequest(
         // @ts-expect-error TS2345
         createValidationRequest({optionsRef: this.#optionsRef, assetRequests}),
