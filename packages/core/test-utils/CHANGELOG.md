@@ -1,5 +1,19 @@
 # @atlaspack/test-utils
 
+## 2.14.64
+
+### Patch Changes
+
+- [#1065](https://github.com/atlassian-labs/atlaspack/pull/1065) [`e898fda`](https://github.com/atlassian-labs/atlaspack/commit/e898fda7511d98e5597d847c4a32c028a8a24d6c) Thanks [@at-nathan](https://github.com/at-nathan)! - Update third-party dependencies to align with AFM
+
+- Updated dependencies [[`e898fda`](https://github.com/atlassian-labs/atlaspack/commit/e898fda7511d98e5597d847c4a32c028a8a24d6c), [`3ff901a`](https://github.com/atlassian-labs/atlaspack/commit/3ff901a222d5e077a3bb96031a89c3b5173ece69)]:
+  - @atlaspack/cache@3.2.56
+  - @atlaspack/utils@3.4.3
+  - @atlaspack/core@2.38.3
+  - @atlaspack/fs@2.15.56
+  - @atlaspack/package-manager@2.14.61
+  - @atlaspack/config-default@19.0.3
+
 ## 2.14.63
 
 ### Patch Changes

@@ -1,5 +1,23 @@
 # @atlaspack/rust
 
+## 3.29.0
+
+### Minor Changes
+
+- [#1066](https://github.com/atlassian-labs/atlaspack/pull/1066) [`07edc83`](https://github.com/atlassian-labs/atlaspack/commit/07edc83079f6a752b09b28a9fe8b45f6523f0f81) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Add proper AST traversal and tree shaking to native CSS packaging
+
+- [#1068](https://github.com/atlassian-labs/atlaspack/pull/1068) [`ff7e3f0`](https://github.com/atlassian-labs/atlaspack/commit/ff7e3f08c3977b0d9b9edfe739a8e596abbdd729) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Add source map generation to native CSS packaging
+
+- [#1064](https://github.com/atlassian-labs/atlaspack/pull/1064) [`5256d37`](https://github.com/atlassian-labs/atlaspack/commit/5256d37a88334554ae78456622389c97f66a2196) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Add proper URL handling to native CSS packaging
+
+### Patch Changes
+
+- [#1074](https://github.com/atlassian-labs/atlaspack/pull/1074) [`e8fe5c0`](https://github.com/atlassian-labs/atlaspack/commit/e8fe5c0070f0d92d68f98902edcc96dc82c1e52d) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - return structured diagnostics for compiled plugin
+
+- [#1072](https://github.com/atlassian-labs/atlaspack/pull/1072) [`508e15c`](https://github.com/atlassian-labs/atlaspack/commit/508e15c7acd187703bade4d613ca7f5739ae3af7) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - fix jsx pragma removal for compiled
+
+- [#1071](https://github.com/atlassian-labs/atlaspack/pull/1071) [`34c7cec`](https://github.com/atlassian-labs/atlaspack/commit/34c7cecebae240f11f36971b4eeaeaaf579531c9) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - forward resolver invalidations to request tracker
+
 ## 3.28.0
 
 ### Minor Changes

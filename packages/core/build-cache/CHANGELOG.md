@@ -1,5 +1,12 @@
 # @atlaspack/build-cache
 
+## 2.13.15
+
+### Patch Changes
+
+- Updated dependencies [[`3ff901a`](https://github.com/atlassian-labs/atlaspack/commit/3ff901a222d5e077a3bb96031a89c3b5173ece69)]:
+  - @atlaspack/feature-flags@2.31.1
+
 ## 2.13.14
 
 ### Patch Changes
