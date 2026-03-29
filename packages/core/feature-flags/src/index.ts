@@ -407,6 +407,24 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @author Marcin Szczepanski <mszczepanski@atlassian.com>
    */
   fixSourceMapHashRefs: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * When enabled, improves the reliability of the Rust/JS asset graph
+   * synchronization layer in Atlaspack V3:
+   * - Stores the asset graph result even when downstream errors occur
+   *   (symbol propagation, commit_assets), preventing Rust/JS divergence
+   * - Gracefully handles content key collisions ("Graph already has content key")
+   *   and missing update nodes ("undefined == true") by healing the divergence
+   *   and reporting to devmetrics via trackableEvent
+   * - Clones the previous asset graph data instead of sharing references,
+   *   preventing accidental mutation of stored results
+   *
+   * @author Matt Koko <mkokolich@atlassian.com>
+   * @since 2026-03-25
+   */
+  v3AssetGraphSyncImprovements:
+    process.env.ATLASPACK_BUILD_ENV === 'test' &&
+    process.env.ATLASPACK_V3 === 'true',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;
