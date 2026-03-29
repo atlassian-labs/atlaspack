@@ -1,5 +1,29 @@
 # @atlaspack/core
 
+## 2.38.3
+
+### Patch Changes
+
+- [#1065](https://github.com/atlassian-labs/atlaspack/pull/1065) [`e898fda`](https://github.com/atlassian-labs/atlaspack/commit/e898fda7511d98e5597d847c4a32c028a8a24d6c) Thanks [@at-nathan](https://github.com/at-nathan)! - Update third-party dependencies to align with AFM
+
+- [#1073](https://github.com/atlassian-labs/atlaspack/pull/1073) [`3ff901a`](https://github.com/atlassian-labs/atlaspack/commit/3ff901a222d5e077a3bb96031a89c3b5173ece69) Thanks [@matt-koko](https://github.com/matt-koko)! - Improve Rust/JS asset graph interop for atlaspack v3 by reducing scenarios where Rust/JS can diverge their respective previous asset graphs.
+
+- Updated dependencies [[`07edc83`](https://github.com/atlassian-labs/atlaspack/commit/07edc83079f6a752b09b28a9fe8b45f6523f0f81), [`e898fda`](https://github.com/atlassian-labs/atlaspack/commit/e898fda7511d98e5597d847c4a32c028a8a24d6c), [`3ff901a`](https://github.com/atlassian-labs/atlaspack/commit/3ff901a222d5e077a3bb96031a89c3b5173ece69), [`e8fe5c0`](https://github.com/atlassian-labs/atlaspack/commit/e8fe5c0070f0d92d68f98902edcc96dc82c1e52d), [`ff7e3f0`](https://github.com/atlassian-labs/atlaspack/commit/ff7e3f08c3977b0d9b9edfe739a8e596abbdd729), [`508e15c`](https://github.com/atlassian-labs/atlaspack/commit/508e15c7acd187703bade4d613ca7f5739ae3af7), [`34c7cec`](https://github.com/atlassian-labs/atlaspack/commit/34c7cecebae240f11f36971b4eeaeaaf579531c9), [`5256d37`](https://github.com/atlassian-labs/atlaspack/commit/5256d37a88334554ae78456622389c97f66a2196)]:
+  - @atlaspack/rust@3.29.0
+  - @atlaspack/cache@3.2.56
+  - @atlaspack/utils@3.4.3
+  - @atlaspack/feature-flags@2.31.1
+  - @atlaspack/fs@2.15.56
+  - @atlaspack/logger@2.14.53
+  - @atlaspack/source-map@3.3.5
+  - @atlaspack/package-manager@2.14.61
+  - @atlaspack/profiler@2.15.22
+  - @atlaspack/workers@2.14.61
+  - @atlaspack/build-cache@2.13.15
+  - @atlaspack/graph@3.6.23
+  - @atlaspack/types@2.15.51
+  - @atlaspack/plugin@2.14.61
+
 ## 2.38.2
 
 ### Patch Changes

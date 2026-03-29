@@ -1,5 +1,11 @@
 # @atlaspack/feature-flags
 
+## 2.31.1
+
+### Patch Changes
+
+- [#1073](https://github.com/atlassian-labs/atlaspack/pull/1073) [`3ff901a`](https://github.com/atlassian-labs/atlaspack/commit/3ff901a222d5e077a3bb96031a89c3b5173ece69) Thanks [@matt-koko](https://github.com/matt-koko)! - Improve Rust/JS asset graph interop for atlaspack v3 by reducing scenarios where Rust/JS can diverge their respective previous asset graphs.
+
 ## 2.31.0
 
 ### Minor Changes

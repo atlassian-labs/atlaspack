@@ -1,5 +1,12 @@
 # @atlaspack/transformer-inline
 
+## 2.14.61
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.61
+
 ## 2.14.60
 
 ### Patch Changes
