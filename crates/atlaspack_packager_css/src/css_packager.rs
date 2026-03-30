@@ -458,7 +458,7 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
 
     let css = hoist_imports(&css, &hoisted_imports, bundle, source_map.as_mut())?;
 
-    let css = replace_url_references(
+    let mut css = replace_url_references(
       &css,
       bundle,
       self.bundle_graph.as_ref(),
@@ -466,7 +466,7 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
       &self.context.output_dir,
     )?;
 
-    let map_bytes = generate_map_bytes(&mut css.clone(), bundle, source_map.as_mut())?;
+    let map_bytes = generate_map_bytes(&mut css, bundle, source_map.as_mut())?;
     Ok(build_package_result(css, map_bytes, assets.len(), warnings))
   }
 }
