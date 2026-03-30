@@ -2232,7 +2232,6 @@ mod tests {
     let css_content = ".foo { background: url(icon.png); }";
     db.put("asset_url", css_content.as_bytes()).unwrap();
 
-    // Common setup
     let make_package_result = |target_dist_dir: &str| -> PackageResult {
       let asset = Asset {
         id: "asset_url".to_string(),
@@ -2970,6 +2969,249 @@ mod tests {
       next_char,
       Some('\n'),
       "In non-minified mode the hoisted @import must be followed by a newline; got: {output:?}"
+    );
+  }
+
+  #[test]
+  fn total_assets_count_matches_number_of_assets() {
+    let db = make_db();
+    db.put("ta1", b".a { color: red; }").unwrap();
+    db.put("ta2", b".b { color: blue; }").unwrap();
+    db.put("ta3", b".c { color: green; }").unwrap();
+
+    let asset1 = make_asset("ta1");
+    let asset2 = make_asset("ta2");
+    let asset3 = make_asset("ta3");
+    let bundle = make_bundle("bundle_ta", vec!["ta1", "ta2", "ta3"]);
+
+    let mut graph = TestBundleGraph::new();
+    graph.bundles.push(bundle.clone());
+    graph
+      .assets_by_bundle
+      .insert("bundle_ta".to_string(), vec![asset1, asset2, asset3]);
+
+    let packager = CssPackager::new(
+      CssPackagingContext {
+        db,
+        project_root: PathBuf::from("/tmp"),
+        output_dir: PathBuf::from("/tmp/dist"),
+      },
+      Arc::new(graph),
+    );
+
+    let result = packager
+      .package("bundle_ta")
+      .expect("package() must succeed");
+
+    assert_eq!(
+      result.bundle_info.total_assets, 3,
+      "total_assets must equal the number of assets in the bundle"
+    );
+  }
+
+  #[test]
+  fn content_key_takes_precedence_over_asset_id_for_db_lookup() {
+    let db = make_db();
+    // CSS is stored under the content key, NOT the asset ID.
+    db.put("ck_abc123", b".from-content-key { color: purple; }")
+      .unwrap();
+    // Nothing stored under "asset_ck" — if the packager falls back to the asset
+    // ID the bundle will be empty and the assertion below will fail.
+
+    let mut asset = make_asset("asset_ck");
+    asset.content_key = Some("ck_abc123".to_string());
+
+    let bundle = make_bundle("bundle_ck", vec!["asset_ck"]);
+    let mut graph = TestBundleGraph::new();
+    graph.bundles.push(bundle.clone());
+    graph
+      .assets_by_bundle
+      .insert("bundle_ck".to_string(), vec![asset]);
+
+    let packager = CssPackager::new(
+      CssPackagingContext {
+        db,
+        project_root: PathBuf::from("/tmp"),
+        output_dir: PathBuf::from("/tmp/dist"),
+      },
+      Arc::new(graph),
+    );
+
+    let result = packager
+      .package("bundle_ck")
+      .expect("package() must succeed");
+    let output = output_string(&result);
+
+    assert!(
+      output.contains(".from-content-key"),
+      "CSS stored under content_key must appear in output; got: {output:?}"
+    );
+    assert!(
+      output.contains("purple"),
+      "CSS property from content_key asset must appear in output; got: {output:?}"
+    );
+  }
+
+  #[test]
+  fn apply_css_var_substitution_adjacent_to_punctuation() {
+    let db = make_db();
+    // "placeholder" appears: after `: ` (composes value), separated by space,
+    // and also at the start of the second rule. This exercises the scanner at
+    // multiple boundary positions in a single pass.
+    let css = ".a { composes: placeholder; color: red; } .placeholder { font-weight: bold; }";
+    db.put("asset_punct_subst", css.as_bytes()).unwrap();
+
+    let mut asset = make_asset("asset_punct_subst");
+    asset.meta.insert("hasReferences".to_string(), true.into());
+
+    let mut dep = make_dependency("./other.css", Priority::Sync);
+    dep.symbols = Some(vec![Symbol {
+      exported: "placeholder".to_string(),
+      local: "placeholder".to_string(),
+      loc: None,
+      is_weak: false,
+      is_esm_export: false,
+      self_referenced: false,
+      is_static_binding_safe: true,
+    }]);
+
+    let mut resolved = make_asset("other");
+    resolved.symbols = Some(vec![Symbol {
+      exported: "placeholder".to_string(),
+      local: "placeholder_hashed".to_string(),
+      loc: None,
+      is_weak: false,
+      is_esm_export: false,
+      self_referenced: false,
+      is_static_binding_safe: true,
+    }]);
+
+    let bundle = make_bundle("bundle_punct_subst", vec!["asset_punct_subst"]);
+    let mut graph = TestBundleGraph::new();
+    graph.bundles.push(bundle.clone());
+    graph
+      .assets_by_bundle
+      .insert("bundle_punct_subst".to_string(), vec![asset]);
+    graph
+      .deps_by_asset
+      .insert("asset_punct_subst".to_string(), vec![dep]);
+    graph.resolved.insert("./other.css".to_string(), resolved);
+
+    let packager = CssPackager::new(
+      CssPackagingContext {
+        db,
+        project_root: PathBuf::from("/tmp"),
+        output_dir: PathBuf::from("/tmp/dist"),
+      },
+      Arc::new(graph),
+    );
+
+    let result = packager
+      .package("bundle_punct_subst")
+      .expect("should succeed");
+    let output = output_string(&result);
+
+    // Both occurrences — in the composes value and as a selector — must be replaced.
+    // The resolved name "placeholder_hashed" must appear at least twice (once in the
+    // composes value and once as the selector).
+    let replacement_count = output.matches("placeholder_hashed").count();
+    assert!(
+      replacement_count >= 2,
+      "ident must be replaced in both positions (composes value and selector); got: {output:?}"
+    );
+    // The unreplaced original ident must not appear as a standalone token.
+    // Check for "composes: placeholder;" (original value, semicolon-terminated) and
+    // ".placeholder {" (original selector, space-terminated).
+    assert!(
+      !output.contains("composes: placeholder;"),
+      "original ident must not remain as the composes value; got: {output:?}"
+    );
+    assert!(
+      !output.contains(".placeholder {"),
+      "original ident must not remain as a CSS selector; got: {output:?}"
+    );
+  }
+
+  #[test]
+  fn tree_shaking_removes_unused_class_inside_starting_style() {
+    let css = "@starting-style { .unused_xyz { opacity: 0; } }";
+    let all: HashSet<String> = [".unused_xyz"].iter().map(|s| s.to_string()).collect();
+    let used: HashSet<String> = HashSet::new();
+
+    let output = remove_unused_class_rules(css, &all, &used);
+
+    assert!(
+      !output.contains(".unused_xyz"),
+      "unused class inside @starting-style must be removed; got: {output:?}"
+    );
+  }
+
+  #[test]
+  fn tree_shaking_retains_used_class_inside_starting_style() {
+    let css = "@starting-style { .used_abc { opacity: 0; } }";
+    let all: HashSet<String> = [".used_abc"].iter().map(|s| s.to_string()).collect();
+    let used: HashSet<String> = [".used_abc"].iter().map(|s| s.to_string()).collect();
+
+    let output = remove_unused_class_rules(css, &all, &used);
+
+    assert!(
+      output.contains(".used_abc"),
+      "used class inside @starting-style must be retained; got: {output:?}"
+    );
+    assert!(
+      output.contains("@starting-style"),
+      "@starting-style block must be retained when its rule is used; got: {output:?}"
+    );
+  }
+
+  #[test]
+  fn tree_shaking_scope_rule_removes_unused_via_packager() {
+    let db = make_db();
+    let css = "@scope (.card) { .foo_abc { color: red; } .bar_def { color: blue; } }";
+    db.put("asset_scope_pkg", css.as_bytes()).unwrap();
+
+    let asset = make_css_module_asset(
+      "asset_scope_pkg",
+      vec![("foo", "foo_abc"), ("bar", "bar_def")],
+      true,
+    );
+
+    let mut bundle = make_bundle("bundle_scope_pkg", vec!["asset_scope_pkg"]);
+    bundle.env.should_optimize = true;
+
+    let mut graph = TestBundleGraph::new();
+    graph.bundles.push(bundle.clone());
+    graph
+      .assets_by_bundle
+      .insert("bundle_scope_pkg".to_string(), vec![asset]);
+
+    let mut used_syms = HashSet::new();
+    used_syms.insert("foo".to_string());
+    graph
+      .used_symbols_by_asset
+      .insert("asset_scope_pkg".to_string(), used_syms);
+
+    let packager = CssPackager::new(
+      CssPackagingContext {
+        db,
+        project_root: PathBuf::from("/tmp"),
+        output_dir: PathBuf::from("/tmp/dist"),
+      },
+      Arc::new(graph),
+    );
+
+    let result = packager
+      .package("bundle_scope_pkg")
+      .expect("should succeed");
+    let output = output_string(&result);
+
+    assert!(
+      output.contains(".foo_abc"),
+      ".foo_abc must be retained inside @scope (it is used); got: {output:?}"
+    );
+    assert!(
+      !output.contains(".bar_def"),
+      ".bar_def must be removed inside @scope (it is unused); got: {output:?}"
     );
   }
 }

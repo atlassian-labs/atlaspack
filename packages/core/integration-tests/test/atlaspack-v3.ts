@@ -681,6 +681,152 @@ describe.v3('AtlaspackV3', function () {
       );
     });
 
+    it('emits a source map for CSS imported from a JS entry', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        native-css-sm-from-js
+          index.js:
+            import './styles.css';
+            export const version = 1;
+          styles.css:
+            .container { display: flex; gap: 1rem; }
+            .button { padding: 0.5rem 1rem; }
+          yarn.lock:
+      `;
+
+      const bg = await bundle(
+        join(__dirname, 'native-css-sm-from-js/index.js'),
+        {
+          mode: 'development',
+          inputFS: overlayFS,
+          outputFS: overlayFS,
+          featureFlags: {fullNative: true},
+        },
+      );
+
+      const cssBundles = bg
+        .getBundles()
+        .filter((b: any) => b.type === 'css' && b.filePath);
+      assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
+
+      const cssPath: string = cssBundles[0].filePath;
+      const cssContent = await overlayFS.readFile(cssPath, 'utf8');
+
+      assert.ok(
+        cssContent.includes('sourceMappingURL'),
+        `CSS bundle from JS entry must contain a sourceMappingURL comment; got: ${cssContent}`,
+      );
+
+      const mapContent = await overlayFS.readFile(cssPath + '.map', 'utf8');
+      const mapJson = JSON.parse(mapContent);
+
+      assert.ok(
+        Array.isArray(mapJson.sources) && mapJson.sources.length > 0,
+        `Source map must have a non-empty 'sources' array; got: ${mapContent}`,
+      );
+      assert.ok(
+        typeof mapJson.mappings === 'string' && mapJson.mappings.length > 0,
+        `Source map must have non-empty 'mappings'; got: ${mapContent}`,
+      );
+    });
+
+    it('packages CSS from a JS entry in production mode', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        native-css-prod-js-entry
+          index.js:
+            import './app.css';
+            export const version = 1;
+          app.css:
+            @import './tokens.css';
+            .layout { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space); }
+            .card   { border-radius: var(--radius); padding: var(--space); }
+          tokens.css:
+            :root { --space: 1rem; --radius: 4px; }
+          yarn.lock:
+      `;
+
+      const bg = await bundle(
+        join(__dirname, 'native-css-prod-js-entry/index.js'),
+        {
+          mode: 'production',
+          inputFS: overlayFS,
+          outputFS: overlayFS,
+          featureFlags: {fullNative: true},
+        },
+      );
+
+      const cssBundles = bg
+        .getBundles()
+        .filter((b: any) => b.type === 'css' && b.filePath);
+      assert.ok(
+        cssBundles.length > 0,
+        'Expected at least one CSS bundle from JS entry in production mode',
+      );
+
+      const css = await overlayFS.readFile(cssBundles[0].filePath, 'utf8');
+
+      // Minification: no runs of whitespace between tokens.
+      assert.ok(
+        !css.includes('  '),
+        `Production CSS must not contain indentation whitespace; got: ${css}`,
+      );
+      // Content from both files must be present after inlining @import.
+      assert.ok(
+        css.includes('grid') || css.includes('display'),
+        `Production CSS must contain layout rules from app.css; got: ${css}`,
+      );
+    });
+
+    // @layer cascade layers must be preserved intact by the native packager.
+    // This is exercised separately from the parity suite so that any v3-specific
+    // layer handling (e.g. layer reordering by lightningcss) is caught early.
+    it('@layer cascade layers are preserved in native output', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        native-css-layer
+          index.css:
+            @layer reset, base, theme;
+            @layer reset { *, *::before, *::after { box-sizing: border-box; } }
+            @layer base   { body { margin: 0; font-family: system-ui; } }
+            @layer theme  { :root { --color: #0052cc; } .btn { color: var(--color); } }
+          yarn.lock:
+      `;
+
+      const bg = await bundle(join(__dirname, 'native-css-layer/index.css'), {
+        mode: 'development',
+        inputFS: overlayFS,
+        outputFS: overlayFS,
+        featureFlags: {fullNative: true},
+      });
+
+      const cssBundles = bg
+        .getBundles()
+        .filter((b: any) => b.type === 'css' && b.filePath);
+      assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
+      const css = await overlayFS.readFile(cssBundles[0].filePath, 'utf8');
+
+      assert.ok(
+        css.includes('@layer'),
+        `Native CSS must preserve @layer rules; got: ${css}`,
+      );
+      // All three named layers must appear in the output.
+      assert.ok(
+        css.includes('reset'),
+        `@layer reset must be present in native output; got: ${css}`,
+      );
+      assert.ok(
+        css.includes('base'),
+        `@layer base must be present in native output; got: ${css}`,
+      );
+      assert.ok(
+        css.includes('theme'),
+        `@layer theme must be present in native output; got: ${css}`,
+      );
+      // Layer ordering: the reset layer declaration must appear before base.
+      assert.ok(
+        css.indexOf('reset') < css.indexOf('base'),
+        `@layer reset must appear before @layer base; got: ${css}`,
+      );
+    });
+
     // When an external @import is hoisted to the top of the output, the source
     // map must reflect the line shift so that generated line 0 (the hoisted
     // @import) has no source mapping (encoded as a leading ';' in mappings).

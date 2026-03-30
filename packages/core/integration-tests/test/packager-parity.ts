@@ -486,4 +486,84 @@ describe('packager-parity (JS vs native CSS packager)', function () {
 
     await assertPackagerParity(fixtureName);
   });
+
+  it('@starting-style rules are preserved identically', async function () {
+    this.timeout(30000);
+    const fixtureName = 'packager-parity-starting-style';
+
+    await fsFixture(overlayFS, __dirname)`
+      ${fixtureName}
+        index.css:
+          .dialog {
+            transition: opacity 0.3s, display 0.3s allow-discrete;
+            opacity: 1;
+          }
+          @starting-style {
+            .dialog {
+              opacity: 0;
+            }
+          }
+          .popover {
+            transition: transform 0.2s;
+            transform: scale(1);
+          }
+          @starting-style {
+            .popover {
+              transform: scale(0.8);
+            }
+          }
+        yarn.lock:
+    `;
+
+    await assertPackagerParity(fixtureName);
+  });
+
+  it('@scope rules are preserved identically', async function () {
+    this.timeout(30000);
+    const fixtureName = 'packager-parity-scope';
+
+    await fsFixture(overlayFS, __dirname)`
+      ${fixtureName}
+        index.css:
+          @scope (.card) {
+            .title { font-size: 1.25rem; font-weight: bold; }
+            .body  { padding: 1rem; }
+          }
+          @scope (.sidebar) to (.widget) {
+            p { margin: 0; color: var(--sidebar-text); }
+          }
+          :root { --sidebar-text: #333; }
+        yarn.lock:
+    `;
+
+    await assertPackagerParity(fixtureName);
+  });
+
+  it.skip('diamond import deduplication is identical between packagers', async function () {
+    // TODO: Native packager uses *correct* DFS post-order (shared.css before a-component).
+    // JS packager orders incorrectly due to lightning walking through internal @imports.
+    // Fix would be in CSSPackager.ts.
+    this.timeout(30000);
+    const fixtureName = 'packager-parity-diamond-dedup';
+
+    await fsFixture(overlayFS, __dirname)`
+      ${fixtureName}
+        index.css:
+          @import "./a.css";
+          @import "./b.css";
+          .page { padding: 2rem; }
+        a.css:
+          @import "./shared.css";
+          .a-component { color: blue; }
+        b.css:
+          @import "./shared.css";
+          .b-component { color: green; }
+        shared.css:
+          *, *::before, *::after { box-sizing: border-box; }
+          body { margin: 0; font-family: system-ui; }
+        yarn.lock:
+    `;
+
+    await assertPackagerParity(fixtureName);
+  });
 });
