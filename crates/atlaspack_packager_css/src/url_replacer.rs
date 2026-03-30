@@ -163,7 +163,6 @@ fn mime_for_file_type(file_type: &FileType) -> &'static str {
 }
 
 /// Resolves a forward-slash relative path from the CSS bundle to the bundle owning `asset_id`.
-/// Resolves a forward-slash relative path from the CSS bundle to the bundle owning `asset_id`.
 fn find_relative_path(
   asset_id: &str,
   css_bundle: &Bundle,
