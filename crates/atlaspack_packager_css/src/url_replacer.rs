@@ -521,47 +521,6 @@ mod tests {
   }
 
   #[test]
-  fn unresolvable_url_falls_back_to_specifier() {
-    let placeholder = "ddd4444444444444";
-    let specifier = "./missing-image.png";
-
-    let css_bundle = make_css_bundle("bundle_css");
-    let db = make_db();
-    let output_dir = PathBuf::from("/dist");
-
-    let dep = make_url_dep(specifier, Some(placeholder));
-
-    let css_asset = Asset {
-      id: "asset_css_1".to_string(),
-      file_type: FileType::Css,
-      env: Arc::new(Environment::default()),
-      ..Asset::default()
-    };
-
-    let mut graph = MockBundleGraph::new();
-    graph.bundles.push(css_bundle.clone());
-    graph
-      .assets_by_bundle
-      .insert("bundle_css".to_string(), vec![css_asset.clone()]);
-    graph
-      .deps_by_asset
-      .insert("asset_css_1".to_string(), vec![dep]);
-    let input = format!(".missing {{ background: url({placeholder}); }}");
-
-    let result = replace_url_references(&input, &css_bundle, &graph, &db, &output_dir)
-      .expect("replace_url_references must succeed");
-
-    assert!(
-      result.contains(specifier),
-      "Expected original specifier '{specifier}' in fallback output, got: {result:?}"
-    );
-    assert!(
-      !result.contains(placeholder),
-      "Placeholder must be replaced even on fallback, got: {result:?}"
-    );
-  }
-
-  #[test]
   fn css_import_dep_placeholders_are_not_processed() {
     let import_placeholder = "eee5555555555555";
     let css_bundle = make_css_bundle("bundle_css");
@@ -803,27 +762,17 @@ mod tests {
   }
 
   #[test]
-  fn is_non_inline_bundle_containing_asset_false_for_inline_bundle() {
-    let mut bundle = make_css_bundle("css");
-    bundle.bundle_behavior = Some(BundleBehavior::Inline);
+  fn is_non_inline_bundle_containing_asset_false_for_inline_bundles() {
+    // Both Inline and InlineIsolated behaviors must return false.
     let graph = MockBundleGraph::new();
-    assert!(!is_non_inline_bundle_containing_asset(
-      &bundle,
-      "any-asset",
-      &graph
-    ));
-  }
-
-  #[test]
-  fn is_non_inline_bundle_containing_asset_false_for_inline_isolated_bundle() {
-    let mut bundle = make_css_bundle("css");
-    bundle.bundle_behavior = Some(BundleBehavior::InlineIsolated);
-    let graph = MockBundleGraph::new();
-    assert!(!is_non_inline_bundle_containing_asset(
-      &bundle,
-      "any-asset",
-      &graph
-    ));
+    for behavior in [BundleBehavior::Inline, BundleBehavior::InlineIsolated] {
+      let mut bundle = make_css_bundle("css");
+      bundle.bundle_behavior = Some(behavior);
+      assert!(
+        !is_non_inline_bundle_containing_asset(&bundle, "any-asset", &graph),
+        "expected false for {behavior:?}"
+      );
+    }
   }
 
   #[test]
@@ -967,8 +916,7 @@ mod tests {
     let db = make_db();
     let output_dir = PathBuf::from("/dist");
 
-    let mut dep = make_url_dep(specifier, Some(placeholder));
-    dep.specifier = specifier.to_string();
+    let dep = make_url_dep(specifier, Some(placeholder));
 
     let css_asset = Asset {
       id: "asset_css_1".to_string(),

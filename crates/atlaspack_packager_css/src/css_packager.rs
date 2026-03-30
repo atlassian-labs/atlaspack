@@ -832,6 +832,19 @@ mod tests {
     Arc::new(InMemoryDatabase::default()) as DatabaseRef
   }
 
+  /// Convenience constructor for tests that don't need custom paths.
+  /// Uses `/tmp` as the project root and `/tmp/dist` as the output directory.
+  fn make_packager(db: DatabaseRef, graph: TestBundleGraph) -> CssPackager<TestBundleGraph> {
+    CssPackager::new(
+      CssPackagingContext {
+        db,
+        project_root: PathBuf::from("/tmp"),
+        output_dir: PathBuf::from("/tmp/dist"),
+      },
+      Arc::new(graph),
+    )
+  }
+
   fn output_string(result: &PackageResult) -> String {
     let bytes = result
       .bundle_info
@@ -863,18 +876,6 @@ mod tests {
   }
 
   #[test]
-  fn css_packaging_context_fields_are_accessible() {
-    let db = make_db();
-    let context = CssPackagingContext {
-      db,
-      project_root: PathBuf::from("/tmp/project"),
-      output_dir: PathBuf::from("/tmp/project/dist"),
-    };
-    assert_eq!(context.project_root, PathBuf::from("/tmp/project"));
-    assert_eq!(context.output_dir, PathBuf::from("/tmp/project/dist"));
-  }
-
-  #[test]
   fn single_asset_css_is_included_in_output() {
     let db = make_db();
     db.put("asset_1", b"body { color: red; }").unwrap();
@@ -888,14 +889,7 @@ mod tests {
       .assets_by_bundle
       .insert("bundle_1".to_string(), vec![asset]);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp/project"),
-        output_dir: PathBuf::from("/tmp/project/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager
       .package("bundle_1")
@@ -932,14 +926,7 @@ mod tests {
       .assets_by_bundle
       .insert("bundle_1".to_string(), vec![asset1, asset2]);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp/project"),
-        output_dir: PathBuf::from("/tmp/project/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager
       .package("bundle_1")
@@ -976,14 +963,7 @@ mod tests {
     graph
       .deps_by_asset
       .insert("asset_1".to_string(), vec![ext_dep]);
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp/project"),
-        output_dir: PathBuf::from("/tmp/project/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager
       .package("bundle_1")
@@ -1031,14 +1011,7 @@ mod tests {
       .insert("asset_1".to_string(), vec![internal_dep]);
     graph.resolved.insert("asset_2".to_string(), asset2);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp/project"),
-        output_dir: PathBuf::from("/tmp/project/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager.package("bundle_1").expect("should succeed");
     let output = output_string(&result);
@@ -1073,14 +1046,7 @@ mod tests {
       .assets_by_bundle
       .insert("foo".to_string(), vec![asset]);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager.package("foo").expect("should succeed");
     let output = output_string(&result);
@@ -1107,14 +1073,7 @@ mod tests {
       .assets_by_bundle
       .insert("bundle_1".to_string(), vec![asset_empty, asset_normal]);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager.package("bundle_1").expect("should succeed");
     let output = output_string(&result);
@@ -1155,11 +1114,8 @@ mod tests {
   #[test]
   fn tree_shaking_removes_unused_class() {
     let css = ".foo_abc { color: red; } .bar_def { color: blue; }";
-    let all: HashSet<String> = [".foo_abc", ".bar_def"]
-      .iter()
-      .map(|s| s.to_string())
-      .collect();
-    let used: HashSet<String> = [".foo_abc"].iter().map(|s| s.to_string()).collect();
+    let all: HashSet<String> = [".foo_abc".into(), ".bar_def".into()].into();
+    let used: HashSet<String> = [".foo_abc".into()].into();
 
     let output = remove_unused_class_rules(css, &all, &used);
 
@@ -1174,23 +1130,9 @@ mod tests {
   }
 
   #[test]
-  fn tree_shaking_retains_used_class() {
-    let css = ".foo_abc { color: red; }";
-    let all: HashSet<String> = [".foo_abc"].iter().map(|s| s.to_string()).collect();
-    let used: HashSet<String> = [".foo_abc"].iter().map(|s| s.to_string()).collect();
-
-    let output = remove_unused_class_rules(css, &all, &used);
-
-    assert!(
-      output.contains(".foo_abc"),
-      "used class .foo_abc must appear in output; got: {output:?}"
-    );
-  }
-
-  #[test]
   fn tree_shaking_preserves_non_module_selectors() {
     let css = ".foo_abc { color: red; } body { margin: 0; }";
-    let all: HashSet<String> = [".foo_abc"].iter().map(|s| s.to_string()).collect();
+    let all: HashSet<String> = [".foo_abc".into()].into();
     let used: HashSet<String> = HashSet::new();
 
     let output = remove_unused_class_rules(css, &all, &used);
@@ -1212,11 +1154,8 @@ mod tests {
   #[test]
   fn tree_shaking_wildcard_retains_all_classes() {
     let css = ".foo_abc { color: red; } .bar_def { color: blue; }";
-    let all: HashSet<String> = [".foo_abc", ".bar_def"]
-      .iter()
-      .map(|s| s.to_string())
-      .collect();
-    let used = all.clone();
+    let all: HashSet<String> = [".foo_abc".into(), ".bar_def".into()].into();
+    let used: HashSet<String> = all.clone();
 
     let output = remove_unused_class_rules(css, &all, &used);
 
@@ -1233,10 +1172,7 @@ mod tests {
   #[test]
   fn tree_shaking_empty_used_symbols_removes_all_module_classes() {
     let css = ".foo_abc { color: red; } .bar_def { color: blue; }";
-    let all: HashSet<String> = [".foo_abc", ".bar_def"]
-      .iter()
-      .map(|s| s.to_string())
-      .collect();
+    let all: HashSet<String> = [".foo_abc".into(), ".bar_def".into()].into();
     let used: HashSet<String> = HashSet::new();
 
     let output = remove_unused_class_rules(css, &all, &used);
@@ -1254,7 +1190,7 @@ mod tests {
   #[test]
   fn tree_shaking_removes_multiline_unused_rule() {
     let css = ".unused_xyz {\n  color: blue;\n  font-size: 12px;\n}";
-    let all: HashSet<String> = [".unused_xyz"].iter().map(|s| s.to_string()).collect();
+    let all: HashSet<String> = [".unused_xyz".into()].into();
     let used: HashSet<String> = HashSet::new();
 
     let output = remove_unused_class_rules(css, &all, &used);
@@ -1272,11 +1208,8 @@ mod tests {
   #[test]
   fn tree_shaking_partial_removal_keeps_used_removes_unused() {
     let css = ".a_111 { color: red; } .b_222 { color: blue; } .c_333 { color: green; }";
-    let all: HashSet<String> = [".a_111", ".b_222", ".c_333"]
-      .iter()
-      .map(|s| s.to_string())
-      .collect();
-    let used: HashSet<String> = [".a_111", ".c_333"].iter().map(|s| s.to_string()).collect();
+    let all: HashSet<String> = [".a_111".into(), ".b_222".into(), ".c_333".into()].into();
+    let used: HashSet<String> = [".a_111".into(), ".c_333".into()].into();
 
     let output = remove_unused_class_rules(css, &all, &used);
 
@@ -1319,14 +1252,7 @@ mod tests {
       .used_symbols_by_asset
       .insert("asset_wildcard".to_string(), used_syms);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager.package("bundle_w").expect("should succeed");
     let output = output_string(&result);
@@ -1377,14 +1303,7 @@ mod tests {
       .incoming_deps_by_asset
       .insert("asset_default".to_string(), vec![dep]);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager.package("bundle_d").expect("should succeed");
     let output = output_string(&result);
@@ -1400,27 +1319,10 @@ mod tests {
   }
 
   #[test]
-  fn tree_shaking_retains_empty_media_block_after_removing_nested_rule() {
-    let css = "@media (min-width: 500px) { .unused_xyz { color: red; } }";
-    let all: HashSet<String> = [".unused_xyz"].iter().map(|s| s.to_string()).collect();
-    let used: HashSet<String> = HashSet::new();
-
-    let output = remove_unused_class_rules(css, &all, &used);
-
-    assert!(
-      !output.contains(".unused_xyz"),
-      "unused class inside @media must be removed by AST shaker; got: {output:?}"
-    );
-  }
-
-  #[test]
   fn tree_shaking_comment_with_brace_does_not_corrupt_output() {
     let css = "/* } */ .foo_abc { color: red; } .bar_def { color: blue; }";
-    let all: HashSet<String> = [".foo_abc", ".bar_def"]
-      .iter()
-      .map(|s| s.to_string())
-      .collect();
-    let used: HashSet<String> = [".foo_abc"].iter().map(|s| s.to_string()).collect();
+    let all: HashSet<String> = [".foo_abc".into(), ".bar_def".into()].into();
+    let used: HashSet<String> = [".foo_abc".into()].into();
 
     let output = remove_unused_class_rules(css, &all, &used);
 
@@ -1443,7 +1345,7 @@ mod tests {
   #[test]
   fn tree_shaking_removes_unused_class_inside_media_query() {
     let css = "@media (min-width: 500px) { .unused_xyz { color: red; } }";
-    let all: HashSet<String> = [".unused_xyz"].iter().map(|s| s.to_string()).collect();
+    let all: HashSet<String> = [".unused_xyz".into()].into();
     let used: HashSet<String> = HashSet::new();
 
     let output = remove_unused_class_rules(css, &all, &used);
@@ -1457,8 +1359,8 @@ mod tests {
   #[test]
   fn tree_shaking_retains_used_class_inside_media_query() {
     let css = "@media (min-width: 500px) { .used_abc { color: red; } }";
-    let all: HashSet<String> = [".used_abc"].iter().map(|s| s.to_string()).collect();
-    let used: HashSet<String> = [".used_abc"].iter().map(|s| s.to_string()).collect();
+    let all: HashSet<String> = [".used_abc".into()].into();
+    let used: HashSet<String> = [".used_abc".into()].into();
 
     let output = remove_unused_class_rules(css, &all, &used);
 
@@ -1475,10 +1377,7 @@ mod tests {
   #[test]
   fn tree_shaking_removes_fully_unused_grouped_selector() {
     let css = ".foo_abc, .bar_def { color: red; }";
-    let all: HashSet<String> = [".foo_abc", ".bar_def"]
-      .iter()
-      .map(|s| s.to_string())
-      .collect();
+    let all: HashSet<String> = [".foo_abc".into(), ".bar_def".into()].into();
     let used: HashSet<String> = HashSet::new();
 
     let output = remove_unused_class_rules(css, &all, &used);
@@ -1496,12 +1395,9 @@ mod tests {
   #[test]
   fn tree_shaking_retains_grouped_selector_rule_when_any_selector_is_used() {
     let css = ".foo_abc, .bar_def { color: red; }";
-    let all: HashSet<String> = [".foo_abc", ".bar_def"]
-      .iter()
-      .map(|s| s.to_string())
-      .collect();
+    let all: HashSet<String> = [".foo_abc".into(), ".bar_def".into()].into();
     // Only foo is used; bar is not.
-    let used: HashSet<String> = [".foo_abc"].iter().map(|s| s.to_string()).collect();
+    let used: HashSet<String> = [".foo_abc".into()].into();
 
     let output = remove_unused_class_rules(css, &all, &used);
 
@@ -1531,14 +1427,7 @@ mod tests {
       .assets_by_bundle
       .insert("bundle_1".to_string(), vec![asset1]);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager.package("bundle_1").expect("should succeed");
     let output = output_string(&result);
@@ -1552,11 +1441,8 @@ mod tests {
   #[test]
   fn tree_shaking_removes_unused_class_inside_container_query() {
     let css = "@container sidebar (min-width: 700px) { .foo_abc { color: red; } .bar_def { color: blue; } }";
-    let all: HashSet<String> = [".foo_abc", ".bar_def"]
-      .iter()
-      .map(|s| s.to_string())
-      .collect();
-    let used: HashSet<String> = [".foo_abc"].iter().map(|s| s.to_string()).collect();
+    let all: HashSet<String> = [".foo_abc".into(), ".bar_def".into()].into();
+    let used: HashSet<String> = [".foo_abc".into()].into();
 
     let output = remove_unused_class_rules(css, &all, &used);
 
@@ -1573,11 +1459,8 @@ mod tests {
   #[test]
   fn tree_shaking_removes_unused_class_inside_scope_rule() {
     let css = "@scope (.card) { .foo_abc { color: red; } .bar_def { color: blue; } }";
-    let all: HashSet<String> = [".foo_abc", ".bar_def"]
-      .iter()
-      .map(|s| s.to_string())
-      .collect();
-    let used: HashSet<String> = [".foo_abc"].iter().map(|s| s.to_string()).collect();
+    let all: HashSet<String> = [".foo_abc".into(), ".bar_def".into()].into();
+    let used: HashSet<String> = [".foo_abc".into()].into();
 
     let output = remove_unused_class_rules(css, &all, &used);
 
@@ -1617,14 +1500,7 @@ mod tests {
     graph
       .deps_by_asset
       .insert("asset_2".to_string(), vec![ext_dep]);
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager.package("bundle_1").expect("should succeed");
     let output = output_string(&result);
@@ -1677,14 +1553,7 @@ mod tests {
       .used_symbols_by_asset
       .insert("asset_composes_int".to_string(), used_syms);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager
       .package("bundle_composes")
@@ -1730,14 +1599,7 @@ mod tests {
       .used_symbols_by_asset
       .insert("asset_multi".to_string(), used_syms);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager
       .package("bundle_multi")
@@ -1782,14 +1644,7 @@ mod tests {
       .used_symbols_by_asset
       .insert("asset_global".to_string(), used_syms);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager
       .package("bundle_global")
@@ -1831,14 +1686,7 @@ mod tests {
       .used_symbols_by_asset
       .insert("asset_ext".to_string(), used_syms);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager
       .package("bundle_ext")
@@ -1881,14 +1729,7 @@ mod tests {
       .assets_by_bundle
       .insert("bundle_sm1".to_string(), vec![asset]);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager
       .package("bundle_sm1")
@@ -1927,14 +1768,7 @@ mod tests {
       .assets_by_bundle
       .insert("bundle_sm2".to_string(), vec![asset]);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager
       .package("bundle_sm2")
@@ -2005,14 +1839,7 @@ mod tests {
       .deps_by_asset
       .insert("asset_sm3".to_string(), vec![ext_dep]);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager
       .package("bundle_sm3")
@@ -2059,14 +1886,7 @@ mod tests {
       .assets_by_bundle
       .insert("bundle_sm4".to_string(), vec![asset]);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager
       .package("bundle_sm4")
@@ -2138,14 +1958,7 @@ mod tests {
       .incoming_deps_by_asset
       .insert("asset_default".to_string(), vec![dep]);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager.package("bundle_d2").expect("should succeed");
     let output = output_string(&result);
@@ -2198,14 +2011,7 @@ mod tests {
       .assets_by_bundle
       .insert("bundle_ab".to_string(), vec![asset_a, asset_b]);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager
       .package("bundle_ab")
@@ -2362,14 +2168,7 @@ mod tests {
       .assets_by_bundle
       .insert("bundle_input_map".to_string(), vec![asset]);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager
       .package("bundle_input_map")
@@ -2532,10 +2331,6 @@ mod tests {
     bundle.bundle_behavior = Some(BundleBehavior::Inline);
     bundle.main_entry_id = Some("attr_asset".to_string());
 
-    // In `make_bundle`, env is default, so output format is `Global`.
-    // The url replacer uses `find_relative_path`.
-    // We need to ensure the graph returns the resolved asset for the dependency.
-
     let mut graph = TestBundleGraph::new();
     graph.bundles.push(bundle.clone());
     graph
@@ -2545,37 +2340,22 @@ mod tests {
       .deps_by_asset
       .insert("attr_asset".to_string(), vec![dep]);
 
-    // Mock resolved asset so URL replacer works
-    let image_asset = make_asset("image_asset");
-    // Also need a bundle for the image asset if we want find_relative_path to find it,
-    // OR we can make it inline so it gets base64 encoded.
-    // If we want it to be a URL replacement to another file, that file needs to be in a bundle.
-    // Let's make the image asset inline for simplicity to test the replacement path?
-    // Actually, `replace_url_references` handles inline assets by base64 encoding them.
-    // Let's test that path as it's simpler to setup in this mock graph.
-    let mut image_asset = image_asset;
+    // Inline image asset — `replace_url_references` base64-encodes inline assets,
+    // which is the simplest path to exercise URL replacement in this mock graph.
+    let mut image_asset = make_asset("image_asset");
     image_asset.bundle_behavior = Some(BundleBehavior::Inline);
     image_asset.content_key = Some("image_content".to_string());
     db.put("image_content", b"fake-image-data").unwrap();
 
     graph.resolved.insert("image.png".to_string(), image_asset);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager
       .package("attr_bundle")
       .expect("package() must succeed");
     let output = output_string(&result);
 
-    // It should be just the property value with replaced URL, not wrapped in a rule
-    // assert!(output.contains("background: url("), "Output should contain the CSS property");
     assert!(
       output.contains("background: url("),
       "Output should contain the CSS property; got: {}",
@@ -2640,14 +2420,7 @@ mod tests {
       .resolved
       .insert("./other.css".to_string(), asset2_with_symbols);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager.package("bundle_1").expect("should succeed");
     let output = output_string(&result);
@@ -2726,14 +2499,7 @@ mod tests {
       .insert("asset_overlap".to_string(), vec![dep]);
     graph.resolved.insert("./other.css".to_string(), resolved);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager.package("bundle_overlap").expect("should succeed");
     let output = output_string(&result);
@@ -2787,14 +2553,7 @@ mod tests {
       .used_symbols_by_asset
       .insert("asset_chain".to_string(), used_syms);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager.package("bundle_chain").expect("should succeed");
     let output = output_string(&result);
@@ -2836,14 +2595,7 @@ mod tests {
       .assets_by_bundle
       .insert("inline_bundle_notype".to_string(), vec![asset]);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager
       .package("inline_bundle_notype")
@@ -2861,14 +2613,7 @@ mod tests {
     let db = make_db();
     let graph = TestBundleGraph::new();
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager.package("nonexistent_bundle_id");
     assert!(
@@ -2904,14 +2649,7 @@ mod tests {
       .deps_by_asset
       .insert("asset_hoist_min".to_string(), vec![ext_dep]);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager
       .package("bundle_hoist_min")
@@ -2954,14 +2692,7 @@ mod tests {
       .deps_by_asset
       .insert("asset_hoist_nomin".to_string(), vec![ext_dep]);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager
       .package("bundle_hoist_nomin")
@@ -3000,14 +2731,7 @@ mod tests {
       .assets_by_bundle
       .insert("bundle_ta".to_string(), vec![asset1, asset2, asset3]);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager
       .package("bundle_ta")
@@ -3038,14 +2762,7 @@ mod tests {
       .assets_by_bundle
       .insert("bundle_ck".to_string(), vec![asset]);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager
       .package("bundle_ck")
@@ -3107,14 +2824,7 @@ mod tests {
       .insert("asset_punct_subst".to_string(), vec![dep]);
     graph.resolved.insert("./other.css".to_string(), resolved);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager
       .package("bundle_punct_subst")
@@ -3145,7 +2855,7 @@ mod tests {
   #[test]
   fn tree_shaking_removes_unused_class_inside_starting_style() {
     let css = "@starting-style { .unused_xyz { opacity: 0; } }";
-    let all: HashSet<String> = [".unused_xyz"].iter().map(|s| s.to_string()).collect();
+    let all: HashSet<String> = [".unused_xyz".into()].into();
     let used: HashSet<String> = HashSet::new();
 
     let output = remove_unused_class_rules(css, &all, &used);
@@ -3159,8 +2869,8 @@ mod tests {
   #[test]
   fn tree_shaking_retains_used_class_inside_starting_style() {
     let css = "@starting-style { .used_abc { opacity: 0; } }";
-    let all: HashSet<String> = [".used_abc"].iter().map(|s| s.to_string()).collect();
-    let used: HashSet<String> = [".used_abc"].iter().map(|s| s.to_string()).collect();
+    let all: HashSet<String> = [".used_abc".into()].into();
+    let used: HashSet<String> = [".used_abc".into()].into();
 
     let output = remove_unused_class_rules(css, &all, &used);
 
@@ -3201,14 +2911,7 @@ mod tests {
       .used_symbols_by_asset
       .insert("asset_scope_pkg".to_string(), used_syms);
 
-    let packager = CssPackager::new(
-      CssPackagingContext {
-        db,
-        project_root: PathBuf::from("/tmp"),
-        output_dir: PathBuf::from("/tmp/dist"),
-      },
-      Arc::new(graph),
-    );
+    let packager = make_packager(db, graph);
 
     let result = packager
       .package("bundle_scope_pkg")

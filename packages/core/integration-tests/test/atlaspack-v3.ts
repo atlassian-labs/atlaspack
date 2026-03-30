@@ -390,6 +390,33 @@ describe.v3('AtlaspackV3', function () {
     await inputFS.rimraf(dir);
   });
 
+  /** Returns all CSS bundles with a file path from a BundleGraph. */
+  function getCssBundles(bg: any): any[] {
+    return bg.getBundles().filter((b: any) => b.type === 'css' && b.filePath);
+  }
+
+  /**
+   * Asserts that a CSS file has a sourceMappingURL comment and that the
+   * corresponding .map file has a non-empty `sources` array and `mappings`.
+   */
+  async function assertCssSourceMap(cssPath: string, fs: any): Promise<void> {
+    const cssContent = await fs.readFile(cssPath, 'utf8');
+    assert.ok(
+      cssContent.includes('sourceMappingURL'),
+      `CSS bundle must contain a sourceMappingURL comment; got: ${cssContent}`,
+    );
+    const mapContent = await fs.readFile(cssPath + '.map', 'utf8');
+    const mapJson = JSON.parse(mapContent);
+    assert.ok(
+      Array.isArray(mapJson.sources) && mapJson.sources.length > 0,
+      `Source map must have a non-empty 'sources' array; got: ${mapContent}`,
+    );
+    assert.ok(
+      typeof mapJson.mappings === 'string' && mapJson.mappings.length > 0,
+      `Source map must have a non-empty 'mappings' string; got: ${mapContent}`,
+    );
+  }
+
   describe('CSS minification', () => {
     it('minifies CSS output in production mode', async () => {
       await fsFixture(overlayFS, __dirname)`
@@ -412,9 +439,7 @@ describe.v3('AtlaspackV3', function () {
         featureFlags: {fullNative: true},
       });
 
-      const cssBundles = bg
-        .getBundles()
-        .filter((b: any) => b.type === 'css' && b.filePath);
+      const cssBundles = getCssBundles(bg);
       assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
       const css = await outputFS.readFile(cssBundles[0].filePath, 'utf8');
 
@@ -451,9 +476,7 @@ describe.v3('AtlaspackV3', function () {
         featureFlags: {fullNative: true},
       });
 
-      const cssBundles = bg
-        .getBundles()
-        .filter((b: any) => b.type === 'css' && b.filePath);
+      const cssBundles = getCssBundles(bg);
       assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
       const css = await outputFS.readFile(cssBundles[0].filePath, 'utf8');
 
@@ -489,26 +512,9 @@ describe.v3('AtlaspackV3', function () {
         },
       );
 
-      const cssBundles = bg
-        .getBundles()
-        .filter((b: any) => b.type === 'css' && b.filePath);
+      const cssBundles = getCssBundles(bg);
       assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
-
-      const cssPath: string = cssBundles[0].filePath;
-      const cssContent = await overlayFS.readFile(cssPath, 'utf8');
-
-      assert.ok(
-        cssContent.includes('sourceMappingURL'),
-        `CSS bundle must contain a sourceMappingURL comment; got: ${cssContent}`,
-      );
-
-      const mapContent = await overlayFS.readFile(cssPath + '.map', 'utf8');
-      const mapJson = JSON.parse(mapContent);
-
-      assert.ok(
-        Array.isArray(mapJson.sources) && mapJson.sources.length > 0,
-        `Source map must have a non-empty 'sources' array; got: ${mapContent}`,
-      );
+      await assertCssSourceMap(cssBundles[0].filePath, overlayFS);
     });
 
     // Both packagers reconstruct hoisted external @imports from the dependency specifier
@@ -535,9 +541,7 @@ describe.v3('AtlaspackV3', function () {
         },
       );
 
-      const cssBundles = bg
-        .getBundles()
-        .filter((b: any) => b.type === 'css' && b.filePath);
+      const cssBundles = getCssBundles(bg);
       assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
       const css = await overlayFS.readFile(cssBundles[0].filePath, 'utf8');
 
@@ -582,9 +586,7 @@ describe.v3('AtlaspackV3', function () {
         featureFlags: {fullNative: true},
       });
 
-      const cssBundles = bg
-        .getBundles()
-        .filter((b: any) => b.type === 'css' && b.filePath);
+      const cssBundles = getCssBundles(bg);
       assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
       const css = await overlayFS.readFile(cssBundles[0].filePath, 'utf8');
 
@@ -621,9 +623,7 @@ describe.v3('AtlaspackV3', function () {
         },
       );
 
-      const cssBundles = bg
-        .getBundles()
-        .filter((b: any) => b.type === 'css' && b.filePath);
+      const cssBundles = getCssBundles(bg);
       assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
       const css = await overlayFS.readFile(cssBundles[0].filePath, 'utf8');
 
@@ -665,9 +665,7 @@ describe.v3('AtlaspackV3', function () {
         },
       );
 
-      const cssBundles = bg
-        .getBundles()
-        .filter((b: any) => b.type === 'css' && b.filePath);
+      const cssBundles = getCssBundles(bg);
       assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
       const css = await overlayFS.readFile(cssBundles[0].filePath, 'utf8');
 
@@ -703,30 +701,9 @@ describe.v3('AtlaspackV3', function () {
         },
       );
 
-      const cssBundles = bg
-        .getBundles()
-        .filter((b: any) => b.type === 'css' && b.filePath);
+      const cssBundles = getCssBundles(bg);
       assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
-
-      const cssPath: string = cssBundles[0].filePath;
-      const cssContent = await overlayFS.readFile(cssPath, 'utf8');
-
-      assert.ok(
-        cssContent.includes('sourceMappingURL'),
-        `CSS bundle from JS entry must contain a sourceMappingURL comment; got: ${cssContent}`,
-      );
-
-      const mapContent = await overlayFS.readFile(cssPath + '.map', 'utf8');
-      const mapJson = JSON.parse(mapContent);
-
-      assert.ok(
-        Array.isArray(mapJson.sources) && mapJson.sources.length > 0,
-        `Source map must have a non-empty 'sources' array; got: ${mapContent}`,
-      );
-      assert.ok(
-        typeof mapJson.mappings === 'string' && mapJson.mappings.length > 0,
-        `Source map must have non-empty 'mappings'; got: ${mapContent}`,
-      );
+      await assertCssSourceMap(cssBundles[0].filePath, overlayFS);
     });
 
     it('packages CSS from a JS entry in production mode', async () => {
@@ -754,9 +731,7 @@ describe.v3('AtlaspackV3', function () {
         },
       );
 
-      const cssBundles = bg
-        .getBundles()
-        .filter((b: any) => b.type === 'css' && b.filePath);
+      const cssBundles = getCssBundles(bg);
       assert.ok(
         cssBundles.length > 0,
         'Expected at least one CSS bundle from JS entry in production mode',
@@ -797,9 +772,7 @@ describe.v3('AtlaspackV3', function () {
         featureFlags: {fullNative: true},
       });
 
-      const cssBundles = bg
-        .getBundles()
-        .filter((b: any) => b.type === 'css' && b.filePath);
+      const cssBundles = getCssBundles(bg);
       assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
       const css = await overlayFS.readFile(cssBundles[0].filePath, 'utf8');
 
@@ -851,9 +824,7 @@ describe.v3('AtlaspackV3', function () {
         },
       );
 
-      const cssBundles = bg
-        .getBundles()
-        .filter((b: any) => b.type === 'css' && b.filePath);
+      const cssBundles = getCssBundles(bg);
       assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
       const cssPath: string = cssBundles[0].filePath;
       const cssContent = await overlayFS.readFile(cssPath, 'utf8');

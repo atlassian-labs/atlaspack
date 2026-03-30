@@ -89,8 +89,11 @@ describe('packager-parity (JS vs native CSS packager)', function () {
     setupV3Flags({fullNative: true});
   });
 
-  it('simple single-file CSS is packaged identically', async function () {
+  beforeEach(function () {
     this.timeout(30000);
+  });
+
+  it('simple single-file CSS is packaged identically', async function () {
     const fixtureName = 'packager-parity-simple';
 
     await fsFixture(overlayFS, __dirname)`
@@ -105,7 +108,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
   });
 
   it('multi-asset CSS concatenation produces identical output', async function () {
-    this.timeout(30000);
     const fixtureName = 'packager-parity-multi-asset';
 
     await fsFixture(overlayFS, __dirname)`
@@ -122,7 +124,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
   });
 
   it('CSS custom properties round-trip identically', async function () {
-    this.timeout(30000);
     const fixtureName = 'packager-parity-custom-props';
 
     await fsFixture(overlayFS, __dirname)`
@@ -137,7 +138,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
   });
 
   it('@media query rules are preserved identically', async function () {
-    this.timeout(30000);
     const fixtureName = 'packager-parity-media-query';
 
     await fsFixture(overlayFS, __dirname)`
@@ -153,7 +153,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
   });
 
   it('@keyframes animation rules are preserved identically', async function () {
-    this.timeout(30000);
     const fixtureName = 'packager-parity-keyframes';
 
     await fsFixture(overlayFS, __dirname)`
@@ -168,7 +167,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
   });
 
   it('asset concatenation order matches source order', async function () {
-    this.timeout(30000);
     const fixtureName = 'packager-parity-order';
 
     await fsFixture(overlayFS, __dirname)`
@@ -188,7 +186,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
   });
 
   it('external @import hoisting is identical between packagers', async function () {
-    this.timeout(30000);
     const fixtureName = 'packager-parity-ext-import';
     const extUrl = 'https://fonts.googleapis.com/css2?family=Inter';
 
@@ -204,7 +201,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
   });
 
   it('duplicate @import deduplication is identical between packagers', async function () {
-    this.timeout(30000);
     const fixtureName = 'packager-parity-dedup';
 
     await fsFixture(overlayFS, __dirname)`
@@ -225,7 +221,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
   });
 
   it('url() references are resolved to identical relative paths', async function () {
-    this.timeout(30000);
     const fixtureName = 'packager-parity-url-ref';
 
     // Both a plain url() and a url() with a #fragment must be resolved
@@ -256,7 +251,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
   });
 
   it('url() inline data URI is identical between packagers', async function () {
-    this.timeout(30000);
     const fixtureName = 'packager-parity-url-inline';
 
     // data-url: scheme causes the asset to be inlined as a percent-encoded data
@@ -284,7 +278,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
   });
 
   it('@font-face with local url() references is packaged identically', async function () {
-    this.timeout(30000);
     const fixtureName = 'packager-parity-font-face';
 
     // Font files have no dedicated transformer and are passed through raw,
@@ -312,7 +305,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
   });
 
   it('@layer cascade layers are preserved identically', async function () {
-    this.timeout(30000);
     const fixtureName = 'packager-parity-layer';
 
     await fsFixture(overlayFS, __dirname)`
@@ -329,7 +321,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
   });
 
   it('@supports feature queries are preserved identically', async function () {
-    this.timeout(30000);
     const fixtureName = 'packager-parity-supports';
 
     await fsFixture(overlayFS, __dirname)`
@@ -351,7 +342,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
   });
 
   it('@container queries are preserved identically', async function () {
-    this.timeout(30000);
     const fixtureName = 'packager-parity-container';
 
     await fsFixture(overlayFS, __dirname)`
@@ -371,7 +361,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
   });
 
   it('CSS nesting is preserved identically', async function () {
-    this.timeout(30000);
     const fixtureName = 'packager-parity-nesting';
 
     await fsFixture(overlayFS, __dirname)`
@@ -391,7 +380,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
   });
 
   it('CSS imported from a JS entry is packaged identically', async function () {
-    this.timeout(30000);
     const fixtureName = 'packager-parity-js-entry';
 
     await fsFixture(overlayFS, __dirname)`
@@ -412,7 +400,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
   });
 
   it('multiple CSS bundles from separate JS entries are packaged identically', async function () {
-    this.timeout(30000);
     const fixtureName = 'packager-parity-multi-bundle';
 
     // Two independent JS entry points each pull in their own CSS tree.
@@ -447,7 +434,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
     // while the native packager uses lightningcss, producing different whitespace.
     // Development mode passes the raw transformer output through both packagers unchanged,
     // so strict equality holds.
-    this.timeout(30000);
     const fixtureName = 'packager-parity-css-modules-wildcard';
 
     await fsFixture(overlayFS, __dirname)`
@@ -472,7 +458,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
     // media query conditions (e.g. `screen, print`) are not preserved by either packager.
     // This test guards against one packager accidentally preserving conditions
     // while the other strips them, causing a divergence.
-    this.timeout(30000);
     const fixtureName = 'packager-parity-ext-import-mq-conditions';
     const extUrl = 'https://fonts.googleapis.com/css2?family=Lato';
 
@@ -488,7 +473,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
   });
 
   it('@starting-style rules are preserved identically', async function () {
-    this.timeout(30000);
     const fixtureName = 'packager-parity-starting-style';
 
     await fsFixture(overlayFS, __dirname)`
@@ -519,7 +503,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
   });
 
   it('@scope rules are preserved identically', async function () {
-    this.timeout(30000);
     const fixtureName = 'packager-parity-scope';
 
     await fsFixture(overlayFS, __dirname)`
@@ -545,7 +528,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
     // Atlassian Design System token as the value, mimicking many real
     // compiled.*.css files. The volume (~100 rules) is representative of a
     // single page-level bundle.
-    this.timeout(30000);
     const fixtureName = 'packager-parity-compiled-atomic';
 
     await fsFixture(overlayFS, __dirname)`
@@ -716,7 +698,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
   });
 
   it('design system global reset with tokens is packaged identically', async function () {
-    this.timeout(30000);
     const fixtureName = 'packager-parity-ds-reset';
 
     await fsFixture(overlayFS, __dirname)`
@@ -798,7 +779,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
     // a shared token layer, a layout system, several component files (nav, sidebar,
     // content, cards), responsive breakpoints, and focus/hover/active states.
     // This exercises the packager under volume and import-chain depth simultaneously.
-    this.timeout(30000);
     const fixtureName = 'packager-parity-component-bundle';
 
     await fsFixture(overlayFS, __dirname)`
@@ -1001,7 +981,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
     // Exercises the at-rule coverage that matters most for animated product
     // UI: loading skeletons, spinners, toast/flag entry animations, focus rings,
     // and the @supports fallbacks Confluence uses for focus-visible polyfilling.
-    this.timeout(30000);
     const fixtureName = 'packager-parity-at-rules';
 
     await fsFixture(overlayFS, __dirname)`
@@ -1120,7 +1099,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
     // TODO: Native packager uses *correct* DFS post-order (shared.css before a-component).
     // JS packager orders incorrectly due to lightning walking through internal @imports.
     // Fix would be in CSSPackager.ts.
-    this.timeout(30000);
     const fixtureName = 'packager-parity-diamond-dedup';
 
     await fsFixture(overlayFS, __dirname)`
