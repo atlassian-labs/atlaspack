@@ -539,6 +539,583 @@ describe('packager-parity (JS vs native CSS packager)', function () {
     await assertPackagerParity(fixtureName);
   });
 
+  it('compiled atomic CSS (Atlassian Compiled-style output) is packaged identically', async function () {
+    // Mimics the atomic class-per-property CSS emitted by @compiled/react.
+    // Each rule has a single declaration with a hashed class name and an
+    // Atlassian Design System token as the value, mimicking many real
+    // compiled.*.css files. The volume (~100 rules) is representative of a
+    // single page-level bundle.
+    this.timeout(30000);
+    const fixtureName = 'packager-parity-compiled-atomic';
+
+    await fsFixture(overlayFS, __dirname)`
+      ${fixtureName}
+        tokens.css:
+          :root {
+            --ds-surface: #fff;
+            --ds-text: #172b4d;
+            --ds-text-subtle: #505258;
+            --ds-text-inverse: #fff;
+            --ds-link: #0052cc;
+            --ds-link-pressed: #0747a6;
+            --ds-background-neutral: #f4f5f7;
+            --ds-background-neutral-hovered: #ebecf0;
+            --ds-background-neutral-pressed: #dfe1e6;
+            --ds-background-selected: #deebff;
+            --ds-background-selected-hovered: #b3d4ff;
+            --ds-background-selected-pressed: #4c9aff;
+            --ds-background-danger: #ffebe6;
+            --ds-background-danger-hovered: #ffbdad;
+            --ds-background-success: #e3fcef;
+            --ds-background-success-hovered: #abf5d1;
+            --ds-background-warning: #fffae6;
+            --ds-background-warning-hovered: #ffe380;
+            --ds-border: #dfe1e6;
+            --ds-border-focused: #2684ff;
+            --ds-border-danger: #de350b;
+            --ds-border-success: #00875a;
+            --ds-border-width-focused: 2px;
+            --ds-space-025: 2px;
+            --ds-space-050: 4px;
+            --ds-space-075: 6px;
+            --ds-space-100: 8px;
+            --ds-space-150: 12px;
+            --ds-space-200: 16px;
+            --ds-space-250: 20px;
+            --ds-space-300: 24px;
+            --ds-space-400: 32px;
+            --ds-space-500: 40px;
+            --ds-space-600: 48px;
+            --ds-font-family-body: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Ubuntu, "Helvetica Neue", sans-serif;
+            --ds-font-family-heading: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Ubuntu, "Helvetica Neue", sans-serif;
+            --ds-font-family-monospace: ui-monospace, "Menlo", "Monaco", "Cascadia Mono", "Segoe UI Mono", monospace;
+            --ds-font-body: normal 400 14px/1.42857 var(--ds-font-family-body);
+            --ds-font-heading-xxlarge: 600 2.57143em/1.11111 var(--ds-font-family-heading);
+            --ds-font-heading-xlarge: 600 2.07143em/1.10345 var(--ds-font-family-heading);
+            --ds-font-heading-large: 500 1.71429em/1.16667 var(--ds-font-family-heading);
+            --ds-font-heading-medium: 500 1.42857em/1.2 var(--ds-font-family-heading);
+            --ds-font-heading-small: 600 1.14286em/1.25 var(--ds-font-family-heading);
+            --ds-font-heading-xsmall: 600 1em/1.14286 var(--ds-font-family-heading);
+            --ds-font-heading-xxsmall: 600 0.85714em/1.33333 var(--ds-font-family-heading);
+            --ds-shadow-raised: 0px 1px 1px #091e4240, 0px 0px 1px #091e424f;
+            --ds-shadow-overlay: 0px 8px 12px #091e4226, 0px 0px 1px #091e424f;
+            --ds-opacity-loading: 0.2;
+            --ds-opacity-disabled: 0.4;
+          }
+        compiled.css:
+          ._19itidpf{border:0}
+          ._19itglyw{border:none}
+          ._ect41gqc{font-family:var(--ds-font-family-body,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Ubuntu,"Helvetica Neue",sans-serif)}
+          ._4bfu1r31{text-decoration-color:currentColor}
+          ._1hms8stv{text-decoration-line:underline}
+          ._ajmmnqa1{text-decoration-style:solid}
+          ._syaz13af{color:var(--ds-link,#1868db)}
+          ._1hmsglyw{text-decoration-line:none}
+          ._syazazsu{color:var(--ds-text-subtle,#505258)}
+          ._syaz15cr{color:var(--ds-text-inverse,#fff)}
+          ._1e0c1nu9{display:inline}
+          ._o5721q9c{white-space:nowrap}
+          ._s7n41q9y{vertical-align:baseline}
+          ._kqswh2mm{position:relative}
+          ._152ttb3r{inset-block-start:.11em}
+          ._1bsbgm0b{width:.9em}
+          ._4t3igm0b{height:.9em}
+          ._ahbqzjw7{margin-inline-start:.3em}
+          ._vchhusvi{box-sizing:border-box}
+          ._ca0qidpf{padding-top:0}
+          ._u5f3idpf{padding-right:0}
+          ._n3tdidpf{padding-bottom:0}
+          ._19bvidpf{padding-left:0}
+          ._1reo15vq{overflow-x:hidden}
+          ._18m915vq{overflow-y:hidden}
+          ._1bsbt94y{width:1px}
+          ._4t3it94y{height:1px}
+          ._kqswstnw{position:absolute}
+          ._ogto7mnp{clip:rect(1px,1px,1px,1px)}
+          ._uiztglyw{-webkit-user-select:none;user-select:none}
+          ._ymio1r31:focus:not(:focus-visible){outline-color:currentColor}
+          ._ypr0glyw:focus:not(:focus-visible){outline-style:none}
+          ._zcxs1o36:focus:not(:focus-visible){outline-width:medium}
+          ._r06hglyw{-webkit-appearance:none;-moz-appearance:none;appearance:none}
+          ._bfhkm890{background-color:var(--ds-background-neutral,#f4f5f7)}
+          ._bfhkd4y8{background-color:var(--ds-background-neutral-hovered,#ebecf0)}
+          ._bfhkkuup{background-color:var(--ds-background-neutral-pressed,#dfe1e6)}
+          ._bfhkz2ec{background-color:var(--ds-background-selected,#deebff)}
+          ._bfhk1gf0{background-color:var(--ds-background-selected-hovered,#b3d4ff)}
+          ._bfhk2kxc{background-color:var(--ds-background-selected-pressed,#4c9aff)}
+          ._bfhkbq5w{background-color:var(--ds-background-danger,#ffebe6)}
+          ._bfhkfoww{background-color:var(--ds-background-danger-hovered,#ffbdad)}
+          ._bfhk1jbd{background-color:var(--ds-background-success,#e3fcef)}
+          ._bfhkabc1{background-color:var(--ds-background-success-hovered,#abf5d1)}
+          ._bfhkabc2{background-color:var(--ds-background-warning,#fffae6)}
+          ._bfhkabc3{background-color:var(--ds-background-warning-hovered,#ffe380)}
+          ._syaz1234{color:var(--ds-text,#172b4d)}
+          ._syaz5678{color:var(--ds-text-subtle,#626f86)}
+          ._1wybidpf{flex-grow:0}
+          ._1wyb1234{flex-grow:1}
+          ._80omidpf{flex-shrink:0}
+          ._80om1234{flex-shrink:1}
+          ._1wybidpf{flex-grow:0}
+          ._4cvr1234{flex-direction:row}
+          ._4cvr5678{flex-direction:column}
+          ._4cvr9abc{flex-direction:row-reverse}
+          ._1qag1234{align-items:center}
+          ._1qag5678{align-items:flex-start}
+          ._1qag9abc{align-items:flex-end}
+          ._1qagdef0{align-items:stretch}
+          ._vcv11234{justify-content:center}
+          ._vcv15678{justify-content:flex-start}
+          ._vcv19abc{justify-content:flex-end}
+          ._vcv1def0{justify-content:space-between}
+          ._11c8idpf{gap:0}
+          ._11c81234{gap:var(--ds-space-050,4px)}
+          ._11c85678{gap:var(--ds-space-100,8px)}
+          ._11c89abc{gap:var(--ds-space-200,16px)}
+          ._11c8def0{gap:var(--ds-space-300,24px)}
+          ._otyridpf{padding:0}
+          ._otyr1234{padding:var(--ds-space-050,4px)}
+          ._otyr5678{padding:var(--ds-space-100,8px)}
+          ._otyr9abc{padding:var(--ds-space-200,16px)}
+          ._1234abcd{margin:0 auto}
+          ._5678abcd{width:100%}
+          ._9abcdef0{max-width:1280px}
+          ._def01234{height:100vh}
+          ._abcd1234{min-height:0}
+          ._1234efgh{overflow:hidden}
+          ._5678efgh{overflow:auto}
+          ._9abcefgh{overflow:visible}
+          ._border12{border:var(--ds-border-width-focused,2px) solid var(--ds-border,#dfe1e6)}
+          ._border34{border-radius:var(--ds-space-050,4px)}
+          ._border56{border-radius:var(--ds-space-075,6px)}
+          ._border78{border-color:var(--ds-border-focused,#2684ff)}
+          ._border9a{border-color:var(--ds-border-danger,#de350b)}
+          ._borderbc{border-color:var(--ds-border-success,#00875a)}
+          ._opac1234{opacity:var(--ds-opacity-disabled,0.4)}
+          ._opac5678{opacity:var(--ds-opacity-loading,0.2)}
+          ._opac9abc{opacity:1}
+          ._trans1234{transition:background-color 0.2s ease,color 0.2s ease,box-shadow 0.2s ease}
+          ._trans5678{transition:opacity 0.2s ease}
+          ._trans9abc{transition:transform 0.15s ease-out}
+          ._curs1234{cursor:pointer}
+          ._curs5678{cursor:not-allowed}
+          ._curs9abc{cursor:default}
+          ._outl1234{outline:none}
+          ._outl5678{outline:var(--ds-border-width-focused,2px) solid var(--ds-border-focused,#2684ff)}
+          ._outl9abc{outline-offset:var(--ds-space-025,2px)}
+          ._zidx1234{z-index:100}
+          ._zidx5678{z-index:200}
+          ._zidx9abc{z-index:300}
+          ._zidxdef0{z-index:400}
+        index.css:
+          @import "./tokens.css";
+          @import "./compiled.css";
+        yarn.lock:
+    `;
+
+    await assertPackagerParity(fixtureName);
+  });
+
+  it('design system global reset with tokens is packaged identically', async function () {
+    this.timeout(30000);
+    const fixtureName = 'packager-parity-ds-reset';
+
+    await fsFixture(overlayFS, __dirname)`
+      ${fixtureName}
+        reset.css:
+          html,body,p,div,h1,h2,h3,h4,h5,h6,ul,ol,dl,img,pre,form,fieldset { margin: 0; padding: 0; }
+          img,fieldset { border: 0; }
+          body, html { width: 100%; height: 100%; }
+          body {
+            background-color: var(--ds-surface, #fff);
+            color: var(--ds-text, #172b4d);
+            font: var(--ds-font-body, normal 400 14px/1.42857 -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif);
+            -ms-overflow-style: -ms-autohiding-scrollbar;
+            -webkit-text-decoration-skip-ink: auto;
+            text-decoration-skip-ink: auto;
+          }
+          p,ul,ol,dl,h1,h2,h3,h4,h5,h6,blockquote,pre,form,table { margin: var(--ds-space-150, 12px) 0 0 0; }
+          a { color: var(--ds-link, #0052cc); text-decoration: none; }
+          a:hover { color: var(--ds-link, #0065ff); text-decoration: underline; }
+          a:active { color: var(--ds-link-pressed, #0747a6); }
+          a:focus-visible {
+            outline: var(--ds-border-width-focused, 2px) solid var(--ds-border-focused, #2684ff);
+            outline-offset: var(--ds-space-025, 2px);
+          }
+          @supports not selector(*:focus-visible) {
+            a:focus {
+              outline: var(--ds-border-width-focused, 2px) solid var(--ds-border-focused, #4c9aff);
+              outline-offset: var(--ds-space-025, 2px);
+            }
+          }
+          h1 { font: var(--ds-font-heading-xlarge, 600 2.07143em/1.10345 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif); color: var(--ds-text); margin-top: var(--ds-space-500, 40px); }
+          h2 { font: var(--ds-font-heading-large, 500 1.71429em/1.16667 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif); color: var(--ds-text); margin-top: var(--ds-space-500, 40px); }
+          h3 { font: var(--ds-font-heading-medium, 500 1.42857em/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif); color: var(--ds-text); margin-top: 28px; }
+          h4 { font: var(--ds-font-heading-small, 600 1.14286em/1.25 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif); color: var(--ds-text); margin-top: var(--ds-space-300, 24px); }
+          h5 { font: var(--ds-font-heading-xsmall, 600 1em/1.14286 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif); color: var(--ds-text); margin-top: var(--ds-space-200, 16px); }
+          h6 { font: var(--ds-font-heading-xxsmall, 600 0.85714em/1.33333 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif); color: var(--ds-text); margin-top: var(--ds-space-150, 12px); }
+          code, kbd, pre { font-family: var(--ds-font-family-monospace, ui-monospace, "Menlo", "Monaco", "Cascadia Mono", monospace); }
+          blockquote {
+            border-left: 2px solid var(--ds-border, #dfe1e6);
+            color: var(--ds-text-subtle, #626f86);
+            padding-left: var(--ds-space-200, 16px);
+            margin: var(--ds-space-200, 16px) 0;
+          }
+          table { border-collapse: collapse; width: 100%; }
+          th, td { padding: var(--ds-space-100, 8px) var(--ds-space-150, 12px); border: 1px solid var(--ds-border, #dfe1e6); text-align: left; }
+          th { background-color: var(--ds-background-neutral, #f4f5f7); font-weight: 600; }
+          input, button, select, textarea { font-family: inherit; font-size: inherit; }
+          button { cursor: pointer; }
+          :focus-visible { outline: var(--ds-border-width-focused, 2px) solid var(--ds-border-focused, #2684ff); outline-offset: 2px; }
+          *,*::before,*::after { box-sizing: border-box; }
+        typography.css:
+          .heading-xxlarge {
+            font: var(--ds-font-heading-xxlarge, 600 2.57143em/1.11111 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+            color: var(--ds-text);
+          }
+          .heading-xlarge { font: var(--ds-font-heading-xlarge, 600 2.07143em/1.10345 -apple-system, sans-serif); color: var(--ds-text); }
+          .heading-large  { font: var(--ds-font-heading-large, 500 1.71429em/1.16667 -apple-system, sans-serif); color: var(--ds-text); }
+          .heading-medium { font: var(--ds-font-heading-medium, 500 1.42857em/1.2 -apple-system, sans-serif); color: var(--ds-text); }
+          .body { font: var(--ds-font-body, normal 400 14px/1.42857 -apple-system, sans-serif); color: var(--ds-text); }
+          .body-small { font-size: 0.85714em; line-height: 1.33333; color: var(--ds-text-subtle, #626f86); }
+          .body-bold { font-weight: 700; }
+          .truncate { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 100%; }
+          .sr-only {
+            position: absolute; width: 1px; height: 1px;
+            padding: 0; margin: -1px; overflow: hidden;
+            clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+          }
+        index.css:
+          @import "./reset.css";
+          @import "./typography.css";
+        yarn.lock:
+    `;
+
+    await assertPackagerParity(fixtureName);
+  });
+
+  it('multi-file component bundle with DS tokens and media queries is packaged identically', async function () {
+    // Mimics a realistic component-tree CSS bundle from a product pages:
+    // a shared token layer, a layout system, several component files (nav, sidebar,
+    // content, cards), responsive breakpoints, and focus/hover/active states.
+    // This exercises the packager under volume and import-chain depth simultaneously.
+    this.timeout(30000);
+    const fixtureName = 'packager-parity-component-bundle';
+
+    await fsFixture(overlayFS, __dirname)`
+      ${fixtureName}
+        tokens.css:
+          :root {
+            --ds-surface: #fff;
+            --ds-surface-sunken: #f4f5f7;
+            --ds-surface-overlay: #fff;
+            --ds-text: #172b4d;
+            --ds-text-subtle: #626f86;
+            --ds-text-disabled: #8993a4;
+            --ds-link: #0052cc;
+            --ds-background-neutral: #f4f5f7;
+            --ds-background-selected: #deebff;
+            --ds-border: #dfe1e6;
+            --ds-border-focused: #2684ff;
+            --ds-shadow-raised: 0px 1px 1px #091e4240, 0px 0px 1px #091e424f;
+            --ds-shadow-overlay: 0px 8px 12px #091e4226, 0px 0px 1px #091e424f;
+            --ds-space-050: 4px;
+            --ds-space-100: 8px;
+            --ds-space-150: 12px;
+            --ds-space-200: 16px;
+            --ds-space-300: 24px;
+            --ds-space-400: 32px;
+            --ds-space-500: 40px;
+            --ds-space-600: 48px;
+            --page-max-width: 1280px;
+            --nav-height: 56px;
+            --sidebar-width: 240px;
+            --sidebar-collapsed-width: 48px;
+          }
+        layout.css:
+          .page-root {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background-color: var(--ds-surface-sunken, #f4f5f7);
+          }
+          .page-wrapper {
+            display: flex;
+            flex: 1 1 auto;
+            max-width: var(--page-max-width, 1280px);
+            margin: 0 auto;
+            width: 100%;
+            padding: 0 var(--ds-space-200, 16px);
+          }
+          .page-content {
+            flex: 1 1 auto;
+            min-width: 0;
+            padding: var(--ds-space-300, 24px) var(--ds-space-400, 32px);
+          }
+          @media (max-width: 768px) {
+            .page-wrapper { flex-direction: column; padding: 0; }
+            .page-content { padding: var(--ds-space-200, 16px) var(--ds-space-150, 12px); }
+          }
+          @media (max-width: 480px) {
+            .page-content { padding: var(--ds-space-150, 12px) var(--ds-space-100, 8px); }
+          }
+        nav.css:
+          .nav-root {
+            position: sticky;
+            top: 0;
+            z-index: 300;
+            height: var(--nav-height, 56px);
+            background-color: var(--ds-surface, #fff);
+            border-bottom: 1px solid var(--ds-border, #dfe1e6);
+            display: flex;
+            align-items: center;
+            padding: 0 var(--ds-space-300, 24px);
+            box-shadow: var(--ds-shadow-raised, 0 1px 2px rgba(0,0,0,0.16));
+          }
+          .nav-logo { flex-shrink: 0; margin-right: var(--ds-space-200, 16px); }
+          .nav-search {
+            flex: 1 1 auto;
+            max-width: 480px;
+            margin: 0 var(--ds-space-300, 24px);
+          }
+          .nav-actions { display: flex; align-items: center; gap: var(--ds-space-100, 8px); margin-left: auto; }
+          .nav-avatar {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+          }
+          .nav-avatar:hover { box-shadow: 0 0 0 2px var(--ds-border-focused, #2684ff); }
+          .nav-item {
+            display: flex;
+            align-items: center;
+            gap: var(--ds-space-050, 4px);
+            padding: var(--ds-space-075, 6px) var(--ds-space-100, 8px);
+            border-radius: 3px;
+            color: var(--ds-text, #172b4d);
+            text-decoration: none;
+            cursor: pointer;
+            transition: background-color 0.1s ease;
+          }
+          .nav-item:hover { background-color: var(--ds-background-neutral, #f4f5f7); }
+          .nav-item:active { background-color: var(--ds-background-neutral-pressed, #dfe1e6); }
+          .nav-item[aria-current='page'] { background-color: var(--ds-background-selected, #deebff); color: var(--ds-link, #0052cc); }
+          .nav-item:focus-visible { outline: 2px solid var(--ds-border-focused, #2684ff); outline-offset: 2px; }
+          @media (max-width: 768px) {
+            .nav-search { display: none; }
+            .nav-root { padding: 0 var(--ds-space-150, 12px); }
+          }
+        sidebar.css:
+          .sidebar {
+            flex-shrink: 0;
+            width: var(--sidebar-width, 240px);
+            background-color: var(--ds-surface, #fff);
+            border-right: 1px solid var(--ds-border, #dfe1e6);
+            padding: var(--ds-space-200, 16px) 0;
+            overflow-y: auto;
+            transition: width 0.2s ease;
+          }
+          .sidebar--collapsed { width: var(--sidebar-collapsed-width, 48px); }
+          .sidebar--collapsed .sidebar-label { opacity: 0; width: 0; overflow: hidden; }
+          .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: var(--ds-space-100, 8px);
+            padding: var(--ds-space-075, 6px) var(--ds-space-200, 16px);
+            color: var(--ds-text, #172b4d);
+            text-decoration: none;
+            cursor: pointer;
+            border-radius: 3px;
+            margin: 0 var(--ds-space-100, 8px);
+          }
+          .sidebar-item:hover { background-color: var(--ds-background-neutral, #f4f5f7); }
+          .sidebar-item--active {
+            background-color: var(--ds-background-selected, #deebff);
+            color: var(--ds-link, #0052cc);
+            font-weight: 500;
+          }
+          .sidebar-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--ds-text-subtle, #626f86);
+            padding: var(--ds-space-100, 8px) var(--ds-space-200, 16px) var(--ds-space-050, 4px);
+          }
+          @media (max-width: 768px) {
+            .sidebar { display: none; }
+          }
+        card.css:
+          .card {
+            background-color: var(--ds-surface, #fff);
+            border: 1px solid var(--ds-border, #dfe1e6);
+            border-radius: 8px;
+            padding: var(--ds-space-300, 24px);
+            box-shadow: var(--ds-shadow-raised, 0 1px 2px rgba(0,0,0,0.08));
+            transition: box-shadow 0.15s ease;
+          }
+          .card:hover { box-shadow: var(--ds-shadow-overlay, 0 4px 8px rgba(0,0,0,0.16)); }
+          .card--flat { box-shadow: none; }
+          .card--flat:hover { box-shadow: none; background-color: var(--ds-surface-sunken, #f4f5f7); }
+          .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--ds-space-200, 16px);
+          }
+          .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--ds-text, #172b4d);
+            line-height: 1.25;
+          }
+          .card-body { color: var(--ds-text, #172b4d); font-size: 14px; line-height: 1.42857; }
+          .card-footer {
+            display: flex;
+            align-items: center;
+            gap: var(--ds-space-100, 8px);
+            margin-top: var(--ds-space-200, 16px);
+            padding-top: var(--ds-space-200, 16px);
+            border-top: 1px solid var(--ds-border, #dfe1e6);
+          }
+          .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: var(--ds-space-200, 16px);
+          }
+          @media (max-width: 480px) {
+            .card-grid { grid-template-columns: 1fr; }
+            .card { padding: var(--ds-space-200, 16px); border-radius: 4px; }
+          }
+        index.css:
+          @import "./tokens.css";
+          @import "./nav.css";
+          @import "./sidebar.css";
+          @import "./layout.css";
+          @import "./card.css";
+        yarn.lock:
+    `;
+
+    await assertPackagerParity(fixtureName);
+  });
+
+  it('keyframes, animations, @supports, and media queries are packaged identically', async function () {
+    // Exercises the at-rule coverage that matters most for animated product
+    // UI: loading skeletons, spinners, toast/flag entry animations, focus rings,
+    // and the @supports fallbacks Confluence uses for focus-visible polyfilling.
+    this.timeout(30000);
+    const fixtureName = 'packager-parity-at-rules';
+
+    await fsFixture(overlayFS, __dirname)`
+      ${fixtureName}
+        animations.css:
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+          }
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.4; }
+          }
+          @keyframes skeleton-shimmer {
+            0%   { background-position: -200% 0; }
+            100% { background-position:  200% 0; }
+          }
+          @keyframes slide-in-from-right {
+            from { transform: translateX(100%); opacity: 0; }
+            to   { transform: translateX(0);    opacity: 1; }
+          }
+          @keyframes slide-out-to-right {
+            from { transform: translateX(0);    opacity: 1; }
+            to   { transform: translateX(100%); opacity: 0; }
+          }
+          @keyframes fade-in {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+          }
+          @keyframes scale-in {
+            from { transform: scale(0.9); opacity: 0; }
+            to   { transform: scale(1);   opacity: 1; }
+          }
+          @keyframes highlight-pulse {
+            0%        { box-shadow: none; }
+            10%, 90%  { box-shadow: 0 0 0 3px var(--ds-border-focused, #2684ff); }
+            100%      { box-shadow: none; }
+          }
+          .spinner {
+            animation: spin 0.7s linear infinite;
+            border: 2px solid var(--ds-border, #dfe1e6);
+            border-top-color: var(--ds-link, #0052cc);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+          }
+          .skeleton {
+            background: linear-gradient(
+              90deg,
+              var(--ds-background-neutral, #f4f5f7) 25%,
+              var(--ds-background-neutral-hovered, #ebecf0) 50%,
+              var(--ds-background-neutral, #f4f5f7) 75%
+            );
+            background-size: 400% 100%;
+            animation: skeleton-shimmer 1.4s ease infinite;
+            border-radius: 3px;
+          }
+          .skeleton--text  { height: 14px; margin-bottom: 8px; }
+          .skeleton--title { height: 24px; width: 60%; margin-bottom: 16px; }
+          .skeleton--avatar { width: 32px; height: 32px; border-radius: 50%; }
+          .flag {
+            animation: slide-in-from-right 0.3s cubic-bezier(0.2, 0, 0, 1) forwards;
+          }
+          .flag--exit {
+            animation: slide-out-to-right 0.25s cubic-bezier(0.2, 0, 1, 1) forwards;
+          }
+          .toast-enter { animation: fade-in 0.15s ease forwards; }
+          .popover-enter { animation: scale-in 0.15s cubic-bezier(0.2, 0, 0, 1) forwards; }
+          .highlight { animation: highlight-pulse 2s ease 1 forwards; }
+          @media (prefers-reduced-motion: reduce) {
+            .spinner, .skeleton, .flag, .flag--exit, .toast-enter, .popover-enter, .highlight {
+              animation: none;
+            }
+          }
+        focus.css:
+          @supports selector(*:focus-visible) {
+            :focus:not(:focus-visible) { outline: none; }
+            :focus-visible {
+              outline: var(--ds-border-width-focused, 2px) solid var(--ds-border-focused, #2684ff);
+              outline-offset: 2px;
+            }
+          }
+          @supports not selector(*:focus-visible) {
+            :focus {
+              outline: var(--ds-border-width-focused, 2px) solid var(--ds-border-focused, #4c9aff);
+              outline-offset: 2px;
+            }
+          }
+          @media (prefers-color-scheme: dark) {
+            :root {
+              --ds-surface: #1d2125;
+              --ds-surface-sunken: #161a1d;
+              --ds-text: #b6c2cf;
+              --ds-text-subtle: #738496;
+              --ds-border: #2c333a;
+              --ds-background-neutral: #22272b;
+              --ds-link: #579dff;
+              --ds-border-focused: #579dff;
+            }
+          }
+          @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            * { box-shadow: none !important; animation: none !important; }
+          }
+        index.css:
+          @import "./animations.css";
+          @import "./focus.css";
+        yarn.lock:
+    `;
+
+    await assertPackagerParity(fixtureName);
+  });
+
   it.skip('diamond import deduplication is identical between packagers', async function () {
     // TODO: Native packager uses *correct* DFS post-order (shared.css before a-component).
     // JS packager orders incorrectly due to lightning walking through internal @imports.

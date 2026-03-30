@@ -5,6 +5,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use atlaspack_core::bundle_graph::bundle_graph::BundleGraph;
 use atlaspack_core::package_result::{BundleInfo, PackageResult};
+use atlaspack_core::types::engines::EnginesBrowsers;
 use atlaspack_core::types::{Asset, Bundle, BundleBehavior, Diagnostic, Priority};
 use lightningcss::bundler::{Bundler, ResolveResult, SourceProvider};
 use lightningcss::printer::PrinterOptions;
@@ -431,9 +432,18 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
       );
     }
 
-    let targets = Browsers::from_browserslist(["last 2 Chrome versions"])
-      .expect("Failed to parse browserslist")
-      .unwrap_or_default()
+    let targets = bundle
+      .env
+      .engines
+      .browsers
+      .as_ref()
+      .and_then(|b| {
+        let query = match b {
+          EnginesBrowsers::String(s) => vec![s.clone()],
+          EnginesBrowsers::List(l) => l.clone(),
+        };
+        Browsers::from_browserslist(query).ok().flatten()
+      })
       .into();
 
     let printer_options = PrinterOptions {
