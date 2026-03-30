@@ -77,6 +77,33 @@ function mockStdio() {
   };
 }
 
+/** Returns all CSS bundles with a file path from a BundleGraph. */
+function getCssBundles(bg: any): any[] {
+  return bg.getBundles().filter((b: any) => b.type === 'css' && b.filePath);
+}
+
+/**
+ * Asserts that a CSS file has a sourceMappingURL comment and that the
+ * corresponding .map file has a non-empty `sources` array and `mappings`.
+ */
+async function assertCssSourceMap(cssPath: string, fs: any): Promise<void> {
+  const cssContent = await fs.readFile(cssPath, 'utf8');
+  assert.ok(
+    cssContent.includes('sourceMappingURL'),
+    `CSS bundle must contain a sourceMappingURL comment; got: ${cssContent}`,
+  );
+  const mapContent = await fs.readFile(cssPath + '.map', 'utf8');
+  const mapJson = JSON.parse(mapContent);
+  assert.ok(
+    Array.isArray(mapJson.sources) && mapJson.sources.length > 0,
+    `Source map must have a non-empty 'sources' array; got: ${mapContent}`,
+  );
+  assert.ok(
+    typeof mapJson.mappings === 'string' && mapJson.mappings.length > 0,
+    `Source map must have a non-empty 'mappings' string; got: ${mapContent}`,
+  );
+}
+
 describe.v3('AtlaspackV3', function () {
   it('builds', async () => {
     await fsFixture(overlayFS, __dirname)`
@@ -390,34 +417,7 @@ describe.v3('AtlaspackV3', function () {
     await inputFS.rimraf(dir);
   });
 
-  /** Returns all CSS bundles with a file path from a BundleGraph. */
-  function getCssBundles(bg: any): any[] {
-    return bg.getBundles().filter((b: any) => b.type === 'css' && b.filePath);
-  }
-
-  /**
-   * Asserts that a CSS file has a sourceMappingURL comment and that the
-   * corresponding .map file has a non-empty `sources` array and `mappings`.
-   */
-  async function assertCssSourceMap(cssPath: string, fs: any): Promise<void> {
-    const cssContent = await fs.readFile(cssPath, 'utf8');
-    assert.ok(
-      cssContent.includes('sourceMappingURL'),
-      `CSS bundle must contain a sourceMappingURL comment; got: ${cssContent}`,
-    );
-    const mapContent = await fs.readFile(cssPath + '.map', 'utf8');
-    const mapJson = JSON.parse(mapContent);
-    assert.ok(
-      Array.isArray(mapJson.sources) && mapJson.sources.length > 0,
-      `Source map must have a non-empty 'sources' array; got: ${mapContent}`,
-    );
-    assert.ok(
-      typeof mapJson.mappings === 'string' && mapJson.mappings.length > 0,
-      `Source map must have a non-empty 'mappings' string; got: ${mapContent}`,
-    );
-  }
-
-  describe('CSS minification', () => {
+  describe('native CSS packager', () => {
     it('minifies CSS output in production mode', async () => {
       await fsFixture(overlayFS, __dirname)`
         css-minify-prod
@@ -491,9 +491,7 @@ describe.v3('AtlaspackV3', function () {
         `Development CSS must contain the 'color' property; got: ${css}`,
       );
     });
-  });
 
-  describe('native CSS packager', () => {
     it('emits a source map alongside a CSS bundle in development mode', async () => {
       await fsFixture(overlayFS, __dirname)`
         native-css-sourcemap

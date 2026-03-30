@@ -339,6 +339,15 @@ mod tests {
     }
   }
 
+  fn make_css_asset(id: &str) -> Asset {
+    Asset {
+      id: id.to_string(),
+      file_type: FileType::Css,
+      env: Arc::new(Environment::default()),
+      ..Asset::default()
+    }
+  }
+
   fn make_url_dep(specifier: &str, placeholder: Option<&str>) -> Dependency {
     let mut dep = DependencyBuilder::default()
       .specifier(specifier.to_string())
@@ -351,13 +360,7 @@ mod tests {
   }
 
   fn make_import_dep(specifier: &str, placeholder: Option<&str>) -> Dependency {
-    let mut dep = DependencyBuilder::default()
-      .specifier(specifier.to_string())
-      .specifier_type(SpecifierType::Url)
-      .priority(Priority::Sync)
-      .env(Arc::new(Environment::default()))
-      .build();
-    dep.placeholder = placeholder.map(|s| s.to_string());
+    let mut dep = make_url_dep(specifier, placeholder);
     dep.is_css_import = true;
     dep
   }
@@ -415,12 +418,7 @@ mod tests {
     let url_dep = make_url_dep("./images/hero.png", Some(placeholder));
 
     // asset_css has the URL dep; image_asset is the resolved target
-    let css_asset = Asset {
-      id: "asset_css_1".to_string(),
-      file_type: FileType::Css,
-      env: Arc::new(Environment::default()),
-      ..Asset::default()
-    };
+    let css_asset = make_css_asset("asset_css_1");
 
     let mut graph = MockBundleGraph::new();
     graph.bundles.push(css_bundle.clone());
@@ -469,12 +467,7 @@ mod tests {
     let dep1 = make_url_dep("./images/hero.png", Some(placeholder1));
     let dep2 = make_url_dep("./images/logo.gif", Some(placeholder2));
 
-    let css_asset = Asset {
-      id: "asset_css_1".to_string(),
-      file_type: FileType::Css,
-      env: Arc::new(Environment::default()),
-      ..Asset::default()
-    };
+    let css_asset = make_css_asset("asset_css_1");
 
     let mut graph = MockBundleGraph::new();
     graph.bundles.push(css_bundle.clone());
@@ -530,12 +523,7 @@ mod tests {
     let import_dep = make_import_dep("other.css", Some(import_placeholder));
 
     let image_asset = make_image_asset("asset_img_1", FileType::Png, None);
-    let css_asset = Asset {
-      id: "asset_css_1".to_string(),
-      file_type: FileType::Css,
-      env: Arc::new(Environment::default()),
-      ..Asset::default()
-    };
+    let css_asset = make_css_asset("asset_css_1");
 
     let mut graph = MockBundleGraph::new();
     graph.bundles.push(css_bundle.clone());
@@ -572,12 +560,7 @@ mod tests {
 
     let dep = make_url_dep("./images/bg.png", Some(placeholder));
 
-    let css_asset = Asset {
-      id: "asset_css_1".to_string(),
-      file_type: FileType::Css,
-      env: Arc::new(Environment::default()),
-      ..Asset::default()
-    };
+    let css_asset = make_css_asset("asset_css_1");
 
     let mut graph = MockBundleGraph::new();
     graph.bundles.push(css_bundle.clone());
@@ -635,12 +618,7 @@ mod tests {
 
     let dep = make_url_dep("icon.svg", Some(placeholder));
 
-    let css_asset = Asset {
-      id: "asset_css_1".to_string(),
-      file_type: FileType::Css,
-      env: Arc::new(Environment::default()),
-      ..Asset::default()
-    };
+    let css_asset = make_css_asset("asset_css_1");
 
     let mut graph = MockBundleGraph::new();
     graph.bundles.push(css_bundle.clone());
@@ -694,12 +672,7 @@ mod tests {
 
     let dep = make_url_dep("./inline.png", Some(placeholder));
 
-    let css_asset = Asset {
-      id: "asset_css_1".to_string(),
-      file_type: FileType::Css,
-      env: Arc::new(Environment::default()),
-      ..Asset::default()
-    };
+    let css_asset = make_css_asset("asset_css_1");
 
     let mut graph = MockBundleGraph::new();
     graph.bundles.push(css_bundle.clone());
@@ -741,7 +714,8 @@ mod tests {
   }
 
   #[test]
-  fn append_fragment_with_some_appends_hash() {
+  fn append_fragment_appends_hash_or_returns_base_unchanged() {
+    // With a fragment
     assert_eq!(
       append_fragment("path/to/file.svg".to_string(), Some("icon")),
       "path/to/file.svg#icon"
@@ -750,10 +724,7 @@ mod tests {
       append_fragment("file.png".to_string(), Some("section")),
       "file.png#section"
     );
-  }
-
-  #[test]
-  fn append_fragment_with_none_returns_base_unchanged() {
+    // Without a fragment
     assert_eq!(
       append_fragment("path/to/file.svg".to_string(), None),
       "path/to/file.svg"
@@ -763,7 +734,7 @@ mod tests {
 
   #[test]
   fn is_non_inline_bundle_containing_asset_false_for_inline_bundles() {
-    // Both Inline and InlineIsolated behaviors must return false.
+    // Both Inline and InlineIsolated behaviors must return false regardless of asset membership.
     let graph = MockBundleGraph::new();
     for behavior in [BundleBehavior::Inline, BundleBehavior::InlineIsolated] {
       let mut bundle = make_css_bundle("css");
@@ -776,32 +747,26 @@ mod tests {
   }
 
   #[test]
-  fn is_non_inline_bundle_containing_asset_true_when_bundle_contains_asset() {
+  fn is_non_inline_bundle_containing_asset_reflects_asset_membership() {
     let bundle = make_css_bundle("css");
-    let asset = Asset {
-      id: "my-asset".to_string(),
-      file_type: FileType::Css,
-      env: Arc::new(Environment::default()),
-      ..Asset::default()
-    };
+
+    // Returns true when the bundle contains the asset.
+    let asset = make_css_asset("my-asset");
     let mut graph = MockBundleGraph::new();
     graph
       .assets_by_bundle
       .insert("css".to_string(), vec![asset]);
-    assert!(is_non_inline_bundle_containing_asset(
-      &bundle, "my-asset", &graph
-    ));
-  }
+    assert!(
+      is_non_inline_bundle_containing_asset(&bundle, "my-asset", &graph),
+      "expected true when bundle contains asset"
+    );
 
-  #[test]
-  fn is_non_inline_bundle_containing_asset_false_when_bundle_does_not_contain_asset() {
-    let bundle = make_css_bundle("css");
-    let graph = MockBundleGraph::new(); // no assets registered
-    assert!(!is_non_inline_bundle_containing_asset(
-      &bundle,
-      "absent-asset",
-      &graph
-    ));
+    // Returns false when the asset is absent.
+    let empty_graph = MockBundleGraph::new();
+    assert!(
+      !is_non_inline_bundle_containing_asset(&bundle, "absent-asset", &empty_graph),
+      "expected false when bundle does not contain asset"
+    );
   }
 
   #[test]
@@ -839,7 +804,8 @@ mod tests {
   }
 
   #[test]
-  fn mime_for_file_type_unknown_extension_returns_octet_stream() {
+  fn mime_for_file_type_unrecognised_types_return_octet_stream() {
+    // Unknown Other extensions
     assert_eq!(
       mime_for_file_type(&FileType::Other("bin".to_string())),
       "application/octet-stream"
@@ -848,10 +814,7 @@ mod tests {
       mime_for_file_type(&FileType::Other("xyz".to_string())),
       "application/octet-stream"
     );
-  }
-
-  #[test]
-  fn mime_for_file_type_non_image_file_types_return_octet_stream() {
+    // Non-image typed assets (Js, Css, Html, etc.)
     assert_eq!(
       mime_for_file_type(&FileType::Js),
       "application/octet-stream"
@@ -867,7 +830,8 @@ mod tests {
   }
 
   #[test]
-  fn path_to_url_string_simple_path() {
+  fn path_to_url_string_converts_path_components() {
+    // Simple relative path
     assert_eq!(
       path_to_url_string(std::path::Path::new("images/hero.png")),
       "images/hero.png"
@@ -876,10 +840,7 @@ mod tests {
       path_to_url_string(std::path::Path::new("file.css")),
       "file.css"
     );
-  }
-
-  #[test]
-  fn path_to_url_string_parent_dir_components() {
+    // Parent-dir traversal
     assert_eq!(
       path_to_url_string(std::path::Path::new("../images/hero.png")),
       "../images/hero.png"
@@ -888,23 +849,16 @@ mod tests {
       path_to_url_string(std::path::Path::new("../../fonts/fira.woff2")),
       "../../fonts/fira.woff2"
     );
-  }
-
-  #[test]
-  fn path_to_url_string_cur_dir_components() {
+    // Current-dir component
     assert_eq!(
       path_to_url_string(std::path::Path::new("./images/hero.png")),
       "./images/hero.png"
     );
-  }
-
-  #[test]
-  fn path_to_url_string_root_prefix_stripped() {
-    // On Unix, the root `/` component is a Prefix/RootDir which is dropped.
-    // So `/images/hero.png` → "images/hero.png".
-    let result = path_to_url_string(std::path::Path::new("/images/hero.png"));
-    // Root component is stripped; only Normal components survive.
-    assert_eq!(result, "images/hero.png");
+    // Root prefix is stripped (Unix: Prefix/RootDir component is dropped)
+    assert_eq!(
+      path_to_url_string(std::path::Path::new("/images/hero.png")),
+      "images/hero.png"
+    );
   }
 
   #[test]
@@ -918,12 +872,7 @@ mod tests {
 
     let dep = make_url_dep(specifier, Some(placeholder));
 
-    let css_asset = Asset {
-      id: "asset_css_1".to_string(),
-      file_type: FileType::Css,
-      env: Arc::new(Environment::default()),
-      ..Asset::default()
-    };
+    let css_asset = make_css_asset("asset_css_1");
 
     let mut graph = MockBundleGraph::new();
     graph.bundles.push(css_bundle.clone());
@@ -973,12 +922,7 @@ mod tests {
     };
 
     let dep = make_url_dep("./isolated.png", Some(placeholder));
-    let css_asset = Asset {
-      id: "asset_css_isolated".to_string(),
-      file_type: FileType::Css,
-      env: Arc::new(Environment::default()),
-      ..Asset::default()
-    };
+    let css_asset = make_css_asset("asset_css_isolated");
 
     let mut graph = MockBundleGraph::new();
     graph.bundles.push(css_bundle.clone());
@@ -1012,12 +956,7 @@ mod tests {
     let output_dir = PathBuf::from("/dist");
 
     let dep = make_url_dep(specifier, Some(placeholder));
-    let css_asset = Asset {
-      id: "asset_css_1".to_string(),
-      file_type: FileType::Css,
-      env: Arc::new(Environment::default()),
-      ..Asset::default()
-    };
+    let css_asset = make_css_asset("asset_css_1");
 
     let mut graph = MockBundleGraph::new();
     graph.bundles.push(css_bundle.clone());
@@ -1051,15 +990,9 @@ mod tests {
     );
 
     // Specifier includes a hash fragment.
-    let mut dep = make_url_dep("./images/sprite.svg#icon", Some(placeholder));
-    dep.specifier = "./images/sprite.svg#icon".to_string();
+    let dep = make_url_dep("./images/sprite.svg#icon", Some(placeholder));
 
-    let css_asset = Asset {
-      id: "asset_css_1".to_string(),
-      file_type: FileType::Css,
-      env: Arc::new(Environment::default()),
-      ..Asset::default()
-    };
+    let css_asset = make_css_asset("asset_css_1");
 
     let mut graph = MockBundleGraph::new();
     graph.bundles.push(css_bundle.clone());

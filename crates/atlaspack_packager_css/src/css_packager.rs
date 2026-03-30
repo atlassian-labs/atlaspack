@@ -875,6 +875,77 @@ mod tests {
     }
   }
 
+  fn make_css_module_asset(id: &str, symbols: Vec<(&str, &str)>, should_optimize: bool) -> Asset {
+    Asset {
+      id: id.to_string(),
+      file_type: FileType::Css,
+      env: Arc::new(Environment {
+        should_optimize,
+        ..Environment::default()
+      }),
+      symbols: if symbols.is_empty() {
+        None
+      } else {
+        Some(
+          symbols
+            .into_iter()
+            .map(|(exported, local)| Symbol {
+              exported: exported.to_string(),
+              local: local.to_string(),
+              loc: None,
+              is_weak: false,
+              is_esm_export: false,
+              self_referenced: false,
+              is_static_binding_safe: true,
+            })
+            .collect(),
+        )
+      },
+      ..Asset::default()
+    }
+  }
+
+  fn make_bundle_with_name(id: &str, entry_asset_ids: Vec<&str>, name: &str) -> Bundle {
+    Bundle {
+      name: Some(name.to_string()),
+      ..make_bundle(id, entry_asset_ids)
+    }
+  }
+
+  fn make_env_with_source_map() -> Environment {
+    use atlaspack_core::types::TargetSourceMapOptions;
+    Environment {
+      source_map: Some(TargetSourceMapOptions::default()),
+      ..Environment::default()
+    }
+  }
+
+  /// Creates a CSS asset with source map enabled.
+  fn make_asset_with_source_map(id: &str) -> Asset {
+    Asset {
+      id: id.to_string(),
+      file_type: FileType::Css,
+      env: Arc::new(make_env_with_source_map()),
+      ..Asset::default()
+    }
+  }
+
+  /// Builds a `HashSet<String>` from a slice of string slices.
+  fn string_set(items: &[&str]) -> HashSet<String> {
+    items.iter().map(|s| s.to_string()).collect()
+  }
+
+  /// Extracts and parses the source map JSON from a `PackageResult`.
+  /// Panics with a descriptive message if `map_contents` is absent or invalid.
+  fn parse_source_map(result: &PackageResult) -> Value {
+    let map_bytes = result
+      .bundle_info
+      .map_contents
+      .as_ref()
+      .expect("map_contents must be Some when source maps are enabled");
+    from_slice(map_bytes).expect("map_contents must be valid JSON")
+  }
+
   #[test]
   fn single_asset_css_is_included_in_output() {
     let db = make_db();
@@ -1081,41 +1152,11 @@ mod tests {
     assert!(output.contains(".normal"));
   }
 
-  fn make_css_module_asset(id: &str, symbols: Vec<(&str, &str)>, should_optimize: bool) -> Asset {
-    Asset {
-      id: id.to_string(),
-      file_type: FileType::Css,
-      env: Arc::new(Environment {
-        should_optimize,
-        ..Environment::default()
-      }),
-      symbols: if symbols.is_empty() {
-        None
-      } else {
-        Some(
-          symbols
-            .into_iter()
-            .map(|(exported, local)| Symbol {
-              exported: exported.to_string(),
-              local: local.to_string(),
-              loc: None,
-              is_weak: false,
-              is_esm_export: false,
-              self_referenced: false,
-              is_static_binding_safe: true,
-            })
-            .collect(),
-        )
-      },
-      ..Asset::default()
-    }
-  }
-
   #[test]
   fn tree_shaking_removes_unused_class() {
     let css = ".foo_abc { color: red; } .bar_def { color: blue; }";
-    let all: HashSet<String> = [".foo_abc".into(), ".bar_def".into()].into();
-    let used: HashSet<String> = [".foo_abc".into()].into();
+    let all = string_set(&[".foo_abc", ".bar_def"]);
+    let used = string_set(&[".foo_abc"]);
 
     let output = remove_unused_class_rules(css, &all, &used);
 
@@ -1132,8 +1173,8 @@ mod tests {
   #[test]
   fn tree_shaking_preserves_non_module_selectors() {
     let css = ".foo_abc { color: red; } body { margin: 0; }";
-    let all: HashSet<String> = [".foo_abc".into()].into();
-    let used: HashSet<String> = HashSet::new();
+    let all = string_set(&[".foo_abc"]);
+    let used = string_set(&[]);
 
     let output = remove_unused_class_rules(css, &all, &used);
 
@@ -1154,8 +1195,8 @@ mod tests {
   #[test]
   fn tree_shaking_wildcard_retains_all_classes() {
     let css = ".foo_abc { color: red; } .bar_def { color: blue; }";
-    let all: HashSet<String> = [".foo_abc".into(), ".bar_def".into()].into();
-    let used: HashSet<String> = all.clone();
+    let all = string_set(&[".foo_abc", ".bar_def"]);
+    let used = all.clone();
 
     let output = remove_unused_class_rules(css, &all, &used);
 
@@ -1172,8 +1213,8 @@ mod tests {
   #[test]
   fn tree_shaking_empty_used_symbols_removes_all_module_classes() {
     let css = ".foo_abc { color: red; } .bar_def { color: blue; }";
-    let all: HashSet<String> = [".foo_abc".into(), ".bar_def".into()].into();
-    let used: HashSet<String> = HashSet::new();
+    let all = string_set(&[".foo_abc", ".bar_def"]);
+    let used = string_set(&[]);
 
     let output = remove_unused_class_rules(css, &all, &used);
 
@@ -1190,8 +1231,8 @@ mod tests {
   #[test]
   fn tree_shaking_removes_multiline_unused_rule() {
     let css = ".unused_xyz {\n  color: blue;\n  font-size: 12px;\n}";
-    let all: HashSet<String> = [".unused_xyz".into()].into();
-    let used: HashSet<String> = HashSet::new();
+    let all = string_set(&[".unused_xyz"]);
+    let used = string_set(&[]);
 
     let output = remove_unused_class_rules(css, &all, &used);
 
@@ -1208,8 +1249,8 @@ mod tests {
   #[test]
   fn tree_shaking_partial_removal_keeps_used_removes_unused() {
     let css = ".a_111 { color: red; } .b_222 { color: blue; } .c_333 { color: green; }";
-    let all: HashSet<String> = [".a_111".into(), ".b_222".into(), ".c_333".into()].into();
-    let used: HashSet<String> = [".a_111".into(), ".c_333".into()].into();
+    let all = string_set(&[".a_111", ".b_222", ".c_333"]);
+    let used = string_set(&[".a_111", ".c_333"]);
 
     let output = remove_unused_class_rules(css, &all, &used);
 
@@ -1246,11 +1287,9 @@ mod tests {
       .assets_by_bundle
       .insert("bundle_w".to_string(), vec![asset]);
 
-    let mut used_syms = HashSet::new();
-    used_syms.insert("*".to_string());
     graph
       .used_symbols_by_asset
-      .insert("asset_wildcard".to_string(), used_syms);
+      .insert("asset_wildcard".to_string(), string_set(&["*"]));
 
     let packager = make_packager(db, graph);
 
@@ -1268,7 +1307,7 @@ mod tests {
   }
 
   #[test]
-  fn default_import_disables_tree_shaking() {
+  fn default_import_disables_tree_shaking_and_emits_warning() {
     let db = make_db();
     let css = ".foo_abc { color: red; } .bar_def { color: blue; }";
     db.put("asset_default", css.as_bytes()).unwrap();
@@ -1279,19 +1318,19 @@ mod tests {
       true,
     );
 
-    let bundle = make_bundle("bundle_d", vec!["asset_default"]);
+    let mut bundle = make_bundle("bundle_default", vec!["asset_default"]);
+    bundle.env.should_optimize = true;
     let mut graph = TestBundleGraph::new();
     graph.bundles.push(bundle.clone());
     graph
       .assets_by_bundle
-      .insert("bundle_d".to_string(), vec![asset.clone()]);
+      .insert("bundle_default".to_string(), vec![asset.clone()]);
 
-    let mut used_syms = HashSet::new();
-    used_syms.insert("default".to_string());
-    used_syms.insert("foo".to_string());
+    // Only "default" is in used symbols; without the guard, tree-shaking would remove
+    // "bar_def". The guard must retain all classes and emit a diagnostic warning.
     graph
       .used_symbols_by_asset
-      .insert("asset_default".to_string(), used_syms);
+      .insert("asset_default".to_string(), string_set(&["default"]));
 
     let mut dep = make_dependency("asset_default", Priority::Sync);
     dep.symbols = Some(vec![Symbol {
@@ -1305,24 +1344,36 @@ mod tests {
 
     let packager = make_packager(db, graph);
 
-    let result = packager.package("bundle_d").expect("should succeed");
+    let result = packager.package("bundle_default").expect("should succeed");
     let output = output_string(&result);
 
+    // The default import guard must retain ALL classes (tree-shaking disabled).
     assert!(
       output.contains(".foo_abc"),
-      ".foo_abc must be present; got: {output:?}"
+      ".foo_abc must be retained when default import guard fires; got: {output:?}"
     );
     assert!(
       output.contains(".bar_def"),
-      ".bar_def must be present (default import guard); got: {output:?}"
+      ".bar_def must be retained when default import guard fires; got: {output:?}"
+    );
+
+    // The guard must also emit a diagnostic explaining the fallback.
+    assert!(
+      !result.warnings.is_empty(),
+      "PackageResult.warnings must be non-empty when default import guard fires"
+    );
+    let warning_msg = &result.warnings[0].message;
+    assert!(
+      warning_msg.contains("default specifier"),
+      "Warning message must mention 'default specifier'; got: {warning_msg:?}"
     );
   }
 
   #[test]
   fn tree_shaking_comment_with_brace_does_not_corrupt_output() {
     let css = "/* } */ .foo_abc { color: red; } .bar_def { color: blue; }";
-    let all: HashSet<String> = [".foo_abc".into(), ".bar_def".into()].into();
-    let used: HashSet<String> = [".foo_abc".into()].into();
+    let all = string_set(&[".foo_abc", ".bar_def"]);
+    let used = string_set(&[".foo_abc"]);
 
     let output = remove_unused_class_rules(css, &all, &used);
 
@@ -1345,8 +1396,8 @@ mod tests {
   #[test]
   fn tree_shaking_removes_unused_class_inside_media_query() {
     let css = "@media (min-width: 500px) { .unused_xyz { color: red; } }";
-    let all: HashSet<String> = [".unused_xyz".into()].into();
-    let used: HashSet<String> = HashSet::new();
+    let all = string_set(&[".unused_xyz"]);
+    let used = string_set(&[]);
 
     let output = remove_unused_class_rules(css, &all, &used);
 
@@ -1359,8 +1410,8 @@ mod tests {
   #[test]
   fn tree_shaking_retains_used_class_inside_media_query() {
     let css = "@media (min-width: 500px) { .used_abc { color: red; } }";
-    let all: HashSet<String> = [".used_abc".into()].into();
-    let used: HashSet<String> = [".used_abc".into()].into();
+    let all = string_set(&[".used_abc"]);
+    let used = string_set(&[".used_abc"]);
 
     let output = remove_unused_class_rules(css, &all, &used);
 
@@ -1377,8 +1428,8 @@ mod tests {
   #[test]
   fn tree_shaking_removes_fully_unused_grouped_selector() {
     let css = ".foo_abc, .bar_def { color: red; }";
-    let all: HashSet<String> = [".foo_abc".into(), ".bar_def".into()].into();
-    let used: HashSet<String> = HashSet::new();
+    let all = string_set(&[".foo_abc", ".bar_def"]);
+    let used = string_set(&[]);
 
     let output = remove_unused_class_rules(css, &all, &used);
 
@@ -1395,15 +1446,19 @@ mod tests {
   #[test]
   fn tree_shaking_retains_grouped_selector_rule_when_any_selector_is_used() {
     let css = ".foo_abc, .bar_def { color: red; }";
-    let all: HashSet<String> = [".foo_abc".into(), ".bar_def".into()].into();
+    let all = string_set(&[".foo_abc", ".bar_def"]);
     // Only foo is used; bar is not.
-    let used: HashSet<String> = [".foo_abc".into()].into();
+    let used = string_set(&[".foo_abc"]);
 
     let output = remove_unused_class_rules(css, &all, &used);
 
     assert!(
       output.contains(".foo_abc"),
       ".foo_abc must be present because it is used; got: {output:?}"
+    );
+    assert!(
+      output.contains(".bar_def"),
+      ".bar_def must also be present because the whole rule body is kept when any selector in the group is used; got: {output:?}"
     );
     // The rule body must be retained (it applies to the used selector).
     assert!(
@@ -1441,8 +1496,8 @@ mod tests {
   #[test]
   fn tree_shaking_removes_unused_class_inside_container_query() {
     let css = "@container sidebar (min-width: 700px) { .foo_abc { color: red; } .bar_def { color: blue; } }";
-    let all: HashSet<String> = [".foo_abc".into(), ".bar_def".into()].into();
-    let used: HashSet<String> = [".foo_abc".into()].into();
+    let all = string_set(&[".foo_abc", ".bar_def"]);
+    let used = string_set(&[".foo_abc"]);
 
     let output = remove_unused_class_rules(css, &all, &used);
 
@@ -1459,8 +1514,8 @@ mod tests {
   #[test]
   fn tree_shaking_removes_unused_class_inside_scope_rule() {
     let css = "@scope (.card) { .foo_abc { color: red; } .bar_def { color: blue; } }";
-    let all: HashSet<String> = [".foo_abc".into(), ".bar_def".into()].into();
-    let used: HashSet<String> = [".foo_abc".into()].into();
+    let all = string_set(&[".foo_abc", ".bar_def"]);
+    let used = string_set(&[".foo_abc"]);
 
     let output = remove_unused_class_rules(css, &all, &used);
 
@@ -1547,11 +1602,9 @@ mod tests {
       .assets_by_bundle
       .insert("bundle_composes".to_string(), vec![asset.clone()]);
 
-    let mut used_syms = HashSet::new();
-    used_syms.insert("foo".to_string());
     graph
       .used_symbols_by_asset
-      .insert("asset_composes_int".to_string(), used_syms);
+      .insert("asset_composes_int".to_string(), string_set(&["foo"]));
 
     let packager = make_packager(db, graph);
 
@@ -1593,11 +1646,9 @@ mod tests {
       .assets_by_bundle
       .insert("bundle_multi".to_string(), vec![asset.clone()]);
 
-    let mut used_syms = HashSet::new();
-    used_syms.insert("main".to_string());
     graph
       .used_symbols_by_asset
-      .insert("asset_multi".to_string(), used_syms);
+      .insert("asset_multi".to_string(), string_set(&["main"]));
 
     let packager = make_packager(db, graph);
 
@@ -1638,11 +1689,9 @@ mod tests {
       .assets_by_bundle
       .insert("bundle_global".to_string(), vec![asset.clone()]);
 
-    let mut used_syms = HashSet::new();
-    used_syms.insert("main".to_string());
     graph
       .used_symbols_by_asset
-      .insert("asset_global".to_string(), used_syms);
+      .insert("asset_global".to_string(), string_set(&["main"]));
 
     let packager = make_packager(db, graph);
 
@@ -1680,11 +1729,9 @@ mod tests {
       .assets_by_bundle
       .insert("bundle_ext".to_string(), vec![asset.clone()]);
 
-    let mut used_syms = HashSet::new();
-    used_syms.insert("main".to_string());
     graph
       .used_symbols_by_asset
-      .insert("asset_ext".to_string(), used_syms);
+      .insert("asset_ext".to_string(), string_set(&["main"]));
 
     let packager = make_packager(db, graph);
 
@@ -1698,21 +1745,6 @@ mod tests {
       !output.contains(".other"),
       ".other is unused and should be removed"
     );
-  }
-
-  fn make_bundle_with_name(id: &str, entry_asset_ids: Vec<&str>, name: &str) -> Bundle {
-    Bundle {
-      name: Some(name.to_string()),
-      ..make_bundle(id, entry_asset_ids)
-    }
-  }
-
-  fn make_env_with_source_map() -> Environment {
-    use atlaspack_core::types::TargetSourceMapOptions;
-    Environment {
-      source_map: Some(TargetSourceMapOptions::default()),
-      ..Environment::default()
-    }
   }
 
   #[test]
@@ -1752,12 +1784,7 @@ mod tests {
     let db = make_db();
     db.put("asset_sm2", b".foo { color: red; }").unwrap();
 
-    let asset = Asset {
-      id: "asset_sm2".to_string(),
-      file_type: FileType::Css,
-      env: Arc::new(make_env_with_source_map()),
-      ..Asset::default()
-    };
+    let asset = make_asset_with_source_map("asset_sm2");
 
     let mut bundle = make_bundle_with_name("bundle_sm2", vec!["asset_sm2"], "output.css");
     bundle.env = make_env_with_source_map();
@@ -1774,13 +1801,7 @@ mod tests {
       .package("bundle_sm2")
       .expect("package() must succeed");
 
-    let map_bytes = result
-      .bundle_info
-      .map_contents
-      .as_ref()
-      .expect("map_contents must be Some when source maps are enabled");
-
-    let map_json: Value = from_slice(map_bytes).expect("map_contents must be valid JSON");
+    let map_json = parse_source_map(&result);
 
     assert_eq!(
       map_json["version"],
@@ -1818,12 +1839,7 @@ mod tests {
     let css_content = format!("@import \"{ext_url}\";\n.foo {{ color: red; }}");
     db.put("asset_sm3", css_content.as_bytes()).unwrap();
 
-    let asset = Asset {
-      id: "asset_sm3".to_string(),
-      file_type: FileType::Css,
-      env: Arc::new(make_env_with_source_map()),
-      ..Asset::default()
-    };
+    let asset = make_asset_with_source_map("asset_sm3");
 
     let mut bundle = make_bundle_with_name("bundle_sm3", vec!["asset_sm3"], "output.css");
     bundle.env = make_env_with_source_map();
@@ -1845,19 +1861,12 @@ mod tests {
       .package("bundle_sm3")
       .expect("package() must succeed");
 
-    let map_bytes = result
-      .bundle_info
-      .map_contents
-      .as_ref()
-      .expect("map_contents must be Some when source maps are enabled");
-
-    let map_json: Value = from_slice(map_bytes).expect("map_contents must be valid JSON");
-
+    let map_json = parse_source_map(&result);
     let mappings = map_json["mappings"]
       .as_str()
       .expect("source map must have a 'mappings' string");
 
-    // Semicolon indicates the first generated line (containing the @import) has no mappings.
+    // Semicolon indicates the first generated line (the hoisted @import) has no source mapping.
     assert!(
       mappings.starts_with(';'),
       "mappings must start with ';' to indicate the first line is skipped due to hoisting; \
@@ -1870,12 +1879,7 @@ mod tests {
     let db = make_db();
     db.put("asset_sm4", b".bar { margin: 0; }").unwrap();
 
-    let asset = Asset {
-      id: "asset_sm4".to_string(),
-      file_type: FileType::Css,
-      env: Arc::new(make_env_with_source_map()),
-      ..Asset::default()
-    };
+    let asset = make_asset_with_source_map("asset_sm4");
 
     let mut bundle = make_bundle_with_name("bundle_sm4", vec!["asset_sm4"], "output.css");
     bundle.env = make_env_with_source_map();
@@ -1892,14 +1896,7 @@ mod tests {
       .package("bundle_sm4")
       .expect("package() must succeed");
 
-    let map_bytes = result
-      .bundle_info
-      .map_contents
-      .as_ref()
-      .expect("map_contents must be Some when source maps are enabled");
-
-    let map_json: Value = from_slice(map_bytes).expect("map_contents must be valid JSON");
-
+    let map_json = parse_source_map(&result);
     let sources = map_json["sources"]
       .as_array()
       .expect("source map must have a 'sources' array");
@@ -1908,78 +1905,11 @@ mod tests {
       !sources.is_empty(),
       "source map 'sources' must be non-empty; got: {map_json:?}"
     );
-
-    let has_asset_source = sources
-      .iter()
-      .any(|s| s.as_str().map(|p| p.contains("asset_sm4")).unwrap_or(false));
     assert!(
-      has_asset_source,
+      sources
+        .iter()
+        .any(|s| s.as_str().map(|p| p.contains("asset_sm4")).unwrap_or(false)),
       "source map 'sources' must contain a path referencing 'asset_sm4'; got sources: {sources:?}"
-    );
-  }
-
-  #[test]
-  fn default_import_emits_structured_warning_in_package_result() {
-    let db = make_db();
-    let css = ".foo_abc { color: red; } .bar_def { color: blue; }";
-    db.put("asset_default", css.as_bytes()).unwrap();
-
-    let asset = make_css_module_asset(
-      "asset_default",
-      vec![("foo", "foo_abc"), ("bar", "bar_def")],
-      true,
-    );
-
-    let mut bundle = make_bundle("bundle_d2", vec!["asset_default"]);
-    bundle.env.should_optimize = true;
-    let mut graph = TestBundleGraph::new();
-    graph.bundles.push(bundle.clone());
-    graph
-      .assets_by_bundle
-      .insert("bundle_d2".to_string(), vec![asset.clone()]);
-
-    let mut used_syms = HashSet::new();
-    used_syms.insert("default".to_string());
-    graph
-      .used_symbols_by_asset
-      .insert("asset_default".to_string(), used_syms);
-
-    let mut dep = make_dependency("asset_default", Priority::Sync);
-    dep.symbols = Some(vec![Symbol {
-      exported: "default".to_string(),
-      local: "default".to_string(),
-      loc: None,
-      is_weak: false,
-      is_esm_export: false,
-      self_referenced: false,
-      is_static_binding_safe: true,
-    }]);
-    graph
-      .incoming_deps_by_asset
-      .insert("asset_default".to_string(), vec![dep]);
-
-    let packager = make_packager(db, graph);
-
-    let result = packager.package("bundle_d2").expect("should succeed");
-    let output = output_string(&result);
-
-    assert!(
-      output.contains(".foo_abc"),
-      ".foo_abc must be retained when default import guard fires; got: {output:?}"
-    );
-    assert!(
-      output.contains(".bar_def"),
-      ".bar_def must be retained when default import guard fires; got: {output:?}"
-    );
-
-    assert!(
-      !result.warnings.is_empty(),
-      "PackageResult.warnings must be non-empty when default import guard fires"
-    );
-    let warning_msg = &result.warnings[0].message;
-    assert!(
-      warning_msg.contains("default specifier"),
-      "Warning message must mention 'default specifier'; got: {warning_msg:?}"
     );
   }
 
@@ -1989,18 +1919,8 @@ mod tests {
     db.put("asset_a", b".a { color: red; }").unwrap();
     db.put("asset_b", b".b { color: blue; }").unwrap();
 
-    let asset_a = Asset {
-      id: "asset_a".to_string(),
-      file_type: FileType::Css,
-      env: Arc::new(make_env_with_source_map()),
-      ..Asset::default()
-    };
-    let asset_b = Asset {
-      id: "asset_b".to_string(),
-      file_type: FileType::Css,
-      env: Arc::new(make_env_with_source_map()),
-      ..Asset::default()
-    };
+    let asset_a = make_asset_with_source_map("asset_a");
+    let asset_b = make_asset_with_source_map("asset_b");
 
     let mut bundle = make_bundle_with_name("bundle_ab", vec!["asset_a", "asset_b"], "output.css");
     bundle.env = make_env_with_source_map();
@@ -2017,24 +1937,23 @@ mod tests {
       .package("bundle_ab")
       .expect("package() must succeed");
 
-    let map_bytes = result
-      .bundle_info
-      .map_contents
-      .as_ref()
-      .expect("map_contents must be Some");
+    let map_json = parse_source_map(&result);
+    let sources = map_json["sources"]
+      .as_array()
+      .expect("source map must have a 'sources' array");
 
-    let map_json: Value = from_slice(map_bytes).unwrap();
-    let sources = map_json["sources"].as_array().unwrap();
-
-    let has_a = sources
-      .iter()
-      .any(|s| s.as_str().unwrap().contains("asset_a"));
-    let has_b = sources
-      .iter()
-      .any(|s| s.as_str().unwrap().contains("asset_b"));
-
-    assert!(has_a, "source map must contain asset_a");
-    assert!(has_b, "source map must contain asset_b");
+    assert!(
+      sources
+        .iter()
+        .any(|s| s.as_str().unwrap_or("").contains("asset_a")),
+      "source map must contain a source path for asset_a; got: {sources:?}"
+    );
+    assert!(
+      sources
+        .iter()
+        .any(|s| s.as_str().unwrap_or("").contains("asset_b")),
+      "source map must contain a source path for asset_b; got: {sources:?}"
+    );
   }
 
   #[test]
@@ -2127,10 +2046,8 @@ mod tests {
       "CSS output should differ due to URL paths"
     );
 
-    let map_short =
-      from_slice::<Value>(result_short.bundle_info.map_contents.as_ref().unwrap()).unwrap();
-    let map_long =
-      from_slice::<Value>(result_long.bundle_info.map_contents.as_ref().unwrap()).unwrap();
+    let map_short = parse_source_map(&result_short);
+    let map_long = parse_source_map(&result_long);
 
     assert_eq!(
       map_short["mappings"], map_long["mappings"],
@@ -2139,7 +2056,7 @@ mod tests {
   }
 
   #[test]
-  fn source_map_composes_per_asset_input_map() {
+  fn source_map_chains_from_upstream_input_map() {
     let db = make_db();
     let css_content = ".foo { color: red; }";
     db.put("asset_input_map", css_content.as_bytes()).unwrap();
@@ -2174,24 +2091,15 @@ mod tests {
       .package("bundle_input_map")
       .expect("package() must succeed");
 
-    let map_bytes = result
-      .bundle_info
-      .map_contents
-      .as_ref()
-      .expect("map_contents must be Some when source maps are enabled");
-
-    let map_json: Value = from_slice(map_bytes).expect("map_contents must be valid JSON");
-
+    let map_json = parse_source_map(&result);
     let sources = map_json["sources"]
       .as_array()
       .expect("source map must have a 'sources' array");
 
-    let has_original_source = sources
-      .iter()
-      .any(|s| s.as_str().map(|p| p.contains("foo.scss")).unwrap_or(false));
-
     assert!(
-      has_original_source,
+      sources
+        .iter()
+        .any(|s| s.as_str().map(|p| p.contains("foo.scss")).unwrap_or(false)),
       "source map must contain original source 'foo.scss' from input map; got sources: {sources:?}"
     );
   }
@@ -2220,6 +2128,17 @@ mod tests {
       result.starts_with("\\1 "),
       "Control char must be hex-escaped; got: {result:?}"
     );
+  }
+
+  #[test]
+  fn escape_dashed_ident_starts_with_digit() {
+    assert_eq!(escape_dashed_ident("123"), "123");
+    assert_eq!(escape_dashed_ident("1a"), "1a");
+  }
+
+  #[test]
+  fn escape_dashed_ident_starts_with_dash_digit() {
+    assert_eq!(escape_dashed_ident("-123"), "-123");
   }
 
   #[test]
@@ -2299,17 +2218,6 @@ mod tests {
       result.contains("color: red"),
       "non-minified output must preserve space in 'color: red'; got: {result:?}"
     );
-  }
-
-  #[test]
-  fn escape_dashed_ident_starts_with_digit() {
-    assert_eq!(escape_dashed_ident("123"), "123");
-    assert_eq!(escape_dashed_ident("1a"), "1a");
-  }
-
-  #[test]
-  fn escape_dashed_ident_starts_with_dash_digit() {
-    assert_eq!(escape_dashed_ident("-123"), "-123");
   }
 
   #[test]
@@ -2547,11 +2455,9 @@ mod tests {
       .assets_by_bundle
       .insert("bundle_chain".to_string(), vec![asset]);
 
-    let mut used_syms = HashSet::new();
-    used_syms.insert("a".to_string());
     graph
       .used_symbols_by_asset
-      .insert("asset_chain".to_string(), used_syms);
+      .insert("asset_chain".to_string(), string_set(&["a"]));
 
     let packager = make_packager(db, graph);
 
@@ -2855,8 +2761,8 @@ mod tests {
   #[test]
   fn tree_shaking_removes_unused_class_inside_starting_style() {
     let css = "@starting-style { .unused_xyz { opacity: 0; } }";
-    let all: HashSet<String> = [".unused_xyz".into()].into();
-    let used: HashSet<String> = HashSet::new();
+    let all = string_set(&[".unused_xyz"]);
+    let used = string_set(&[]);
 
     let output = remove_unused_class_rules(css, &all, &used);
 
@@ -2869,8 +2775,8 @@ mod tests {
   #[test]
   fn tree_shaking_retains_used_class_inside_starting_style() {
     let css = "@starting-style { .used_abc { opacity: 0; } }";
-    let all: HashSet<String> = [".used_abc".into()].into();
-    let used: HashSet<String> = [".used_abc".into()].into();
+    let all = string_set(&[".used_abc"]);
+    let used = string_set(&[".used_abc"]);
 
     let output = remove_unused_class_rules(css, &all, &used);
 
@@ -2905,11 +2811,9 @@ mod tests {
       .assets_by_bundle
       .insert("bundle_scope_pkg".to_string(), vec![asset]);
 
-    let mut used_syms = HashSet::new();
-    used_syms.insert("foo".to_string());
     graph
       .used_symbols_by_asset
-      .insert("asset_scope_pkg".to_string(), used_syms);
+      .insert("asset_scope_pkg".to_string(), string_set(&["foo"]));
 
     let packager = make_packager(db, graph);
 

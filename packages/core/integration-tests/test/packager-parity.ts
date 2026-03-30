@@ -30,12 +30,12 @@ function extractCssBundleContents(bg: any): Promise<string[]> {
 /// Builds `entry` via both JS and native packagers and returns each CSS output.
 async function compareCssPackagers(
   fixtureName: string,
-  build_mode: BuildMode,
+  buildMode: BuildMode,
   entries: string[],
 ): Promise<{jsContents: string[]; nativeContents: string[]}> {
   const entryPaths = entries.map((e) => path.join(__dirname, fixtureName, e));
   const commonOpts = {
-    mode: build_mode,
+    mode: buildMode,
     inputFS: overlayFS,
     outputFS: overlayFS,
   };
@@ -60,10 +60,10 @@ async function assertPackagerParity(
   fixtureName: string,
   {
     entries = ['index.css'],
-    build_modes = [BuildMode.DEVELOPMENT, BuildMode.PRODUCTION],
+    buildModes = [BuildMode.DEVELOPMENT, BuildMode.PRODUCTION],
   } = {},
 ): Promise<void> {
-  for (const mode of build_modes) {
+  for (const mode of buildModes) {
     const {jsContents, nativeContents} = await compareCssPackagers(
       fixtureName,
       mode,
@@ -246,7 +246,7 @@ describe('packager-parity (JS vs native CSS packager)', function () {
     `;
 
     await assertPackagerParity(fixtureName, {
-      build_modes: [BuildMode.DEVELOPMENT],
+      buildModes: [BuildMode.DEVELOPMENT],
     });
   });
 
@@ -273,7 +273,7 @@ describe('packager-parity (JS vs native CSS packager)', function () {
     `;
 
     await assertPackagerParity(fixtureName, {
-      build_modes: [BuildMode.DEVELOPMENT],
+      buildModes: [BuildMode.DEVELOPMENT],
     });
   });
 
@@ -449,7 +449,7 @@ describe('packager-parity (JS vs native CSS packager)', function () {
 
     await assertPackagerParity(fixtureName, {
       entries: ['index.js'],
-      build_modes: [BuildMode.DEVELOPMENT],
+      buildModes: [BuildMode.DEVELOPMENT],
     });
   });
 
