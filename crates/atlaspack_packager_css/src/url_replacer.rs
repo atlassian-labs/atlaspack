@@ -1,3 +1,4 @@
+use std::collections::{HashMap, HashSet};
 use std::path::{Component, Path};
 
 use base64::Engine;
@@ -16,35 +17,7 @@ const FIXED_ENCODE_URI_COMPONENT: &AsciiSet = &NON_ALPHANUMERIC
 
 use atlaspack_core::bundle_graph::bundle_graph::BundleGraph;
 use atlaspack_core::database::DatabaseRef;
-use atlaspack_core::types::{Bundle, BundleBehavior, FileType};
-
-/// Appends a URL fragment to a base URL string when one is present.
-fn append_fragment(base: String, fragment: Option<&str>) -> String {
-  match fragment {
-    Some(f) => format!("{base}#{f}"),
-    None => base,
-  }
-}
-
-/// Returns true if `bundle` is a non-inline bundle containing `asset_id`.
-fn is_non_inline_bundle_containing_asset(
-  bundle: &Bundle,
-  asset_id: &str,
-  bundle_graph: &dyn BundleGraph,
-) -> bool {
-  let is_inline = matches!(
-    bundle.bundle_behavior,
-    Some(BundleBehavior::Inline) | Some(BundleBehavior::InlineIsolated)
-  );
-  if is_inline {
-    return false;
-  }
-  bundle_graph
-    .get_bundle_assets(bundle)
-    .ok()
-    .map(|assets| assets.iter().any(|a| a.id == asset_id))
-    .unwrap_or(false)
-}
+use atlaspack_core::types::{Asset, Bundle, BundleBehavior, FileType};
 
 /// Replaces `url()` placeholder tokens with resolved relative paths or data URIs.
 pub fn replace_url_references(
@@ -64,7 +37,8 @@ pub fn replace_url_references(
         continue;
       }
       let token = dep.placeholder.as_deref().unwrap_or(dep.specifier.as_str());
-      url_deps.push((token.to_string(), dep));
+      let resolved = bundle_graph.get_resolved_asset(dep, bundle)?;
+      url_deps.push((token.to_string(), dep, resolved));
     }
   }
 
@@ -72,20 +46,22 @@ pub fn replace_url_references(
     return Ok(css.to_string());
   }
 
-  // Only process placeholders that actually appear in the CSS output.
-  let active_url_deps: Vec<_> = url_deps
+  let target_asset_ids: HashSet<&str> = url_deps
     .iter()
-    .filter(|(token, _)| css.contains(token.as_str()))
+    .filter_map(|(_, _, resolved)| resolved.map(|a| a.id.as_str()))
     .collect();
 
-  if active_url_deps.is_empty() {
-    return Ok(css.to_string());
-  }
+  let assets_to_bundle = find_assets_to_bundle(bundle_graph, target_asset_ids);
 
-  let mut result = css.to_string();
+  // Map each token to its replacement string.
+  let mut replacement_map = HashMap::new();
 
-  for (token, dep) in &active_url_deps {
-    let resolved = bundle_graph.get_resolved_asset(dep, bundle)?;
+  for (token, dep, resolved) in &url_deps {
+    let token = token.as_str();
+    let placeholder_exists = css.contains(token) && !replacement_map.contains_key(token);
+    if !placeholder_exists {
+      continue;
+    }
 
     // Extract any URL fragment (e.g. `sprite.svg#icon`) from the specifier.
     let (specifier_base, fragment) = dep
@@ -94,44 +70,108 @@ pub fn replace_url_references(
       .map(|(base, frag)| (base, Some(frag)))
       .unwrap_or((dep.specifier.as_str(), None));
 
-    let replacement = match resolved {
+    let replacement = match *resolved {
       None => append_fragment(escape_css_string(specifier_base), fragment),
       Some(asset) => {
-        let is_inline = matches!(
-          asset.bundle_behavior,
-          Some(BundleBehavior::Inline) | Some(BundleBehavior::InlineIsolated)
-        );
-        if is_inline {
-          // Data URIs do not need CSS string escaping and cannot have fragments.
-          let db_key = asset.content_key.as_deref().unwrap_or(asset.id.as_str());
-          let bytes = db.get(db_key)?.unwrap_or_default();
-          let mime = mime_for_file_type(&asset.file_type);
-          // Mirror @atlaspack/optimizer-data-url: text (valid UTF-8) → percent-encode,
-          // binary → base64. SVG and other text formats are percent-encoded; PNG/WebP/etc
-          // are base64-encoded.
-          match std::str::from_utf8(&bytes) {
-            Ok(text) => {
-              let encoded = utf8_percent_encode(text, FIXED_ENCODE_URI_COMPONENT);
-              format!("data:{mime},{encoded}")
-            }
-            Err(_) => {
-              let encoded = BASE64_STANDARD.encode(&bytes);
-              format!("data:{mime};base64,{encoded}")
-            }
-          }
+        if is_inline_behavior(asset.bundle_behavior) {
+          to_data_uri(asset, db)?
         } else {
-          let resolved_path =
-            find_relative_path(asset.id.as_str(), bundle, bundle_graph, output_dir)
-              .unwrap_or_else(|| specifier_base.to_string());
-          append_fragment(escape_css_string(&resolved_path), fragment)
+          let resolved_path = assets_to_bundle
+            .get(asset.id.as_str())
+            .and_then(|target_bundle| {
+              find_relative_path_for_bundle(target_bundle, bundle, output_dir)
+            })
+            .or_else(|| {
+              // Fallback for assets already in the current bundle
+              bundle_assets
+                .iter()
+                .find(|a| a.id == asset.id)
+                .map(|_| specifier_base.to_string())
+            });
+
+          match resolved_path {
+            Some(path) => append_fragment(escape_css_string(&path), fragment),
+            None => append_fragment(escape_css_string(specifier_base), fragment),
+          }
         }
       }
     };
 
-    result = result.replace(token.as_str(), &replacement);
+    replacement_map.insert(token, replacement);
   }
 
+  if replacement_map.is_empty() {
+    return Ok(css.to_string());
+  }
+
+  let mut result = css.to_string();
+  for (token, replacement) in &replacement_map {
+    result = result.replace(token, replacement);
+  }
   Ok(result)
+}
+
+/// Pre-calculates asset-to-non-inline-bundle mapping for required assets.
+fn find_assets_to_bundle<'a>(
+  bundle_graph: &'a dyn BundleGraph,
+  target_asset_ids: HashSet<&'a str>,
+) -> HashMap<&'a str, &'a Bundle> {
+  let mut assets_to_bundle = HashMap::new();
+
+  if !target_asset_ids.is_empty() {
+    for bundle in bundle_graph.get_bundles() {
+      if is_inline_behavior(bundle.bundle_behavior) {
+        continue;
+      }
+
+      if let Ok(assets) = bundle_graph.get_bundle_assets(bundle) {
+        for asset in assets {
+          if target_asset_ids.contains(asset.id.as_str()) {
+            assets_to_bundle.insert(asset.id.as_str(), bundle);
+          }
+        }
+      }
+    }
+  }
+
+  assets_to_bundle
+}
+
+fn is_inline_behavior(behavior: Option<BundleBehavior>) -> bool {
+  matches!(
+    behavior,
+    Some(BundleBehavior::Inline) | Some(BundleBehavior::InlineIsolated)
+  )
+}
+
+/// Appends a URL fragment to a base URL string when one is present.
+fn append_fragment(base: String, fragment: Option<&str>) -> String {
+  match fragment {
+    Some(f) => format!("{base}#{f}"),
+    None => base,
+  }
+}
+
+/// Converts an asset's content to a data URI, either percent-encoded (for text/SVG)
+/// or base64-encoded (for binary).
+fn to_data_uri(asset: &Asset, db: &DatabaseRef) -> anyhow::Result<String> {
+  let db_key = asset.content_key.as_deref().unwrap_or(asset.id.as_str());
+  let bytes = db.get(db_key)?.unwrap_or_default();
+  let mime = mime_for_file_type(&asset.file_type);
+
+  // Mirror @atlaspack/optimizer-data-url: text (valid UTF-8) → percent-encode,
+  // binary → base64. SVG and other text formats are percent-encoded; PNG/WebP/etc
+  // are base64-encoded.
+  match std::str::from_utf8(&bytes) {
+    Ok(text) => {
+      let encoded = utf8_percent_encode(text, FIXED_ENCODE_URI_COMPONENT);
+      Ok(format!("data:{mime},{encoded}"))
+    }
+    Err(_) => {
+      let encoded = BASE64_STANDARD.encode(&bytes);
+      Ok(format!("data:{mime};base64,{encoded}"))
+    }
+  }
 }
 
 /// Escapes `"` and `\` in a CSS string value to prevent breaking string syntax.
@@ -162,18 +202,12 @@ fn mime_for_file_type(file_type: &FileType) -> &'static str {
   }
 }
 
-/// Resolves a forward-slash relative path from the CSS bundle to the bundle owning `asset_id`.
-fn find_relative_path(
-  asset_id: &str,
+/// Resolves a forward-slash relative path from `css_bundle` to `target_bundle`.
+fn find_relative_path_for_bundle(
+  target_bundle: &Bundle,
   css_bundle: &Bundle,
-  bundle_graph: &dyn BundleGraph,
   output_dir: &Path,
 ) -> Option<String> {
-  let target_bundle = bundle_graph.get_bundles().into_iter().find(|bundle| {
-    bundle.id != css_bundle.id
-      && is_non_inline_bundle_containing_asset(bundle, asset_id, bundle_graph)
-  })?;
-
   let to_name = target_bundle.name.as_deref().filter(|n| !n.is_empty())?;
 
   let from_name = css_bundle.name.as_deref().unwrap_or("");
@@ -194,8 +228,13 @@ pub(crate) fn path_to_url_string(path: &Path) -> String {
       Component::CurDir => Some("."),
       _ => None,
     })
-    .collect::<Vec<_>>()
-    .join("/")
+    .fold(String::new(), |mut acc, part| {
+      if !acc.is_empty() {
+        acc.push('/');
+      }
+      acc.push_str(part);
+      acc
+    })
 }
 
 #[cfg(test)]
@@ -213,10 +252,7 @@ mod tests {
   };
   use pretty_assertions::assert_eq;
 
-  use super::{
-    append_fragment, is_non_inline_bundle_containing_asset, mime_for_file_type, path_to_url_string,
-    replace_url_references,
-  };
+  use super::{append_fragment, mime_for_file_type, path_to_url_string, replace_url_references};
 
   struct MockBundleGraph {
     bundles: Vec<Bundle>,
@@ -733,39 +769,57 @@ mod tests {
   }
 
   #[test]
-  fn is_non_inline_bundle_containing_asset_false_for_inline_bundles() {
-    // Both Inline and InlineIsolated behaviors must return false regardless of asset membership.
-    let graph = MockBundleGraph::new();
-    for behavior in [BundleBehavior::Inline, BundleBehavior::InlineIsolated] {
-      let mut bundle = make_css_bundle("css");
-      bundle.bundle_behavior = Some(behavior);
-      assert!(
-        !is_non_inline_bundle_containing_asset(&bundle, "any-asset", &graph),
-        "expected false for {behavior:?}"
-      );
-    }
-  }
+  fn inline_bundle_assets_are_not_candidates_for_path_resolution() {
+    // Assets whose containing bundle has Inline or InlineIsolated behavior must not be
+    // resolved to a relative path — they should be inlined as a data URI instead.
+    // This exercises the is_inline_behavior guard inside find_assets_to_bundle.
+    let placeholder = "ddd4444444444444";
+    let db = make_db();
+    let output_dir = PathBuf::from("/dist");
 
-  #[test]
-  fn is_non_inline_bundle_containing_asset_reflects_asset_membership() {
-    let bundle = make_css_bundle("css");
+    // The image asset itself is *not* inline, but its bundle is.
+    // replace_url_references should not find it via path resolution and fall back
+    // to the specifier.
+    let image_asset = make_image_asset("asset_img_inline_bundle", FileType::Png, None);
+    let mut inline_bundle = make_image_bundle(
+      "bundle_img_inline",
+      "asset_img_inline_bundle",
+      "images/hero.png",
+      "/dist",
+    );
+    inline_bundle.bundle_behavior = Some(BundleBehavior::Inline);
 
-    // Returns true when the bundle contains the asset.
-    let asset = make_css_asset("my-asset");
+    let css_bundle = make_css_bundle("bundle_css");
+    let css_asset = make_css_asset("asset_css_1");
+    let dep = make_url_dep("./images/hero.png", Some(placeholder));
+
     let mut graph = MockBundleGraph::new();
+    graph.bundles.push(css_bundle.clone());
+    graph.bundles.push(inline_bundle);
     graph
       .assets_by_bundle
-      .insert("css".to_string(), vec![asset]);
-    assert!(
-      is_non_inline_bundle_containing_asset(&bundle, "my-asset", &graph),
-      "expected true when bundle contains asset"
-    );
+      .insert("bundle_css".to_string(), vec![css_asset]);
+    graph
+      .assets_by_bundle
+      .insert("bundle_img_inline".to_string(), vec![image_asset.clone()]);
+    graph
+      .deps_by_asset
+      .insert("asset_css_1".to_string(), vec![dep]);
+    graph.resolved.insert(placeholder.to_string(), image_asset);
 
-    // Returns false when the asset is absent.
-    let empty_graph = MockBundleGraph::new();
+    let input = format!(".hero {{ background: url({placeholder}); }}");
+    let result = replace_url_references(&input, &css_bundle, &graph, &db, &output_dir)
+      .expect("replace_url_references must succeed");
+
+    // The inline bundle is excluded from path resolution so no relative path is computed
+    // via bundle lookup; the output falls back to the original specifier string.
     assert!(
-      !is_non_inline_bundle_containing_asset(&bundle, "absent-asset", &empty_graph),
-      "expected false when bundle does not contain asset"
+      !result.contains(placeholder),
+      "Placeholder must be replaced; got: {result:?}"
+    );
+    assert!(
+      result.contains("./images/hero.png"),
+      "Should fall back to the original specifier when the owning bundle is inline; got: {result:?}"
     );
   }
 

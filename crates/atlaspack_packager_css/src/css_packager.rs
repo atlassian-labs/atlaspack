@@ -2,11 +2,13 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use std::fmt::Write as _;
+
 use anyhow::Result;
 use atlaspack_core::bundle_graph::bundle_graph::BundleGraph;
 use atlaspack_core::package_result::{BundleInfo, PackageResult};
 use atlaspack_core::types::engines::EnginesBrowsers;
-use atlaspack_core::types::{Asset, Bundle, BundleBehavior, Diagnostic, Priority};
+use atlaspack_core::types::{Asset, Bundle, BundleBehavior, Diagnostic, ErrorKind, Priority};
 use lightningcss::bundler::{Bundler, ResolveResult, SourceProvider};
 use lightningcss::printer::PrinterOptions;
 use lightningcss::properties::custom::{Token, TokenOrValue};
@@ -17,7 +19,6 @@ use lightningcss::targets::Browsers;
 use lightningcss::traits::ToCss;
 use parcel_sourcemap_ext::SourceMap as ParcelSourceMap;
 
-use crate::url_replacer::replace_url_references;
 use crate::{CssPackager, CssPackagingContext, url_replacer};
 
 /// In-memory [`SourceProvider`] for lightningcss. Stores CSS by path key so
@@ -132,8 +133,8 @@ fn remove_unused_from_rule_list<'i>(
 /// avoiding a redundant parse/print cycle.
 fn optimise_css_ast<'i>(
   rules: &mut CssRuleList<'i>,
-  assets: &Vec<&Asset>,
-  bundle_graph: &Arc<impl BundleGraph>,
+  assets: &[&Asset],
+  bundle_graph: &dyn BundleGraph,
   warnings: &mut Vec<Diagnostic>,
 ) {
   for asset in assets {
@@ -144,25 +145,24 @@ fn optimise_css_ast<'i>(
       // Wildcard import: retain all classes.
       continue;
     }
-    if used_symbols.contains("default") && asset_has_default_import(asset, bundle_graph.as_ref()) {
-      warnings.push(
-        atlaspack_core::types::DiagnosticBuilder::default()
-          .message(format!(
-            "CSS modules cannot be tree shaken when imported with a default specifier ({})",
-            asset.file_path.display()
-          ))
-          .hints(vec![
-            "Instead use: import * as styles from \"...\";".to_string(),
-          ])
-          .origin(Some("atlaspack_packager_css".to_string()))
-          .build()
-          .unwrap(),
-      );
+    if used_symbols.contains("default") && asset_has_default_import(asset, bundle_graph) {
+      warnings.push(Diagnostic {
+        message: format!(
+          "CSS modules cannot be tree shaken when imported with a default specifier ({})",
+          asset.file_path.display()
+        ),
+        hints: vec!["Instead use: import * as styles from \"...\";".to_string()],
+        origin: Some("atlaspack_packager_css".to_string()),
+        kind: ErrorKind::default(),
+        code_frames: vec![],
+        documentation_url: None,
+        name: None,
+      });
       continue;
     }
 
     let Some(mut selectors) = build_module_selector_sets(asset, &used_symbols) else {
-      return;
+      continue;
     };
 
     // Expand used_selectors to include classes composed-from by already-used classes.
@@ -310,8 +310,7 @@ fn build_package_result(
 fn asset_has_default_import(asset: &Asset, bundle_graph: &dyn BundleGraph) -> bool {
   bundle_graph
     .get_incoming_dependencies(asset)
-    .ok()
-    .map(|deps| {
+    .is_ok_and(|deps| {
       deps.iter().any(|dep| {
         dep
           .symbols
@@ -321,7 +320,6 @@ fn asset_has_default_import(asset: &Asset, bundle_graph: &dyn BundleGraph) -> bo
           .any(|s| s.exported == "default")
       })
     })
-    .unwrap_or(false)
 }
 
 impl<B: BundleGraph + Send + Sync> CssPackager<B> {
@@ -364,17 +362,19 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
 
     let project_root_str = self.context.project_root.to_string_lossy().into_owned();
     let mut hoisted_imports: Vec<String> = Vec::new();
+    let mut seen_hoisted_imports: HashSet<String> = HashSet::new();
     let mut entry_contents = String::new();
     let mut css_code_map: HashMap<String, String> = HashMap::new();
 
     for asset in &assets {
-      entry_contents.push_str(&format!("@import \"{}\";\n", asset.id));
+      writeln!(entry_contents, "@import \"{}\";", asset.id).unwrap();
 
       let external_imports = collect_external_imports(
         asset,
         bundle,
         self.bundle_graph.as_ref(),
         &mut hoisted_imports,
+        &mut seen_hoisted_imports,
       )?;
 
       let db_key = asset.content_key.as_deref().unwrap_or(&asset.id);
@@ -409,11 +409,11 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
     let entry_path = format!("__atlaspack_entry_{bundle_id}.css");
     css_code_map.insert(entry_path.clone(), entry_contents);
 
-    let mut source_map: Option<ParcelSourceMap> = if bundle.env.source_map.is_some() {
-      Some(ParcelSourceMap::new(&project_root_str))
-    } else {
-      None
-    };
+    let mut source_map: Option<ParcelSourceMap> = bundle
+      .env
+      .source_map
+      .is_some()
+      .then(|| ParcelSourceMap::new(&project_root_str));
 
     let provider = InMemoryCssProvider::new(css_code_map);
     let mut bundler = Bundler::new(&provider, source_map.as_mut(), ParserOptions::default());
@@ -427,7 +427,7 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
       optimise_css_ast(
         &mut stylesheet.rules,
         &assets,
-        &self.bundle_graph,
+        self.bundle_graph.as_ref(),
         &mut warnings,
       );
     }
@@ -459,7 +459,7 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
         targets,
         ..Default::default()
       })
-      .unwrap();
+      .map_err(|e| anyhow::anyhow!("lightningcss minification failed: {:?}", e))?;
 
     let result = stylesheet
       .to_css(printer_options)
@@ -468,7 +468,7 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
 
     let css = hoist_imports(&css, &hoisted_imports, bundle, source_map.as_mut())?;
 
-    let mut css = replace_url_references(
+    let mut css = url_replacer::replace_url_references(
       &css,
       bundle,
       self.bundle_graph.as_ref(),
@@ -483,10 +483,11 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
 
 /// Collects `@import` specifiers from the given asset's dependencies that point to external URIs (eg. Google Fonts).
 fn collect_external_imports(
-  asset: &&Asset,
+  asset: &Asset,
   bundle: &Bundle,
   bundle_graph: &dyn BundleGraph,
   hoisted_imports: &mut Vec<String>,
+  seen_hoisted_imports: &mut HashSet<String>,
 ) -> Result<Vec<String>> {
   let mut results = Vec::new();
   for dep in bundle_graph.get_dependencies(asset)? {
@@ -501,7 +502,7 @@ fn collect_external_imports(
     }
 
     let import_stmt = format!("@import \"{}\";", dep.specifier);
-    if !hoisted_imports.contains(&import_stmt) {
+    if seen_hoisted_imports.insert(import_stmt.clone()) {
       hoisted_imports.push(import_stmt);
     }
     results.push(dep.specifier.clone())
@@ -512,13 +513,13 @@ fn collect_external_imports(
 
 /// Hoists the given `@import` statements to the top of the CSS, above all inlined imports.
 fn hoist_imports(
-  css: &String,
+  css: &str,
   hoisted_imports: &[String],
   bundle: &Bundle,
   mut source_map: Option<&mut ParcelSourceMap>,
 ) -> Result<String> {
   if hoisted_imports.is_empty() {
-    return Ok(css.clone());
+    return Ok(css.to_string());
   }
 
   let hoisted_count = hoisted_imports.len() as i64;
@@ -545,11 +546,10 @@ fn generate_map_bytes(
   };
 
   let bundle_name = bundle.name.as_deref().unwrap_or("output.css");
-  let separator = if css.ends_with('\n') { "" } else { "\n" };
-
-  css.push_str(&format!(
-    "{separator}/*# sourceMappingURL={bundle_name}.map */\n"
-  ));
+  if !css.ends_with('\n') {
+    writeln!(&mut *css)?;
+  }
+  writeln!(&mut *css, "/*# sourceMappingURL={bundle_name}.map */")?;
 
   let map_json = source_map
     .to_json(None)
