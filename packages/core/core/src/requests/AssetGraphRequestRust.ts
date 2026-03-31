@@ -82,31 +82,6 @@ export function createAssetGraphRequestRust(
       );
 
       let changedAssetsPropagation = new Set(changedAssets.keys());
-      // Skip symbol propagation for runtime assets - they have pre-computed symbol data
-      if (input.skipSymbolProp) {
-        logger.verbose({
-          origin: '@atlaspack/core',
-          message: 'Skipping symbol propagation for runtime asset graph',
-        });
-      } else {
-        let errors = propagateSymbols({
-          options,
-          assetGraph,
-          changedAssetsPropagation,
-          assetGroupsWithRemovedParents: new Set(),
-          previousErrors: new Map(), //this.previousSymbolPropagationErrors,
-        });
-
-        if (errors.size > 0) {
-          // Just throw the first error. Since errors can bubble (e.g. reexporting a reexported symbol also fails),
-          // determining which failing export is the root cause is nontrivial (because of circular dependencies).
-          throw new ThrowableDiagnostic({
-            diagnostic: [...errors.values()][0],
-          });
-        }
-      }
-
-      await dumpGraphToGraphViz(assetGraph, 'AssetGraphV3');
 
       let result = {
         assetGraph,
@@ -117,19 +92,61 @@ export function createAssetGraphRequestRust(
         previousSymbolPropagationErrors: undefined,
       };
 
-      let [_commitResult, commitError] = await commitPromise;
+      // When v3AssetGraphSyncImprovements is enabled, wrap downstream steps
+      // in try/catch and store the result even on error. This prevents Rust/JS
+      // divergence when symbol propagation or commit_assets fails.
+      let storeResultOnError = getFeatureFlag('v3AssetGraphSyncImprovements');
 
-      if (commitError) {
-        throw new ThrowableDiagnostic({
-          diagnostic: {
-            message:
-              'Error committing asset graph in Rust: ' + commitError.message,
-          },
-        });
+      try {
+        // Skip symbol propagation for runtime assets - they have pre-computed symbol data
+        if (input.skipSymbolProp) {
+          logger.verbose({
+            origin: '@atlaspack/core',
+            message: 'Skipping symbol propagation for runtime asset graph',
+          });
+        } else {
+          let errors = propagateSymbols({
+            options,
+            assetGraph,
+            changedAssetsPropagation,
+            assetGroupsWithRemovedParents: new Set(),
+            previousErrors: new Map(), //this.previousSymbolPropagationErrors,
+          });
+
+          if (errors.size > 0) {
+            // Just throw the first error. Since errors can bubble (e.g. reexporting a reexported symbol also fails),
+            // determining which failing export is the root cause is nontrivial (because of circular dependencies).
+            throw new ThrowableDiagnostic({
+              diagnostic: [...errors.values()][0],
+            });
+          }
+        }
+
+        await dumpGraphToGraphViz(assetGraph, 'AssetGraphV3');
+
+        let [_commitResult, commitError] = await commitPromise;
+
+        if (commitError) {
+          throw new ThrowableDiagnostic({
+            diagnostic: {
+              message:
+                'Error committing asset graph in Rust: ' + commitError.message,
+            },
+          });
+        }
+
+        await runInput.api.storeResult(result);
+        runInput.api.invalidateOnBuild();
+      } catch (e) {
+        if (storeResultOnError) {
+          // Store the graph even on error to prevent Rust/JS divergence.
+          // The graph from getAssetGraph is structurally correct — only
+          // downstream processing (symbols, commit) failed.
+          await runInput.api.storeResult(result);
+          runInput.api.invalidateOnBuild();
+        }
+        throw e;
       }
-
-      await runInput.api.storeResult(result);
-      runInput.api.invalidateOnBuild();
 
       return result;
     },
@@ -148,28 +165,52 @@ export function getAssetGraph(
 
   let reuseEdges = false;
 
+  let clonePrevGraph = getFeatureFlag('v3AssetGraphSyncImprovements');
+
   if (prevAssetGraph && serializedGraph.safeToSkipBundling) {
-    graph = new AssetGraph({
-      _contentKeyToNodeId: prevAssetGraph._contentKeyToNodeId,
-      _nodeIdToContentKey: prevAssetGraph._nodeIdToContentKey,
-      nodes: prevAssetGraph.nodes,
-      rootNodeId: prevAssetGraph.rootNodeId,
-      adjacencyList: prevAssetGraph.adjacencyList,
-    });
+    if (clonePrevGraph) {
+      graph = new AssetGraph({
+        _contentKeyToNodeId: new Map(prevAssetGraph._contentKeyToNodeId),
+        _nodeIdToContentKey: new Map(prevAssetGraph._nodeIdToContentKey),
+        nodes: [...prevAssetGraph.nodes],
+        rootNodeId: prevAssetGraph.rootNodeId,
+        adjacencyList: prevAssetGraph.adjacencyList,
+      });
+    } else {
+      graph = new AssetGraph({
+        _contentKeyToNodeId: prevAssetGraph._contentKeyToNodeId,
+        _nodeIdToContentKey: prevAssetGraph._nodeIdToContentKey,
+        nodes: prevAssetGraph.nodes,
+        rootNodeId: prevAssetGraph.rootNodeId,
+        adjacencyList: prevAssetGraph.adjacencyList,
+      });
+    }
     reuseEdges = true;
   } else if (
     prevAssetGraph &&
     (serializedGraph.updates.length > 0 || serializedGraph.nodes.length > 0)
   ) {
-    graph = new AssetGraph({
-      _contentKeyToNodeId: prevAssetGraph._contentKeyToNodeId,
-      _nodeIdToContentKey: prevAssetGraph._nodeIdToContentKey,
-      nodes: prevAssetGraph.nodes,
-      initialCapacity: serializedGraph.edges.length,
-      // Accomodate the root node
-      initialNodeCapacity: prevAssetGraph.nodes.length + 1,
-      rootNodeId: prevAssetGraph.rootNodeId,
-    });
+    if (clonePrevGraph) {
+      graph = new AssetGraph({
+        _contentKeyToNodeId: new Map(prevAssetGraph._contentKeyToNodeId),
+        _nodeIdToContentKey: new Map(prevAssetGraph._nodeIdToContentKey),
+        nodes: [...prevAssetGraph.nodes],
+        initialCapacity: serializedGraph.edges.length,
+        // Accomodate the root node
+        initialNodeCapacity: prevAssetGraph.nodes.length + 1,
+        rootNodeId: prevAssetGraph.rootNodeId,
+      });
+    } else {
+      graph = new AssetGraph({
+        _contentKeyToNodeId: prevAssetGraph._contentKeyToNodeId,
+        _nodeIdToContentKey: prevAssetGraph._nodeIdToContentKey,
+        nodes: prevAssetGraph.nodes,
+        initialCapacity: serializedGraph.edges.length,
+        // Accomodate the root node
+        initialNodeCapacity: prevAssetGraph.nodes.length + 1,
+        rootNodeId: prevAssetGraph.rootNodeId,
+      });
+    }
     graph.safeToIncrementallyBundle = false;
   } else {
     graph = new AssetGraph({
@@ -263,45 +304,120 @@ export function getAssetGraph(
     return base;
   }
 
+  function buildDivergenceDiagnostics(
+    divergenceType: string,
+    newNode: AssetGraphNode,
+    existingNode: AssetGraphNode | null | undefined,
+    index: number,
+  ) {
+    return {
+      contentKey: newNode.id,
+      divergenceType,
+      newNode: describeNode(newNode),
+      existingNode: existingNode ? describeNode(existingNode) : null,
+      iterationIndex: index,
+      totalSerializedNodes: nodesCount,
+      newNodesCount: serializedGraph.nodes.length,
+      updatesCount: serializedGraph.updates.length,
+      edgesCount: serializedGraph.edges.length,
+      hadPreviousGraph: !!prevAssetGraph,
+      safeToSkipBundling: serializedGraph.safeToSkipBundling,
+      graphNodeCount: graph._contentKeyToNodeId.size,
+    };
+  }
+
   function updateNode(
     newNode: AssetGraphNode,
     isUpdateNode: boolean,
     index: number,
   ) {
+    let healDivergence = getFeatureFlag('v3AssetGraphSyncImprovements');
+
     if (isUpdateNode) {
       let existingNode = graph.getNodeByContentKey(newNode.id);
 
-      assert(existingNode && existingNode.type === newNode.type);
-
-      Object.assign(existingNode, newNode);
-    } else {
-      try {
-        graph.addNodeByContentKey(newNode.id, newNode);
-      } catch (e) {
-        if (
-          e instanceof Error &&
-          e.message.includes('already has content key')
-        ) {
-          let existingNode = graph.getNodeByContentKey(newNode.id);
-          let diagnostics = {
-            contentKey: newNode.id,
-            newNode: describeNode(newNode),
-            existingNode: existingNode ? describeNode(existingNode) : null,
-            iterationIndex: index,
-            totalSerializedNodes: nodesCount,
-            newNodesCount: serializedGraph.nodes.length,
-            updatesCount: serializedGraph.updates.length,
-            edgesCount: serializedGraph.edges.length,
-            hadPreviousGraph: !!prevAssetGraph,
-            safeToSkipBundling: serializedGraph.safeToSkipBundling,
-            graphNodeCount: graph._contentKeyToNodeId.size,
-          };
-
-          throw new Error(
-            `Graph already has content key '${newNode.id}'. Diagnostics: ${JSON.stringify(diagnostics, null, 2)}`,
+      if (healDivergence) {
+        if (existingNode) {
+          assert(existingNode.type === newNode.type);
+          Object.assign(existingNode, newNode);
+        } else {
+          // Rust sent an update for a node JS doesn't have.
+          // This means JS's graph is stale. Add the node as new instead.
+          // This handles the "undefined == true" error class.
+          let diagnostics = buildDivergenceDiagnostics(
+            'update_node_not_found',
+            newNode,
+            existingNode,
+            index,
           );
+          logger.warn({
+            origin: '@atlaspack/core',
+            message:
+              `Rust/JS asset graph divergence healed: update node not found, ` +
+              `adding as new. contentKey=${newNode.id} type=${newNode.type} iterationIndex=${index}`,
+            meta: {
+              trackableEvent: 'asset_graph_divergence_healed',
+              ...diagnostics,
+            },
+          });
+          graph.addNodeByContentKey(newNode.id, newNode);
         }
-        throw e;
+      } else {
+        assert(existingNode && existingNode.type === newNode.type);
+        Object.assign(existingNode, newNode);
+      }
+    } else {
+      if (healDivergence) {
+        if (graph.hasContentKey(newNode.id)) {
+          // Rust sent a "new" node that JS already has.
+          // This means JS's graph has nodes that Rust considers new.
+          // Treat as an update instead of throwing.
+          // This handles the "Graph already has content key" error class.
+          let existingNode = graph.getNodeByContentKey(newNode.id);
+          let diagnostics = buildDivergenceDiagnostics(
+            'new_node_already_exists',
+            newNode,
+            existingNode,
+            index,
+          );
+          logger.warn({
+            origin: '@atlaspack/core',
+            message:
+              `Rust/JS asset graph divergence healed: new node already exists, ` +
+              `treating as update. contentKey=${newNode.id} type=${newNode.type} iterationIndex=${index}`,
+            meta: {
+              trackableEvent: 'asset_graph_divergence_healed',
+              ...diagnostics,
+            },
+          });
+          if (existingNode) {
+            Object.assign(existingNode, newNode);
+          }
+        } else {
+          graph.addNodeByContentKey(newNode.id, newNode);
+        }
+      } else {
+        try {
+          graph.addNodeByContentKey(newNode.id, newNode);
+        } catch (e) {
+          if (
+            e instanceof Error &&
+            e.message.includes('already has content key')
+          ) {
+            let existingNode = graph.getNodeByContentKey(newNode.id);
+            let diagnostics = buildDivergenceDiagnostics(
+              'new_node_already_exists',
+              newNode,
+              existingNode,
+              index,
+            );
+
+            throw new Error(
+              `Graph already has content key '${newNode.id}'. Diagnostics: ${JSON.stringify(diagnostics, null, 2)}`,
+            );
+          }
+          throw e;
+        }
       }
     }
   }

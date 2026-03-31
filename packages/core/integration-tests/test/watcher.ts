@@ -700,5 +700,110 @@ describe('watcher', function () {
           `to permanently return true, triggering rebuilds.`,
       );
     });
+
+    // Regression test for Rust/JS asset graph divergence (AFB-1776).
+    //
+    // When a symbol propagation error occurs after Rust successfully builds and
+    // caches the asset graph, JS never calls storeResult(). Rust has graph B
+    // (with new nodes), JS retains stale graph A. On the next rebuild, Rust
+    // sends updates referencing nodes that only exist in B. JS tries to look
+    // them up in A and fails with an error.
+    it('should not diverge Rust and JS graphs after a symbol propagation error', async function () {
+      this.timeout(30000);
+
+      let outDir = path.join(dir, 'dist');
+      let fixtureDir = path.join(dir, 'graph-divergence-test');
+
+      await fsFixture(inputFS, dir)`
+          graph-divergence-test
+            package.json:
+              {
+                "name": "graph-divergence-test"
+              }
+
+            index.js:
+              import { foo } from './lib.js';
+              console.log(foo);
+
+            lib.js:
+              export const foo = 1;
+
+            helper.js:
+              export const bar = 2;
+        `;
+
+      let b = bundler(path.join(fixtureDir, 'index.js'), {
+        inputFS: inputFS,
+        outputFS: inputFS,
+        defaultTargetOptions: {
+          shouldScopeHoist: true,
+        },
+        targets: {
+          main: {
+            distDir: outDir,
+          },
+        },
+      });
+
+      subscription = await b.watch();
+
+      // Build 1: initial build should succeed
+      let buildEvent = await getNextBuild(b);
+      assert.equal(
+        buildEvent.type,
+        'buildSuccess',
+        buildEvent.type === 'buildFailure'
+          ? `Initial build failed: ${(buildEvent as any).diagnostics?.map((d: any) => d.message).join('; ')}`
+          : 'Initial build should succeed',
+      );
+
+      // Build 2: add a new import (structural change) and request a
+      // non-existent symbol from lib.js.
+      // The structural change adds helper.js nodes to Rust's graph.
+      // The bad symbol triggers a propagateSymbols error AFTER Rust stores its
+      // result but BEFORE JS calls storeResult(). This would cause a Rust/JS divergence.
+      await inputFS.writeFile(
+        path.join(fixtureDir, 'index.js'),
+        `import { DOES_NOT_EXIST } from './lib.js';\nimport { bar } from './helper.js';\nconsole.log(DOES_NOT_EXIST, bar);\n`,
+      );
+
+      buildEvent = await getNextBuild(b);
+      assert.equal(
+        buildEvent.type,
+        'buildFailure',
+        'Build 2 should fail with a symbol propagation error',
+      );
+      let diagnosticMessages = (buildEvent as any).diagnostics
+        ?.map((d: any) => d.message)
+        .join('; ');
+
+      assert(
+        diagnosticMessages?.includes('does not export'),
+        `Build 2 should fail with "does not export" but got: ${diagnosticMessages}`,
+      );
+
+      // Build 3: fix the symbol error but keep the helper.js import.
+      // Rust rebuilds from its graph B (which has helper.js nodes). It sends
+      // helper.js-related nodes as updates.
+      // JS applies these updates to its stale graph A which doesn't have
+      // helper.js nodes, causing an assertion error if v3AssetGraphSyncImprovements is disabled.
+      await inputFS.writeFile(
+        path.join(fixtureDir, 'index.js'),
+        `import { foo, DOES_NOT_EXIST } from './lib.js';\nimport { bar } from './helper.js';\nconsole.log(foo, DOES_NOT_EXIST, bar);\n`,
+      );
+      await inputFS.writeFile(
+        path.join(fixtureDir, 'lib.js'),
+        `export const foo = 1;\nexport const DOES_NOT_EXIST = 2;\n`,
+      );
+
+      buildEvent = await getNextBuild(b);
+
+      // With v3AssetGraphSyncImprovements enabled:
+      // - Stores the graph result even when propagateSymbols fails,
+      //   so JS stays in sync with Rust.
+      // - Clones the prev graph so shared mutation doesn't mask issues
+      // - Build 3 should succeed because the graph was stored on Build 2's error.
+      assert(buildEvent.type === 'buildSuccess', 'Build 3 should succeed');
+    });
   });
 });
