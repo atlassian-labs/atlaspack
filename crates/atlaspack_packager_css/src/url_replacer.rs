@@ -118,19 +118,25 @@ fn find_assets_to_bundle<'a>(
 ) -> HashMap<&'a str, &'a Bundle> {
   let mut assets_to_bundle = HashMap::new();
 
-  if !target_asset_ids.is_empty() {
-    for bundle in bundle_graph.get_bundles() {
-      if is_inline_behavior(bundle.bundle_behavior) {
+  if target_asset_ids.is_empty() {
+    return assets_to_bundle;
+  }
+
+  for bundle in bundle_graph.get_bundles() {
+    if is_inline_behavior(bundle.bundle_behavior) {
+      continue;
+    }
+
+    let Ok(assets) = bundle_graph.get_bundle_assets(bundle) else {
+      continue;
+    };
+
+    for asset in assets {
+      if !target_asset_ids.contains(asset.id.as_str()) {
         continue;
       }
 
-      if let Ok(assets) = bundle_graph.get_bundle_assets(bundle) {
-        for asset in assets {
-          if target_asset_ids.contains(asset.id.as_str()) {
-            assets_to_bundle.insert(asset.id.as_str(), bundle);
-          }
-        }
-      }
+      assets_to_bundle.insert(asset.id.as_str(), bundle);
     }
   }
 
