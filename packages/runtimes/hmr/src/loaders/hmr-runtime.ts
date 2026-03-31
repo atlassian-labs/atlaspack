@@ -1,5 +1,4 @@
-/* global HMR_HOST, HMR_PORT, HMR_ENV_HASH, HMR_SECURE, HMR_USE_SSE, chrome, browser, __parcel__import__, __parcel__importScripts__, ServiceWorkerGlobalScope */
-/* global HMR_ENABLE_BUNDLE_VERSION */
+/* global HMR_HOST, HMR_PORT, HMR_ENV_HASH, HMR_SECURE, HMR_USE_SSE, chrome, browser, __parcel__import__, __parcel__importScripts__, ServiceWorkerGlobalScope, HMR_ENABLE_BUNDLE_VERSION */
 
 /*::
 import type {
@@ -105,6 +104,7 @@ function getBundleVersion() {
 }
 
 function bumpBundleVersion() {
+  // @ts-expect-error TS2304
   if (!HMR_ENABLE_BUNDLE_VERSION) {
     return;
   }
@@ -118,6 +118,7 @@ function bumpBundleVersion() {
 }
 
 function appendBundleVersion(url: string) {
+  // @ts-expect-error TS2304
   if (!HMR_ENABLE_BUNDLE_VERSION) {
     return url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
   }
