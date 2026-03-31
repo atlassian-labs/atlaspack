@@ -153,6 +153,16 @@ export const DEFAULT_FEATURE_FLAGS = {
   hmrImprovements: false,
 
   /**
+   * When enabled, HMR uses a single incrementing bundle version token for all
+   * refreshed asset URLs in a given update cycle, instead of generating a fresh
+   * timestamp per asset fetch.
+   *
+   * @author Alex Zherdev <azherdev@atlassian.com>
+   * @since 2026-03-30
+   */
+  hmrBundleVersioning: false,
+
+  /**
    * Enables the new packaging progress CLI experience
    *
    * @author Matt Jones <mjones4@atlassian.com>

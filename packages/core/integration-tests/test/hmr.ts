@@ -85,7 +85,7 @@ describe('hmr', function () {
       },
       inputFS: overlayFS,
       config,
-      featureFlags: {hmrImprovements: true},
+      featureFlags: {hmrImprovements: true, hmrBundleVersioning: true},
     });
 
     subscription = await b.watch();
@@ -989,6 +989,7 @@ module.hot.dispose((data) => {
           hmrOptions: {port},
           shouldContentHash: false,
           config,
+          featureFlags: {hmrBundleVersioning: true},
         });
 
         subscription = await b.watch();
@@ -1054,6 +1055,7 @@ module.hot.dispose((data) => {
         hmrOptions: {port},
         shouldContentHash: false,
         config,
+        featureFlags: {hmrBundleVersioning: true},
       });
 
       subscription = await b.watch();

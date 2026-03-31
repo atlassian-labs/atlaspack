@@ -1,4 +1,5 @@
 /* global HMR_HOST, HMR_PORT, HMR_ENV_HASH, HMR_SECURE, HMR_USE_SSE, chrome, browser, __parcel__import__, __parcel__importScripts__, ServiceWorkerGlobalScope */
+/* global HMR_ENABLE_BUNDLE_VERSION */
 
 /*::
 import type {
@@ -40,6 +41,7 @@ declare var HMR_PORT: string;
 declare var HMR_ENV_HASH: string;
 declare var HMR_SECURE: boolean;
 declare var HMR_USE_SSE: boolean;
+declare var HMR_ENABLE_BUNDLE_VERSION: boolean;
 declare var chrome: ExtensionContext;
 declare var browser: ExtensionContext;
 declare var __parcel__import__: (string) => Promise<void>;
@@ -103,6 +105,10 @@ function getBundleVersion() {
 }
 
 function bumpBundleVersion() {
+  if (!HMR_ENABLE_BUNDLE_VERSION) {
+    return;
+  }
+
   let version = getBundleVersion();
   let nextVersion =
     typeof version === 'number' && Number.isFinite(version) ? version + 1 : 1;
@@ -112,6 +118,10 @@ function bumpBundleVersion() {
 }
 
 function appendBundleVersion(url: string) {
+  if (!HMR_ENABLE_BUNDLE_VERSION) {
+    return url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+  }
+
   let version = getBundleVersion();
   if (version == null) {
     return url;
