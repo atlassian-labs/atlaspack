@@ -663,7 +663,8 @@ module.hot.dispose((data) => {
             assert.equal(secondUrl.search, '');
 
             return {
-              'a.txt': 'updated-a',
+              'a.txt': 'updated-a-1',
+              'b.txt': 'updated-b-1',
             };
           },
           (outputs: Array<any>) => {
@@ -676,7 +677,8 @@ module.hot.dispose((data) => {
             firstSearch = firstUpdatedUrl.search;
 
             return {
-              'b.txt': 'updated-b',
+              'a.txt': 'updated-a-2',
+              'b.txt': 'updated-b-2',
             };
           },
         ]);
@@ -989,7 +991,6 @@ module.hot.dispose((data) => {
           hmrOptions: {port},
           shouldContentHash: false,
           config,
-          featureFlags: {hmrBundleVersioning: true},
         });
 
         subscription = await b.watch();
@@ -1055,7 +1056,6 @@ module.hot.dispose((data) => {
         hmrOptions: {port},
         shouldContentHash: false,
         config,
-        featureFlags: {hmrBundleVersioning: true},
       });
 
       subscription = await b.watch();

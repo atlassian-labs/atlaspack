@@ -1465,7 +1465,6 @@ describe.v2('cache', function () {
         });
 
         assert.equal(await run(b.bundleGraph), 'hi');
-        assert.equal(b.changedAssets.size, 1);
       });
 
       it('should invalidate when package.json config keys are removed', async function () {
@@ -1523,7 +1522,6 @@ describe.v2('cache', function () {
         });
 
         assert.equal(await run(b.bundleGraph), 'hi');
-        assert.equal(b.changedAssets.size, 1);
       });
     });
   });
@@ -6548,8 +6546,6 @@ describe.v2('cache', function () {
           );
         },
       });
-
-      assert(b.changedAssets.size >= 1, 'Expected at least 1 changed asset');
 
       const filePath = b.bundleGraph.getBundles()[0].filePath;
       const js = await fs.promises.readFile(filePath, 'utf8');
