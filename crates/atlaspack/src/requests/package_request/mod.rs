@@ -665,7 +665,7 @@ mod tests {
 
     let (output, fs) = run_test_request(bundle, content, HashMap::new()).await;
 
-    let expected_name = format!("index.{content_hash}.test");
+    let expected_name = format!("index.{}.test", name_hash_for_filename(&content_hash));
     let expected_path = PathBuf::from("/dist").join(&expected_name);
     assert_eq!(output.file_path, expected_path);
     assert!(
@@ -694,7 +694,8 @@ mod tests {
     // Pass an empty orchestrator map — the bundle must resolve its own ref.
     let (output, fs) = run_test_request(bundle, &content, HashMap::new()).await;
 
-    let expected_written = format!("self_ref={content_hash}").into_bytes();
+    let expected_written =
+      format!("self_ref={}", name_hash_for_filename(&content_hash)).into_bytes();
     assert_eq!(
       fs.read(&output.file_path).unwrap(),
       expected_written,
