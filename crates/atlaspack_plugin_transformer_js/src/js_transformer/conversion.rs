@@ -31,6 +31,7 @@ mod loc;
 /// Conversions from SWC symbol types into [`Symbol`]
 mod symbol;
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn convert_result(
   mut asset: Asset,
   transformer_config: &atlaspack_js_swc_core::Config,
@@ -39,6 +40,7 @@ pub(crate) fn convert_result(
   mode: &BuildMode,
   core_path: &Path,
   hmr_options: &Option<atlaspack_core::plugin::HmrOptions>,
+  fix_export_star_namespace_overwrite: bool,
 ) -> Result<TransformResult, Vec<Diagnostic>> {
   let asset_file_path = asset.file_path.to_path_buf();
   let asset_environment = asset.env.clone();
@@ -96,17 +98,35 @@ pub(crate) fn convert_result(
     for symbol in hoist_result.re_exports {
       if let Some(dependency) = dependency_by_specifier.get_mut(&symbol.source) {
         if is_re_export_all_symbol(&symbol) {
-          let loc = Some(convert_loc(
-            project_root,
-            asset_file_path.clone(),
-            &symbol.loc,
-          ));
-          let symbol = make_export_all_symbol(loc);
+          // When a module has both `import * as ns from 'x'` and
+          // `export * from 'x'`, they share a single dep. Check if there's
+          // already a non-weak '*' symbol (from the namespace import).
+          let has_non_weak_star = fix_export_star_namespace_overwrite
+            && dependency.symbols.as_ref().is_some_and(|syms| {
+              syms
+                .iter()
+                .any(|s| s.exported == "*" && s.local != "*" && !s.is_weak)
+            });
 
-          if let Some(symbols) = dependency.symbols.as_mut() {
-            symbols.push(symbol);
+          if has_non_weak_star {
+            // Don't overwrite the namespace import binding.
+            // Flag the dep so symbol propagation still treats it as a wildcard re-exporter.
+            dependency
+              .meta
+              .insert("hasExportStar".into(), serde_json::Value::Bool(true));
           } else {
-            dependency.symbols = Some(vec![symbol]);
+            let loc = Some(convert_loc(
+              project_root,
+              asset_file_path.clone(),
+              &symbol.loc,
+            ));
+            let symbol = make_export_all_symbol(loc);
+
+            if let Some(symbols) = dependency.symbols.as_mut() {
+              symbols.push(symbol);
+            } else {
+              dependency.symbols = Some(vec![symbol]);
+            }
           }
           // TODO: Why isn't this added to the asset.symbols array?
         } else {
@@ -273,12 +293,25 @@ pub(crate) fn convert_result(
 
       for sym in symbol_result.exports_all {
         if let Some(dependency) = dependency_by_specifier.get_mut(&sym.source) {
-          let loc = Some(convert_loc(project_root, asset_file_path.clone(), &sym.loc));
-          let symbol = make_export_all_symbol(loc);
-          if let Some(symbols) = dependency.symbols.as_mut() {
-            symbols.push(symbol);
+          let has_non_weak_star = fix_export_star_namespace_overwrite
+            && dependency.symbols.as_ref().is_some_and(|syms| {
+              syms
+                .iter()
+                .any(|s| s.exported == "*" && s.local != "*" && !s.is_weak)
+            });
+
+          if has_non_weak_star {
+            dependency
+              .meta
+              .insert("hasExportStar".into(), serde_json::Value::Bool(true));
           } else {
-            dependency.symbols = Some(vec![symbol]);
+            let loc = Some(convert_loc(project_root, asset_file_path.clone(), &sym.loc));
+            let symbol = make_export_all_symbol(loc);
+            if let Some(symbols) = dependency.symbols.as_mut() {
+              symbols.push(symbol);
+            } else {
+              dependency.symbols = Some(vec![symbol]);
+            }
           }
         }
       }

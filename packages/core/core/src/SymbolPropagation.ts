@@ -1,7 +1,6 @@
 import type {ContentKey, NodeId} from '@atlaspack/graph';
 import type {Meta, Symbol} from '@atlaspack/types';
 import type {Diagnostic} from '@atlaspack/diagnostic';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
 import type {
   AssetNode,
   DependencyNode,
@@ -95,7 +94,9 @@ export function propagateSymbols({
           }
         }
         let hasNamespaceOutgoingDeps = outgoingDeps.some(
-          (d) => d.value.symbols?.get('*')?.local === '*',
+          (d) =>
+            d.value.symbols?.get('*')?.local === '*' ||
+            d.value.meta?.hasExportStar,
         );
 
         // 1) Determine what the incomingDeps requests from the asset
@@ -192,7 +193,10 @@ export function propagateSymbols({
             let depSymbols = dep.value.symbols;
             if (!depSymbols) continue;
 
-            if (depSymbols.get('*')?.local === '*') {
+            if (
+              depSymbols.get('*')?.local === '*' ||
+              dep.value.meta?.hasExportStar
+            ) {
               if (addAll) {
                 depUsedSymbolsDown.add('*');
               } else {
@@ -335,7 +339,10 @@ export function propagateSymbols({
             );
           }
 
-          if (outgoingDepSymbols.get('*')?.local === '*') {
+          if (
+            outgoingDepSymbols.get('*')?.local === '*' ||
+            outgoingDep.value.meta?.hasExportStar
+          ) {
             outgoingDep.usedSymbolsUp.forEach((sResolved, s) => {
               if (s === 'default') {
                 return;
@@ -453,7 +460,9 @@ export function propagateSymbols({
           let incomingDepSymbols = incomingDep.value.symbols;
           if (!incomingDepSymbols) continue;
 
-          let hasNamespaceReexport = incomingDepSymbols.get('*')?.local === '*';
+          let hasNamespaceReexport =
+            incomingDepSymbols.get('*')?.local === '*' ||
+            incomingDep.value.meta?.hasExportStar;
           for (let s of incomingDep.usedSymbolsDown) {
             if (
               assetSymbols == null || // Assume everything could be provided if symbols are cleared

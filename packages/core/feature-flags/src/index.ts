@@ -425,6 +425,18 @@ export const DEFAULT_FEATURE_FLAGS = {
   v3AssetGraphSyncImprovements:
     process.env.ATLASPACK_BUILD_ENV === 'test' &&
     process.env.ATLASPACK_V3 === 'true',
+
+  /**
+   * Fix scope hoisting crash when a module has both `import * as ns from 'x'`
+   * and `export * from 'x'` for the same specifier. Without this fix, the
+   * wildcard re-export overwrites the namespace import binding on the shared
+   * dependency, causing a ReferenceError in the bundled output.
+   *
+   * @see https://github.com/parcel-bundler/parcel/issues/10175
+   * @since 2026-04-02
+   * @author mattcompiles <mjones4@atlassian.com>
+   */
+  fixExportStarNamespaceOverwrite: process.env.ATLASPACK_BUILD_ENV === 'test',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;
