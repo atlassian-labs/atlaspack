@@ -20,6 +20,10 @@
   ],
   "resolutions": {
     "@swc/core": "1.15.11",
+    "anymatch/picomatch": "^2.3.2",
+    "jest-util/picomatch": "^2.3.2",
+    "micromatch/picomatch": "^2.3.2",
+    "readdirp/picomatch": "^2.3.2",
     "react": "18.2.0",
     "react-dom": "18.2.0"
   },
