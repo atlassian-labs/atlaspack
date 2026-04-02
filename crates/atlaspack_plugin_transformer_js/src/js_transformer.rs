@@ -37,6 +37,7 @@ mod conversion;
 define_feature_flags!(JsTransformerFlags, {
   conditionalBundlingApi,
   exportsRebindingOptimisation,
+  fixExportStarNamespaceOverwrite,
   hmrImprovements,
   nestedPromiseImportFix,
   newJsxConfig
@@ -713,6 +714,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       &self.mode,
       &self.core_path,
       &self.hmr_options,
+      self.feature_flags.fixExportStarNamespaceOverwrite(),
     )
     .map_err(|errors| anyhow!(Diagnostics::from(errors)))?;
 
