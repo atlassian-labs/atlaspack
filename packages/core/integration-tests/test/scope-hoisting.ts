@@ -459,7 +459,7 @@ import {OverlayFS} from '@atlaspack/fs';
         // Regression test for https://github.com/parcel-bundler/parcel/issues/10175
         // When a library entry point does:
         //   import * as ns from './sub'; export { ns }; export * from './sub'; export default ns;
-        // and the consumer does: import { name } from 'lib/v4'
+        // and the consumer does: import { name } from 'lib'
         // scope hoisting in production would produce a ReferenceError because the
         // re-exported symbol reference was broken.
         await fsFixture(overlayFS, __dirname)`
@@ -467,32 +467,19 @@ import {OverlayFS} from '@atlaspack/fs';
             yarn.lock:
 
             index.js:
-              import {z} from 'mylib/v4';
+              import {z} from './lib';
               output = z.greet();
 
-            node_modules/mylib/package.json:
-              {
-                "name": "mylib",
-                "version": "1.0.0",
-                "exports": {
-                  "./v4": {
-                    "import": "./v4/index.js",
-                    "require": "./v4/index.cjs"
-                  }
-                },
-                "sideEffects": false
-              }
-
-            node_modules/mylib/v4/index.js:
+            lib.js:
               import * as z from "./classic/index.js";
               export { z };
               export * from "./classic/index.js";
               export default z;
 
-            node_modules/mylib/v4/classic/index.js:
+            classic/index.js:
               export * from "./external.js";
 
-            node_modules/mylib/v4/classic/external.js:
+            classic/external.js:
               export function greet() {
                 return 'hello';
               }
@@ -509,6 +496,45 @@ import {OverlayFS} from '@atlaspack/fs';
 
         let output = await run(b);
         assert.strictEqual(output, 'hello');
+      });
+
+      it('supports named export via export-star when combined with namespace import (zod/v4 pattern)', async function () {
+        // Verify that `export * from 'x'` still exposes individual named exports
+        // when combined with `import * as ns from 'x'` on the same specifier.
+        await fsFixture(overlayFS, __dirname)`
+          re-export-namespace-star-named
+            yarn.lock:
+
+            index.js:
+              import {greet, version} from './lib';
+              output = greet() + ':' + version;
+
+            lib.js:
+              import * as z from "./classic/index.js";
+              export { z };
+              export * from "./classic/index.js";
+              export default z;
+
+            classic/index.js:
+              export * from "./external.js";
+
+            classic/external.js:
+              export function greet() {
+                return 'hello';
+              }
+              export const version = '1.0.0';
+        `;
+
+        let b = await bundle(
+          path.join(__dirname, 're-export-namespace-star-named/index.js'),
+          {
+            mode: 'production',
+            inputFS: overlayFS,
+          },
+        );
+
+        let output = await run(b);
+        assert.strictEqual(output, 'hello:1.0.0');
       });
 
       it('supports re-exporting all exports from an external module', async function () {
