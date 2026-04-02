@@ -1,5 +1,17 @@
 # @atlaspack/bundler-default
 
+## 3.4.34
+
+### Patch Changes
+
+- Updated dependencies [[`39b1fdf`](https://github.com/atlassian-labs/atlaspack/commit/39b1fdf59d317a9e862dceba0495dda9f1fda77c)]:
+  - @atlaspack/feature-flags@2.31.2
+  - @atlaspack/rust@3.29.1
+  - @atlaspack/graph@3.6.24
+  - @atlaspack/types-internal@2.25.4
+  - @atlaspack/utils@3.4.4
+  - @atlaspack/plugin@2.14.62
+
 ## 3.4.33
 
 ### Patch Changes

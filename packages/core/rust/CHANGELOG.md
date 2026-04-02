@@ -1,5 +1,11 @@
 # @atlaspack/rust
 
+## 3.29.1
+
+### Patch Changes
+
+- [#1080](https://github.com/atlassian-labs/atlaspack/pull/1080) [`39b1fdf`](https://github.com/atlassian-labs/atlaspack/commit/39b1fdf59d317a9e862dceba0495dda9f1fda77c) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Fix scope hoisting crash when a module has both `import * as ns from 'x'` and `export * from 'x'` for the same specifier. The wildcard re-export was overwriting the namespace import binding on the shared dependency, causing a ReferenceError in the bundled output. Gated behind `fixExportStarNamespaceOverwrite` feature flag.
+
 ## 3.29.0
 
 ### Minor Changes
