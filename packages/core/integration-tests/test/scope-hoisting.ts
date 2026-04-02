@@ -455,6 +455,62 @@ import {OverlayFS} from '@atlaspack/fs';
         assert.strictEqual(output, '123 999');
       });
 
+      it('supports named import from a package that re-exports via namespace star and default (zod/v4 pattern)', async function () {
+        // Regression test for https://github.com/parcel-bundler/parcel/issues/10175
+        // When a library entry point does:
+        //   import * as ns from './sub'; export { ns }; export * from './sub'; export default ns;
+        // and the consumer does: import { name } from 'lib/v4'
+        // scope hoisting in production would produce a ReferenceError because the
+        // re-exported symbol reference was broken.
+        await fsFixture(overlayFS, __dirname)`
+          re-export-namespace-star-default
+            yarn.lock:
+
+            index.js:
+              import {z} from 'mylib/v4';
+              output = z.greet();
+
+            node_modules/mylib/package.json:
+              {
+                "name": "mylib",
+                "version": "1.0.0",
+                "exports": {
+                  "./v4": {
+                    "import": "./v4/index.js",
+                    "require": "./v4/index.cjs"
+                  }
+                },
+                "sideEffects": false
+              }
+
+            node_modules/mylib/v4/index.js:
+              import * as z from "./classic/index.js";
+              export { z };
+              export * from "./classic/index.js";
+              export default z;
+
+            node_modules/mylib/v4/classic/index.js:
+              export * from "./external.js";
+
+            node_modules/mylib/v4/classic/external.js:
+              export function greet() {
+                return 'hello';
+              }
+              export const version = '1.0.0';
+        `;
+
+        let b = await bundle(
+          path.join(__dirname, 're-export-namespace-star-default/index.js'),
+          {
+            mode: 'production',
+            inputFS: overlayFS,
+          },
+        );
+
+        let output = await run(b);
+        assert.strictEqual(output, 'hello');
+      });
+
       it('supports re-exporting all exports from an external module', async function () {
         let b = await bundle(
           path.join(
