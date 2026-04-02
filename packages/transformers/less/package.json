@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-less",
-  "version": "2.15.22",
+  "version": "2.15.23",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -16,9 +16,9 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/types-internal": "2.25.3",
-    "@atlaspack/plugin": "2.14.61",
-    "@atlaspack/source-map": "3.3.5",
+    "@atlaspack/types-internal": "2.25.4",
+    "@atlaspack/plugin": "2.14.62",
+    "@atlaspack/source-map": "3.3.6",
     "less": "^4.1.1"
   },
   "type": "commonjs",

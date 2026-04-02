@@ -1,5 +1,21 @@
 # @atlaspack/transformer-js
 
+## 19.0.4
+
+### Patch Changes
+
+- [#1080](https://github.com/atlassian-labs/atlaspack/pull/1080) [`39b1fdf`](https://github.com/atlassian-labs/atlaspack/commit/39b1fdf59d317a9e862dceba0495dda9f1fda77c) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Fix scope hoisting crash when a module has both `import * as ns from 'x'` and `export * from 'x'` for the same specifier. The wildcard re-export was overwriting the namespace import binding on the shared dependency, causing a ReferenceError in the bundled output. Gated behind `fixExportStarNamespaceOverwrite` feature flag.
+
+- Updated dependencies [[`39b1fdf`](https://github.com/atlassian-labs/atlaspack/commit/39b1fdf59d317a9e862dceba0495dda9f1fda77c)]:
+  - @atlaspack/core@2.38.4
+  - @atlaspack/feature-flags@2.31.2
+  - @atlaspack/rust@3.29.1
+  - @atlaspack/build-cache@2.13.16
+  - @atlaspack/utils@3.4.4
+  - @atlaspack/source-map@3.3.6
+  - @atlaspack/workers@2.14.62
+  - @atlaspack/plugin@2.14.62
+
 ## 19.0.3
 
 ### Patch Changes
