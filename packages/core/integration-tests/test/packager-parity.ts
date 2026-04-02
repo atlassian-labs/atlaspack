@@ -85,9 +85,7 @@ async function assertPackagerParity(
 }
 
 describe('packager-parity (JS vs native CSS packager)', function () {
-  before(function () {
-    setupV3Flags({fullNative: true});
-  });
+  setupV3Flags({fullNative: true});
 
   beforeEach(function () {
     this.timeout(30000);
