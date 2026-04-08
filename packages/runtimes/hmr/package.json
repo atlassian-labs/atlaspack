@@ -16,6 +16,7 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
+    "@atlaspack/feature-flags": "2.31.2",
     "@atlaspack/plugin": "2.14.62",
     "@atlaspack/utils": "3.4.4"
   },
