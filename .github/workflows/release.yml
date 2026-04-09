@@ -171,7 +171,6 @@ jobs:
           npm config set "//packages.atlassian.com/:_password=${ARTIFACTORY_PASSWORD_BASE64}"
           npm config set "//packages.atlassian.com/:username=${ARTIFACTORY_USERNAME}"
           npm config set "//packages.atlassian.com/:email=build-team@atlassian.com"
-          npm config set "//packages.atlassian.com/:always-auth=true"
       - name: Get Artifact Publish Token
         id: publish-token
         uses: atlassian-labs/artifact-publish-token@v1.0.1
