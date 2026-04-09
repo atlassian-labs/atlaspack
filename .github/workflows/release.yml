@@ -167,7 +167,7 @@ jobs:
         run: ls -l packages/*/*/*.node
       - name: Configure publishing for private registry
         run: |
-          npm config set "@atlaspack:registry" "http://packages.atlassian.com/"
+          npm config set "@atlaspack:registry" "https://packages.atlassian.com/api/npm/npm-private/"
       - name: Get Artifact Publish Token
         id: publish-token
         uses: atlassian-labs/artifact-publish-token@v1.0.1
