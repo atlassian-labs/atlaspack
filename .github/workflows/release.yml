@@ -167,8 +167,16 @@ jobs:
         run: ls -l packages/*/*/*.node
       - name: Npm
         run: |
-          npm config set "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}"
-          npm config set registry https://registry.npmjs.org/
+          npm config set "@atlaspack:registry" "http://packages.atlassian.com/"
+          npm config set "//packages.atlassian.com/:_password=${ARTIFACTORY_PASSWORD_BASE64}"
+          npm config set "//packages.atlassian.com/:username=${ARTIFACTORY_USERNAME}"
+          npm config set "//packages.atlassian.com/:email=build-team@atlassian.com"
+          npm config set "//packages.atlassian.com/:always-auth=true"
+      - name: Get Artifact Publish Token
+        id: publish-token
+        uses: atlassian-labs/artifact-publish-token@v1.0.1
+        with:
+          output-modes: npm
       - run: ${{ inputs.release-command }}
 
   build-and-release-changesets:
@@ -192,7 +200,7 @@ jobs:
           pattern: packages-*
           path: packages
           merge-multiple: true
-      - name: Configure npm publish registry
+      - name: Configure npm publish for public registry
         run: |
           npm config set "@atlaspack:registry" "https://packages.atlassian.com/api/npm/npm-public/"
       - name: Get Artifact Publish Token
