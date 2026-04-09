@@ -1,4 +1,4 @@
-/* global HMR_HOST, HMR_PORT, HMR_ENV_HASH, HMR_SECURE, HMR_USE_SSE, chrome, browser, __parcel__import__, __parcel__importScripts__, ServiceWorkerGlobalScope */
+/* global HMR_HOST, HMR_PORT, HMR_ENV_HASH, HMR_SECURE, HMR_USE_SSE, chrome, browser, __parcel__import__, __parcel__importScripts__, ServiceWorkerGlobalScope, HMR_ENABLE_BUNDLE_VERSION */
 
 /*::
 import type {
@@ -40,6 +40,7 @@ declare var HMR_PORT: string;
 declare var HMR_ENV_HASH: string;
 declare var HMR_SECURE: boolean;
 declare var HMR_USE_SSE: boolean;
+declare var HMR_ENABLE_BUNDLE_VERSION: boolean;
 declare var chrome: ExtensionContext;
 declare var browser: ExtensionContext;
 declare var __parcel__import__: (string) => Promise<void>;
@@ -57,6 +58,7 @@ export type Diff<T extends U, U extends object> = Pick<
 // /flow-to-ts helpers
 
 var OVERLAY_ID = '__parcel__error__overlay__';
+var HMR_BUNDLE_VERSION = '__parcel__hmrBundleVersion';
 
 // @ts-expect-error TS2339
 var OldModule = module.bundle.Module;
@@ -95,6 +97,39 @@ var checkedAssets /*: {|[string]: boolean|} */,
   assetsToDispose /*: Array<[ParcelRequire, string]> */,
   // @ts-expect-error TS7034
   assetsToAccept /*: Array<[ParcelRequire, string]> */;
+
+function getBundleVersion() {
+  // @ts-expect-error TS7017
+  return globalThis[HMR_BUNDLE_VERSION];
+}
+
+function bumpBundleVersion() {
+  // @ts-expect-error TS2304
+  if (!HMR_ENABLE_BUNDLE_VERSION) {
+    return;
+  }
+
+  let version = getBundleVersion();
+  let nextVersion =
+    typeof version === 'number' && Number.isFinite(version) ? version + 1 : 1;
+  // @ts-expect-error TS7017
+  globalThis[HMR_BUNDLE_VERSION] = nextVersion;
+  return nextVersion;
+}
+
+function appendBundleVersion(url: string) {
+  // @ts-expect-error TS2304
+  if (!HMR_ENABLE_BUNDLE_VERSION) {
+    return url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+  }
+
+  let version = getBundleVersion();
+  if (version == null) {
+    return url;
+  }
+
+  return url + (url.includes('?') ? '&' : '?') + 't=' + version;
+}
 
 function getHostname() {
   return (
@@ -199,6 +234,7 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
       });
 
       if (handled) {
+        bumpBundleVersion();
         console.clear();
 
         // Dispatch custom event so other runtimes (e.g React Refresh) are aware.
@@ -389,7 +425,7 @@ function updateLink(link: HTMLElement) {
     }
   };
   // @ts-expect-error TS2339
-  newLink.setAttribute('href', href.split('?')[0] + '?' + Date.now());
+  newLink.setAttribute('href', appendBundleVersion(href));
   // @ts-expect-error TS18047
   link.parentNode.insertBefore(newLink, link.nextSibling);
 }
@@ -437,7 +473,7 @@ function hmrDownload(asset: HMRAsset) {
   if (asset.type === 'js') {
     if (typeof document !== 'undefined') {
       let script = document.createElement('script');
-      script.src = asset.url + '?t=' + Date.now();
+      script.src = appendBundleVersion(asset.url);
       if (asset.outputFormat === 'esmodule') {
         script.type = 'module';
       }
@@ -458,7 +494,7 @@ function hmrDownload(asset: HMRAsset) {
       // Worker scripts
       if (asset.outputFormat === 'esmodule') {
         // @ts-expect-error TS2304
-        return __parcel__import__(asset.url + '?t=' + Date.now());
+        return __parcel__import__(appendBundleVersion(asset.url));
       } else {
         return new Promise(
           (
@@ -467,7 +503,7 @@ function hmrDownload(asset: HMRAsset) {
           ) => {
             try {
               // @ts-expect-error TS2304
-              __parcel__importScripts__(asset.url + '?t=' + Date.now());
+              __parcel__importScripts__(appendBundleVersion(asset.url));
               // @ts-expect-error TS2794
               resolve();
             } catch (err: any) {

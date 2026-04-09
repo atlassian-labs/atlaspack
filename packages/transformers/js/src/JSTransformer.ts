@@ -1300,7 +1300,24 @@ export default new Transformer({
         let dep = deps.get(source);
         if (!dep) continue;
         if (local === '*' && imported === '*') {
-          dep.symbols.set('*', '*', convertLoc(loc), true);
+          // When a module has both `import * as ns from 'x'` and
+          // `export * from 'x'`, they share a single dep (merged by the
+          // core). The namespace import binding ('*' → local, isWeak:false)
+          // set by imported_symbols is strictly more inclusive than the
+          // wildcard re-export ('*' → '*', isWeak:true) for symbol
+          // propagation, so don't overwrite it. Instead, flag the dep so
+          // that symbol propagation still treats it as a wildcard
+          // re-exporter.
+          let existingStar = dep.symbols.get('*');
+          if (
+            getFeatureFlag('fixExportStarNamespaceOverwrite') &&
+            existingStar &&
+            existingStar.local !== '*'
+          ) {
+            dep.meta.hasExportStar = true;
+          } else {
+            dep.symbols.set('*', '*', convertLoc(loc), true);
+          }
         } else {
           let reExportName =
             dep.symbols.get(imported)?.local ??
@@ -1412,7 +1429,20 @@ export default new Transformer({
           let dep = deps.get(source);
           if (!dep) continue;
           dep.symbols.ensure();
-          dep.symbols.set('*', '*', convertLoc(loc), true);
+          // When a module has both `import * as ns from 'x'` and
+          // `export * from 'x'`, they share a single dep. Don't overwrite
+          // the namespace import binding — flag the dep instead so symbol
+          // propagation still treats it as a wildcard re-exporter.
+          let existingStar = dep.symbols.get('*');
+          if (
+            getFeatureFlag('fixExportStarNamespaceOverwrite') &&
+            existingStar &&
+            existingStar.local !== '*'
+          ) {
+            dep.meta.hasExportStar = true;
+          } else {
+            dep.symbols.set('*', '*', convertLoc(loc), true);
+          }
         }
 
         // Add * symbol if there are CJS exports, no imports/exports at all, or the asset is wrapped.

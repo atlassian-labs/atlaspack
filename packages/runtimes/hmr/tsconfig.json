@@ -11,6 +11,9 @@
     },
     {
       "path": "../../core/utils/tsconfig.json"
+    },
+    {
+      "path": "../../core/feature-flags/tsconfig.json"
     }
   ]
 }

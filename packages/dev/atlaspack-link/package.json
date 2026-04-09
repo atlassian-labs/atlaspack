@@ -1,7 +1,7 @@
 {
   "name": "@atlaspack/link",
   "description": "A CLI for linking a dev version of atlaspack into a project",
-  "version": "2.14.61",
+  "version": "2.14.62",
   "private": true,
   "bin": {
     "atlaspack-link": "bin.js"
@@ -16,9 +16,9 @@
   "dependencies": {
     "@babel/core": "^7.22.11",
     "@atlaspack/babel-register": "2.14.5",
-    "@atlaspack/fs": "2.15.56",
-    "@atlaspack/utils": "3.4.3",
-    "@atlaspack/rust": "3.29.0",
+    "@atlaspack/fs": "2.15.57",
+    "@atlaspack/utils": "3.4.4",
+    "@atlaspack/rust": "3.29.1",
     "commander": "^8.3.0",
     "nullthrows": "^1.1.1"
   },

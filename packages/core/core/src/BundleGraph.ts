@@ -335,7 +335,9 @@ export default class BundleGraph {
             ([, t]: [any, any]) => new Set([...t.values()]).size === t.size,
           )
         ) {
-          let isReexportAll = nodeValueSymbols.get('*')?.local === '*';
+          let isReexportAll =
+            nodeValueSymbols.get('*')?.local === '*' ||
+            node.value.meta?.hasExportStar;
           let reexportAllLoc = isReexportAll
             ? nullthrows(nodeValueSymbols.get('*')).loc
             : undefined;
@@ -2317,7 +2319,7 @@ export default class BundleGraph {
       // Wildcard reexports are never listed in the reexporting asset's symbols.
       if (
         identifier == null &&
-        depSymbols.get('*')?.local === '*' &&
+        (depSymbols.get('*')?.local === '*' || dep.meta?.hasExportStar) &&
         symbol !== 'default'
       ) {
         let resolved = this.getResolvedAsset(dep, boundary);
@@ -2455,7 +2457,7 @@ export default class BundleGraph {
       let depSymbols = dep.symbols;
       if (!depSymbols) continue;
 
-      if (depSymbols.get('*')?.local === '*') {
+      if (depSymbols.get('*')?.local === '*' || dep.meta?.hasExportStar) {
         let resolved = this.getResolvedAsset(dep, boundary);
         if (!resolved) continue;
         let exported = this.getExportedSymbols(resolved, boundary)

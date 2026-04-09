@@ -1,5 +1,13 @@
 # @atlaspack/runtime-browser-hmr
 
+## 2.15.19
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.4.4
+  - @atlaspack/plugin@2.14.62
+
 ## 2.15.18
 
 ### Patch Changes

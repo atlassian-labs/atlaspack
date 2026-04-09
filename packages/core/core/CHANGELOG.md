@@ -1,5 +1,27 @@
 # @atlaspack/core
 
+## 2.38.4
+
+### Patch Changes
+
+- [#1080](https://github.com/atlassian-labs/atlaspack/pull/1080) [`39b1fdf`](https://github.com/atlassian-labs/atlaspack/commit/39b1fdf59d317a9e862dceba0495dda9f1fda77c) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Fix scope hoisting crash when a module has both `import * as ns from 'x'` and `export * from 'x'` for the same specifier. The wildcard re-export was overwriting the namespace import binding on the shared dependency, causing a ReferenceError in the bundled output. Gated behind `fixExportStarNamespaceOverwrite` feature flag.
+
+- Updated dependencies [[`39b1fdf`](https://github.com/atlassian-labs/atlaspack/commit/39b1fdf59d317a9e862dceba0495dda9f1fda77c)]:
+  - @atlaspack/feature-flags@2.31.2
+  - @atlaspack/rust@3.29.1
+  - @atlaspack/build-cache@2.13.16
+  - @atlaspack/cache@3.2.57
+  - @atlaspack/fs@2.15.57
+  - @atlaspack/graph@3.6.24
+  - @atlaspack/utils@3.4.4
+  - @atlaspack/logger@2.14.54
+  - @atlaspack/source-map@3.3.6
+  - @atlaspack/package-manager@2.14.62
+  - @atlaspack/workers@2.14.62
+  - @atlaspack/plugin@2.14.62
+  - @atlaspack/profiler@2.15.23
+  - @atlaspack/types@2.15.52
+
 ## 2.38.3
 
 ### Patch Changes

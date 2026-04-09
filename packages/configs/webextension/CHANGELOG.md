@@ -1,5 +1,18 @@
 # @atlaspack/config-webextension
 
+## 19.0.4
+
+### Patch Changes
+
+- Updated dependencies [[`39b1fdf`](https://github.com/atlassian-labs/atlaspack/commit/39b1fdf59d317a9e862dceba0495dda9f1fda77c)]:
+  - @atlaspack/core@2.38.4
+  - @atlaspack/config-default@19.0.4
+  - @atlaspack/types@2.15.52
+  - @atlaspack/packager-webextension@2.14.62
+  - @atlaspack/runtime-webextension@2.15.19
+  - @atlaspack/transformer-webextension@2.14.62
+  - @atlaspack/transformer-raw@2.14.62
+
 ## 19.0.3
 
 ### Patch Changes
