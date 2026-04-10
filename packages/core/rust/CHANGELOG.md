@@ -1,5 +1,11 @@
 # @atlaspack/rust
 
+## 3.29.2
+
+### Patch Changes
+
+- [#1083](https://github.com/atlassian-labs/atlaspack/pull/1083) [`ccc18b0`](https://github.com/atlassian-labs/atlaspack/commit/ccc18b02f7fc280995d2fe4698afb66e6e2c2b60) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - revert resolver invalidation forwarding
+
 ## 3.29.1
 
 ### Patch Changes
