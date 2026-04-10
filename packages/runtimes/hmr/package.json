@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/runtime-browser-hmr",
-  "version": "2.15.19",
+  "version": "2.15.20",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -16,9 +16,9 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/feature-flags": "2.31.2",
-    "@atlaspack/plugin": "2.14.62",
-    "@atlaspack/utils": "3.4.4"
+    "@atlaspack/feature-flags": "2.31.3",
+    "@atlaspack/plugin": "2.14.63",
+    "@atlaspack/utils": "3.4.5"
   },
   "type": "commonjs",
   "scripts": {

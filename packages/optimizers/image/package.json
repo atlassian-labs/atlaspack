@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/optimizer-image",
-  "version": "19.0.4",
+  "version": "19.0.5",
   "license": "(MIT OR Apache-2.0)",
   "main": "./lib/ImageOptimizer.js",
   "source": "./src/ImageOptimizer.ts",
@@ -20,13 +20,13 @@
   ],
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/plugin": "2.14.62",
-    "@atlaspack/rust": "3.29.1",
-    "@atlaspack/utils": "3.4.4",
-    "@atlaspack/workers": "2.14.62"
+    "@atlaspack/plugin": "2.14.63",
+    "@atlaspack/rust": "3.29.2",
+    "@atlaspack/utils": "3.4.5",
+    "@atlaspack/workers": "2.14.63"
   },
   "peerDependencies": {
-    "@atlaspack/core": "2.38.4"
+    "@atlaspack/core": "2.38.5"
   },
   "type": "commonjs",
   "scripts": {

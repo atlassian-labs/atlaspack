@@ -1,5 +1,11 @@
 # @atlaspack/feature-flags
 
+## 2.31.3
+
+### Patch Changes
+
+- [#1076](https://github.com/atlassian-labs/atlaspack/pull/1076) [`c4a3b39`](https://github.com/atlassian-labs/atlaspack/commit/c4a3b399c70a434625626af3f7e9b666045cdf39) Thanks [@alexzherdev](https://github.com/alexzherdev)! - Alternative HMR versioning behind feature flag
+
 ## 2.31.2
 
 ### Patch Changes

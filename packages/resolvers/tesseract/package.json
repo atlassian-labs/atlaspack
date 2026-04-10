@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/resolver-tesseract",
-  "version": "2.15.35",
+  "version": "2.15.36",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -16,8 +16,8 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/node-resolver-core": "3.7.33",
-    "@atlaspack/plugin": "2.14.62"
+    "@atlaspack/node-resolver-core": "3.7.34",
+    "@atlaspack/plugin": "2.14.63"
   },
   "type": "commonjs",
   "scripts": {
