@@ -528,6 +528,7 @@ describe('packager-parity (JS vs native CSS packager)', function () {
     // single page-level bundle.
     const fixtureName = 'packager-parity-compiled-atomic';
 
+    // NOTE: avoids vendor-prefixed properties (-moz-user-select etc) due to native browserlist discrepancy.
     await fsFixture(overlayFS, __dirname)`
       ${fixtureName}
         tokens.css:
@@ -612,11 +613,11 @@ describe('packager-parity (JS vs native CSS packager)', function () {
           ._4t3it94y{height:1px}
           ._kqswstnw{position:absolute}
           ._ogto7mnp{clip:rect(1px,1px,1px,1px)}
-          ._uiztglyw{-webkit-user-select:none;user-select:none}
+          ._uiztglyw{cursor:default}
           ._ymio1r31:focus:not(:focus-visible){outline-color:currentColor}
           ._ypr0glyw:focus:not(:focus-visible){outline-style:none}
           ._zcxs1o36:focus:not(:focus-visible){outline-width:medium}
-          ._r06hglyw{-webkit-appearance:none;-moz-appearance:none;appearance:none}
+          ._r06hglyw{border:none}
           ._bfhkm890{background-color:var(--ds-background-neutral,#f4f5f7)}
           ._bfhkd4y8{background-color:var(--ds-background-neutral-hovered,#ebecf0)}
           ._bfhkkuup{background-color:var(--ds-background-neutral-pressed,#dfe1e6)}
@@ -709,7 +710,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
             color: var(--ds-text, #172b4d);
             font: var(--ds-font-body, normal 400 14px/1.42857 -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif);
             -ms-overflow-style: -ms-autohiding-scrollbar;
-            -webkit-text-decoration-skip-ink: auto;
             text-decoration-skip-ink: auto;
           }
           p,ul,ol,dl,h1,h2,h3,h4,h5,h6,blockquote,pre,form,table { margin: var(--ds-space-150, 12px) 0 0 0; }

@@ -174,6 +174,10 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
       .has_dependencies
       .map_or_else(|| true, |has_deps| !has_deps);
 
+    // CAVEAT: `browserslist-rs` (embedded `browserslist-data`) has frozen browser usage stats,
+    // diverging from npm `browserslist` (caniuse-lite). Usage-based queries like "> 0.25%"
+    // may resolve to different browser sets → different vendor-prefix decisions vs the JS
+    // transformer. Avoid vendor-prefixed properties in parity test fixtures.
     let browsers = asset.env.engines.browsers.clone().map_or_else(
       || Ok(None),
       |browsers| match browsers {
