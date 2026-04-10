@@ -167,7 +167,6 @@ jobs:
         run: ls -l packages/*/*/*.node
       - run: ${{ inputs.release-command }}
 
-
   build-and-release-changesets:
     name: Build and release Changesets
     if: github.ref_name == 'main'
