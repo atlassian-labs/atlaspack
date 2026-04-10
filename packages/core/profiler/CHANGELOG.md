@@ -1,5 +1,14 @@
 # @atlaspack/profiler
 
+## 2.15.24
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.25.5
+  - @atlaspack/utils@3.4.5
+  - @atlaspack/logger@2.14.55
+
 ## 2.15.23
 
 ### Patch Changes

@@ -70,6 +70,7 @@ describe('hmr', function () {
             [key: string]: string;
           }
         >,
+    featureFlags?: {[key: string]: boolean},
   ) {
     await ncp(
       path.join(__dirname, '/integration/', name),
@@ -85,7 +86,7 @@ describe('hmr', function () {
       },
       inputFS: overlayFS,
       config,
-      featureFlags: {hmrImprovements: true},
+      featureFlags: {hmrImprovements: true, ...featureFlags},
     });
 
     subscription = await b.watch();
@@ -647,6 +648,52 @@ module.hot.dispose((data) => {
         assert.notEqual(url.search, search);
       },
     );
+
+    it('should reuse one bundle version for all URL references in a single HMR cycle', async function () {
+      let firstSearch;
+      let {outputs} = await testHMRClient(
+        'hmr-url-multiple',
+        [
+          (outputs: Array<any>) => {
+            assert.equal(outputs.length, 2);
+            let firstUrl = new URL(outputs[0]);
+            let secondUrl = new URL(outputs[1]);
+            assert(/a\.[0-9a-f]+\.txt/.test(firstUrl.pathname));
+            assert(/b\.[0-9a-f]+\.txt/.test(secondUrl.pathname));
+            assert.equal(firstUrl.search, '');
+            assert.equal(secondUrl.search, '');
+
+            return {
+              'a.txt': 'updated-a-1',
+              'b.txt': 'updated-b-1',
+            };
+          },
+          (outputs: Array<any>) => {
+            assert.equal(outputs.length, 4);
+            let firstUpdatedUrl = new URL(outputs[2]);
+            let secondUpdatedUrl = new URL(outputs[3]);
+            assert.equal(firstUpdatedUrl.search, '?t=1');
+            assert.equal(secondUpdatedUrl.search, '?t=1');
+            assert.equal(firstUpdatedUrl.search, secondUpdatedUrl.search);
+            firstSearch = firstUpdatedUrl.search;
+
+            return {
+              'a.txt': 'updated-a-2',
+              'b.txt': 'updated-b-2',
+            };
+          },
+        ],
+        {hmrBundleVersioning: true},
+      );
+
+      assert.equal(outputs.length, 6);
+      let firstUpdatedUrl = new URL(outputs[4]);
+      let secondUpdatedUrl = new URL(outputs[5]);
+      assert.equal(firstUpdatedUrl.search, '?t=2');
+      assert.equal(secondUpdatedUrl.search, '?t=2');
+      assert.equal(firstUpdatedUrl.search, secondUpdatedUrl.search);
+      assert.notEqual(firstUpdatedUrl.search, firstSearch);
+    });
 
     it('should have correct source locations in errors', async function () {
       let {outputs, bundleGraph} = await testHMRClient(

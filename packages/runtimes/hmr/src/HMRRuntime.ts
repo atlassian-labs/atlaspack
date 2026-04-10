@@ -1,4 +1,5 @@
 import {Runtime} from '@atlaspack/plugin';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import fs from 'fs';
 import path from 'path';
 
@@ -54,6 +55,9 @@ export default new Runtime({
         `var HMR_USE_SSE = ${JSON.stringify(
           // @ts-expect-error TS2339
           !!(process.env.ATLASPACK_BUILD_REPL && process.browser),
+        )};` +
+        `var HMR_ENABLE_BUNDLE_VERSION = ${JSON.stringify(
+          getFeatureFlag('hmrBundleVersioning'),
         )};` +
         `module.bundle.HMR_BUNDLE_ID = ${JSON.stringify(bundle.id)};` +
         HMR_RUNTIME,

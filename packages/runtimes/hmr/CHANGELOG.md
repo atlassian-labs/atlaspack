@@ -1,5 +1,16 @@
 # @atlaspack/runtime-browser-hmr
 
+## 2.15.20
+
+### Patch Changes
+
+- [#1076](https://github.com/atlassian-labs/atlaspack/pull/1076) [`c4a3b39`](https://github.com/atlassian-labs/atlaspack/commit/c4a3b399c70a434625626af3f7e9b666045cdf39) Thanks [@alexzherdev](https://github.com/alexzherdev)! - Alternative HMR versioning behind feature flag
+
+- Updated dependencies [[`c4a3b39`](https://github.com/atlassian-labs/atlaspack/commit/c4a3b399c70a434625626af3f7e9b666045cdf39)]:
+  - @atlaspack/feature-flags@2.31.3
+  - @atlaspack/utils@3.4.5
+  - @atlaspack/plugin@2.14.63
+
 ## 2.15.19
 
 ### Patch Changes
