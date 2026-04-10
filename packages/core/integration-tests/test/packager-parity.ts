@@ -689,8 +689,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
         index.css:
           @import "./tokens.css";
           @import "./compiled.css";
-        .browserslistrc:
-          last 2 Chrome versions
         yarn.lock:
     `;
 
@@ -768,8 +766,6 @@ describe('packager-parity (JS vs native CSS packager)', function () {
         index.css:
           @import "./reset.css";
           @import "./typography.css";
-        .browserslistrc:
-          last 2 Chrome versions
         yarn.lock:
     `;
 

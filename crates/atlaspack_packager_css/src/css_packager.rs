@@ -7,7 +7,6 @@ use std::fmt::Write as _;
 use anyhow::Result;
 use atlaspack_core::bundle_graph::bundle_graph::BundleGraph;
 use atlaspack_core::package_result::{BundleInfo, PackageResult};
-use atlaspack_core::types::engines::EnginesBrowsers;
 use atlaspack_core::types::{Asset, Bundle, BundleBehavior, Diagnostic, ErrorKind, Priority};
 use lightningcss::bundler::{Bundler, ResolveResult, SourceProvider};
 use lightningcss::printer::PrinterOptions;
@@ -15,7 +14,6 @@ use lightningcss::properties::custom::{Token, TokenOrValue};
 use lightningcss::properties::{Property, PropertyId};
 use lightningcss::rules::{CssRule, CssRuleList};
 use lightningcss::stylesheet::{MinifyOptions, ParserOptions, StyleSheet};
-use lightningcss::targets::Browsers;
 use lightningcss::traits::ToCss;
 use parcel_sourcemap_ext::SourceMap as ParcelSourceMap;
 
@@ -432,38 +430,20 @@ impl<B: BundleGraph + Send + Sync> CssPackager<B> {
       );
     }
 
-    let targets = bundle
-      .env
-      .engines
-      .browsers
-      .as_ref()
-      .and_then(|b| {
-        let query = match b {
-          EnginesBrowsers::String(s) => vec![s.clone()],
-          EnginesBrowsers::List(l) => l.clone(),
-        };
-        Browsers::from_browserslist(query).ok().flatten()
-      })
-      .into();
+    stylesheet
+      .minify(MinifyOptions::default())
+      .map_err(|e| anyhow::anyhow!("lightningcss minification failed: {e:?}"))?;
 
     let printer_options = PrinterOptions {
-      targets,
       minify: bundle.env.should_optimize,
       source_map: source_map.as_mut(),
       project_root: self.context.project_root.to_str(),
       ..PrinterOptions::default()
     };
 
-    stylesheet
-      .minify(MinifyOptions {
-        targets,
-        ..Default::default()
-      })
-      .map_err(|e| anyhow::anyhow!("lightningcss minification failed: {:?}", e))?;
-
     let result = stylesheet
       .to_css(printer_options)
-      .map_err(|e| anyhow::anyhow!("lightningcss printing failed: {:?}", e))?;
+      .map_err(|e| anyhow::anyhow!("lightningcss printing failed: {e:?}"))?;
     let css = result.code;
 
     let css = hoist_imports(&css, &hoisted_imports, bundle, source_map.as_mut())?;
