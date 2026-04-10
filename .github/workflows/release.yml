@@ -188,7 +188,7 @@ jobs:
           pattern: packages-*
           path: packages
           merge-multiple: true
-      - name: Configure publishing for public registry
+      - name: Configure publishing for Artifactory
         run: |
           npm config set "@atlaspack:registry" "https://packages.atlassian.com/api/npm/npm-public/"
       - name: Get Artifact Publish Token
