@@ -165,6 +165,10 @@ jobs:
           merge-multiple: true
       - name: Debug
         run: ls -l packages/*/*/*.node
+      - name: Npm
+        run: |
+          npm config set "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}"
+          npm config set registry https://registry.npmjs.org/
       - run: ${{ inputs.release-command }}
 
   build-and-release-changesets:
