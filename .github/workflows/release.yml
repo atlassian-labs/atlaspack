@@ -197,9 +197,6 @@ jobs:
         uses: atlassian-labs/artifact-publish-token@v1.0.1
         with:
           output-modes: npm
-      - name: Set registry to Artifactory
-        run: |
-          echo "@atlaspack:registry=https://packages.atlassian.com/api/npm/npm-public/" >> ${{ github.workspace }}/.npmrc-public
       - uses: changesets/action@v1
         with:
           publish: yarn changesets-publish
