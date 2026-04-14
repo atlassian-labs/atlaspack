@@ -1,5 +1,11 @@
 # @atlaspack/test-utils
 
+## 2.14.68
+
+### Patch Changes
+
+- [#1089](https://github.com/atlassian-labs/atlaspack/pull/1089) [`9fd7562`](https://github.com/atlassian-labs/atlaspack/commit/9fd756210b9b1f6db3897fbcf0a6dd3bcfd2c1a3) Thanks [@at-nathan](https://github.com/at-nathan)! - Set publish registry to .npmrc-public
+
 ## 2.14.67
 
 ### Patch Changes
