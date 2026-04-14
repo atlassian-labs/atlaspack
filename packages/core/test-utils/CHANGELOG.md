@@ -1,5 +1,11 @@
 # @atlaspack/test-utils
 
+## 2.14.67
+
+### Patch Changes
+
+- [#1087](https://github.com/atlassian-labs/atlaspack/pull/1087) [`b4b72c4`](https://github.com/atlassian-labs/atlaspack/commit/b4b72c4186bb3ca6e17b94088d056516a4cf17e4) Thanks [@at-nathan](https://github.com/at-nathan)! - Updating publishing registry
+
 ## 2.14.66
 
 ### Patch Changes
