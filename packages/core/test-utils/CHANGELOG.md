@@ -1,5 +1,11 @@
 # @atlaspack/test-utils
 
+## 2.14.69
+
+### Patch Changes
+
+- [#1093](https://github.com/atlassian-labs/atlaspack/pull/1093) [`47eaf48`](https://github.com/atlassian-labs/atlaspack/commit/47eaf48676719ef02034b5eb2aad9a268ed6b718) Thanks [@at-nathan](https://github.com/at-nathan)! - Set publish registry in env
+
 ## 2.14.68
 
 ### Patch Changes
