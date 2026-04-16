@@ -199,7 +199,7 @@ jobs:
           output-modes: npm
       - name: Set publish registry
         run: |
-          echo "@atlaspack:registry=https://packages.atlassian.com/api/npm/npm-public/" >> "${{ github.workspace }}/.npmrc-public"
+          printf "\n@atlaspack:registry=https://packages.atlassian.com/api/npm/npm-public/\n" >> "${{ github.workspace }}/.npmrc-public"
       - name: Debug npm publish config
         run: |
           echo "=== npm config list ==="
