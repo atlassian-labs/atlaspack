@@ -1,5 +1,11 @@
 # @atlaspack/lsp
 
+## 2.14.6
+
+### Patch Changes
+
+- [#1097](https://github.com/atlassian-labs/atlaspack/pull/1097) [`a830611`](https://github.com/atlassian-labs/atlaspack/commit/a8306112160dc12d7ebe5a30abe8350ec101bca3) Thanks [@at-nathan](https://github.com/at-nathan)! - Trigger another Artifactory publish
+
 ## 2.14.5
 
 ### Patch Changes
