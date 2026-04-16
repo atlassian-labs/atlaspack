@@ -192,14 +192,14 @@ jobs:
           pattern: packages-*
           path: packages
           merge-multiple: true
-      - name: Set publish registry
-        run: |
-          npm config set "@atlaspack:registry" https://packages.atlassian.com/api/npm/npm-public/
       - name: Get Artifact Publish Token
         id: publish-token
         uses: atlassian-labs/artifact-publish-token@v1.0.1
         with:
           output-modes: npm
+      - name: Set publish registry
+        run: |
+          echo "@atlaspack:registry=https://packages.atlassian.com/api/npm/npm-public/" >> "${{ github.workspace }}/.npmrc-public"
       - name: Debug npm publish config
         run: |
           echo "=== npm config list ==="
@@ -208,8 +208,8 @@ jobs:
           npm config list --json
           echo "=== effective registry for @atlaspack scope ==="
           npm config get "@atlaspack:registry"
-          echo "=== .npmrc-public contents (if present) ==="
-          cat "${{ github.workspace }}/.npmrc-public" 2>/dev/null || echo "(not present)"
+          echo "=== .npmrc-public contents ==="
+          cat "${{ github.workspace }}/.npmrc-public"
         env:
           NPM_CONFIG_USERCONFIG: ${{ github.workspace }}/.npmrc-public
       - uses: changesets/action@v1
