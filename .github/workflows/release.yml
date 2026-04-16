@@ -200,6 +200,18 @@ jobs:
         uses: atlassian-labs/artifact-publish-token@v1.0.1
         with:
           output-modes: npm
+      - name: Debug npm publish config
+        run: |
+          echo "=== npm config list ==="
+          npm config list
+          echo "=== npm config list --json ==="
+          npm config list --json
+          echo "=== effective registry for @atlaspack scope ==="
+          npm config get "@atlaspack:registry"
+          echo "=== .npmrc-public contents (if present) ==="
+          cat "${{ github.workspace }}/.npmrc-public" 2>/dev/null || echo "(not present)"
+        env:
+          NPM_CONFIG_USERCONFIG: ${{ github.workspace }}/.npmrc-public
       - uses: changesets/action@v1
         with:
           publish: yarn changesets-publish
