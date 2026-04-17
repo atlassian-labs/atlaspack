@@ -1,5 +1,11 @@
 # @atlaspack/lsp
 
+## 2.14.7
+
+### Patch Changes
+
+- [#1099](https://github.com/atlassian-labs/atlaspack/pull/1099) [`a1d7729`](https://github.com/atlassian-labs/atlaspack/commit/a1d772935c9ed74c6d8eafbee6b65eb91ddc38fd) Thanks [@at-nathan](https://github.com/at-nathan)! - Fix public registry format
+
 ## 2.14.6
 
 ### Patch Changes
