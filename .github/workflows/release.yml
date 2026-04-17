@@ -200,18 +200,6 @@ jobs:
       - name: Set publish registry
         run: |
           printf "\n@atlaspack:registry=https://packages.atlassian.com/api/npm/npm-public/\n" >> "${{ github.workspace }}/.npmrc-public"
-      - name: Debug npm publish config
-        run: |
-          echo "=== npm config list ==="
-          npm config list
-          echo "=== npm config list --json ==="
-          npm config list --json
-          echo "=== effective registry for @atlaspack scope ==="
-          npm config get "@atlaspack:registry"
-          echo "=== .npmrc-public contents ==="
-          cat "${{ github.workspace }}/.npmrc-public"
-        env:
-          NPM_CONFIG_USERCONFIG: ${{ github.workspace }}/.npmrc-public
       - uses: changesets/action@v1
         with:
           publish: yarn changesets-publish
