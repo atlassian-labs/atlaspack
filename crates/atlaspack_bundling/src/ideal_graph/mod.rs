@@ -1138,8 +1138,6 @@ fn materialize_ideal_bundle(
   let hash_reference = format!("HASH_REF_{}", &bundle_id[..16]);
 
   let entry_asset_id = ideal_bundle.root_asset_id.clone();
-  let is_shared_bundle = entry_asset_id.is_none();
-
   // Determine is_splittable from the root asset's `is_bundle_splittable` property.
   // This matches the JS bundler's behavior where `isSplittable` is set from
   // `entryAsset.isBundleSplittable`.
@@ -1162,16 +1160,13 @@ fn materialize_ideal_bundle(
     env: (*target.env).clone(),
     entry_asset_ids: entry_asset_id.clone().into_iter().collect(),
     main_entry_id: entry_asset_id,
-    // Use the ideal-graph decision for stable naming.
-    //
-    // IMPORTANT: We must not default to the entry dependency's `needs_stable_name` for non-entry
-    // bundles, otherwise every async bundle becomes "entry-like" and ends up with entry runtimes
-    // (bundle-url, bundle-manifest, etc) and can violate bundle-group naming invariants.
-    needs_stable_name: Some(if is_shared_bundle {
-      false
-    } else {
-      ideal_bundle.needs_stable_name
-    }),
+    // Use the ideal-graph decision for stable naming. The builder sets
+    // `needs_stable_name` correctly for every bundle type:
+    //  - Entry bundles: true (is_entry == true in Phase 3)
+    //  - Type-change siblings: inherited from parent (Fix 2a in css_packager)
+    //  - Shared / async bundles: false (hardcoded in Phase 9)
+    // Trusting the builder avoids special-casing shared vs sibling bundles here.
+    needs_stable_name: Some(ideal_bundle.needs_stable_name),
     bundle_behavior: ideal_bundle.behavior,
     is_placeholder: false,
     is_splittable,

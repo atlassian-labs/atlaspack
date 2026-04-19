@@ -17,7 +17,7 @@ use atlaspack_core::asset_graph::{
   AssetGraph, AssetGraphNode, DependencyState, FinalizedSymbolTracker, SymbolTracker,
   propagate_requested_symbols,
 };
-use atlaspack_core::types::{AssetWithDependencies, Dependency, DependencyId};
+use atlaspack_core::types::{AssetWithDependencies, Dependency, DependencyId, SpecifierType};
 
 use super::RequestResult;
 use super::asset_request::{AssetRequest, AssetRequestOutput};
@@ -119,6 +119,9 @@ impl AssetGraphRequest {
         pipeline: asset.pipeline.clone(),
         query: asset.query.clone(),
         side_effects: asset.side_effects,
+        // Incremental rebuilds re-use the previously computed asset; conservatively
+        // set is_url = false since we don't have the originating dependency here.
+        is_url: false,
       };
 
       outputs.insert(asset_request.id(), asset_request_output);
@@ -408,6 +411,7 @@ impl AssetGraphBuilder {
           pipeline: pipeline.clone(),
           query: query.clone(),
           side_effects: *side_effects,
+          is_url: dependency.specifier_type == SpecifierType::Url,
         }
       }
       PathRequestOutput::Excluded => {

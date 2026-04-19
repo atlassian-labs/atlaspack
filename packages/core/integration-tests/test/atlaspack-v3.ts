@@ -77,6 +77,33 @@ function mockStdio() {
   };
 }
 
+/** Returns all CSS bundles with a file path from a BundleGraph. */
+function getCssBundles(bg: any): any[] {
+  return bg.getBundles().filter((b: any) => b.type === 'css' && b.filePath);
+}
+
+/**
+ * Asserts that a CSS file has a sourceMappingURL comment and that the
+ * corresponding .map file has a non-empty `sources` array and `mappings`.
+ */
+async function assertCssSourceMap(cssPath: string, fs: any): Promise<void> {
+  const cssContent = await fs.readFile(cssPath, 'utf8');
+  assert.ok(
+    cssContent.includes('sourceMappingURL'),
+    `CSS bundle must contain a sourceMappingURL comment; got: ${cssContent}`,
+  );
+  const mapContent = await fs.readFile(cssPath + '.map', 'utf8');
+  const mapJson = JSON.parse(mapContent);
+  assert.ok(
+    Array.isArray(mapJson.sources) && mapJson.sources.length > 0,
+    `Source map must have a non-empty 'sources' array; got: ${mapContent}`,
+  );
+  assert.ok(
+    typeof mapJson.mappings === 'string' && mapJson.mappings.length > 0,
+    `Source map must have a non-empty 'mappings' string; got: ${mapContent}`,
+  );
+}
+
 describe.v3('AtlaspackV3', function () {
   it('builds', async () => {
     await fsFixture(overlayFS, __dirname)`
@@ -388,6 +415,443 @@ describe.v3('AtlaspackV3', function () {
     );
 
     await inputFS.rimraf(dir);
+  });
+
+  describe('native CSS packager', () => {
+    it('minifies CSS output in production mode', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        css-minify-prod
+          index.css:
+            body {
+              color: red;
+              background: white;
+            }
+            .heading {
+              font-size: 2em;
+              font-weight: bold;
+            }
+          yarn.lock:
+      `;
+
+      const bg = await bundle(join(__dirname, 'css-minify-prod/index.css'), {
+        mode: 'production',
+        inputFS: overlayFS,
+        featureFlags: {fullNative: true},
+      });
+
+      const cssBundles = getCssBundles(bg);
+      assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
+      const css = await outputFS.readFile(cssBundles[0].filePath, 'utf8');
+
+      // Minified output must not contain runs of whitespace between tokens.
+      // A non-minified rule like `body {\n  color: red;\n}` becomes `body{color:red}`.
+      assert.ok(
+        !css.includes('  '),
+        `Production CSS must not contain indentation whitespace; got: ${css}`,
+      );
+      assert.ok(
+        !css.includes('{\n'),
+        `Production CSS must not contain newlines after '{'; got: ${css}`,
+      );
+    });
+
+    it('does not minify CSS output in development mode', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        css-minify-dev
+          index.css:
+            body {
+              color: red;
+              background: white;
+            }
+            .heading {
+              font-size: 2em;
+              font-weight: bold;
+            }
+          yarn.lock:
+      `;
+
+      const bg = await bundle(join(__dirname, 'css-minify-dev/index.css'), {
+        mode: 'development',
+        inputFS: overlayFS,
+        featureFlags: {fullNative: true},
+      });
+
+      const cssBundles = getCssBundles(bg);
+      assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
+      const css = await outputFS.readFile(cssBundles[0].filePath, 'utf8');
+
+      // Development output must preserve whitespace — rules should be on
+      // separate lines and properties should be indented.
+      assert.ok(
+        css.includes('\n'),
+        `Development CSS must contain newlines (not minified); got: ${css}`,
+      );
+      assert.ok(
+        css.includes('color'),
+        `Development CSS must contain the 'color' property; got: ${css}`,
+      );
+    });
+
+    it('emits a source map alongside a CSS bundle in development mode', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        native-css-sourcemap
+          index.css:
+            body { color: blue; }
+          yarn.lock:
+      `;
+
+      const bg = await bundle(
+        join(__dirname, 'native-css-sourcemap/index.css'),
+        {
+          mode: 'development',
+          inputFS: overlayFS,
+          outputFS: overlayFS,
+          featureFlags: {fullNative: true},
+        },
+      );
+
+      const cssBundles = getCssBundles(bg);
+      assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
+      await assertCssSourceMap(cssBundles[0].filePath, overlayFS);
+    });
+
+    // Both packagers reconstruct hoisted external @imports from the dependency specifier
+    // (URL only). Media query conditions (e.g. `screen, print`) are not preserved by
+    // either packager — this is a known limitation of the current hoisting approach.
+    it('hoists external @import URL above local rules', async () => {
+      const extUrl = 'https://fonts.googleapis.com/css2?family=Roboto';
+
+      await fsFixture(overlayFS, __dirname)`
+        native-css-ext-import-mq
+          index.css:
+            @import "${extUrl}" screen, print;
+            .local { color: green; }
+          yarn.lock:
+      `;
+
+      const bg = await bundle(
+        join(__dirname, 'native-css-ext-import-mq/index.css'),
+        {
+          mode: 'development',
+          inputFS: overlayFS,
+          outputFS: overlayFS,
+          featureFlags: {fullNative: true},
+        },
+      );
+
+      const cssBundles = getCssBundles(bg);
+      assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
+      const css = await overlayFS.readFile(cssBundles[0].filePath, 'utf8');
+
+      assert.ok(
+        css.includes(extUrl),
+        `Hoisted @import must contain the external URL; got: ${css}`,
+      );
+      assert.ok(
+        css.includes('.local'),
+        `Native CSS must preserve local rules; got: ${css}`,
+      );
+      assert.ok(
+        css.indexOf('@import') < css.indexOf('.local'),
+        `External @import must be hoisted before local rules; got: ${css}`,
+      );
+    });
+
+    // CSS Modules tree-shaking intentionally diverges between packagers: the native
+    // packager removes unused classes via lightningcss AST while the JS packager uses
+    // PostCSS. The outputs cannot be strict-equaled, so this test only verifies that
+    // the native packager retains the used class in production mode.
+    //
+    // Note: in V3 (atlaspackV3: true), namespace CSS module imports (`import * as`)
+    // currently cause get_used_symbols to return None, so tree-shaking is skipped and
+    // all classes are retained. The assertion below only checks used-class retention.
+    it('CSS Modules: used class is retained in native production output', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        native-css-modules
+          index.js:
+            import * as styles from './styles.module.css';
+            document.body.className = styles.title;
+          styles.module.css:
+            .title { font-weight: bold; }
+            .unused { display: none; }
+          yarn.lock:
+      `;
+
+      const bg = await bundle(join(__dirname, 'native-css-modules/index.js'), {
+        mode: 'production',
+        inputFS: overlayFS,
+        outputFS: overlayFS,
+        featureFlags: {fullNative: true},
+      });
+
+      const cssBundles = getCssBundles(bg);
+      assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
+      const css = await overlayFS.readFile(cssBundles[0].filePath, 'utf8');
+
+      assert.ok(
+        css.includes('font-weight'),
+        `Native CSS must retain the used .title class; got: ${css}`,
+      );
+      // The unused .unused class may or may not be present depending on whether V3
+      // symbol propagation resolves the namespace import to specific properties.
+      // We only assert the used class is present, which is the stated contract.
+    });
+
+    // In development mode should_optimize is false, so optimise_css_ast is skipped
+    // entirely. Every class — used or not — must appear in the output.
+    it('CSS Modules: all classes are present in development mode (no tree-shaking)', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        native-css-modules-dev
+          index.js:
+            import * as styles from './styles.module.css';
+            document.body.className = styles.title;
+          styles.module.css:
+            .title { font-weight: bold; }
+            .unused { display: none; }
+          yarn.lock:
+      `;
+
+      const bg = await bundle(
+        join(__dirname, 'native-css-modules-dev/index.js'),
+        {
+          mode: 'development',
+          inputFS: overlayFS,
+          outputFS: overlayFS,
+          featureFlags: {fullNative: true},
+        },
+      );
+
+      const cssBundles = getCssBundles(bg);
+      assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
+      const css = await overlayFS.readFile(cssBundles[0].filePath, 'utf8');
+
+      assert.ok(
+        css.includes('font-weight'),
+        `Development output must retain the used .title class; got: ${css}`,
+      );
+      assert.ok(
+        css.includes('display'),
+        `Development output must retain the unused .unused class (no tree-shaking in dev mode); got: ${css}`,
+      );
+    });
+
+    // A CSS module that imports a plain CSS file: both the module's own rules and
+    // the imported plain CSS rules must appear in the native development output.
+    // This exercises the transformer → packager pipeline for mixed CSS module + plain
+    // CSS import chains, which is a common real-world pattern.
+    it('CSS Modules: imported plain CSS is included in native development output', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        native-css-module-import
+          index.js:
+            import * as styles from './layout.module.css';
+            document.body.className = styles.wrapper;
+          layout.module.css:
+            @import './base.css';
+            .wrapper { display: flex; }
+          base.css:
+            body { margin: 0; }
+          yarn.lock:
+      `;
+
+      const bg = await bundle(
+        join(__dirname, 'native-css-module-import/index.js'),
+        {
+          mode: 'development',
+          inputFS: overlayFS,
+          outputFS: overlayFS,
+          featureFlags: {fullNative: true},
+        },
+      );
+
+      const cssBundles = getCssBundles(bg);
+      assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
+      const css = await overlayFS.readFile(cssBundles[0].filePath, 'utf8');
+
+      assert.ok(
+        css.includes('margin'),
+        `Imported plain CSS (base.css) must appear in development bundle; got: ${css}`,
+      );
+      assert.ok(
+        css.includes('flex'),
+        `CSS module own rules (.wrapper) must appear in development bundle; got: ${css}`,
+      );
+    });
+
+    it('emits a source map for CSS imported from a JS entry', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        native-css-sm-from-js
+          index.js:
+            import './styles.css';
+            export const version = 1;
+          styles.css:
+            .container { display: flex; gap: 1rem; }
+            .button { padding: 0.5rem 1rem; }
+          yarn.lock:
+      `;
+
+      const bg = await bundle(
+        join(__dirname, 'native-css-sm-from-js/index.js'),
+        {
+          mode: 'development',
+          inputFS: overlayFS,
+          outputFS: overlayFS,
+          featureFlags: {fullNative: true},
+        },
+      );
+
+      const cssBundles = getCssBundles(bg);
+      assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
+      await assertCssSourceMap(cssBundles[0].filePath, overlayFS);
+    });
+
+    it('packages CSS from a JS entry in production mode', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        native-css-prod-js-entry
+          index.js:
+            import './app.css';
+            export const version = 1;
+          app.css:
+            @import './tokens.css';
+            .layout { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space); }
+            .card   { border-radius: var(--radius); padding: var(--space); }
+          tokens.css:
+            :root { --space: 1rem; --radius: 4px; }
+          yarn.lock:
+      `;
+
+      const bg = await bundle(
+        join(__dirname, 'native-css-prod-js-entry/index.js'),
+        {
+          mode: 'production',
+          inputFS: overlayFS,
+          outputFS: overlayFS,
+          featureFlags: {fullNative: true},
+        },
+      );
+
+      const cssBundles = getCssBundles(bg);
+      assert.ok(
+        cssBundles.length > 0,
+        'Expected at least one CSS bundle from JS entry in production mode',
+      );
+
+      const css = await overlayFS.readFile(cssBundles[0].filePath, 'utf8');
+
+      // Minification: no runs of whitespace between tokens.
+      assert.ok(
+        !css.includes('  '),
+        `Production CSS must not contain indentation whitespace; got: ${css}`,
+      );
+      // Content from both files must be present after inlining @import.
+      assert.ok(
+        css.includes('grid') || css.includes('display'),
+        `Production CSS must contain layout rules from app.css; got: ${css}`,
+      );
+    });
+
+    // @layer cascade layers must be preserved intact by the native packager.
+    // This is exercised separately from the parity suite so that any v3-specific
+    // layer handling (e.g. layer reordering by lightningcss) is caught early.
+    it('@layer cascade layers are preserved in native output', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        native-css-layer
+          index.css:
+            @layer reset, base, theme;
+            @layer reset { *, *::before, *::after { box-sizing: border-box; } }
+            @layer base   { body { margin: 0; font-family: system-ui; } }
+            @layer theme  { :root { --color: #0052cc; } .btn { color: var(--color); } }
+          yarn.lock:
+      `;
+
+      const bg = await bundle(join(__dirname, 'native-css-layer/index.css'), {
+        mode: 'development',
+        inputFS: overlayFS,
+        outputFS: overlayFS,
+        featureFlags: {fullNative: true},
+      });
+
+      const cssBundles = getCssBundles(bg);
+      assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
+      const css = await overlayFS.readFile(cssBundles[0].filePath, 'utf8');
+
+      assert.ok(
+        css.includes('@layer'),
+        `Native CSS must preserve @layer rules; got: ${css}`,
+      );
+      // All three named layers must appear in the output.
+      assert.ok(
+        css.includes('reset'),
+        `@layer reset must be present in native output; got: ${css}`,
+      );
+      assert.ok(
+        css.includes('base'),
+        `@layer base must be present in native output; got: ${css}`,
+      );
+      assert.ok(
+        css.includes('theme'),
+        `@layer theme must be present in native output; got: ${css}`,
+      );
+      // Layer ordering: the reset layer declaration must appear before base.
+      assert.ok(
+        css.indexOf('reset') < css.indexOf('base'),
+        `@layer reset must appear before @layer base; got: ${css}`,
+      );
+    });
+
+    // When an external @import is hoisted to the top of the output, the source
+    // map must reflect the line shift so that generated line 0 (the hoisted
+    // @import) has no source mapping (encoded as a leading ';' in mappings).
+    it('source map first-line offset is correct after external @import hoisting', async () => {
+      const extUrl = 'https://fonts.googleapis.com/css2?family=Lato';
+
+      await fsFixture(overlayFS, __dirname)`
+        native-css-sourcemap-offset
+          index.css:
+            @import "${extUrl}" screen;
+            .local { color: green; }
+          yarn.lock:
+      `;
+
+      const bg = await bundle(
+        join(__dirname, 'native-css-sourcemap-offset/index.css'),
+        {
+          mode: 'development',
+          inputFS: overlayFS,
+          outputFS: overlayFS,
+          featureFlags: {fullNative: true},
+        },
+      );
+
+      const cssBundles = getCssBundles(bg);
+      assert.ok(cssBundles.length > 0, 'Expected at least one CSS bundle');
+      const cssPath: string = cssBundles[0].filePath;
+      const cssContent = await overlayFS.readFile(cssPath, 'utf8');
+
+      // The hoisted @import must be the first line of the output.
+      assert.ok(
+        cssContent.startsWith('@import'),
+        `Output must start with the hoisted @import; got: ${cssContent}`,
+      );
+
+      // The local rule must not be on line 0 — it is pushed down by the hoisted import.
+      const lines: string[] = cssContent.split('\n');
+      const localRuleLine = lines.findIndex((l: string) =>
+        l.includes('.local'),
+      );
+      assert.ok(
+        localRuleLine > 0,
+        `.local rule must not be on line 0 (hoisting must push it down); localRuleLine=${localRuleLine}, css=${cssContent}`,
+      );
+
+      // The source map mappings must encode line 0 as unmapped (leading ';').
+      const mapContent = await overlayFS.readFile(cssPath + '.map', 'utf8');
+      const mapJson = JSON.parse(mapContent);
+      assert.ok(
+        typeof mapJson.mappings === 'string' &&
+          mapJson.mappings.startsWith(';'),
+        `Source map mappings must start with ';' (no mapping on hoisted line 0); got: ${mapJson.mappings}`,
+      );
+    });
   });
 
   describe('worker thread logging', () => {

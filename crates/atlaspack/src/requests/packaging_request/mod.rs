@@ -206,7 +206,9 @@ impl<B: BundleGraph + Send + Sync + 'static> Request for PackagingRequest<B> {
           total_bundles,
         });
 
-        // Record this bundle's real content hash so subsequent levels can resolve it.
+        // Record this bundle's name hash so subsequent levels can resolve it.
+        // Use name_hash_for_filename (last 8 chars) to match the JS
+        // WriteBundlesRequest.ts nameHashForFilename() convention.
         let hash_ref = {
           let graph = &*self.bundle_graph;
           graph
@@ -215,7 +217,7 @@ impl<B: BundleGraph + Send + Sync + 'static> Request for PackagingRequest<B> {
             .unwrap_or_default()
         };
         if !hash_ref.is_empty() {
-          packaged_hashes.insert(hash_ref, output.hash.clone());
+          packaged_hashes.insert(hash_ref, name_hash_for_filename(&output.hash));
         }
         all_outputs.insert(bundle_id, output);
       }

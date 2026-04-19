@@ -329,28 +329,65 @@ impl NativeBundleGraph {
   // THIS IS DEFINITELY NOT PRODUCTION READY CODE!
   #[tracing::instrument(level = "info", skip_all)]
   pub fn name_bundles(&mut self) {
-    // Two passes: we need to read asset nodes while building names, then mutate bundle nodes.
+    // Two passes: we need to read node/graph data while building names, then mutate bundle nodes.
+    //
+    // Stem derivation mirrors JS DefaultNamer:
+    // - If the bundle has entry assets, use the first entry asset's file stem.
+    // - If the bundle has no entry assets (e.g. a type-change CSS sibling), find
+    //   the bundle group it belongs to (via incoming Bundle edges) and use that
+    //   group's entry_asset_id to derive the stem. This ensures a CSS sibling of
+    //   `index.js` is named `index.css` rather than `bundle.<hash>.css`.
     let names: HashMap<String, String> = self
       .nodes
       .iter()
-      .filter_map(|node| {
+      .enumerate()
+      .filter_map(|(node_id, node)| {
         let NativeBundleGraphNode::Bundle(b) = node else {
           return None;
         };
-        let stem = b
-          .entry_asset_ids
-          .first()
-          .and_then(|id| self.get_node_id_by_content_key(id))
-          .and_then(|nid| self.nodes.get(*nid))
-          .and_then(|n| match n {
-            NativeBundleGraphNode::Asset(asset) => asset
-              .file_path
-              .file_stem()
-              .and_then(|s| s.to_str())
-              .map(String::from),
-            _ => None,
-          })
-          .unwrap_or_else(|| "bundle".to_string());
+
+        let stem = if let Some(entry_asset_id) = b.entry_asset_ids.first() {
+          // Normal bundle: derive stem from own entry asset.
+          self
+            .get_node_id_by_content_key(entry_asset_id)
+            .and_then(|nid| self.nodes.get(*nid))
+            .and_then(|n| match n {
+              NativeBundleGraphNode::Asset(asset) => asset
+                .file_path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .map(String::from),
+              _ => None,
+            })
+        } else {
+          // No entry assets (type-change sibling or shared bundle): look for the
+          // bundle group that owns this bundle via incoming Bundle-typed edges.
+          // The bundle group's entry_asset_id gives us the right stem (e.g. the
+          // JS entry that caused CSS to be extracted as a sibling).
+          self
+            .get_incoming_neighbors_by_edge_type(&node_id, NativeBundleGraphEdgeType::Bundle)
+            .into_iter()
+            .find_map(|bg_node_id| {
+              let NativeBundleGraphNode::BundleGroup { entry_asset_id, .. } =
+                self.nodes.get(bg_node_id)?
+              else {
+                return None;
+              };
+              self
+                .get_node_id_by_content_key(entry_asset_id)
+                .and_then(|nid| self.nodes.get(*nid))
+                .and_then(|n| match n {
+                  NativeBundleGraphNode::Asset(asset) => asset
+                    .file_path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .map(String::from),
+                  _ => None,
+                })
+            })
+        }
+        .unwrap_or_else(|| "bundle".to_string());
+
         let ext = b.bundle_type.extension();
         let name = if b.needs_stable_name == Some(true) {
           format!("{}.{}", stem, ext)

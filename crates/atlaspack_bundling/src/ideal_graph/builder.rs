@@ -2096,13 +2096,22 @@ impl IdealGraphBuilder {
     let sibling_asset_key = ideal.assets.insert_synthetic(sibling_id_str);
     let sibling_bundle_id = IdealBundleId::from_asset_key(sibling_asset_key);
 
+    // Inherit needs_stable_name from the parent bundle. This matches the JS
+    // bundler's idealGraph.ts where a CSS sibling of a JS entry inherits the
+    // entry's needsStableName, so it gets a content-derived name (e.g.
+    // `index.css`) rather than a hash-based one (e.g. `bundle.<hash>.css`).
+    let parent_needs_stable_name = ideal
+      .get_bundle(parent_bundle_id)
+      .map(|b| b.needs_stable_name)
+      .unwrap_or(false);
+
     ideal.create_bundle(IdealBundle {
       id: sibling_bundle_id,
       root_asset_id: None, // Type-change sibling bundles have no root asset.
       bundle_group_root: None,
       assets: FixedBitSet::with_capacity(self.assets.len()),
       bundle_type: file_type,
-      needs_stable_name: false,
+      needs_stable_name: parent_needs_stable_name,
       behavior: None,
       ancestor_assets: DenseBitset::new(),
     })?;

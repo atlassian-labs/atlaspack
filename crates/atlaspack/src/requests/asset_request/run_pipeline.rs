@@ -72,7 +72,7 @@ pub async fn run_pipeline(input: RunPipelineInput) -> anyhow::Result<RunPipeline
       // When the Asset changes file_type we need to regenerate its id
       current_asset.update_id(&project_root);
 
-      let next_pipeline = plugins.transformers(&current_asset).await?;
+      let next_pipeline = plugins.transformers(&current_asset, false).await?;
 
       if pipeline.should_run_new_pipeline(&next_pipeline) {
         tracing::debug!(

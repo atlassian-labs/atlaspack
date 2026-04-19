@@ -20,7 +20,17 @@ pub mod plugin_cache;
 pub trait Plugins {
   fn named_pipelines(&self) -> Vec<String>;
   fn resolvers(&self) -> Result<Vec<Arc<dyn ResolverPlugin>>, anyhow::Error>;
-  async fn transformers(&self, asset: &Asset) -> Result<TransformerPipeline, anyhow::Error>;
+  /// Returns the transformer pipeline for `asset`.
+  ///
+  /// `allow_empty` mirrors the JS `allowEmpty` / `isURL` flag: when `true` and
+  /// no transformers match the asset path, an empty (pass-through) pipeline is
+  /// returned instead of an error. This is used for URL-type assets (e.g. fonts
+  /// referenced from CSS `url()`) that have no dedicated native transformer.
+  async fn transformers(
+    &self,
+    asset: &Asset,
+    allow_empty: bool,
+  ) -> Result<TransformerPipeline, anyhow::Error>;
 }
 
 pub struct TransformerPipeline {
