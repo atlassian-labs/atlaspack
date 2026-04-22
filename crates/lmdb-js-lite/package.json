@@ -3,6 +3,7 @@
   "version": "0.1.5",
   "main": "dist/compat.js",
   "types": "compat.d.ts",
+  "private": true,
   "repository": "https://github.com/atlassian-labs/atlaspack",
   "os": [
     "darwin",
