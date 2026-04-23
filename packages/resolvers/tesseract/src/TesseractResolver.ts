@@ -22,6 +22,10 @@ interface TesseractResolverConfig {
   unsupportedExtensions?: Array<string>;
 }
 
+const isReactDomServer = (specifier: string) =>
+  specifier.includes('react-dom/server') ||
+  specifier.includes('react-dom-next/server');
+
 const IGNORE_MODULES_REGEX = /(mock|mocks|\.woff|\.woff2|\.mp3|\.ogg)$/;
 const IGNORE_PATH = join(__dirname, 'data', 'empty-module.js');
 
@@ -166,7 +170,7 @@ export default new Resolver({
 
     const snapvmEnv = new Proxy(dependency.env, {
       get(target, property) {
-        if (handleReactDomServer && specifier.includes('react-dom/server')) {
+        if (handleReactDomServer && isReactDomServer(specifier)) {
           if (property === 'isNode') {
             return () => true;
           }
@@ -193,8 +197,8 @@ export default new Resolver({
     });
 
     const packageConditions =
-      handleReactDomServer && specifier.includes('react-dom/server')
-        ? ['default']
+      handleReactDomServer && isReactDomServer(specifier)
+        ? ['node', 'default']
         : ['ssr', 'require'];
 
     const promise = useBrowser
