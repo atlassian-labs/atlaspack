@@ -159,6 +159,13 @@ pub struct PluginOptions {
   /// Browserslist environment (e.g. "development" or "production") for config with
   /// "browserslist": { "development": [...], "production": [...] }.
   pub browserslist_env: Option<String>,
+  /// Panic if `resolve_import_binding` is called outside the body of a Compiled
+  /// CSS API call (`css(...)`, `styled.X(...)`, `` css`...` ``, `` styled.X`...` ``,
+  /// `cssMap({...})`, `keyframes(...)` or `<ClassNames>`). Crossing an import
+  /// boundary outside a CSS API call would silently expand the file's
+  /// transitive transform-dependency footprint, so this guard catches any
+  /// regression in the entry-point wiring.
+  pub strict_css_block_guard: Option<bool>,
 }
 
 impl Default for PluginOptions {
@@ -183,6 +190,7 @@ impl Default for PluginOptions {
       flatten_multiple_selectors: None,
       extract: None,
       browserslist_env: None,
+      strict_css_block_guard: None,
     }
   }
 }
@@ -209,6 +217,7 @@ impl From<&crate::config::CompiledCssInJsConfig> for PluginOptions {
       flatten_multiple_selectors: config.flatten_multiple_selectors,
       extract: config.extract,
       browserslist_env: config.browserslist_env.clone(),
+      strict_css_block_guard: config.strict_css_block_guard,
     }
   }
 }
@@ -652,6 +661,11 @@ pub struct Metadata {
   pub parent_scope: SharedScope,
   pub own_scope: Option<SharedScope>,
   pub parent_expr: Option<Box<Expr>>,
+  /// True when the current resolution chain is happening inside the body of a
+  /// Compiled CSS API call. Set by entry-point wiring (`enter_css_block`) and
+  /// preserved across all `with_*` helpers and binding lookups. Used by the
+  /// strict `resolve_import_binding` guard.
+  pub in_css_block: bool,
 }
 
 impl Metadata {
@@ -668,6 +682,17 @@ impl Metadata {
       parent_scope,
       own_scope: None,
       parent_expr: None,
+      in_css_block: false,
+    }
+  }
+
+  /// Mark this metadata as being inside a Compiled CSS API call body. All
+  /// downstream `resolve_import_binding` calls reached from this metadata are
+  /// considered legitimate transform-time inlinings.
+  pub fn enter_css_block(&self) -> Self {
+    Self {
+      in_css_block: true,
+      ..self.clone()
     }
   }
 

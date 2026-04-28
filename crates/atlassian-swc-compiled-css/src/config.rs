@@ -119,6 +119,15 @@ pub struct CompiledCssInJsConfig {
   /// Defaults to `None`.
   ///
   pub browserslist_env: Option<String>,
+  ///
+  /// When enabled, panic if `resolve_import_binding` is invoked outside of a
+  /// Compiled CSS API call body (`css(...)`, `styled.X(...)`, `cssMap({...})`,
+  /// `keyframes(...)`, or `<ClassNames>`). Used to detect transform-time
+  /// inlining that silently expands the file's transform-dependency footprint.
+  ///
+  /// Defaults to `false`.
+  ///
+  pub strict_css_block_guard: Option<bool>,
 }
 
 /// Full configuration for CompiledCssInJs transform.
@@ -239,6 +248,12 @@ pub struct CompiledCssInJsTransformConfig {
   /// Browserslist environment (e.g. "development" or "production") for package.json "browserslist".
   ///
   pub browserslist_env: Option<String>,
+  ///
+  /// When enabled, panic if a value is inlined from outside a CSS API call body.
+  ///
+  /// Defaults to `false`.
+  ///
+  pub strict_css_block_guard: bool,
 }
 
 impl Default for CompiledCssInJsTransformConfig {
@@ -263,6 +278,7 @@ impl Default for CompiledCssInJsTransformConfig {
       unsafe_use_safe_assets: false,
       unsafe_skip_pattern: None,
       browserslist_env: None,
+      strict_css_block_guard: false,
     }
   }
 }
@@ -300,6 +316,9 @@ impl From<CompiledCssInJsConfig> for CompiledCssInJsTransformConfig {
         .unwrap_or(defaults.unsafe_use_safe_assets),
       unsafe_skip_pattern: partial.unsafe_skip_pattern.or(defaults.unsafe_skip_pattern),
       browserslist_env: partial.browserslist_env.or(defaults.browserslist_env),
+      strict_css_block_guard: partial
+        .strict_css_block_guard
+        .unwrap_or(defaults.strict_css_block_guard),
     }
   }
 }

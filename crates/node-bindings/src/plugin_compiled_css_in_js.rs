@@ -62,6 +62,11 @@ pub struct CompiledCssInJsConfigPlugin {
   pub unsafe_skip_pattern: Option<String>,
   /// Browserslist environment (e.g. "development" or "production") for package.json "browserslist".
   pub browserslist_env: Option<String>,
+  /// When enabled, panic if `resolve_import_binding` is invoked outside a
+  /// Compiled CSS API call body (`css(...)`, `styled.X(...)`, `cssMap({...})`,
+  /// `keyframes(...)`, or `<ClassNames>`). Used to detect transform-time
+  /// inlining that silently expands the file's transform-dependency footprint.
+  pub strict_css_block_guard: Option<bool>,
 }
 
 #[napi(object)]
@@ -288,6 +293,7 @@ fn process_compiled_css_in_js(
         .browserslist_env
         .clone()
         .or_else(|| input.browserslist_env.clone()),
+      strict_css_block_guard: input.config.strict_css_block_guard,
     },
   );
 
@@ -612,6 +618,7 @@ fn config_to_plugin_options(
     flatten_multiple_selectors: Some(config.flatten_multiple_selectors),
     extract: Some(config.extract),
     browserslist_env: config.browserslist_env.clone(),
+    strict_css_block_guard: Some(config.strict_css_block_guard),
   }
 }
 

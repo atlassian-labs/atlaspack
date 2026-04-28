@@ -89,6 +89,10 @@ where
     return;
   };
 
+  // Mark `css={...}` JSX prop processing as being inside a CSS block.
+  let meta_owned = meta.enter_css_block();
+  let meta = &meta_owned;
+
   if std::env::var("COMPILED_CLI_TRACE").is_ok() {
     use swc_core::ecma::ast::JSXElementName;
     let name = match &element.opening.name {
