@@ -51,7 +51,10 @@ fn expression_references_import(
         }
 
         if let Some(node) = &binding.node {
-          return expression_references_import(node, &binding.meta, visited, evaluate_expression);
+          // Propagate CSS-block context across the binding boundary.
+          let mut next_meta = binding.meta.clone();
+          next_meta.in_css_block |= meta.in_css_block;
+          return expression_references_import(node, &next_meta, visited, evaluate_expression);
         }
       }
 
@@ -718,13 +721,17 @@ fn resolve_variable_binding(
   binding: PartialBindingWithMeta,
   path: &[String],
   default: &Option<Expr>,
+  caller_meta: &Metadata,
   evaluate_expression: EvaluateExpression,
 ) -> Option<PartialBindingWithMeta> {
   let Some(base) = binding.node.as_ref() else {
     return Some(binding);
   };
 
-  let mut pair = evaluate_expression(base, binding.meta.clone());
+  // Inherit caller's CSS-block context (binding.meta is module-scope).
+  let mut eval_meta = binding.meta.clone();
+  eval_meta.in_css_block |= caller_meta.in_css_block;
+  let mut pair = evaluate_expression(base, eval_meta);
   if std::env::var("STACK_DEBUG_BINDING").is_ok() || std::env::var("STACK_DEBUG_SHARED").is_ok() {
     eprintln!(
       "[resolve_binding] variable base expr_type={} path={:?}",
@@ -781,7 +788,11 @@ fn resolve_variable_binding(
     )
   ) {
     let mut visited = IndexSet::new();
-    if expression_references_import(base, &binding.meta, &mut visited, evaluate_expression) {
+    // Diagnostic walk for `resolved.constant`; inherits caller's CSS-block
+    // context so the strict guard doesn't fire on legitimate inlining.
+    let mut diagnostic_meta = binding.meta.clone();
+    diagnostic_meta.in_css_block |= caller_meta.in_css_block;
+    if expression_references_import(base, &diagnostic_meta, &mut visited, evaluate_expression) {
       // Mirror Babel: treat import-derived string/template bindings as dynamic so they are not
       // eagerly inlined, but still preserve the node for consumers (e.g., styled tagged
       // templates) that need the original template literal to build CSS.
@@ -810,17 +821,74 @@ fn resolve_import_binding(
     return Some(binding);
   }
 
+  // CSS-block guard: import-boundary inlining is only valid inside a Compiled
+  // API call body (css/styled/cssMap/keyframes/<ClassNames>). A caller outside
+  // such a body silently expands the file's transform-dependency footprint.
+  if !meta.in_css_block && meta.state().opts.strict_css_block_guard.unwrap_or(false) {
+    panic!(
+      "Compiled SWC plugin: resolve_import_binding for source '{}' (kind={:?}) called \
+       outside a CSS block (file={:?}). Crossing import boundaries for value inlining \
+       must originate from a css(), styled.X(), keyframes(), cssMap() or <ClassNames> body.",
+      source,
+      kind,
+      meta.state().file().filename,
+    );
+  }
+
+  // Multi-file hop guard: if we are already resolving an import, this is a
+  // second cross-module resolution (e.g. a re-export). Imported values used in
+  // Compiled CSS API calls must be defined in the imported module, not
+  // re-exported from a third file.
+  if meta.resolving_import {
+    let file = meta.state().file().filename.clone();
+    match meta.state().opts.imported_binding_hop {
+      Some(crate::config::ImportedBindingHop::Ban) => {
+        panic!(
+          "Compiled SWC plugin: resolve_import_binding for source '{}' (kind={:?}) called \
+           while already resolving an import (file={:?}). Multi-file hops are banned — \
+           imported values must be defined in the directly-imported module, not re-exported \
+           from a third file.",
+          source, kind, file,
+        );
+      }
+      Some(crate::config::ImportedBindingHop::Log) => {
+        eprintln!(
+          "Compiled SWC plugin [WARN]: multi-file import hop detected — source='{}' \
+           kind={:?} file={:?}",
+          source, kind, file,
+        );
+      }
+      None => {}
+    }
+  }
+
+  // Mark subsequent resolutions as being inside an import-resolution chain.
+  let meta = meta.enter_import_resolution();
+
   let cached = load_or_parse_module(&meta, source)?;
 
+  let in_css_block = meta.in_css_block;
   let resolved = match kind {
     ImportBindingKind::Namespace => Some(binding),
     ImportBindingKind::Default => {
       let result = get_default_export(&cached.program)?;
-      Some(build_import_binding(binding, result, cached.state))
+      Some(build_import_binding(
+        binding,
+        result,
+        cached.state,
+        in_css_block,
+        meta.resolving_import,
+      ))
     }
     ImportBindingKind::Named(name) => {
       let result = get_named_export(&cached.program, name)?;
-      Some(build_import_binding(binding, result, cached.state))
+      Some(build_import_binding(
+        binding,
+        result,
+        cached.state,
+        in_css_block,
+        meta.resolving_import,
+      ))
     }
   }?;
 
@@ -831,8 +899,14 @@ fn build_import_binding(
   mut binding: PartialBindingWithMeta,
   traversed: TraverserResult<Expr>,
   state: Rc<RefCell<TransformState>>,
+  in_css_block: bool,
+  resolving_import: bool,
 ) -> PartialBindingWithMeta {
-  let metadata = Metadata::new(state).with_parent_span(Some(traversed.span));
+  let mut metadata = Metadata::new(state).with_parent_span(Some(traversed.span));
+  // Propagate context flags across the module boundary so downstream guards
+  // have accurate state when the imported value is further resolved.
+  metadata.in_css_block = in_css_block;
+  metadata.resolving_import = resolving_import;
   binding.node = Some(traversed.node);
   binding.meta = metadata;
   binding
@@ -916,7 +990,7 @@ pub fn resolve_binding(
 
   match path_kind {
     Some(BindingPathKind::Variable { path, default }) => {
-      resolve_variable_binding(binding, &path, &default, evaluate_expression)
+      resolve_variable_binding(binding, &path, &default, &meta, evaluate_expression)
     }
     Some(BindingPathKind::Import { source, kind }) => {
       let imported = resolve_import_binding(binding, &source, &kind, meta);
@@ -1136,6 +1210,240 @@ mod tests {
     };
 
     assert_eq!(str_lit.value, "blue");
+  }
+
+  #[test]
+  fn strict_guard_disabled_by_default_allows_import_resolution() {
+    let dir = tempdir().expect("temp directory");
+    let entry_path = dir.path().join("entry.tsx");
+    fs::write(&entry_path, "").expect("write entry");
+
+    let module_path = dir.path().join("colors.ts");
+    fs::write(&module_path, "export const blue = 'blue';").expect("write module");
+
+    let cm: Lrc<SourceMap> = Default::default();
+    let file = TransformFile::transform_compiled_with_options(
+      cm,
+      Vec::new(),
+      TransformFileOptions {
+        filename: Some(entry_path.to_string_lossy().into_owned()),
+        cwd: Some(dir.path().to_path_buf()),
+        root: Some(dir.path().to_path_buf()),
+        loc_filename: None,
+      },
+    );
+
+    let state = Rc::new(RefCell::new(TransformState::new(
+      file,
+      PluginOptions::default(),
+    )));
+    let meta = Metadata::new(state.clone());
+
+    let binding = PartialBindingWithMeta::new(
+      None,
+      Some(BindingPath::import(
+        Some(DUMMY_SP),
+        "./colors".into(),
+        ImportBindingKind::Named("blue".into()),
+      )),
+      true,
+      meta.clone(),
+      BindingSource::Import,
+    );
+    meta.insert_parent_binding("blue", binding);
+
+    let result =
+      resolve_binding("blue", meta, identity_evaluate as EvaluateExpression).expect("binding");
+
+    let Expr::Lit(Lit::Str(str_lit)) = result.node.expect("resolved literal") else {
+      panic!("expected string literal");
+    };
+
+    assert_eq!(str_lit.value, "blue");
+  }
+
+  #[test]
+  fn strict_guard_allows_import_resolution_inside_css_block() {
+    let dir = tempdir().expect("temp directory");
+    let entry_path = dir.path().join("entry.tsx");
+    fs::write(&entry_path, "").expect("write entry");
+
+    let module_path = dir.path().join("colors.ts");
+    fs::write(&module_path, "export const blue = 'blue';").expect("write module");
+
+    let cm: Lrc<SourceMap> = Default::default();
+    let file = TransformFile::transform_compiled_with_options(
+      cm,
+      Vec::new(),
+      TransformFileOptions {
+        filename: Some(entry_path.to_string_lossy().into_owned()),
+        cwd: Some(dir.path().to_path_buf()),
+        root: Some(dir.path().to_path_buf()),
+        loc_filename: None,
+      },
+    );
+
+    let mut options = PluginOptions::default();
+    options.strict_css_block_guard = Some(true);
+
+    let state = Rc::new(RefCell::new(TransformState::new(file, options)));
+    let meta = Metadata::new(state.clone()).enter_css_block();
+
+    let binding = PartialBindingWithMeta::new(
+      None,
+      Some(BindingPath::import(
+        Some(DUMMY_SP),
+        "./colors".into(),
+        ImportBindingKind::Named("blue".into()),
+      )),
+      true,
+      meta.clone(),
+      BindingSource::Import,
+    );
+    meta.insert_parent_binding("blue", binding);
+
+    let result =
+      resolve_binding("blue", meta, identity_evaluate as EvaluateExpression).expect("binding");
+
+    let Expr::Lit(Lit::Str(str_lit)) = result.node.expect("resolved literal") else {
+      panic!("expected string literal");
+    };
+
+    assert_eq!(str_lit.value, "blue");
+  }
+
+  #[test]
+  #[should_panic(expected = "outside a CSS block")]
+  fn strict_guard_panics_when_import_resolved_outside_css_block() {
+    let dir = tempdir().expect("temp directory");
+    let entry_path = dir.path().join("entry.tsx");
+    fs::write(&entry_path, "").expect("write entry");
+
+    let module_path = dir.path().join("colors.ts");
+    fs::write(&module_path, "export const blue = 'blue';").expect("write module");
+
+    let cm: Lrc<SourceMap> = Default::default();
+    let file = TransformFile::transform_compiled_with_options(
+      cm,
+      Vec::new(),
+      TransformFileOptions {
+        filename: Some(entry_path.to_string_lossy().into_owned()),
+        cwd: Some(dir.path().to_path_buf()),
+        root: Some(dir.path().to_path_buf()),
+        loc_filename: None,
+      },
+    );
+
+    let mut options = PluginOptions::default();
+    options.strict_css_block_guard = Some(true);
+
+    let state = Rc::new(RefCell::new(TransformState::new(file, options)));
+    // No `enter_css_block()` — this represents an unintended call site.
+    let meta = Metadata::new(state.clone());
+
+    let binding = PartialBindingWithMeta::new(
+      None,
+      Some(BindingPath::import(
+        Some(DUMMY_SP),
+        "./colors".into(),
+        ImportBindingKind::Named("blue".into()),
+      )),
+      true,
+      meta.clone(),
+      BindingSource::Import,
+    );
+    meta.insert_parent_binding("blue", binding);
+
+    let _ = resolve_binding("blue", meta, identity_evaluate as EvaluateExpression);
+  }
+
+  fn create_hop_metadata(
+    dir: &std::path::Path,
+    hop_mode: Option<crate::config::ImportedBindingHop>,
+  ) -> (Metadata, Rc<RefCell<crate::types::TransformState>>) {
+    let entry_path = dir.join("entry.tsx");
+    std::fs::write(&entry_path, "").expect("write entry");
+    // Intermediate module that re-exports from a third file.
+    let intermediate_path = dir.join("intermediate.ts");
+    std::fs::write(&intermediate_path, "export { RED } from './source';")
+      .expect("write intermediate");
+    // Source module with the actual value.
+    let source_path = dir.join("source.ts");
+    std::fs::write(&source_path, "export const RED = 'red';").expect("write source");
+
+    let cm: Lrc<SourceMap> = Default::default();
+    let file = TransformFile::transform_compiled_with_options(
+      cm,
+      Vec::new(),
+      TransformFileOptions {
+        filename: Some(entry_path.to_string_lossy().into_owned()),
+        cwd: Some(dir.to_path_buf()),
+        root: Some(dir.to_path_buf()),
+        loc_filename: None,
+      },
+    );
+    let mut opts = PluginOptions::default();
+    opts.imported_binding_hop = hop_mode;
+    // Ensure we're inside a CSS block so the css-block guard doesn't interfere.
+    let state = Rc::new(RefCell::new(TransformState::new(file, opts)));
+    let mut meta = Metadata::new(state.clone()).enter_css_block();
+
+    // Simulate `import { RED } from './intermediate'` in the entry module.
+    let binding = PartialBindingWithMeta::new(
+      None,
+      Some(BindingPath::import(
+        Some(DUMMY_SP),
+        "./intermediate".into(),
+        ImportBindingKind::Named("RED".into()),
+      )),
+      true,
+      meta.clone(),
+      BindingSource::Import,
+    );
+    meta.insert_parent_binding("RED", binding);
+    (meta, state)
+  }
+
+  /// Resolve `RED` through intermediate.ts (a re-export) and then evaluate
+  /// the returned ident to trigger the second hop into source.ts.
+  fn resolve_and_evaluate_red(meta: Metadata) -> Option<PartialBindingWithMeta> {
+    let result = resolve_binding(
+      "RED",
+      meta,
+      utils_evaluate_expression::evaluate_expression as EvaluateExpression,
+    )?;
+    let node = result.node.as_ref()?;
+    // Evaluating the returned ident triggers resolve_binding("RED") in
+    // intermediate.ts's scope, which calls resolve_import_binding for ./source.
+    // This is the second hop that the guard must catch when ban=true.
+    let _ = utils_evaluate_expression::evaluate_expression(node, result.meta.clone());
+    Some(result)
+  }
+
+  #[test]
+  fn hop_guard_disabled_by_default_allows_reexport() {
+    let dir = tempdir().expect("temp dir");
+    let (meta, _state) = create_hop_metadata(dir.path(), None);
+    assert!(resolve_and_evaluate_red(meta).is_some());
+  }
+
+  #[test]
+  #[should_panic(expected = "Multi-file hops are banned")]
+  fn ban_hop_guard_panics_on_reexport() {
+    let dir = tempdir().expect("temp dir");
+    let (meta, _state) =
+      create_hop_metadata(dir.path(), Some(crate::config::ImportedBindingHop::Ban));
+    // Evaluating triggers the second hop: intermediate.ts -> source.ts.
+    let _ = resolve_and_evaluate_red(meta);
+  }
+
+  #[test]
+  fn log_hop_guard_does_not_panic_on_reexport() {
+    let dir = tempdir().expect("temp dir");
+    let (meta, _state) =
+      create_hop_metadata(dir.path(), Some(crate::config::ImportedBindingHop::Log));
+    // log only: must warn to stderr but NOT panic.
+    assert!(resolve_and_evaluate_red(meta).is_some());
   }
 
   #[test]

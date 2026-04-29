@@ -62,6 +62,9 @@ pub struct CompiledCssInJsConfigPlugin {
   pub unsafe_skip_pattern: Option<String>,
   /// Browserslist environment (e.g. "development" or "production") for package.json "browserslist".
   pub browserslist_env: Option<String>,
+  pub strict_css_block_guard: Option<bool>,
+  /// Multi-file import hop detection: `"ban"` = panic, `"log"` = warn.
+  pub imported_binding_hop: Option<atlassian_swc_compiled_css::config::ImportedBindingHop>,
 }
 
 #[napi(object)]
@@ -288,6 +291,8 @@ fn process_compiled_css_in_js(
         .browserslist_env
         .clone()
         .or_else(|| input.browserslist_env.clone()),
+      strict_css_block_guard: input.config.strict_css_block_guard,
+      imported_binding_hop: input.config.imported_binding_hop,
     },
   );
 
@@ -612,6 +617,8 @@ fn config_to_plugin_options(
     flatten_multiple_selectors: Some(config.flatten_multiple_selectors),
     extract: Some(config.extract),
     browserslist_env: config.browserslist_env.clone(),
+    strict_css_block_guard: Some(config.strict_css_block_guard),
+    imported_binding_hop: config.imported_binding_hop,
   }
 }
 

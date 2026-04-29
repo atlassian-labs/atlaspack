@@ -32,6 +32,9 @@ pub fn visit_css_map_path_with_builder<'a, F>(
 where
   F: FnMut(&Expr, &Metadata) -> CssOutput,
 {
+  // Mark `cssMap({...})` body processing as being inside a CSS block.
+  let meta_owned = meta.enter_css_block();
+  let meta = &meta_owned;
   match usage {
     CssMapUsage::TaggedTemplate(tagged_tpl) => {
       report_css_map_error_with_hints(meta, tagged_tpl.span, ErrorMessages::NoTaggedTemplate);

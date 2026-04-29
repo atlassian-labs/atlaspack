@@ -1,3 +1,17 @@
+/// Action to take when a multi-file import hop is detected in Compiled CSS resolution.
+///
+/// Exposed to TypeScript as `"ban" | "log"` via NAPI's `string_enum`.
+#[cfg_attr(feature = "napi", napi_derive::napi(string_enum = "lowercase"))]
+#[cfg_attr(not(feature = "napi"), derive(Clone, Copy))]
+#[derive(Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ImportedBindingHop {
+  /// Panic immediately when a multi-file hop is detected.
+  Ban,
+  /// Emit a warning to stderr instead of panicking.
+  Log,
+}
+
 /// Partial configuration for CompiledCssInJs transform.
 /// All fields are optional and will use defaults if not specified.
 #[cfg_attr(feature = "napi", napi_derive::napi(object))]
@@ -119,6 +133,23 @@ pub struct CompiledCssInJsConfig {
   /// Defaults to `None`.
   ///
   pub browserslist_env: Option<String>,
+  ///
+  /// When enabled, panic if `resolve_import_binding` is invoked outside of a
+  /// Compiled CSS API call body (`css(...)`, `styled.X(...)`, `cssMap({...})`,
+  /// `keyframes(...)`, or `<ClassNames>`). Used to detect transform-time
+  /// inlining that silently expands the file's transform-dependency footprint.
+  ///
+  /// Defaults to `false`.
+  ///
+  pub strict_css_block_guard: Option<bool>,
+  ///
+  /// Multi-file import hop detection mode (`"ban"` = panic, `"log"` = warn,
+  /// unset = disabled).
+  ///
+  /// An imported binding that is itself re-exported from a third module
+  /// requires at least two cross-module resolutions, silently expanding the
+  /// transform-dependency chain.
+  pub imported_binding_hop: Option<ImportedBindingHop>,
 }
 
 /// Full configuration for CompiledCssInJs transform.
@@ -239,6 +270,15 @@ pub struct CompiledCssInJsTransformConfig {
   /// Browserslist environment (e.g. "development" or "production") for package.json "browserslist".
   ///
   pub browserslist_env: Option<String>,
+  ///
+  /// When enabled, panic if a value is inlined from outside a CSS API call body.
+  ///
+  /// Defaults to `false`.
+  ///
+  pub strict_css_block_guard: bool,
+  /// Multi-file import hop detection mode
+  /// Defaults to `None`
+  pub imported_binding_hop: Option<ImportedBindingHop>,
 }
 
 impl Default for CompiledCssInJsTransformConfig {
@@ -263,6 +303,8 @@ impl Default for CompiledCssInJsTransformConfig {
       unsafe_use_safe_assets: false,
       unsafe_skip_pattern: None,
       browserslist_env: None,
+      strict_css_block_guard: false,
+      imported_binding_hop: None,
     }
   }
 }
@@ -300,6 +342,12 @@ impl From<CompiledCssInJsConfig> for CompiledCssInJsTransformConfig {
         .unwrap_or(defaults.unsafe_use_safe_assets),
       unsafe_skip_pattern: partial.unsafe_skip_pattern.or(defaults.unsafe_skip_pattern),
       browserslist_env: partial.browserslist_env.or(defaults.browserslist_env),
+      strict_css_block_guard: partial
+        .strict_css_block_guard
+        .unwrap_or(defaults.strict_css_block_guard),
+      imported_binding_hop: partial
+        .imported_binding_hop
+        .or(defaults.imported_binding_hop),
     }
   }
 }

@@ -492,4 +492,151 @@ mod tests {
 
     assert!(css_attr, "css attribute should remain when disabled");
   }
+
+  fn create_strict_metadata(
+    entry_path: &std::path::Path,
+    dir: &std::path::Path,
+  ) -> (
+    Metadata,
+    Rc<RefCell<crate::types::TransformState>>,
+    Lrc<SourceMap>,
+  ) {
+    use crate::types::{TransformFile, TransformFileOptions, TransformState};
+    let cm: Lrc<SourceMap> = Default::default();
+    let file = TransformFile::transform_compiled_with_options(
+      cm.clone(),
+      Vec::new(),
+      TransformFileOptions {
+        filename: Some(entry_path.to_string_lossy().into_owned()),
+        cwd: Some(dir.to_path_buf()),
+        root: Some(dir.to_path_buf()),
+        loc_filename: None,
+      },
+    );
+    let mut opts = PluginOptions::default();
+    opts.strict_css_block_guard = Some(true);
+    let state = Rc::new(RefCell::new(TransformState::new(file, opts)));
+    // Register `css` as the Compiled CSS import alias.
+    state
+      .borrow_mut()
+      .imported_compiled_imports
+      .css
+      .replace("css".into());
+    let meta = Metadata::new(state.clone());
+    (meta, state, cm)
+  }
+
+  /// Parse a JSX expression using a pre-existing `SourceMap` so spans are
+  /// compatible with a `Metadata` that was built from the same `SourceMap`.
+  fn parse_jsx_with_cm(code: &str, cm: Lrc<SourceMap>) -> Expr {
+    use swc_core::common::FileName;
+    let fm = cm.new_source_file(FileName::Custom("expr.jsx".into()).into(), code.to_string());
+    let lexer = swc_core::ecma::parser::lexer::Lexer::new(
+      swc_core::ecma::parser::Syntax::Es(swc_core::ecma::parser::EsSyntax {
+        jsx: true,
+        ..Default::default()
+      }),
+      Default::default(),
+      swc_core::ecma::parser::StringInput::from(&*fm),
+      None,
+    );
+    let mut parser = swc_core::ecma::parser::Parser::new_from(lexer);
+    *parser.parse_expr().expect("parse JSX expression")
+  }
+
+  fn setup_import_binding(dir: &std::path::Path) -> (Metadata, Lrc<SourceMap>) {
+    use crate::utils_types::{
+      BindingPath, BindingSource, ImportBindingKind, PartialBindingWithMeta,
+    };
+    use swc_core::common::DUMMY_SP;
+
+    let entry_path = dir.join("entry.tsx");
+    std::fs::write(&entry_path, "").unwrap();
+    std::fs::write(dir.join("binding.ts"), "export const red = 'red';").unwrap();
+
+    let (meta, _state, cm) = create_strict_metadata(&entry_path, dir);
+
+    let binding = PartialBindingWithMeta::new(
+      None,
+      Some(BindingPath::import(
+        Some(DUMMY_SP),
+        "./binding".into(),
+        ImportBindingKind::Named("red".into()),
+      )),
+      true,
+      meta.clone(),
+      BindingSource::Import,
+    );
+    meta.insert_parent_binding("red", binding);
+    (meta, cm)
+  }
+
+  #[test]
+  #[should_panic(expected = "outside a CSS block")]
+  fn panics_if_imported_without_css_wrap() {
+    // `css={{ color: importedValue }}` — raw object, no css() wrapper. Must panic.
+    use crate::utils_css_builders::build_css;
+    use swc_core::ecma::ast::{IdentName, KeyValueProp, ObjectLit, Prop, PropName, PropOrSpread};
+    use tempfile::tempdir;
+
+    let dir = tempdir().expect("temp dir");
+    let (meta, cm) = setup_import_binding(dir.path());
+
+    let red_ident = parse_jsx_with_cm("red", cm);
+    let object = Expr::Object(ObjectLit {
+      span: swc_core::common::DUMMY_SP,
+      props: vec![PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+        key: PropName::Ident(IdentName {
+          span: swc_core::common::DUMMY_SP,
+          sym: "color".into(),
+        }),
+        value: Box::new(red_ident),
+      })))],
+    });
+
+    crate::test_utils::with_globals(|| {
+      build_css(&object, &meta);
+    });
+  }
+
+  #[test]
+  fn works_if_imported_with_css_wrap() {
+    // `css({ color: importedValue })` — wrapped in css() Compiled API. Must NOT panic.
+    use crate::utils_css_builders::build_css;
+    use swc_core::ecma::ast::{
+      CallExpr, Callee, ExprOrSpread, IdentName, KeyValueProp, ObjectLit, Prop, PropName,
+      PropOrSpread,
+    };
+    use tempfile::tempdir;
+
+    let dir = tempdir().expect("temp dir");
+    let (meta, cm) = setup_import_binding(dir.path());
+
+    let red_ident = parse_jsx_with_cm("red", cm.clone());
+    let inner_object = Expr::Object(ObjectLit {
+      span: swc_core::common::DUMMY_SP,
+      props: vec![PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+        key: PropName::Ident(IdentName {
+          span: swc_core::common::DUMMY_SP,
+          sym: "color".into(),
+        }),
+        value: Box::new(red_ident),
+      })))],
+    });
+    let css_ident = parse_jsx_with_cm("css", cm);
+    let call = Expr::Call(CallExpr {
+      span: swc_core::common::DUMMY_SP,
+      ctxt: swc_core::common::SyntaxContext::empty(),
+      callee: Callee::Expr(Box::new(css_ident)),
+      args: vec![ExprOrSpread {
+        spread: None,
+        expr: Box::new(inner_object),
+      }],
+      type_args: None,
+    });
+
+    crate::test_utils::with_globals(|| {
+      build_css(&call, &meta);
+    });
+  }
 }
