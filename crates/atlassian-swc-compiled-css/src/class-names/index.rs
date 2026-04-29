@@ -324,6 +324,10 @@ where
     return false;
   }
 
+  // Mark `<ClassNames>` body processing as being inside a CSS block.
+  let meta_owned = meta.enter_css_block();
+  let meta = &meta_owned;
+
   let runtime_helper = get_runtime_class_name_library(meta);
   let children_expr = ensure_children_function(element, meta);
   let (css_identifiers, style_identifiers) = collect_css_and_style_aliases(children_expr);

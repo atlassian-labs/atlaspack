@@ -159,6 +159,9 @@ pub struct PluginOptions {
   /// Browserslist environment (e.g. "development" or "production") for config with
   /// "browserslist": { "development": [...], "production": [...] }.
   pub browserslist_env: Option<String>,
+  pub strict_css_block_guard: Option<bool>,
+  /// Multi-file import hop detection mode (`Ban` = panic, `Log` = warn, `None` = disabled).
+  pub imported_binding_hop: Option<crate::config::ImportedBindingHop>,
 }
 
 impl Default for PluginOptions {
@@ -183,6 +186,8 @@ impl Default for PluginOptions {
       flatten_multiple_selectors: None,
       extract: None,
       browserslist_env: None,
+      strict_css_block_guard: None,
+      imported_binding_hop: None,
     }
   }
 }
@@ -209,6 +214,8 @@ impl From<&crate::config::CompiledCssInJsConfig> for PluginOptions {
       flatten_multiple_selectors: config.flatten_multiple_selectors,
       extract: config.extract,
       browserslist_env: config.browserslist_env.clone(),
+      strict_css_block_guard: config.strict_css_block_guard,
+      imported_binding_hop: config.imported_binding_hop,
     }
   }
 }
@@ -652,6 +659,16 @@ pub struct Metadata {
   pub parent_scope: SharedScope,
   pub own_scope: Option<SharedScope>,
   pub parent_expr: Option<Box<Expr>>,
+  /// True when the current resolution chain is happening inside the body of a
+  /// Compiled CSS API call. Set by entry-point wiring (`enter_css_block`) and
+  /// preserved across all `with_*` helpers and binding lookups. Used by the
+  /// strict `resolve_import_binding` guard.
+  pub in_css_block: bool,
+  /// True when we are already inside a `resolve_import_binding` call. Used to
+  /// detect multi-file hops: an imported value that is itself re-imported from
+  /// another module requires a second cross-file resolution, which expands the
+  /// transform-dependency chain beyond what is permitted.
+  pub resolving_import: bool,
 }
 
 impl Metadata {
@@ -668,6 +685,28 @@ impl Metadata {
       parent_scope,
       own_scope: None,
       parent_expr: None,
+      in_css_block: false,
+      resolving_import: false,
+    }
+  }
+
+  /// Mark this metadata as being inside a Compiled CSS API call body. All
+  /// downstream `resolve_import_binding` calls reached from this metadata are
+  /// considered legitimate transform-time inlinings.
+  pub fn enter_css_block(&self) -> Self {
+    Self {
+      in_css_block: true,
+      ..self.clone()
+    }
+  }
+
+  /// Mark this metadata as being inside an active `resolve_import_binding`
+  /// call. Any further call to `resolve_import_binding` while this flag is
+  /// set constitutes a multi-file hop.
+  pub fn enter_import_resolution(&self) -> Self {
+    Self {
+      resolving_import: true,
+      ..self.clone()
     }
   }
 

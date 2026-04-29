@@ -811,6 +811,23 @@ where
     }
   }
 
+  // Imported cssMap declarations are banned by Compiled; every cssMap reference
+  // must be a local `const X = cssMap({...})`.
+  let is_local_variable = {
+    let own_hit = meta
+      .own_scope()
+      .and_then(|scope| scope.borrow().get(name.as_str()).cloned());
+    let scoped = own_hit.or_else(|| meta.parent_scope().borrow().get(name.as_str()).cloned());
+    matches!(
+      scoped.as_ref().map(|b| &b.source),
+      Some(BindingSource::Module),
+    )
+  };
+  if !is_local_variable {
+    meta.state_mut().ignore_member_expressions.insert(name);
+    return false;
+  }
+
   let resolved = resolve_binding(name.as_str(), meta.clone(), evaluate_expression);
 
   if let Some(PartialBindingWithMeta {
@@ -2075,6 +2092,9 @@ pub fn extract_keyframes_with_builder<F>(
 where
   F: FnMut(&Expr, &Metadata) -> CssOutput,
 {
+  // Mark `keyframes(...)` body processing as being inside a CSS block.
+  let meta_owned = meta.enter_css_block();
+  let meta = &meta_owned;
   // COMPAT: Babel computes the keyframe name by hashing `generate(expression).code`.
   // Our SWC port originally stringified the expression using swc_ecma_codegen which can
   // differ subtly (whitespace/formatting) from Babel, leading to different hashes.
@@ -3215,9 +3235,13 @@ fn build_css_internal(node: &Expr, meta: &Metadata) -> CssOutput {
     let mut normalized_node = binding_node;
     normalize_props_usage(&mut normalized_node);
 
-    let result = build_css_internal(&normalized_node, &binding.meta);
+    // Inherit caller's CSS-block context (binding.meta is module-scope).
+    let mut binding_meta = binding.meta.clone();
+    binding_meta.in_css_block |= meta.in_css_block;
+
+    let result = build_css_internal(&normalized_node, &binding_meta);
     assert_no_imported_css_variables(&Expr::Ident(identifier.clone()), meta, &binding, &result);
-    callback_if_file_included(meta, &binding.meta);
+    callback_if_file_included(meta, &binding_meta);
     return result;
   }
 
@@ -3293,7 +3317,10 @@ fn build_css_internal(node: &Expr, meta: &Metadata) -> CssOutput {
     if is_compiled_css_call_expression(node, &state) {
       drop(state);
       if let Some(first) = call.args.first() {
-        return build_css_internal(&first.expr, meta);
+        // css({...}) is a Compiled API call body — enter the CSS block context
+        // so any import resolution inside the arguments is treated as legitimate.
+        let css_block_meta = meta.enter_css_block();
+        return build_css_internal(&first.expr, &css_block_meta);
       }
       return CssOutput::new();
     }
@@ -5322,7 +5349,7 @@ mod tests {
     // and don't participate in runtime class-name toggling. Wrapping them in Logical
     // would cause transform_css to receive raw @keyframes CSS as a declaration,
     // producing empty sheets and a runtime error.
-    let meta = create_metadata();
+    let _meta = create_metadata();
 
     // Simulate the output of processing css({ '@keyframes': {...}, svg: {...} })
     // which produces a Sheet + Unconditional pair

@@ -17,7 +17,11 @@ pub fn traverse_identifier(
   {
     if binding.constant {
       if let Some(node) = binding.node.as_ref() {
-        let result = (evaluate_expression)(node, binding.meta.clone());
+        // Propagate CSS-block context so import resolution inside the binding's
+        // initializer (e.g. `\`url(${assetUrl})\``) is treated as legitimate.
+        let mut binding_meta = binding.meta.clone();
+        binding_meta.in_css_block |= meta.in_css_block;
+        let result = (evaluate_expression)(node, binding_meta);
         return create_result_pair(result.value, result.meta);
       }
     }

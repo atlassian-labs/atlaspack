@@ -3188,7 +3188,6 @@ fn wrap_bare_declarations_plugin(options: TransformCssOptions) -> pc::BuiltPlugi
 mod tests {
   use super::collapse_repeated_class_descendants;
   use crate::postcss::transform::{TransformCssOptions, transform_css};
-  use crate::utils_hash::hash;
   use pretty_assertions::assert_eq;
 
   #[test]

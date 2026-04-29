@@ -267,6 +267,10 @@ where
     return result;
   };
 
+  // Mark `styled.X({...})` / `` styled.X`...` `` body as inside a CSS block.
+  let meta_owned = meta.enter_css_block();
+  let meta = &meta_owned;
+
   if let Expr::TaggedTpl(tagged) = node {
     if has_invalid_expression(tagged) {
       panic_invalid_expression(tagged.span, meta);
