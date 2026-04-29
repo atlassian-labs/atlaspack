@@ -5349,7 +5349,7 @@ mod tests {
     // and don't participate in runtime class-name toggling. Wrapping them in Logical
     // would cause transform_css to receive raw @keyframes CSS as a declaration,
     // producing empty sheets and a runtime error.
-    let meta = create_metadata();
+    let _meta = create_metadata();
 
     // Simulate the output of processing css({ '@keyframes': {...}, svg: {...} })
     // which produces a Sheet + Unconditional pair

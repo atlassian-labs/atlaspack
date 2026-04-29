@@ -655,6 +655,8 @@ mod tests {
         ssr: Some(true),
         sort_shorthand: Some(true),
         browserslist_env: None,
+        strict_css_block_guard: None,
+        imported_binding_hop: None,
       },
     }
   }

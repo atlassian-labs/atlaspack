@@ -1386,7 +1386,7 @@ mod tests {
     opts.imported_binding_hop = hop_mode;
     // Ensure we're inside a CSS block so the css-block guard doesn't interfere.
     let state = Rc::new(RefCell::new(TransformState::new(file, opts)));
-    let mut meta = Metadata::new(state.clone()).enter_css_block();
+    let meta = Metadata::new(state.clone()).enter_css_block();
 
     // Simulate `import { RED } from './intermediate'` in the entry module.
     let binding = PartialBindingWithMeta::new(
