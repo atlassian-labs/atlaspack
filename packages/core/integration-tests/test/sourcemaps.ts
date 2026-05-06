@@ -1799,4 +1799,119 @@ describe('sourcemaps', function () {
       ),
     );
   });
+
+  it('should produce correct sourcemap for JS importing a CSS module with scope hoisting', async function () {
+    const dir = path.join(__dirname, 'sourcemap-css-modules-scope-hoisting');
+    await overlayFS.mkdirp(dir);
+
+    await fsFixture(overlayFS, dir)`
+      package.json:
+        {
+          "name": "sourcemap-css-modules-scope-hoisting-test",
+          "version": "1.0.0",
+          "private": true
+        }
+
+      style.module.css:
+        .container {
+          color: red;
+        }
+
+        .title {
+          font-size: 24px;
+        }
+
+      index.js:
+        import styles from './style.module.css';
+
+        function getContainer() {
+          return styles.container;
+        }
+
+        function getTitle() {
+          return styles.title;
+        }
+
+        module.exports = {getContainer, getTitle};
+    `;
+
+    // Use scope hoisting without minification so function names are preserved
+    // in the output and we can check source mappings by string.
+    const b = await bundle(path.join(dir, 'index.js'), {
+      inputFS: overlayFS,
+      defaultTargetOptions: {
+        shouldScopeHoist: true,
+        sourceMaps: true,
+        shouldOptimize: false,
+      },
+    });
+
+    const jsBundle = nullthrows(b.getBundles().find((b) => b.type === 'js'));
+    const filename = jsBundle.filePath;
+    const raw = await outputFS.readFile(filename, 'utf8');
+
+    const mapUrlData = await loadSourceMapUrl(outputFS, filename, raw);
+    if (!mapUrlData) {
+      throw new Error('Could not load source map');
+    }
+
+    const sourceMap = new SourceMap('/');
+    sourceMap.addVLQMap(mapUrlData.map);
+
+    const input = await overlayFS.readFile(path.join(dir, 'index.js'), 'utf8');
+    // The source path in the source map is relative to the project root, which
+    // is the directory containing package.json (the fixture dir).
+    const sourcePath = 'sourcemap-css-modules-scope-hoisting/index.js';
+
+    // The CSS module is compiled to a JS asset (containing the class name
+    // mappings) which gets scope-hoisted and prepended before index.js code.
+    // The source map for the CSS module JS stub should be stitched in
+    // correctly so that the entry asset's own mappings are offset by the
+    // right number of lines.
+    //
+    // The bug was that `prependLineCount += 1 + usedExports.length` in
+    // buildAssetPrelude over-counted the prepend lines (counted the same
+    // exports `usedExports.length` times), causing the dep's source map to be
+    // shifted too far down. As a result, the dep's source-mapped lines
+    // overlapped with the parent's function declarations and the parent's
+    // mappings ended up too late in the generated output.
+
+    // Scope hoisting renames functions with the asset ID as a prefix.
+    // We search for the source string and match to the renamed generated string.
+    const getContainerGenerated = raw.match(
+      /function (\$[0-9a-f]+\$var\$getContainer)/,
+    );
+    assert(
+      getContainerGenerated,
+      'Expected getContainer function to appear in generated output',
+    );
+
+    const getTitleGenerated = raw.match(
+      /function (\$[0-9a-f]+\$var\$getTitle)/,
+    );
+    assert(
+      getTitleGenerated,
+      'Expected getTitle function to appear in generated output',
+    );
+
+    checkSourceMapping({
+      map: sourceMap,
+      source: input,
+      generated: raw,
+      str: 'function getContainer',
+      generatedStr: `function ${getContainerGenerated[1]}`,
+      sourcePath,
+      msg: ' - getContainer should map back to index.js correctly after CSS module dep is prepended',
+    });
+
+    checkSourceMapping({
+      map: sourceMap,
+      source: input,
+      generated: raw,
+      str: 'function getTitle',
+      generatedStr: `function ${getTitleGenerated[1]}`,
+      sourcePath,
+      msg: ' - getTitle should map back to index.js correctly after CSS module dep is prepended',
+    });
+  });
 });

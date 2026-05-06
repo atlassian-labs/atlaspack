@@ -1703,7 +1703,7 @@ ${code}
               exp,
             )}, ${get}${set});\n`;
             this.usedHelpers.add('$parcel$export');
-            prependLineCount += 1 + usedExports.length;
+            prependLineCount += 1;
           }
         }
       }
