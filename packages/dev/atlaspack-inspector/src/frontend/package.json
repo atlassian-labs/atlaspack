@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/inspector-frontend",
-  "version": "0.1.30",
+  "version": "0.1.31",
   "license": "MIT",
   "authors": [
     "Pedro Tacla Yamada"
@@ -27,7 +27,7 @@
     "@atlaskit/navigation-system": "^0.170.0",
     "@atlaskit/primitives": "^14.8.4",
     "@atlaskit/tabs": "^18.1.2",
-    "@atlaspack/cli": "2.15.24",
+    "@atlaspack/cli": "2.15.25",
     "@atlaspack/core": "2.38.5",
     "@atlaspack/graph": "3.6.25",
     "@carrotsearch/foamtree": "^3.5.2",

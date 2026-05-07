@@ -1,5 +1,14 @@
 # @atlaspack/test-utils
 
+## 2.14.70
+
+### Patch Changes
+
+- [#1101](https://github.com/atlassian-labs/atlaspack/pull/1101) [`46d15ae`](https://github.com/atlassian-labs/atlaspack/commit/46d15aee764867ee4a8e8867b0326ced9eeeace6) Thanks [@at-nathan](https://github.com/at-nathan)! - Remove debugging for publishing
+
+- Updated dependencies []:
+  - @atlaspack/config-default@19.0.6
+
 ## 2.14.69
 
 ### Patch Changes

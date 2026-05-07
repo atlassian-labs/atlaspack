@@ -1,5 +1,17 @@
 # atlaspack
 
+## 2.0.48
+
+### Patch Changes
+
+- [#1103](https://github.com/atlassian-labs/atlaspack/pull/1103) [`5856a68`](https://github.com/atlassian-labs/atlaspack/commit/5856a6891aafc79a0ffd328dda1734dda95b50e7) Thanks [@at-nathan](https://github.com/at-nathan)! - Marking package as private
+
+- Updated dependencies [[`6fde8ea`](https://github.com/atlassian-labs/atlaspack/commit/6fde8ea2e32d79b7f99008ca6645128663de09aa)]:
+  - @atlaspack/packager-js@2.25.10
+  - @atlaspack/config-default@19.0.6
+  - @atlaspack/config-webextension@19.0.6
+  - @atlaspack/cli@2.15.25
+
 ## 2.0.47
 
 ### Patch Changes

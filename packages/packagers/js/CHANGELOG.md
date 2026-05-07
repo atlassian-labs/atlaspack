@@ -1,5 +1,11 @@
 # @atlaspack/packager-js
 
+## 2.25.10
+
+### Patch Changes
+
+- [#1107](https://github.com/atlassian-labs/atlaspack/pull/1107) [`6fde8ea`](https://github.com/atlassian-labs/atlaspack/commit/6fde8ea2e32d79b7f99008ca6645128663de09aa) Thanks [@at-nathan](https://github.com/at-nathan)! - Fix scope hoisting source map for CSS modules
+
 ## 2.25.9
 
 ### Patch Changes
