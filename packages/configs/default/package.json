@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/config-default",
-  "version": "19.0.5",
+  "version": "19.0.6",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
   "publishConfig": {
@@ -26,7 +26,7 @@
     "@atlaspack/optimizer-swc": "2.16.9",
     "@atlaspack/packager-css": "2.15.24",
     "@atlaspack/packager-html": "2.15.45",
-    "@atlaspack/packager-js": "2.25.9",
+    "@atlaspack/packager-js": "2.25.10",
     "@atlaspack/packager-raw": "2.14.63",
     "@atlaspack/packager-svg": "2.14.63",
     "@atlaspack/packager-wasm": "2.14.63",
