@@ -68,6 +68,7 @@ once_cell = { workspace = true }
 oxipng = { workspace = true }
 rayon = { workspace = true }
 swc_core = { workspace = true }
+swc_sourcemap = "9.3.4"
 swc_atlaskit_tokens = { path = "../swc_atlaskit_tokens" }
 
 # Crash reporting dependencies

@@ -1,10 +1,9 @@
-import nullthrows from 'nullthrows';
-import {transform} from '@swc/core';
 import {Optimizer} from '@atlaspack/plugin';
 import {blobToString, stripAnsi} from '@atlaspack/utils';
-import SourceMap from '@atlaspack/source-map';
 import ThrowableDiagnostic, {escapeMarkdown} from '@atlaspack/diagnostic';
 import path from 'path';
+
+import {minifyWithSourceMap} from './minifyWithSourceMap';
 
 export default new Optimizer({
   async loadConfig({config, options}) {
@@ -30,25 +29,21 @@ export default new Optimizer({
     let code = await blobToString(contents);
     let result;
     try {
-      result = await transform(code, {
-        jsc: {
+      result = await minifyWithSourceMap(
+        code,
+        bundle.env.sourceMap ? (originalMap ?? null) : null,
+        {
           target: 'es2022',
-          minify: {
-            mangle: true,
-            compress: true,
-            // @ts-expect-error TS2698
-            ...userConfig,
-            toplevel:
-              bundle.env.outputFormat === 'esmodule' ||
-              bundle.env.outputFormat === 'commonjs',
-            module: bundle.env.outputFormat === 'esmodule',
-          },
+          mangle: true,
+          compress: true,
+          toplevel:
+            bundle.env.outputFormat === 'esmodule' ||
+            bundle.env.outputFormat === 'commonjs',
+          module: bundle.env.outputFormat === 'esmodule',
+          userConfig: userConfig as Record<string, unknown> | undefined,
+          projectRoot: options.projectRoot,
         },
-        minify: true,
-        sourceMaps: !!bundle.env.sourceMap,
-        configFile: false,
-        swcrc: false,
-      });
+      );
     } catch (err: any) {
       // SWC doesn't give us nice error objects, so we need to parse the message.
       let message = escapeMarkdown(
@@ -107,15 +102,9 @@ export default new Optimizer({
       throw err;
     }
 
-    let sourceMap = null;
-    let minifiedContents: string = nullthrows(result.code);
-    let resultMap = result.map;
-    if (resultMap) {
-      sourceMap = new SourceMap(options.projectRoot);
-      sourceMap.addVLQMap(JSON.parse(resultMap));
-      if (originalMap) {
-        sourceMap.extends(originalMap);
-      }
+    let minifiedContents: string = result.code;
+    const sourceMap = result.map;
+    if (sourceMap) {
       let sourcemapReference = await getSourceMapReference(sourceMap);
       if (sourcemapReference) {
         minifiedContents += `\n//# sourceMappingURL=${sourcemapReference}\n`;

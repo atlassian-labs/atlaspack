@@ -146,6 +146,10 @@ pub struct RunWithTransformationOutput<R> {
 pub struct RunWithTransformationOptions<'a> {
   pub code: &'a str,
   pub syntax: Option<swc_ecma_parser::Syntax>,
+  /// Optional input source map. When supplied, the generated source map
+  /// composes with this map so the output map references the *original*
+  /// sources rather than the intermediate `<anon>` input.
+  pub input_source_map: Option<swc_sourcemap::SourceMap>,
 }
 
 /// Parse code, run resolver over it, then run the `tranform` function with the parsed module
@@ -159,6 +163,7 @@ pub fn run_with_transformation<R>(
 
   let comments = SingleThreadedComments::default();
   let syntax = options.syntax.unwrap_or_default();
+  let input_source_map = options.input_source_map;
 
   let lexer = Lexer::new(
     syntax,
@@ -219,8 +224,11 @@ pub fn run_with_transformation<R>(
       emitter.emit_module(&module)?;
 
       let output_code = String::from_utf8(output_buffer)?;
-      let source_map =
-        source_map.build_source_map(&line_pos_buffer, None, DefaultSourceMapGenConfig);
+      let source_map = source_map.build_source_map(
+        &line_pos_buffer,
+        input_source_map,
+        DefaultSourceMapGenConfig,
+      );
       let mut output_map_buffer = vec![];
 
       source_map.to_writer(&mut output_map_buffer)?;

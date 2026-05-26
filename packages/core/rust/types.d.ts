@@ -105,6 +105,13 @@ export interface InlineRequiresOptimizerInput {
   code: string;
   sourceMaps: boolean;
   ignoreModuleIds: Array<string>;
+  /**
+   * Optional JSON-serialized source map describing where `code` came from.
+   * When supplied, the returned source map already resolves through to the
+   * original sources, avoiding a downstream `<anon>` + `extends()`
+   * composition (which mis-attributes tokens near asset boundaries).
+   */
+  inputSourceMap?: string;
 }
 export interface InlineRequiresOptimizerResult {
   code: string;

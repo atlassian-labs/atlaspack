@@ -191,9 +191,13 @@ export class ScopeHoistingPackager {
       let [content, map, lines] = this.visitAsset(asset);
 
       if (sourceMap && map) {
+        this.addAssetBoundaryMarker(sourceMap, asset, lineCount);
         sourceMap.addSourceMap(map, lineCount);
       } else if (this.bundle.env.sourceMap) {
         sourceMap = map;
+        if (sourceMap) {
+          this.addAssetBoundaryMarker(sourceMap, asset, lineCount);
+        }
       }
 
       res += content + '\n';
@@ -334,6 +338,7 @@ export class ScopeHoistingPackager {
         this.parcelRequireName,
       );
       if (sourceMap && map) {
+        this.addAssetBoundaryMarker(sourceMap, mainEntry, lineCount);
         // @ts-expect-error TS2339 - addSourceMap method exists but missing from @parcel/source-map type definitions
         sourceMap.addSourceMap(map, lineCount);
       }
@@ -696,6 +701,34 @@ export class ScopeHoistingPackager {
     return this.buildAsset(asset, code, map);
   }
 
+  /**
+   * Insert a single "boundary marker" mapping at the start of the line where
+   * `asset`'s source map is about to be appended. Without this marker, source
+   * map consumers (and downstream optimizers such as swc that need to compose
+   * via nearest-neighbour lookups) will attribute the columns at the start of
+   * this asset's region to the *previous* asset's last mapping, because there
+   * is no mapping anchoring the start of the new asset. This is especially
+   * visible for assets with sparse maps (e.g. codegen'd `.graphql.ts` files
+   * from Relay) whose first mapping may be hundreds of columns into the line.
+   *
+   * The marker points at `(asset.filePath, 1, 0)`. Any mapping the asset's
+   * own map provides at the same generated position will override this one
+   * (last-write-wins inside `parcel_sourcemap`).
+   */
+  addAssetBoundaryMarker(
+    sourceMap: SourceMap,
+    asset: Asset,
+    lineOffset: number,
+  ): void {
+    if (!sourceMap) return;
+    let source = this.getAssetFilePath(asset);
+    sourceMap.addIndexedMapping({
+      generated: {line: lineOffset + 1, column: 0},
+      original: {line: 1, column: 0},
+      source,
+    });
+  }
+
   getAssetFilePath(asset: Asset): string {
     return path.relative(this.options.projectRoot, asset.filePath);
   }
@@ -712,6 +745,13 @@ export class ScopeHoistingPackager {
       this.bundle.env.sourceMap && map
         ? new SourceMap(this.options.projectRoot, map)
         : null;
+    // Anchor the start of this asset's region with a boundary marker so the
+    // first columns of the asset don't fall back to a previous asset's
+    // mapping during downstream source-map composition. See the
+    // addAssetBoundaryMarker JSDoc for the full rationale.
+    if (sourceMap) {
+      this.addAssetBoundaryMarker(sourceMap, asset, 0);
+    }
 
     // If this asset is skipped, just add dependencies and not the asset's content.
     if (this.shouldSkipAsset(asset)) {
@@ -751,6 +791,7 @@ export class ScopeHoistingPackager {
             let [code, map, lines] = this.visitAsset(resolved);
             depCode += code + '\n';
             if (sourceMap && map) {
+              this.addAssetBoundaryMarker(sourceMap, resolved, lineCount);
               sourceMap.addSourceMap(map, lineCount);
             }
             lineCount += lines + 1;
@@ -788,7 +829,9 @@ export class ScopeHoistingPackager {
     code += append;
 
     let lineCount = 0;
-    let depContent: Array<[string, SourceMap | null | undefined, number]> = [];
+    let depContent: Array<
+      [string, SourceMap | null | undefined, number, Asset?]
+    > = [];
     if (depMap.size === 0 && replacements.size === 0) {
       // If there are no dependencies or replacements, use a simple function to count the number of lines.
       lineCount = countLines(code) - 1;
@@ -877,7 +920,13 @@ export class ScopeHoistingPackager {
                     }
                   } else {
                     if (shouldWrap) {
-                      depContent.push(this.visitAsset(resolved));
+                      let visited = this.visitAsset(resolved);
+                      depContent.push([
+                        visited[0],
+                        visited[1],
+                        visited[2],
+                        resolved,
+                      ]);
                     } else {
                       let [depCode, depMap, depLines] =
                         this.visitAsset(resolved);
@@ -906,6 +955,7 @@ export class ScopeHoistingPackager {
                   }
 
                   if (map) {
+                    this.addAssetBoundaryMarker(sourceMap, resolved, lineCount);
                     sourceMap.addSourceMap(map, lineCount);
                   }
                 }
@@ -959,10 +1009,13 @@ ${code}
         lineCount += 1;
       }
 
-      for (let [depCode, map, lines] of depContent) {
+      for (let [depCode, map, lines, depAsset] of depContent) {
         if (!depCode) continue;
         code += depCode + '\n';
         if (sourceMap && map) {
+          if (depAsset) {
+            this.addAssetBoundaryMarker(sourceMap, depAsset, lineCount);
+          }
           sourceMap.addSourceMap(map, lineCount);
         }
         lineCount += lines + 1;
@@ -1453,8 +1506,14 @@ ${code}
           this.seenHoistedRequires.add(val);
         }
 
-        res += '\n' + hoistedValues.join('\n');
-        lineCount += hoisted.size;
+        // Only emit the leading `\n` and bump the line count when we
+        // actually have values to write. Otherwise `res += '\n' + ''` would
+        // emit a stray blank line and the line count would over-count by
+        // `hoisted.size` (which includes the now-filtered entries).
+        if (hoistedValues.length > 0) {
+          res += '\n' + hoistedValues.join('\n');
+          lineCount += hoistedValues.length;
+        }
       } else {
         res += '\n' + [...hoisted.values()].join('\n');
         lineCount += hoisted.size;

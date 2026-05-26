@@ -433,6 +433,7 @@ dependencies = [
  "serde_json",
  "swc_atlaskit_tokens",
  "swc_core",
+ "swc_sourcemap",
  "tempfile",
  "tokio",
  "toml",
@@ -968,6 +969,7 @@ dependencies = [
  "sourcemap",
  "swc_core",
  "swc_ecma_parser",
+ "swc_sourcemap",
  "thiserror 2.0.18",
 ]
 

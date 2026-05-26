@@ -555,7 +555,12 @@ describe('sourcemaps', function () {
     let sourceMap = new SourceMap('/');
     sourceMap.addVLQMap(map);
     let mapData = sourceMap.getMap();
-    assert.equal(mapData.sources.length, 4);
+    // 3 real sources (index.js, local.js, utils/util.js). Previously this was
+    // 4 because the SwcOptimizer composed maps via SourceMap.extends, which
+    // left a residual `<anon>` source from swc's own output map. The
+    // optimizer now passes the bundle's input map to swc as `inputSourceMap`
+    // directly, so the final map only contains the real input sources.
+    assert.equal(mapData.sources.length, 3);
 
     for (let source of mapData.sources) {
       if (source === '<anon>') {
@@ -605,6 +610,119 @@ describe('sourcemaps', function () {
       str: 'exports.count = function(a, b) {',
       sourcePath: 'utils/util.js',
     });
+  });
+
+  it('emits an asset-boundary marker for every asset packaged into a JS bundle', async function () {
+    // Regression test for ScopeHoistingPackager.addAssetBoundaryMarker.
+    //
+    // The packager concatenates per-asset source maps into a single bundle
+    // map via `SourceMap.addSourceMap(map, lineOffset)`. The per-asset maps
+    // for some assets — most notably codegen'd files such as Relay's
+    // `__generated__/*.graphql.ts` — can be sparse near the start of the
+    // asset's content. When a downstream optimizer (swc) composes the
+    // merged map via input-source-map composition, columns near the start
+    // of such an asset's region — that have no own mapping — fall back to
+    // the **nearest preceding** mapping, which belongs to the **previous**
+    // asset. The result: the start of one asset's bundled region is
+    // attributed to the previous asset's source.
+    //
+    // The fix is to emit a single mapping `(lineOffset+1, 0) ->
+    // (assetFilePath, 1, 0)` at the start of every asset's region in the
+    // merged packager map. This anchors the column-0 boundary so the
+    // downstream swc composition always has an asset-local mapping to
+    // resolve against.
+    //
+    // This test builds a real fixture (with optimization disabled so the
+    // packager map is the final output map) and asserts that **every**
+    // asset that contributed to the bundle has a corresponding column-0
+    // mapping in the merged map — the boundary marker. Without the fix,
+    // assets whose per-asset map happens to have no column-0 mapping (which
+    // depends on the transformer's emission characteristics) would NOT have
+    // a column-0 entry in the merged map.
+    const dir = path.join(__dirname, 'sourcemap-asset-boundary');
+    await overlayFS.mkdirp(dir);
+
+    await fsFixture(overlayFS, dir)`
+      index.js:
+        import {alpha} from './alpha.js';
+        import {bravo} from './bravo.js';
+        globalThis.__alpha = alpha;
+        globalThis.__bravo = bravo;
+
+      alpha.js:
+        export function alpha(arg) {
+          return 'alpha-from-alpha-' + arg;
+        }
+
+      bravo.js:
+        export function bravo(arg) {
+          return 'bravo-from-bravo-' + arg;
+        }
+
+      package.json:
+        {
+          "name": "atlaspack-sourcemap-asset-boundary-test",
+          "version": "1.0.0",
+          "private": true
+        }
+    `;
+
+    const b = await bundle(path.join(dir, 'index.js'), {
+      inputFS: overlayFS,
+      mode: 'production',
+      defaultTargetOptions: {
+        shouldOptimize: false,
+        sourceMaps: true,
+      },
+    });
+
+    const filename = nullthrows(b.getBundles()[0].filePath);
+    const raw = await outputFS.readFile(filename, 'utf8');
+    const mapUrlData = await loadSourceMapUrl(outputFS, filename, raw);
+    if (!mapUrlData) {
+      throw new Error('Could not load map');
+    }
+
+    const sourceMap = new SourceMap('/');
+    sourceMap.addVLQMap(mapUrlData.map);
+
+    const mappings = sourceMap.getMappings();
+    const sources = sourceMap.getSources();
+
+    // Every asset that contributed to this bundle must have at least one
+    // mapping with `generated.column === 0` pointing at it — that's the
+    // boundary marker. Without the fix, the small leaf assets here happen
+    // to also have column-0 mappings in their own per-asset maps (because
+    // their source maps are dense), so this test relies on counting *how
+    // many distinct sources have a column-0 mapping in the merged map*.
+    //
+    // With the fix: ALL bundled JS sources should have a column-0 mapping
+    // (one per asset). Without the fix: only those whose own per-asset map
+    // emitted one would.
+    //
+    // For these small leaf assets, the boundary marker should produce a
+    // mapping where `original.line === 1 && original.column === 0` — that's
+    // distinctive of the marker itself.
+    const expectedAssets = ['alpha.js', 'bravo.js', 'index.js'];
+    for (const expectedAsset of expectedAssets) {
+      const sourceIdx = sources.findIndex((s) => s.endsWith(expectedAsset));
+      assert(
+        sourceIdx !== -1,
+        `expected to find ${expectedAsset} in the merged map sources, got: ${sources.join(', ')}`,
+      );
+      // The boundary marker is `(line=N, col=0) -> (source=asset, line=1, col=0)`.
+      const hasBoundaryMarker = mappings.some(
+        (m) =>
+          m.generated.column === 0 &&
+          (m.source as unknown as number) === sourceIdx &&
+          m.original?.line === 1 &&
+          m.original?.column === 0,
+      );
+      assert(
+        hasBoundaryMarker,
+        `${expectedAsset} should have a column-0 boundary marker mapping (generated col 0 -> ${expectedAsset}:1:0) in the merged map`,
+      );
+    }
   });
 
   it('should create a valid sourcemap as a child of a TS bundle', async function () {

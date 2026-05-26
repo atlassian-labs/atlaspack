@@ -24,5 +24,6 @@ serde_json = { workspace = true }
 thiserror = { workspace = true }
 swc_ecma_parser = { workspace = true }
 sourcemap = { workspace = true }
+swc_sourcemap = "9.3.4"
 
 #atlaspack-js-swc-core = { path = "../../packages/transformers/js/core" }

@@ -58,10 +58,22 @@ module.exports = new Optimizer<never, BundleConfig>({
 
     try {
       let sourceMap = null;
+      // Hand the upstream map straight to the Rust optimizer so it can
+      // compose the result map via swc's native source-map chaining,
+      // rather than emitting an `<anon>`-rooted map and stitching it on
+      // afterwards with `SourceMap.extends()`. That JS-side composition
+      // uses `find_closest_mapping`, which mis-attributes tokens near
+      // asset boundaries after downstream minification.
+      const inputSourceMap =
+        originalMap && bundle.env.sourceMap
+          ? // swc requires version: 3; atlaspack's `toVLQ()` omits it.
+            JSON.stringify({version: 3, ...originalMap.toVLQ()})
+          : undefined;
       const result = await runInlineRequiresOptimizerAsync({
         code: contents.toString(),
         sourceMaps: !!bundle.env.sourceMap,
         ignoreModuleIds: Array.from(bundleConfig.assetPublicIdsWithSideEffects),
+        inputSourceMap,
       });
 
       // @ts-expect-error TS2339
@@ -69,9 +81,9 @@ module.exports = new Optimizer<never, BundleConfig>({
       if (sourceMapResult != null) {
         sourceMap = new SourceMap(options.projectRoot);
         sourceMap.addVLQMap(JSON.parse(sourceMapResult));
-        if (originalMap) {
-          sourceMap.extends(originalMap);
-        }
+        // No extends() needed: the Rust side already composed against
+        // `inputSourceMap`, so the result map already references the
+        // original sources directly.
       }
       // @ts-expect-error TS2339
       return {contents: result.code, map: sourceMap};
