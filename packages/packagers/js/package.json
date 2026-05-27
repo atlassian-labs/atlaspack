@@ -30,6 +30,8 @@
   },
   "type": "commonjs",
   "scripts": {
+    "test": "mocha",
+    "test-ci": "mocha",
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

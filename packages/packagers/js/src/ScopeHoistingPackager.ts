@@ -53,6 +53,29 @@ const REPLACEMENT_RE =
   /\n|import\s+"([0-9a-f]{16,20}:.+?)";|(?:\$[0-9a-f]{16,20}\$exports)|(?:\$[0-9a-f]{16,20}\$(?:import|importAsync|require)\$[0-9a-f]+(?:\$[0-9a-f]+)?)/g;
 
 const BUILTINS = Object.keys(globals.builtin);
+
+/**
+ * Joins filtered hoisted parcelRequire values into the bundle output,
+ * returning the text to append and the number of newlines it adds.
+ *
+ * Returns `{text: '', lineCount: 0}` when there are no values, to avoid
+ * emitting a stray leading `\n` (which would over-count lineCount and
+ * desynchronise the bundle source-map offset bookkeeping).
+ *
+ * Exported for direct unit testing of the lineCount bookkeeping.
+ */
+export function appendHoistedValues(values: ReadonlyArray<string>): {
+  text: string;
+  lineCount: number;
+} {
+  if (values.length === 0) {
+    return {text: '', lineCount: 0};
+  }
+  return {
+    text: '\n' + values.join('\n'),
+    lineCount: values.length,
+  };
+}
 const GLOBALS_BY_CONTEXT = {
   browser: new Set([...BUILTINS, ...Object.keys(globals.browser)]),
   'web-worker': new Set([...BUILTINS, ...Object.keys(globals.worker)]),
@@ -1510,10 +1533,9 @@ ${code}
         // actually have values to write. Otherwise `res += '\n' + ''` would
         // emit a stray blank line and the line count would over-count by
         // `hoisted.size` (which includes the now-filtered entries).
-        if (hoistedValues.length > 0) {
-          res += '\n' + hoistedValues.join('\n');
-          lineCount += hoistedValues.length;
-        }
+        let appended = appendHoistedValues(hoistedValues);
+        res += appended.text;
+        lineCount += appended.lineCount;
       } else {
         res += '\n' + [...hoisted.values()].join('\n');
         lineCount += hoisted.size;
