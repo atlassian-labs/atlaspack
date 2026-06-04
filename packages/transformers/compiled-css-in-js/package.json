@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-compiled-css-in-js",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -25,7 +25,7 @@
     "@atlaspack/plugin": "2.14.63",
     "@atlaspack/rust": "3.29.2",
     "@atlaspack/source-map": "3.3.7",
-    "@atlaspack/transformer-js": "19.0.5",
+    "@atlaspack/transformer-js": "20.0.0",
     "@atlaspack/utils": "3.4.5"
   },
   "devDependencies": {},

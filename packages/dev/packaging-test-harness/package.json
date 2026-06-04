@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/packaging-test-harness",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "license": "(MIT OR Apache-2.0)",
   "private": true,
   "scripts": {
@@ -18,7 +18,7 @@
   "source": "src/index.ts",
   "dependencies": {
     "@atlaspack/cache": "3.2.58",
-    "@atlaspack/core": "2.38.5",
+    "@atlaspack/core": "2.39.0",
     "@atlaspack/diagnostic": "2.14.4",
     "@atlaspack/fs": "2.15.58",
     "@atlaspack/package-manager": "2.14.63",

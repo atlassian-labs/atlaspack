@@ -1,5 +1,11 @@
 # @atlaspack/core
 
+## 2.39.0
+
+### Minor Changes
+
+- [#1108](https://github.com/atlassian-labs/atlaspack/pull/1108) [`0c5200a`](https://github.com/atlassian-labs/atlaspack/commit/0c5200aa749cf8ffe14b9a0b1445c38550c20e7a) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Update `base-x` to fix vuln
+
 ## 2.38.5
 
 ### Patch Changes

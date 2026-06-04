@@ -1,5 +1,19 @@
 # atlaspack
 
+## 2.0.49
+
+### Patch Changes
+
+- Updated dependencies [[`0c5200a`](https://github.com/atlassian-labs/atlaspack/commit/0c5200aa749cf8ffe14b9a0b1445c38550c20e7a)]:
+  - @atlaspack/core@2.39.0
+  - @atlaspack/config-default@20.0.0
+  - @atlaspack/config-webextension@20.0.0
+  - @atlaspack/cli@2.15.26
+  - @atlaspack/optimizer-image@20.0.0
+  - @atlaspack/reporter-bundle-stats@2.14.65
+  - @atlaspack/transformer-image@20.0.0
+  - @atlaspack/transformer-js@20.0.0
+
 ## 2.0.48
 
 ### Patch Changes

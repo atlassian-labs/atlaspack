@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/optimizer-image",
-  "version": "19.0.5",
+  "version": "20.0.0",
   "license": "(MIT OR Apache-2.0)",
   "main": "./lib/ImageOptimizer.js",
   "source": "./src/ImageOptimizer.ts",
@@ -26,7 +26,7 @@
     "@atlaspack/workers": "2.14.63"
   },
   "peerDependencies": {
-    "@atlaspack/core": "2.38.5"
+    "@atlaspack/core": "2.39.0"
   },
   "type": "commonjs",
   "scripts": {
