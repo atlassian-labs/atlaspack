@@ -39,7 +39,7 @@
     "@atlaspack/utils": "3.4.5",
     "@atlaspack/workers": "2.14.63",
     "@atlaspack/source-map": "3.3.7",
-    "base-x": "^3.0.8",
+    "base-x": "^3.0.11",
     "browserslist": "^4.6.6",
     "clone": "^2.1.1",
     "dotenv": "^12.0.4",
