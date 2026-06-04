@@ -1,5 +1,12 @@
 # @atlaspack/transformer-tokens
 
+## 1.2.6
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/transformer-js@20.0.0
+
 ## 1.2.5
 
 ### Patch Changes
