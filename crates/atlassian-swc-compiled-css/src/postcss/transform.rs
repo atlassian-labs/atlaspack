@@ -9,8 +9,8 @@ use swc_core::css::parser::{parse_string_input, parser::ParserConfig};
 #[cfg(feature = "postcss_engine")]
 use super::postcss_pipeline::transform_css_via_postcss;
 
-use super::plugins::discard_comments::collect_preserved_comments;
 use super::plugins::atomicify_rules::HashStrategy;
+use super::plugins::discard_comments::collect_preserved_comments;
 use super::plugins::{
   atomicify_rules::atomicify_rules, discard_duplicates::discard_duplicates,
   discard_empty_rules::discard_empty_rules, expand_shorthands::index::expand_shorthands,

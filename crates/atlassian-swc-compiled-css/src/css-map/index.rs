@@ -1276,7 +1276,185 @@ mod tests {
     }
   }
 
+  // --- hashStrategy option tests (@experimental) ---
+
+  fn css_map_call_with_options(argument: Expr, options: Expr) -> CallExpr {
+    CallExpr {
+      span: DUMMY_SP,
+      ctxt: Default::default(),
+      callee: Callee::Expr(Box::new(Expr::Ident(ident("cssMap")))),
+      args: vec![
+        ExprOrSpread {
+          spread: None,
+          expr: Box::new(argument),
+        },
+        ExprOrSpread {
+          spread: None,
+          expr: Box::new(options),
+        },
+      ],
+      type_args: None,
+    }
+  }
+
+  fn options_object(hash_strategy: &str) -> Expr {
+    Expr::Object(ObjectLit {
+      span: DUMMY_SP,
+      props: vec![object_property("hashStrategy", string_lit(hash_strategy))],
+    })
+  }
+
   #[test]
+  fn accepts_hash_strategy_default() {
+    let meta = create_metadata();
+    let call =
+      css_map_call_with_options(Expr::Object(css_map_argument()), options_object("default"));
+    let result = visit_css_map_path_with_builder(
+      CssMapUsage::Call(&call),
+      Some(&ident("styles")),
+      &meta,
+      |expr, _meta| build_css_from_object(expr),
+    );
+    assert!(!result.props.is_empty(), "should transform successfully");
+    assert!(meta.state().diagnostics.is_empty(), "should have no errors");
+  }
+
+  #[test]
+  fn accepts_hash_strategy_enhanced() {
+    let meta = create_metadata();
+    let call =
+      css_map_call_with_options(Expr::Object(css_map_argument()), options_object("enhanced"));
+    let result = visit_css_map_path_with_builder(
+      CssMapUsage::Call(&call),
+      Some(&ident("styles")),
+      &meta,
+      |expr, _meta| build_css_from_object(expr),
+    );
+    assert!(!result.props.is_empty(), "should transform successfully");
+    assert!(meta.state().diagnostics.is_empty(), "should have no errors");
+  }
+
+  #[test]
+  fn accepts_hash_strategy_max() {
+    let meta = create_metadata();
+    let call = css_map_call_with_options(Expr::Object(css_map_argument()), options_object("max"));
+    let result = visit_css_map_path_with_builder(
+      CssMapUsage::Call(&call),
+      Some(&ident("styles")),
+      &meta,
+      |expr, _meta| build_css_from_object(expr),
+    );
+    assert!(!result.props.is_empty(), "should transform successfully");
+    assert!(meta.state().diagnostics.is_empty(), "should have no errors");
+  }
+
+  #[test]
+  fn errors_on_unknown_css_map_option() {
+    let meta = create_metadata();
+    let options = Expr::Object(ObjectLit {
+      span: DUMMY_SP,
+      props: vec![object_property("unknownOption", string_lit("foo"))],
+    });
+    let call = css_map_call_with_options(Expr::Object(css_map_argument()), options);
+    let result = visit_css_map_path_with_builder(
+      CssMapUsage::Call(&call),
+      Some(&ident("styles")),
+      &meta,
+      |expr, _meta| build_css_from_object(expr),
+    );
+    assert!(
+      result.props.is_empty(),
+      "should return empty object on error"
+    );
+    assert!(
+      !meta.state().diagnostics.is_empty(),
+      "should report an error for unknown option"
+    );
+  }
+
+  #[test]
+  fn errors_on_invalid_hash_strategy_value() {
+    let meta = create_metadata();
+    let call =
+      css_map_call_with_options(Expr::Object(css_map_argument()), options_object("invalid"));
+    let result = visit_css_map_path_with_builder(
+      CssMapUsage::Call(&call),
+      Some(&ident("styles")),
+      &meta,
+      |expr, _meta| build_css_from_object(expr),
+    );
+    assert!(
+      result.props.is_empty(),
+      "should return empty object on error"
+    );
+    assert!(
+      !meta.state().diagnostics.is_empty(),
+      "should report an error for invalid strategy value"
+    );
+  }
+
+  #[test]
+  fn errors_when_options_is_not_object() {
+    let meta = create_metadata();
+    let call = css_map_call_with_options(
+      Expr::Object(css_map_argument()),
+      string_lit("not-an-object"),
+    );
+    let result = visit_css_map_path_with_builder(
+      CssMapUsage::Call(&call),
+      Some(&ident("styles")),
+      &meta,
+      |expr, _meta| build_css_from_object(expr),
+    );
+    assert!(
+      result.props.is_empty(),
+      "should return empty object on error"
+    );
+    assert!(
+      !meta.state().diagnostics.is_empty(),
+      "should report an error when options is not an object"
+    );
+  }
+
+  #[test]
+  fn errors_when_too_many_arguments() {
+    let meta = create_metadata();
+    let call = CallExpr {
+      span: DUMMY_SP,
+      ctxt: Default::default(),
+      callee: Callee::Expr(Box::new(Expr::Ident(ident("cssMap")))),
+      args: vec![
+        ExprOrSpread {
+          spread: None,
+          expr: Box::new(Expr::Object(css_map_argument())),
+        },
+        ExprOrSpread {
+          spread: None,
+          expr: Box::new(options_object("max")),
+        },
+        ExprOrSpread {
+          spread: None,
+          expr: Box::new(string_lit("extra")),
+        },
+      ],
+      type_args: None,
+    };
+    let result = visit_css_map_path_with_builder(
+      CssMapUsage::Call(&call),
+      Some(&ident("styles")),
+      &meta,
+      |expr, _meta| build_css_from_object(expr),
+    );
+    assert!(
+      result.props.is_empty(),
+      "should return empty object on error"
+    );
+    assert!(
+      !meta.state().diagnostics.is_empty(),
+      "should report an error for too many arguments"
+    );
+  }
+
   fn reports_specific_error_when_token_function_is_used() {
     let meta = create_metadata();
     let argument = css_map_argument();

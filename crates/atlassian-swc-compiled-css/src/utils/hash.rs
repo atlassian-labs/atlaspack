@@ -200,8 +200,14 @@ mod tests {
   #[test]
   fn hash_base62_4_char_group_matches_js_reference() {
     // Enhanced strategy: take first 4 chars of base-62 hash.
-    assert_eq!(hash_base62("color").chars().take(4).collect::<String>(), "4EWk");
-    assert_eq!(hash_base62("margin").chars().take(4).collect::<String>(), "45uX");
+    assert_eq!(
+      hash_base62("color").chars().take(4).collect::<String>(),
+      "4EWk"
+    );
+    assert_eq!(
+      hash_base62("margin").chars().take(4).collect::<String>(),
+      "45uX"
+    );
     // Simulate a realistic group seed used by atomicify-rules:
     // prefix='' + at_rule='undefined' + normalized_selector='&' + prop='color'
     assert_eq!(
@@ -216,8 +222,14 @@ mod tests {
   #[test]
   fn hash_base62_6_char_group_matches_js_reference() {
     // Max strategy: take first 6 chars of base-62 hash (full 32-bit hash).
-    assert_eq!(hash_base62("color").chars().take(6).collect::<String>(), "4EWkA1");
-    assert_eq!(hash_base62("margin").chars().take(6).collect::<String>(), "45uXpk");
+    assert_eq!(
+      hash_base62("color").chars().take(6).collect::<String>(),
+      "4EWkA1"
+    );
+    assert_eq!(
+      hash_base62("margin").chars().take(6).collect::<String>(),
+      "45uXpk"
+    );
     // Simulate a realistic group seed used by atomicify-rules:
     // prefix='' + at_rule='undefined' + normalized_selector='&' + prop='color'
     assert_eq!(
