@@ -171,7 +171,7 @@ pub struct TransformCssItemsResult {
 
 pub(crate) fn create_transform_css_options(
   meta: &Metadata,
-  css_map_options: Option<&crate::postcss::plugins::atomicify_rules::CssMapOptions>,
+  css_map_options: Option<&CssMapOptions>,
 ) -> (TransformCssOptions, Option<BTreeMap<String, String>>) {
   let state = meta.state();
   let mut options = TransformCssOptions::default();
@@ -418,7 +418,7 @@ fn record_style_rules(sheets: &[String], meta: &Metadata) {
 fn transform_css_item(
   item: &CssItem,
   meta: &Metadata,
-  css_map_options: Option<&crate::postcss::plugins::atomicify_rules::CssMapOptions>,
+  css_map_options: Option<&CssMapOptions>,
 ) -> TransformCssItemResult {
   thread_local! {
       static DEPTH: Cell<usize> = Cell::new(0);
@@ -638,7 +638,7 @@ fn transform_css_item(
 pub fn transform_css_items(
   css_items: &[CssItem],
   meta: &Metadata,
-  css_map_options: Option<&crate::postcss::plugins::atomicify_rules::CssMapOptions>,
+  css_map_options: Option<&CssMapOptions>,
 ) -> TransformCssItemsResult {
   let mut sheets: Vec<String> = Vec::new();
   let mut class_names: Vec<Expr> = Vec::new();

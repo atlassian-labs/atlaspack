@@ -9,7 +9,9 @@ use swc_core::css::parser::{parse_string_input, parser::ParserConfig};
 #[cfg(feature = "postcss_engine")]
 use super::postcss_pipeline::transform_css_via_postcss;
 
-use super::plugins::atomicify_rules::{CssMapOptions, HashStrategy};
+use super::plugins::atomicify_rules::CssMapOptions;
+#[cfg(test)]
+use super::plugins::atomicify_rules::HashStrategy;
 use super::plugins::discard_comments::collect_preserved_comments;
 use super::plugins::{
   atomicify_rules::atomicify_rules, discard_duplicates::discard_duplicates,
@@ -406,10 +408,7 @@ const FALLBACK_PLUGIN_NAME: &str = "@compiled/postcss";
 mod tests {
   use super::*;
 
-  fn transform(css: &str, hash_strategy: Option<HashStrategy>) -> TransformCssResult {
-    let css_map_options = hash_strategy.map(|hs| CssMapOptions {
-      hash_strategy: Some(hs),
-    });
+  fn transform(css: &str, css_map_options: Option<CssMapOptions>) -> TransformCssResult {
     transform_css_via_swc_pipeline(
       css,
       TransformCssOptions {
@@ -418,6 +417,13 @@ mod tests {
       },
     )
     .expect("transform_css failed")
+  }
+
+  /// Convenience helper for tests that only care about hash_strategy.
+  fn opts_with_strategy(hash_strategy: HashStrategy) -> Option<CssMapOptions> {
+    Some(CssMapOptions {
+      hash_strategy: Some(hash_strategy),
+    })
   }
 
   /// Default strategy: base-36 group hash, 4-char group → 9-char class (_GGGGVVVV).
@@ -438,7 +444,7 @@ mod tests {
   /// Group seed: 'undefined&color' → base62 first 4 chars = '1UtD'
   #[test]
   fn hash_strategy_enhanced_produces_correct_class_name() {
-    let result = transform("color: red;", Some(HashStrategy::Enhanced));
+    let result = transform("color: red;", opts_with_strategy(HashStrategy::Enhanced));
     assert!(
       result.class_names.iter().any(|c| c == "_1UtD5scu"),
       "expected _1UtD5scu in {:?}",
@@ -451,7 +457,7 @@ mod tests {
   /// Group seed: 'undefined&color' → base62 first 6 chars = '1UtDYz'
   #[test]
   fn hash_strategy_max_produces_correct_class_name() {
-    let result = transform("color: red;", Some(HashStrategy::Max));
+    let result = transform("color: red;", opts_with_strategy(HashStrategy::Max));
     assert!(
       result.class_names.iter().any(|c| c == "_1UtDYz5scu"),
       "expected _1UtDYz5scu in {:?}",
@@ -473,7 +479,7 @@ mod tests {
   /// Enhanced strategy class names are 9 chars (_GGGGVVVV).
   #[test]
   fn hash_strategy_enhanced_class_length_is_9() {
-    let result = transform("color: red;", Some(HashStrategy::Enhanced));
+    let result = transform("color: red;", opts_with_strategy(HashStrategy::Enhanced));
     for class in &result.class_names {
       if class.starts_with('_') && !class.contains(' ') {
         assert_eq!(class.len(), 9, "expected 9-char class, got {:?}", class);
@@ -484,7 +490,7 @@ mod tests {
   /// Max strategy class names are 11 chars (_GGGGGGVVVV).
   #[test]
   fn hash_strategy_max_class_length_is_11() {
-    let result = transform("color: red;", Some(HashStrategy::Max));
+    let result = transform("color: red;", opts_with_strategy(HashStrategy::Max));
     for class in &result.class_names {
       if class.starts_with('_') && !class.contains(' ') {
         assert_eq!(class.len(), 11, "expected 11-char class, got {:?}", class);
@@ -496,8 +502,8 @@ mod tests {
   #[test]
   fn hash_strategies_produce_different_class_names() {
     let default_result = transform("color: red;", None);
-    let enhanced_result = transform("color: red;", Some(HashStrategy::Enhanced));
-    let max_result = transform("color: red;", Some(HashStrategy::Max));
+    let enhanced_result = transform("color: red;", opts_with_strategy(HashStrategy::Enhanced));
+    let max_result = transform("color: red;", opts_with_strategy(HashStrategy::Max));
 
     assert_ne!(
       default_result.class_names, enhanced_result.class_names,
