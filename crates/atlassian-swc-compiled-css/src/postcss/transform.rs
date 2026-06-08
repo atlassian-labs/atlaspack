@@ -10,6 +10,7 @@ use swc_core::css::parser::{parse_string_input, parser::ParserConfig};
 use super::postcss_pipeline::transform_css_via_postcss;
 
 use super::plugins::discard_comments::collect_preserved_comments;
+use super::plugins::atomicify_rules::HashStrategy;
 use super::plugins::{
   atomicify_rules::atomicify_rules, discard_duplicates::discard_duplicates,
   discard_empty_rules::discard_empty_rules, expand_shorthands::index::expand_shorthands,
@@ -29,6 +30,9 @@ pub struct TransformCssOptions {
   pub sort_shorthand: Option<bool>,
   pub class_hash_prefix: Option<String>,
   pub flatten_multiple_selectors: Option<bool>,
+  /// Controls the hash strategy used for atomic class name generation.
+  /// @experimental Not part of the public API. May change without notice.
+  pub hash_strategy: Option<HashStrategy>,
   pub declaration_placeholder: Option<String>,
   /// Path used to resolve the browserslist config for autoprefixer.
   /// Defaults to `cwd`, matching Babel's autoprefixer which uses `{ from: undefined }`.
@@ -397,3 +401,109 @@ pub fn transform_css(
 /// Legacy Babel plugin name used in error reporting.
 #[allow(dead_code)]
 const FALLBACK_PLUGIN_NAME: &str = "@compiled/postcss";
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn transform(css: &str, hash_strategy: Option<HashStrategy>) -> TransformCssResult {
+    transform_css_via_swc_pipeline(
+      css,
+      TransformCssOptions {
+        hash_strategy,
+        ..Default::default()
+      },
+    )
+    .expect("transform_css failed")
+  }
+
+  /// Default strategy: base-36 group hash, 4-char group → 9-char class (_GGGGVVVV).
+  /// Expected values verified against the TypeScript `@compiled/css` implementation.
+  #[test]
+  fn hash_strategy_default_produces_correct_class_name() {
+    let result = transform("color: red;", None);
+    assert!(
+      result.class_names.iter().any(|c| c == "_16h85scu"),
+      "expected _16h85scu in {:?}",
+      result.class_names
+    );
+  }
+
+  /// Enhanced strategy: base-62 group hash, 4-char group → 9-char class (_GGGGVVVV).
+  /// Same class length as default but reduced collision risk.
+  #[test]
+  fn hash_strategy_enhanced_produces_correct_class_name() {
+    let result = transform("color: red;", Some(HashStrategy::Enhanced));
+    assert!(
+      result.class_names.iter().any(|c| c == "_2NPk5scu"),
+      "expected _2NPk5scu in {:?}",
+      result.class_names
+    );
+  }
+
+  /// Max strategy: base-62 group hash, 6-char group → 11-char class (_GGGGGGVVVV).
+  /// Structurally incompatible with default/enhanced — cross-strategy deduplication not supported.
+  #[test]
+  fn hash_strategy_max_produces_correct_class_name() {
+    let result = transform("color: red;", Some(HashStrategy::Max));
+    assert!(
+      result.class_names.iter().any(|c| c == "_2NPkLa5scu"),
+      "expected _2NPkLa5scu in {:?}",
+      result.class_names
+    );
+  }
+
+  /// Default strategy class names are 9 chars (_GGGGVVVV).
+  #[test]
+  fn hash_strategy_default_class_length_is_9() {
+    let result = transform("color: red;", None);
+    for class in &result.class_names {
+      if class.starts_with('_') && !class.contains(' ') {
+        assert_eq!(class.len(), 9, "expected 9-char class, got {:?}", class);
+      }
+    }
+  }
+
+  /// Enhanced strategy class names are 9 chars (_GGGGVVVV).
+  #[test]
+  fn hash_strategy_enhanced_class_length_is_9() {
+    let result = transform("color: red;", Some(HashStrategy::Enhanced));
+    for class in &result.class_names {
+      if class.starts_with('_') && !class.contains(' ') {
+        assert_eq!(class.len(), 9, "expected 9-char class, got {:?}", class);
+      }
+    }
+  }
+
+  /// Max strategy class names are 11 chars (_GGGGGGVVVV).
+  #[test]
+  fn hash_strategy_max_class_length_is_11() {
+    let result = transform("color: red;", Some(HashStrategy::Max));
+    for class in &result.class_names {
+      if class.starts_with('_') && !class.contains(' ') {
+        assert_eq!(class.len(), 11, "expected 11-char class, got {:?}", class);
+      }
+    }
+  }
+
+  /// Different strategies produce different class names for the same input.
+  #[test]
+  fn hash_strategies_produce_different_class_names() {
+    let default_result = transform("color: red;", None);
+    let enhanced_result = transform("color: red;", Some(HashStrategy::Enhanced));
+    let max_result = transform("color: red;", Some(HashStrategy::Max));
+
+    assert_ne!(
+      default_result.class_names, enhanced_result.class_names,
+      "default and enhanced should differ"
+    );
+    assert_ne!(
+      default_result.class_names, max_result.class_names,
+      "default and max should differ"
+    );
+    assert_ne!(
+      enhanced_result.class_names, max_result.class_names,
+      "enhanced and max should differ"
+    );
+  }
+}

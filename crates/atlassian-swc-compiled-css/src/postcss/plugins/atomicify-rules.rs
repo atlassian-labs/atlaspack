@@ -1,4 +1,15 @@
 use std::borrow::Cow;
+
+/// Mirrors `HashStrategy` in `packages/css/src/hash-strategy.ts`.
+/// @experimental Not part of the public API. May change without notice.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum HashStrategy {
+  #[default]
+  Default,
+  Enhanced,
+  Max,
+}
+
 use std::sync::Arc;
 
 use swc_core::common::{FileName, SourceMap, Spanned, input::StringInput};
@@ -36,6 +47,7 @@ impl Plugin for AtomicifyRules {
       class_hash_prefix: ctx.options.class_hash_prefix.as_deref(),
       declaration_placeholder: ctx.options.declaration_placeholder.as_deref(),
       optimize_css: ctx.options.optimize_css.unwrap_or(true),
+      hash_strategy: ctx.options.hash_strategy.unwrap_or_default(),
     };
 
     let mut transformed: Vec<Rule> = Vec::with_capacity(stylesheet.rules.len());
@@ -77,6 +89,7 @@ struct AtomicifyOptions<'a> {
   class_hash_prefix: Option<&'a str>,
   declaration_placeholder: Option<&'a str>,
   optimize_css: bool,
+  hash_strategy: HashStrategy,
 }
 
 fn normalize_selectors(selectors: Vec<String>, options: &AtomicifyOptions<'_>) -> Vec<String> {
@@ -251,8 +264,28 @@ fn atomic_class_name(
   let prop = declaration_name(&declaration.name);
   let at_rule = at_rule_label.unwrap_or("undefined");
   let group_seed = format!("{}{}{}{}", prefix, at_rule, normalized_selector, prop);
-  let group_hash = hash(&group_seed);
-  let group = group_hash.chars().take(4).collect::<String>();
+
+  // Group hash: length and encoding depend on hash strategy.
+  let group = match options.hash_strategy {
+    HashStrategy::Default => {
+      // Original: base-36, take first 4 chars.
+      hash(&group_seed).chars().take(4).collect::<String>()
+    }
+    HashStrategy::Enhanced => {
+      // Base-62, take first 4 chars — same class length as default, reduced collision risk.
+      crate::utils::hash::hash_base62(&group_seed)
+        .chars()
+        .take(4)
+        .collect::<String>()
+    }
+    HashStrategy::Max => {
+      // Full 32-bit base-62 hash (6 chars) — structurally incompatible with default/enhanced.
+      crate::utils::hash::hash_base62(&group_seed)
+        .chars()
+        .take(6)
+        .collect::<String>()
+    }
+  };
 
   let mut value_seed = serialize_component_values(&declaration.value).unwrap_or_default();
   // COMPAT: Babel trims whitespace around multiplication inside calc() before hashing.
