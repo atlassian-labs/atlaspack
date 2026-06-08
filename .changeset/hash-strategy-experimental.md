@@ -1,5 +1,6 @@
 ---
 '@atlaspack/transformer-js': patch
+'@atlaspack/rust': patch
 ---
 
 Add experimental `hashStrategy` option to `cssMap` for **internal use only** in the Rust/SWC pipeline.
