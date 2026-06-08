@@ -240,7 +240,7 @@ where
         let crate::utils_transform_css_items::TransformCssItemsResult {
           sheets,
           class_names,
-        } = transform_css_items(&css, meta);
+        } = transform_css_items(&css, meta, None);
         let mut class_iter = class_names.into_iter();
 
         let replacement = match (class_iter.next(), class_iter.next()) {

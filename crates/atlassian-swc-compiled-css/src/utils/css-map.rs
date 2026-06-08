@@ -53,6 +53,10 @@ pub enum ErrorMessages {
   SelectorBlockWrongPlace,
   UseSelectorsWithAmpersand,
   UseVariantOfCssMap,
+  /// @experimental
+  UnknownCssMapOption,
+  /// @experimental
+  InvalidHashStrategyValue,
 }
 
 impl ErrorMessages {
@@ -96,6 +100,12 @@ impl ErrorMessages {
       }
       ErrorMessages::UseVariantOfCssMap => {
         "You must use the variant of a CSS Map object (e.g. `styles.root`), not the root object itself (e.g. `styles`)."
+      }
+      ErrorMessages::UnknownCssMapOption => {
+        "Unknown cssMap option. Only 'hashStrategy' is supported as an experimental option."
+      }
+      ErrorMessages::InvalidHashStrategyValue => {
+        "Invalid hashStrategy value. Expected one of: 'default', 'enhanced', 'max'."
       }
     }
   }

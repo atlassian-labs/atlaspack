@@ -170,9 +170,11 @@ pub struct TransformCssItemsResult {
 
 pub(crate) fn create_transform_css_options(
   meta: &Metadata,
+  hash_strategy: Option<crate::postcss::plugins::atomicify_rules::HashStrategy>,
 ) -> (TransformCssOptions, Option<BTreeMap<String, String>>) {
   let state = meta.state();
   let mut options = TransformCssOptions::default();
+  options.hash_strategy = hash_strategy;
   options.optimize_css = state.opts.optimize_css;
   options.increase_specificity = state.opts.increase_specificity;
   // COMPAT: When generating runtime sheets for hoisting into the program,
@@ -411,7 +413,11 @@ fn record_style_rules(sheets: &[String], meta: &Metadata) {
   }
 }
 
-fn transform_css_item(item: &CssItem, meta: &Metadata) -> TransformCssItemResult {
+fn transform_css_item(
+  item: &CssItem,
+  meta: &Metadata,
+  hash_strategy: Option<crate::postcss::plugins::atomicify_rules::HashStrategy>,
+) -> TransformCssItemResult {
   thread_local! {
       static DEPTH: Cell<usize> = Cell::new(0);
   }
@@ -441,8 +447,8 @@ fn transform_css_item(item: &CssItem, meta: &Metadata) -> TransformCssItemResult
   match item {
     CssItem::Conditional(conditional) => {
       let conditional = conditional.clone();
-      let consequent = transform_css_item(&conditional.consequent, meta);
-      let alternate = transform_css_item(&conditional.alternate, meta);
+      let consequent = transform_css_item(&conditional.consequent, meta, hash_strategy);
+      let alternate = transform_css_item(&conditional.alternate, meta, hash_strategy);
       let has_consequent_sheets = !consequent.sheets.is_empty();
       let has_alternate_sheets = !alternate.sheets.is_empty();
 
@@ -530,7 +536,7 @@ fn transform_css_item(item: &CssItem, meta: &Metadata) -> TransformCssItemResult
       }
     }
     CssItem::Logical(logical) => {
-      let (options, compression_map) = create_transform_css_options(meta);
+      let (options, compression_map) = create_transform_css_options(meta, hash_strategy);
       let css_result = transform_css(&logical.css, options).unwrap_or_else(|err| panic!("{err}"));
       let ordered = order_class_names_from_sheet_order(&css_result.class_names, &css_result.sheets);
       let compressed = compress_class_names_for_runtime(&ordered, compression_map.as_ref());
@@ -600,7 +606,7 @@ fn transform_css_item(item: &CssItem, meta: &Metadata) -> TransformCssItemResult
           }
         }
       }
-      let (options, compression_map) = create_transform_css_options(meta);
+      let (options, compression_map) = create_transform_css_options(meta, hash_strategy);
       let css_result = transform_css(&css, options).unwrap_or_else(|err| panic!("{err}"));
       if std::env::var("COMPILED_CSS_TRACE").is_ok() {
         eprintln!("[transform-css-item] sheets raw={:?}", css_result.sheets);
@@ -627,7 +633,11 @@ fn transform_css_item(item: &CssItem, meta: &Metadata) -> TransformCssItemResult
   }
 }
 
-pub fn transform_css_items(css_items: &[CssItem], meta: &Metadata) -> TransformCssItemsResult {
+pub fn transform_css_items(
+  css_items: &[CssItem],
+  meta: &Metadata,
+  hash_strategy: Option<crate::postcss::plugins::atomicify_rules::HashStrategy>,
+) -> TransformCssItemsResult {
   let mut sheets: Vec<String> = Vec::new();
   let mut class_names: Vec<Expr> = Vec::new();
 
@@ -644,7 +654,7 @@ pub fn transform_css_items(css_items: &[CssItem], meta: &Metadata) -> TransformC
         }
       );
     }
-    let result = transform_css_item(item, meta);
+    let result = transform_css_item(item, meta, hash_strategy);
     let filtered_sheets: Vec<String> = result
       .sheets
       .into_iter()
@@ -722,7 +732,7 @@ mod tests {
   #[test]
   fn default_browserslist_resolution_walks_to_compiled_css() {
     let meta = create_metadata();
-    let (options, _compression) = create_transform_css_options(&meta);
+    let (options, _compression) = create_transform_css_options(&meta, None);
     let resolved = options
       .browserslist_config_path
       .expect("browserslist_config_path should be set");
@@ -749,7 +759,7 @@ mod tests {
     let cwd = file.cwd.clone();
     let state = Rc::new(RefCell::new(TransformState::new(file, opts)));
     let meta = Metadata::new(state);
-    let (options, _compression) = create_transform_css_options(&meta);
+    let (options, _compression) = create_transform_css_options(&meta, None);
     // Default (false): browserslist resolves from cwd, matching Babel's
     // autoprefixer which uses { from: undefined } → process.cwd().
     assert_eq!(options.browserslist_config_path, Some(cwd));
@@ -787,7 +797,7 @@ mod tests {
       guard: None,
     });
 
-    let result = transform_css_items(&[conditional], &meta);
+    let result = transform_css_items(&[conditional], &meta, None);
 
     assert_eq!(result.sheets.len(), 2);
     assert_eq!(result.sheets[0], ".a { color: red; }");
@@ -838,7 +848,7 @@ mod tests {
       guard: None,
     });
 
-    let result = transform_css_items(&[conditional], &meta);
+    let result = transform_css_items(&[conditional], &meta, None);
 
     assert_eq!(result.sheets.len(), 1);
     assert_eq!(result.sheets[0], ".a { color: red; }");
@@ -910,7 +920,7 @@ mod tests {
   #[test]
   fn transform_simple_minheight_css() {
     let meta = create_metadata();
-    let (options, _) = create_transform_css_options(&meta);
+    let (options, _) = create_transform_css_options(&meta, None);
 
     let css1 = transform_css("a{min-height:100%;}", options).expect("transform css");
     assert_eq!(css1.class_names.len(), 1);
@@ -922,7 +932,7 @@ mod tests {
     // (matching Babel's postcss-reduce-initial behavior with default browsers),
     // so `transparent` is NOT converted to `initial`.
     let meta = create_metadata();
-    let (options, _) = create_transform_css_options(&meta);
+    let (options, _) = create_transform_css_options(&meta, None);
 
     let result = transform_css("background-color:transparent;", options).expect("transform css");
     assert!(
@@ -939,7 +949,7 @@ mod tests {
     // because browserslist defaults include browsers that don't support
     // css-rrggbbaa (4/8-digit hex colors).
     let meta = create_metadata();
-    let (options, _) = create_transform_css_options(&meta);
+    let (options, _) = create_transform_css_options(&meta, None);
 
     let result = transform_css(
       "background-color:var(--ds-background-neutral-subtle,#00000000);",
@@ -974,7 +984,7 @@ mod tests {
     // initial_support is false, so currentColor should NOT be converted to
     // `initial` by reduce-initial for text-decoration-color.
     let meta = create_metadata();
-    let (options, _) = create_transform_css_options(&meta);
+    let (options, _) = create_transform_css_options(&meta, None);
 
     let result =
       transform_css("text-decoration-color:currentColor;", options).expect("transform css");
@@ -996,7 +1006,7 @@ mod tests {
   #[test]
   fn transform_keyframes_preserves_negative_percent() {
     let meta = create_metadata();
-    let (mut options, _) = create_transform_css_options(&meta);
+    let (mut options, _) = create_transform_css_options(&meta, None);
 
     // This tests that -100% is preserved in keyframes, not truncated to -100
     let css = "@keyframes test{0%{background-position:100%}to{background-position:-100%}}";
@@ -1161,7 +1171,7 @@ mod tests {
       guard: Some(guard),
     });
 
-    let result = transform_css_items(&[conditional], &meta);
+    let result = transform_css_items(&[conditional], &meta, None);
 
     // The class expression should be guard && (test ? consequent : alternate)
     assert_eq!(result.class_names.len(), 1);

@@ -1,10 +1,12 @@
 use swc_core::atoms::Atom;
 use swc_core::common::{DUMMY_SP, Span, Spanned};
 use swc_core::ecma::ast::{
-  CallExpr, Callee, Expr, Ident, KeyValueProp, Lit, ObjectLit, Prop, PropOrSpread, Str, TaggedTpl,
+  CallExpr, Callee, Expr, Ident, KeyValueProp, Lit, ObjectLit, Prop, PropName, PropOrSpread, Str,
+  TaggedTpl,
 };
 
 use crate::css_map_process_selectors::merge_extended_selectors_into_properties;
+use crate::postcss::plugins::atomicify_rules::HashStrategy;
 use crate::types::Metadata;
 use crate::utils_css_builders::build_css as build_css_from_expr;
 use crate::utils_css_map::{
@@ -43,10 +45,22 @@ where
         return empty_object(call_expr.span);
       };
 
-      if call_expr.args.len() != 1 {
+      if call_expr.args.is_empty() || call_expr.args.len() > 2 {
         report_css_map_error_with_hints(meta, call_expr.span, ErrorMessages::NumberOfArgument);
         return empty_object(call_expr.span);
       }
+
+      // Parse optional second argument { hashStrategy: '...' }
+      // @experimental — not part of the public API.
+      let hash_strategy = if call_expr.args.len() == 2 {
+        parse_css_map_options(&call_expr.args[1].expr, meta)
+      } else {
+        Some(HashStrategy::Default)
+      };
+
+      let Some(hash_strategy) = hash_strategy else {
+        return empty_object(call_expr.span);
+      };
 
       let argument = &call_expr.args[0];
       if argument.spread.is_some() {
@@ -126,7 +140,7 @@ where
           return empty_object(object_lit.span);
         }
 
-        let transform_result = transform_css_items(&css_output.css, meta);
+        let transform_result = transform_css_items(&css_output.css, meta, Some(hash_strategy));
         total_sheets.extend(
           transform_result
             .sheets
@@ -197,6 +211,91 @@ pub fn visit_css_map_path<'a>(
   meta: &Metadata,
 ) -> ObjectLit {
   visit_css_map_path_with_builder(usage, parent_identifier, meta, build_css_from_expr)
+}
+
+/// Parses the optional second argument to `cssMap(styles, options)`.
+/// Returns `Some(HashStrategy)` on success, or `None` if an error was reported.
+/// @experimental — not part of the public API.
+fn parse_css_map_options(options_expr: &Expr, meta: &Metadata) -> Option<HashStrategy> {
+  const VALID_STRATEGIES: &[&str] = &["default", "enhanced", "max"];
+  const KNOWN_OPTIONS: &[&str] = &["hashStrategy"];
+
+  let Expr::Object(options_obj) = options_expr else {
+    report_css_map_error(
+      meta,
+      options_expr.span(),
+      "cssMap options must be a plain object literal.",
+    );
+    return None;
+  };
+
+  let mut hash_strategy = HashStrategy::Default;
+
+  for prop in &options_obj.props {
+    let PropOrSpread::Prop(prop) = prop else {
+      report_css_map_error(
+        meta,
+        prop.span(),
+        ErrorMessages::UnknownCssMapOption.message(),
+      );
+      return None;
+    };
+
+    let Prop::KeyValue(kv) = prop.as_ref() else {
+      report_css_map_error(
+        meta,
+        prop.span(),
+        ErrorMessages::UnknownCssMapOption.message(),
+      );
+      return None;
+    };
+
+    let key = match &kv.key {
+      PropName::Ident(ident) => ident.sym.to_string(),
+      PropName::Str(s) => s.value.to_string(),
+      _ => {
+        report_css_map_error(
+          meta,
+          kv.key.span(),
+          ErrorMessages::UnknownCssMapOption.message(),
+        );
+        return None;
+      }
+    };
+
+    if !KNOWN_OPTIONS.contains(&key.as_str()) {
+      report_css_map_error_with_hints(meta, kv.key.span(), ErrorMessages::UnknownCssMapOption);
+      return None;
+    }
+
+    // key == "hashStrategy"
+    let Expr::Lit(Lit::Str(value_str)) = kv.value.as_ref() else {
+      report_css_map_error_with_hints(
+        meta,
+        kv.value.span(),
+        ErrorMessages::InvalidHashStrategyValue,
+      );
+      return None;
+    };
+
+    let value = value_str.value.as_ref();
+    if !VALID_STRATEGIES.contains(&value) {
+      report_css_map_error_with_hints(
+        meta,
+        kv.value.span(),
+        ErrorMessages::InvalidHashStrategyValue,
+      );
+      return None;
+    }
+
+    hash_strategy = match value {
+      "enhanced" => HashStrategy::Enhanced,
+      "max" => HashStrategy::Max,
+      _ => HashStrategy::Default,
+    };
+  }
+
+  Some(hash_strategy)
 }
 
 fn empty_object(span: Span) -> ObjectLit {

@@ -324,7 +324,7 @@ fn merge_style_attribute(node: &mut Expr, variables: &[Variable]) {
 /// Returns the Compiled component wrapper for the provided JSX element and CSS
 /// output, mirroring the behaviour of the Babel helper.
 pub fn build_compiled_component(mut node: Expr, css_output: &CssOutput, meta: &Metadata) -> Expr {
-  let transform_result = transform_css_items(&css_output.css, meta);
+  let transform_result = transform_css_items(&css_output.css, meta, None);
 
   if std::env::var("COMPILED_CLI_TRACE").is_ok() {
     let state = meta.state();

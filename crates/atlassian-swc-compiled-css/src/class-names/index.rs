@@ -236,7 +236,7 @@ where
   fn visit_mut_expr(&mut self, expr: &mut Expr) {
     if let Some(styles) = extract_styles_from_expr(expr, self.css_identifiers) {
       let css_output = (self.build_css)(styles, self.meta);
-      let transform_result = transform_css_items(&css_output.css, self.meta);
+      let transform_result = transform_css_items(&css_output.css, self.meta, None);
 
       self
         .collected_variables

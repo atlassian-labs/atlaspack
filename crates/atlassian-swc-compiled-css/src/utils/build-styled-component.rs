@@ -678,7 +678,7 @@ pub fn build_styled_component(
   let has_invalid_dom_props = !invalid_dom_props.is_empty();
 
   let (unconditional_css, conditional_items) = serialize_css_items(&css_output.css);
-  let (options, compression_map) = create_transform_css_options(meta);
+  let (options, compression_map) = create_transform_css_options(meta, None);
 
   if let Ok(label) = std::env::var("DEBUG_CSS_FIXTURE") {
     if let Some(filename) = &meta.state().filename {
@@ -702,7 +702,7 @@ pub fn build_styled_component(
   let css_result =
     transform_css(&unconditional_css, options.clone()).unwrap_or_else(|err| panic!("{err}"));
 
-  let conditional_output = transform_css_items(&conditional_items, meta);
+  let conditional_output = transform_css_items(&conditional_items, meta, None);
 
   let class_map_ref = compression_map.as_ref();
   let unconditional_class_names =
