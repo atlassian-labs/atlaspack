@@ -9,7 +9,7 @@ use swc_core::css::parser::{parse_string_input, parser::ParserConfig};
 #[cfg(feature = "postcss_engine")]
 use super::postcss_pipeline::transform_css_via_postcss;
 
-use super::plugins::atomicify_rules::HashStrategy;
+use super::plugins::atomicify_rules::{CssMapOptions, HashStrategy};
 use super::plugins::discard_comments::collect_preserved_comments;
 use super::plugins::{
   atomicify_rules::atomicify_rules, discard_duplicates::discard_duplicates,
@@ -32,7 +32,7 @@ pub struct TransformCssOptions {
   pub flatten_multiple_selectors: Option<bool>,
   /// Controls the hash strategy used for atomic class name generation.
   /// @experimental Not part of the public API. May change without notice.
-  pub hash_strategy: Option<HashStrategy>,
+  pub css_map_options: Option<CssMapOptions>,
   pub declaration_placeholder: Option<String>,
   /// Path used to resolve the browserslist config for autoprefixer.
   /// Defaults to `cwd`, matching Babel's autoprefixer which uses `{ from: undefined }`.
@@ -407,10 +407,13 @@ mod tests {
   use super::*;
 
   fn transform(css: &str, hash_strategy: Option<HashStrategy>) -> TransformCssResult {
+    let css_map_options = hash_strategy.map(|hs| CssMapOptions {
+      hash_strategy: Some(hs),
+    });
     transform_css_via_swc_pipeline(
       css,
       TransformCssOptions {
-        hash_strategy,
+        css_map_options,
         ..Default::default()
       },
     )

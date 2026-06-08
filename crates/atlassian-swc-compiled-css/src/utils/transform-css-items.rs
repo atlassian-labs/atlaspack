@@ -170,11 +170,11 @@ pub struct TransformCssItemsResult {
 
 pub(crate) fn create_transform_css_options(
   meta: &Metadata,
-  hash_strategy: Option<crate::postcss::plugins::atomicify_rules::HashStrategy>,
+  css_map_options: Option<&crate::postcss::plugins::atomicify_rules::CssMapOptions>,
 ) -> (TransformCssOptions, Option<BTreeMap<String, String>>) {
   let state = meta.state();
   let mut options = TransformCssOptions::default();
-  options.hash_strategy = hash_strategy;
+  options.css_map_options = css_map_options.cloned();
   options.optimize_css = state.opts.optimize_css;
   options.increase_specificity = state.opts.increase_specificity;
   // COMPAT: When generating runtime sheets for hoisting into the program,
@@ -416,7 +416,7 @@ fn record_style_rules(sheets: &[String], meta: &Metadata) {
 fn transform_css_item(
   item: &CssItem,
   meta: &Metadata,
-  hash_strategy: Option<crate::postcss::plugins::atomicify_rules::HashStrategy>,
+  css_map_options: Option<&crate::postcss::plugins::atomicify_rules::CssMapOptions>,
 ) -> TransformCssItemResult {
   thread_local! {
       static DEPTH: Cell<usize> = Cell::new(0);
@@ -447,8 +447,8 @@ fn transform_css_item(
   match item {
     CssItem::Conditional(conditional) => {
       let conditional = conditional.clone();
-      let consequent = transform_css_item(&conditional.consequent, meta, hash_strategy);
-      let alternate = transform_css_item(&conditional.alternate, meta, hash_strategy);
+      let consequent = transform_css_item(&conditional.consequent, meta, css_map_options);
+      let alternate = transform_css_item(&conditional.alternate, meta, css_map_options);
       let has_consequent_sheets = !consequent.sheets.is_empty();
       let has_alternate_sheets = !alternate.sheets.is_empty();
 
@@ -536,7 +536,7 @@ fn transform_css_item(
       }
     }
     CssItem::Logical(logical) => {
-      let (options, compression_map) = create_transform_css_options(meta, hash_strategy);
+      let (options, compression_map) = create_transform_css_options(meta, css_map_options);
       let css_result = transform_css(&logical.css, options).unwrap_or_else(|err| panic!("{err}"));
       let ordered = order_class_names_from_sheet_order(&css_result.class_names, &css_result.sheets);
       let compressed = compress_class_names_for_runtime(&ordered, compression_map.as_ref());
@@ -606,7 +606,7 @@ fn transform_css_item(
           }
         }
       }
-      let (options, compression_map) = create_transform_css_options(meta, hash_strategy);
+      let (options, compression_map) = create_transform_css_options(meta, css_map_options);
       let css_result = transform_css(&css, options).unwrap_or_else(|err| panic!("{err}"));
       if std::env::var("COMPILED_CSS_TRACE").is_ok() {
         eprintln!("[transform-css-item] sheets raw={:?}", css_result.sheets);
@@ -636,7 +636,7 @@ fn transform_css_item(
 pub fn transform_css_items(
   css_items: &[CssItem],
   meta: &Metadata,
-  hash_strategy: Option<crate::postcss::plugins::atomicify_rules::HashStrategy>,
+  css_map_options: Option<&crate::postcss::plugins::atomicify_rules::CssMapOptions>,
 ) -> TransformCssItemsResult {
   let mut sheets: Vec<String> = Vec::new();
   let mut class_names: Vec<Expr> = Vec::new();
@@ -654,7 +654,7 @@ pub fn transform_css_items(
         }
       );
     }
-    let result = transform_css_item(item, meta, hash_strategy);
+    let result = transform_css_item(item, meta, css_map_options);
     let filtered_sheets: Vec<String> = result
       .sheets
       .into_iter()

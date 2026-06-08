@@ -10,6 +10,13 @@ pub enum HashStrategy {
   Max,
 }
 
+/// Options passed from a `cssMap(styles, options)` call.
+/// @experimental Not part of the public API. May change without notice.
+#[derive(Debug, Clone, Default)]
+pub struct CssMapOptions {
+  pub hash_strategy: Option<HashStrategy>,
+}
+
 use std::sync::Arc;
 
 use swc_core::common::{FileName, SourceMap, Spanned, input::StringInput};
@@ -47,7 +54,12 @@ impl Plugin for AtomicifyRules {
       class_hash_prefix: ctx.options.class_hash_prefix.as_deref(),
       declaration_placeholder: ctx.options.declaration_placeholder.as_deref(),
       optimize_css: ctx.options.optimize_css.unwrap_or(true),
-      hash_strategy: ctx.options.hash_strategy.unwrap_or_default(),
+      hash_strategy: ctx
+        .options
+        .css_map_options
+        .as_ref()
+        .and_then(|o| o.hash_strategy)
+        .unwrap_or_default(),
     };
 
     let mut transformed: Vec<Rule> = Vec::with_capacity(stylesheet.rules.len());

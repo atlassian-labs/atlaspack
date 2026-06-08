@@ -6,7 +6,7 @@ use swc_core::ecma::ast::{
 };
 
 use crate::css_map_process_selectors::merge_extended_selectors_into_properties;
-use crate::postcss::plugins::atomicify_rules::HashStrategy;
+use crate::postcss::plugins::atomicify_rules::{CssMapOptions, HashStrategy};
 use crate::types::Metadata;
 use crate::utils_css_builders::build_css as build_css_from_expr;
 use crate::utils_css_map::{
@@ -52,13 +52,13 @@ where
 
       // Parse optional second argument { hashStrategy: '...' }
       // @experimental — not part of the public API.
-      let hash_strategy = if call_expr.args.len() == 2 {
+      let css_map_options = if call_expr.args.len() == 2 {
         parse_css_map_options(&call_expr.args[1].expr, meta)
       } else {
-        Some(HashStrategy::Default)
+        Some(CssMapOptions::default())
       };
 
-      let Some(hash_strategy) = hash_strategy else {
+      let Some(css_map_options) = css_map_options else {
         return empty_object(call_expr.span);
       };
 
@@ -140,7 +140,7 @@ where
           return empty_object(object_lit.span);
         }
 
-        let transform_result = transform_css_items(&css_output.css, meta, Some(hash_strategy));
+        let transform_result = transform_css_items(&css_output.css, meta, Some(&css_map_options));
         total_sheets.extend(
           transform_result
             .sheets
@@ -214,9 +214,9 @@ pub fn visit_css_map_path<'a>(
 }
 
 /// Parses the optional second argument to `cssMap(styles, options)`.
-/// Returns `Some(HashStrategy)` on success, or `None` if an error was reported.
+/// Returns `Some(CssMapOptions)` on success, or `None` if an error was reported.
 /// @experimental — not part of the public API.
-fn parse_css_map_options(options_expr: &Expr, meta: &Metadata) -> Option<HashStrategy> {
+fn parse_css_map_options(options_expr: &Expr, meta: &Metadata) -> Option<CssMapOptions> {
   const VALID_STRATEGIES: &[&str] = &["default", "enhanced", "max"];
   const KNOWN_OPTIONS: &[&str] = &["hashStrategy"];
 
@@ -230,6 +230,7 @@ fn parse_css_map_options(options_expr: &Expr, meta: &Metadata) -> Option<HashStr
   };
 
   let mut hash_strategy = HashStrategy::Default;
+  let mut options = CssMapOptions::default();
 
   for prop in &options_obj.props {
     let PropOrSpread::Prop(prop) = prop else {
@@ -295,7 +296,9 @@ fn parse_css_map_options(options_expr: &Expr, meta: &Metadata) -> Option<HashStr
     };
   }
 
-  Some(hash_strategy)
+  Some(CssMapOptions {
+    hash_strategy: Some(hash_strategy),
+  })
 }
 
 fn empty_object(span: Span) -> ObjectLit {
