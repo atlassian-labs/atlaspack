@@ -273,14 +273,14 @@ fn atomic_class_name(
     }
     HashStrategy::Enhanced => {
       // Base-62, take first 4 chars — same class length as default, reduced collision risk.
-      crate::utils::hash::hash_base62(&group_seed)
+      crate::utils_hash::hash_base62(&group_seed)
         .chars()
         .take(4)
         .collect::<String>()
     }
     HashStrategy::Max => {
       // Full 32-bit base-62 hash (6 chars) — structurally incompatible with default/enhanced.
-      crate::utils::hash::hash_base62(&group_seed)
+      crate::utils_hash::hash_base62(&group_seed)
         .chars()
         .take(6)
         .collect::<String>()

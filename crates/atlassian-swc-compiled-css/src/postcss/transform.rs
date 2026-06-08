@@ -418,37 +418,40 @@ mod tests {
   }
 
   /// Default strategy: base-36 group hash, 4-char group → 9-char class (_GGGGVVVV).
-  /// Expected values verified against the TypeScript `@compiled/css` implementation.
+  /// Group seed: '' + 'undefined' + '&' + 'color' = 'undefined&color' → 'syaz'
+  /// Value seed: 'red' → '5scu'
   #[test]
   fn hash_strategy_default_produces_correct_class_name() {
     let result = transform("color: red;", None);
     assert!(
-      result.class_names.iter().any(|c| c == "_16h85scu"),
-      "expected _16h85scu in {:?}",
+      result.class_names.iter().any(|c| c == "_syaz5scu"),
+      "expected _syaz5scu in {:?}",
       result.class_names
     );
   }
 
   /// Enhanced strategy: base-62 group hash, 4-char group → 9-char class (_GGGGVVVV).
   /// Same class length as default but reduced collision risk.
+  /// Group seed: 'undefined&color' → base62 first 4 chars = '1UtD'
   #[test]
   fn hash_strategy_enhanced_produces_correct_class_name() {
     let result = transform("color: red;", Some(HashStrategy::Enhanced));
     assert!(
-      result.class_names.iter().any(|c| c == "_2NPk5scu"),
-      "expected _2NPk5scu in {:?}",
+      result.class_names.iter().any(|c| c == "_1UtD5scu"),
+      "expected _1UtD5scu in {:?}",
       result.class_names
     );
   }
 
   /// Max strategy: base-62 group hash, 6-char group → 11-char class (_GGGGGGVVVV).
   /// Structurally incompatible with default/enhanced — cross-strategy deduplication not supported.
+  /// Group seed: 'undefined&color' → base62 first 6 chars = '1UtDYz'
   #[test]
   fn hash_strategy_max_produces_correct_class_name() {
     let result = transform("color: red;", Some(HashStrategy::Max));
     assert!(
-      result.class_names.iter().any(|c| c == "_2NPkLa5scu"),
-      "expected _2NPkLa5scu in {:?}",
+      result.class_names.iter().any(|c| c == "_1UtDYz5scu"),
+      "expected _1UtDYz5scu in {:?}",
       result.class_names
     );
   }
