@@ -1,17 +1,26 @@
 use std::borrow::Cow;
 
+/// Controls the hash strategy used when generating atomic class names.
 /// Mirrors `HashStrategy` in `packages/css/src/hash-strategy.ts`.
-/// @experimental Not part of the public API. May change without notice.
+///
+/// # Experimental
+/// Not part of the public API. May change or be removed without notice.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum HashStrategy {
+  /// Original behaviour: 4-char base-36 group hash + 4-char base-36 value hash (9-char total).
   #[default]
   Default,
+  /// Base-62 encoding (0-9, a-z, A-Z) for the group hash, giving 8.8× more hash space (9-char total).
   Enhanced,
+  /// Full 32-bit hash encoded in base-62 for both group (6-char) and value (4-char) (11-char total).
   Max,
 }
 
 /// Options passed from a `cssMap(styles, options)` call.
-/// @experimental Not part of the public API. May change without notice.
+/// Designed to be extended with additional fields as new experimental options are introduced.
+///
+/// # Experimental
+/// Not part of the public API. May change or be removed without notice.
 #[derive(Debug, Clone, Default)]
 pub struct CssMapOptions {
   pub hash_strategy: Option<HashStrategy>,

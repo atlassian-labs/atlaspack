@@ -151,6 +151,7 @@ use swc_core::ecma::ast::{
   BinExpr, BinaryOp, CondExpr, Expr, Ident, Lit, ParenExpr, Str, UnaryExpr, UnaryOp,
 };
 
+use crate::postcss::plugins::atomicify_rules::CssMapOptions;
 use crate::postcss::transform::{TransformCssOptions, transform_css};
 use crate::types::Metadata;
 use crate::utils_compress_class_names_for_runtime::compress_class_names_for_runtime;
@@ -174,6 +175,7 @@ pub(crate) fn create_transform_css_options(
 ) -> (TransformCssOptions, Option<BTreeMap<String, String>>) {
   let state = meta.state();
   let mut options = TransformCssOptions::default();
+  // css_map_options is borrowed (&CssMapOptions) but TransformCssOptions needs an owned value.
   options.css_map_options = css_map_options.cloned();
   options.optimize_css = state.opts.optimize_css;
   options.increase_specificity = state.opts.increase_specificity;

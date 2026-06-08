@@ -217,7 +217,10 @@ pub fn visit_css_map_path<'a>(
 /// Returns `Some(CssMapOptions)` on success, or `None` if an error was reported.
 /// @experimental — not part of the public API.
 fn parse_css_map_options(options_expr: &Expr, meta: &Metadata) -> Option<CssMapOptions> {
+  /// All valid values for the `hashStrategy` option.
   const VALID_STRATEGIES: &[&str] = &["default", "enhanced", "max"];
+  /// Exhaustive list of recognised option keys. Any key not in this list triggers an error.
+  /// Add new experimental options here as they are introduced.
   const KNOWN_OPTIONS: &[&str] = &["hashStrategy"];
 
   let Expr::Object(options_obj) = options_expr else {
@@ -230,7 +233,6 @@ fn parse_css_map_options(options_expr: &Expr, meta: &Metadata) -> Option<CssMapO
   };
 
   let mut hash_strategy = HashStrategy::Default;
-  let mut options = CssMapOptions::default();
 
   for prop in &options_obj.props {
     let PropOrSpread::Prop(prop) = prop else {
@@ -269,7 +271,7 @@ fn parse_css_map_options(options_expr: &Expr, meta: &Metadata) -> Option<CssMapO
       return None;
     }
 
-    // key == "hashStrategy"
+    // Validate the value for the matched known option key.
     let Expr::Lit(Lit::Str(value_str)) = kv.value.as_ref() else {
       report_css_map_error_with_hints(
         meta,
