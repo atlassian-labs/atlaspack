@@ -99,12 +99,25 @@ test.describe('Atlaspack Inspector E2E tests', () => {
     const links = await page.$$('a');
     for (const link of links) {
       const href = await link.getAttribute('href');
-      if (href && /app\/cache\/.+/.test(href)) {
-        await link.click();
+      // Match only `/app/cache/<key>` style links. The previous regex
+      // `app\/cache\/.+` also matched sibling routes like `/app/cache-stats`
+      // and `/app/cache-invalidation-files`, which could be picked first on
+      // CI (depending on link ordering) and would navigate away from a real
+      // cache entry, causing the "Cache entry" content assertion to fail.
+      if (href && /^\/?app\/cache\/[^/]+\/?$/.test(href)) {
+        await Promise.all([page.waitForURL(/\/app\/cache\/.+/), link.click()]);
         await page.waitForLoadState('networkidle');
         await page.waitForSelector('atlaspack-inspector-loading-indicator', {
           state: 'detached',
         });
+        // Explicitly wait for the cache entry view to render before asserting
+        // on body content. Without this, CI can race: `networkidle` may fire
+        // before the SPA finishes mounting the cache-entry view, causing the
+        // assertion to read stale (cache-list) content.
+        await page
+          .getByText('Cache entry size', {exact: false})
+          .first()
+          .waitFor({timeout: 10000});
 
         const text = await page.textContent('body');
         assert.ok(

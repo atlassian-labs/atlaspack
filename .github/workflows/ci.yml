@@ -272,7 +272,7 @@ jobs:
     name: E2E tests
     needs:
       - build_native
-    timeout-minutes: 35
+    timeout-minutes: 45
     strategy:
       matrix:
         node: [24]
@@ -291,8 +291,13 @@ jobs:
       - name: Bump max inotify watches (Linux only)
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
         if: ${{ runner.os == 'Linux' }}
-      - run: yarn playwright install
-      - run: yarn test:e2e:ci
+      - name: Install Playwright Browsers and System Dependencies
+        run: yarn playwright install --with-deps
+        env:
+          CI: true
+
+      - name: Run E2E Tests
+        run: yarn test:e2e:ci
 
   atlaspack_inspector_unit_tests:
     name: ${{ matrix.project }} - Unit tests (${{ matrix.os }}, Node ${{ matrix.node }})
@@ -326,6 +331,7 @@ jobs:
     name: '@atlaspack/inspector - E2E tests (${{ matrix.os }}, Node ${{ matrix.node }})'
     needs:
       - build_native
+    timeout-minutes: 45
     strategy:
       matrix:
         node: [24]
@@ -345,8 +351,16 @@ jobs:
       - name: Bump max inotify watches (Linux only)
         if: ${{ runner.os == 'Linux' }}
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
-      - run: |
-          yarn build
+
+      - name: Build
+        run: yarn build
+
+      - name: Install Playwright Browsers and System Dependencies
+        run: |
           yarn playwright install-deps
           yarn playwright install
-          yarn workspace @atlaspack/inspector test:e2e
+        env:
+          CI: true
+
+      - name: Run E2E Tests
+        run: yarn workspace @atlaspack/inspector test:e2e
