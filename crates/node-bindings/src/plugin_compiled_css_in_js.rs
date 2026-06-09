@@ -1504,6 +1504,55 @@ export const ContainerAvatar = ({ src }: ContainerAvatarProps) => (
   }
 
   #[test]
+  fn test_css_map_with_hash_strategy_max() {
+    let config = create_test_config(true, false);
+
+    let input_code = indoc! {r#"
+/**
+ * @jsxRuntime classic
+ * @jsx jsx
+ */
+import { jsx } from '@compiled/react';
+
+import { cssMap } from '@atlaskit/css';
+
+const styles = cssMap(
+	{
+		root: {
+			color: 'red',
+		},
+	},
+	{ hashStrategy: 'max' },
+);
+
+export const Component = () => <div css={styles.root}>Hello</div>;
+    "#};
+
+    let result = process_compiled_css_in_js(input_code, &config);
+    assert!(result.is_ok(), "Transformation should succeed");
+
+    let output = result.unwrap();
+
+    assert!(!output.bail_out, "Transformation should not bail out");
+    assert!(
+      output.diagnostics.is_empty(),
+      "Should have no diagnostics, got: {:?}",
+      output.diagnostics
+    );
+
+    // With hashStrategy: 'max', the class name should be 11 chars (6-char group + 4-char value)
+    // instead of the default 9 chars (4-char group + 4-char value).
+    let class_name_pattern = regex::Regex::new(r"_[a-zA-Z0-9]{10}\b").unwrap();
+    let has_max_class =
+      output.code.contains("color:red") && class_name_pattern.is_match(&output.code);
+    assert!(
+      has_max_class,
+      "Expected an 11-char max-strategy class name in output, got: {}",
+      output.code
+    );
+  }
+
+  #[test]
   fn test_css_map_primitives() {
     let config = create_test_config(true, false);
 

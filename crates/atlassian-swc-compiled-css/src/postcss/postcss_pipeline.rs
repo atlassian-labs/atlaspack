@@ -1582,6 +1582,39 @@ fn should_skip_colormin(prop: &str) -> bool {
     || lower.starts_with("-webkit-tap-highlight-color")
 }
 
+/// Generate the group hash for an atomic class name based on the configured hash strategy.
+/// Mirrors the logic in `atomicify-rules.rs::atomic_class_name`.
+#[cfg(feature = "postcss_engine")]
+fn hash_group_for_strategy(
+  seed: &str,
+  strategy: super::plugins::atomicify_rules::HashStrategy,
+) -> String {
+  use super::plugins::atomicify_rules::HashStrategy;
+  match strategy {
+    HashStrategy::Default => crate::utils_hash::hash(seed).chars().take(4).collect(),
+    HashStrategy::Enhanced => crate::utils_hash::hash_base62(seed)
+      .chars()
+      .take(4)
+      .collect(),
+    HashStrategy::Max => crate::utils_hash::hash_base62(seed)
+      .chars()
+      .take(6)
+      .collect(),
+  }
+}
+
+/// Resolve the hash strategy from TransformCssOptions, defaulting to Default if unset.
+#[cfg(feature = "postcss_engine")]
+fn hash_strategy_from_opts(
+  opts: &TransformCssOptions,
+) -> super::plugins::atomicify_rules::HashStrategy {
+  opts
+    .css_map_options
+    .as_ref()
+    .and_then(|o| o.hash_strategy)
+    .unwrap_or_default()
+}
+
 /// Normalize a value for hashing purposes.
 /// This applies the same transformations that run BEFORE atomicify in Babel:
 /// - reduce-initial: converts values like `currentColor` to `initial` when supported
@@ -1732,13 +1765,18 @@ fn atomicify_rules_plugin(
     super::plugins::normalize_css_engine::colormin::add_plugin_defaults()
   };
 
+  // NOTE: Ctx is currently only used inside the dead-code `process_rule` helper below.
+  // We keep `hash_strategy` here so any future revival mirrors the live `.decl`/`.rule`
+  // closures, which resolve the strategy via `hash_strategy_from_opts(&opts)`.
   #[derive(Clone)]
+  #[allow(dead_code)]
   struct Ctx<'a> {
     at_chain: Vec<(String, String, usize)>, // (name, params, occurrence index)
     selectors: Vec<String>,                 // combined selectors at this depth
     opts: &'a TransformCssOptions,
     collector: AtomicCollector,
     autoprefixer: Option<Arc<AutoprefixerData>>,
+    hash_strategy: super::plugins::atomicify_rules::HashStrategy,
   }
 
   fn can_atomicify_at_rule(name: &str) -> bool {
@@ -2001,7 +2039,7 @@ fn atomicify_rules_plugin(
           group_seed.push_str(&at_seg);
           group_seed.push_str(norm);
           group_seed.push_str(&prop);
-          let group = hash(&group_seed).chars().take(4).collect::<String>();
+          let group = hash_group_for_strategy(&group_seed, ctx.hash_strategy);
           if std::env::var("COMPILED_CLI_TRACE").is_ok() {
             eprintln!(
               "[atomicify.group] at='{}' sel='{}' prop='{}' seed='{}' -> {}",
@@ -2165,7 +2203,7 @@ fn atomicify_rules_plugin(
           group_seed.push_str(at_seg);
           group_seed.push_str(norm);
           group_seed.push_str(&prop);
-          let group = hash(&group_seed).chars().take(4).collect::<String>();
+          let group = hash_group_for_strategy(&group_seed, hash_strategy_from_opts(&opts));
           if std::env::var("COMPILED_CLI_TRACE").is_ok() {
             eprintln!(
               "[atomicify.group] at='{}' sel='{}' prop='{}' seed='{}' -> {}",
@@ -2361,7 +2399,7 @@ fn atomicify_rules_plugin(
               group_seed.push_str(at_seg);
               group_seed.push_str(norm);
               group_seed.push_str(&prop);
-              let group = hash(&group_seed).chars().take(4).collect::<String>();
+              let group = hash_group_for_strategy(&group_seed, hash_strategy_from_opts(&opts));
               if std::env::var("COMPILED_CLI_TRACE").is_ok() {
                 eprintln!(
                   "[atomicify.group] at='{}' sel='{}' prop='{}' seed='{}' -> {}",
@@ -2459,7 +2497,7 @@ fn atomicify_rules_plugin(
                   group_seed.push_str(at_seg);
                   group_seed.push_str(norm);
                   group_seed.push_str(&prop);
-                  let group = hash(&group_seed).chars().take(4).collect::<String>();
+                  let group = hash_group_for_strategy(&group_seed, hash_strategy_from_opts(&opts));
                   if std::env::var("COMPILED_CLI_TRACE").is_ok() {
                     eprintln!(
                       "[atomicify.group] at='{}' sel='{}' prop='{}' seed='{}' -> {}",

@@ -70,7 +70,6 @@ impl Plugin for AtomicifyRules {
         .and_then(|o| o.hash_strategy)
         .unwrap_or_default(),
     };
-
     let mut transformed: Vec<Rule> = Vec::with_capacity(stylesheet.rules.len());
 
     for rule in std::mem::take(&mut stylesheet.rules) {
