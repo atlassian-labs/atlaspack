@@ -356,9 +356,7 @@ jobs:
         run: yarn build
 
       - name: Install Playwright Browsers and System Dependencies
-        run: |
-          yarn playwright install-deps
-          yarn playwright install
+        run: yarn playwright install --with-deps
         env:
           CI: true
 

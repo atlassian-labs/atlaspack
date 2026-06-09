@@ -97,46 +97,38 @@ test.describe('Atlaspack Inspector E2E tests', () => {
     });
 
     const links = await page.$$('a');
-    for (const link of links) {
-      const href = await link.getAttribute('href');
-      // Match only `/app/cache/<key>` style links. The previous regex
-      // `app\/cache\/.+` also matched sibling routes like `/app/cache-stats`
-      // and `/app/cache-invalidation-files`, which could be picked first on
-      // CI (depending on link ordering) and would navigate away from a real
-      // cache entry, causing the "Cache entry" content assertion to fail.
-      if (href && /^\/?app\/cache\/[^/]+\/?$/.test(href)) {
-        await Promise.all([page.waitForURL(/\/app\/cache\/.+/), link.click()]);
-        await page.waitForLoadState('networkidle');
-        await page.waitForSelector('atlaspack-inspector-loading-indicator', {
-          state: 'detached',
-        });
-        // Explicitly wait for the cache entry view to render before asserting
-        // on body content. Without this, CI can race: `networkidle` may fire
-        // before the SPA finishes mounting the cache-entry view, causing the
-        // assertion to read stale (cache-list) content.
-        await page
-          .getByText('Cache entry size', {exact: false})
-          .first()
-          .waitFor({timeout: 10000});
+    // Fetch all hrefs in parallel, then find the first real cache entry link.
+    // Match only `/app/cache/<key>` style links — not sibling routes like
+    // `/app/cache-stats` or `/app/cache-invalidation-files`.
+    const hrefs = await Promise.all(links.map((l) => l.getAttribute('href')));
+    const cacheEntryIndex = hrefs.findIndex(
+      (href) => href && /^\/?app\/cache\/[^/]+\/?$/.test(href),
+    );
 
-        const text = await page.textContent('body');
-        assert.ok(
-          text?.includes('Cache entry'),
-          'Failed to find cache entry content',
-        );
-        assert.ok(
-          text?.includes('Cache entry size'),
-          'Failed to find cache entry code on cache entry',
-        );
-        await expect(page).toHaveScreenshot('cache-entry.png', {
-          maxDiffPixelRatio: 0.05,
-        });
-
-        return;
-      }
+    if (cacheEntryIndex === -1) {
+      throw new Error('Failed to find cache entry link');
     }
 
-    throw new Error('Failed to find cache entry link');
+    await Promise.all([
+      page.waitForURL(/\/app\/cache\/.+/),
+      links[cacheEntryIndex].click(),
+    ]);
+    // Wait for the cache entry view to fully render. This is the authoritative
+    // readiness signal — it replaces separate networkidle / loading-indicator
+    // waits which could resolve before the SPA finishes mounting the view.
+    await page
+      .getByText('Cache entry size', {exact: false})
+      .first()
+      .waitFor({timeout: 10000});
+
+    const entryText = await page.textContent('body');
+    assert.ok(
+      entryText?.includes('Cache entry size'),
+      'Failed to find cache entry content',
+    );
+    await expect(page).toHaveScreenshot('cache-entry.png', {
+      maxDiffPixelRatio: 0.05,
+    });
   });
 
   test('can load the treemap', async function () {
