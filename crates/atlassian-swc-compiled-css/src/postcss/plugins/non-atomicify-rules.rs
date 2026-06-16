@@ -16,12 +16,14 @@
 //!
 //! ## Reuse from `atomicify-rules`:
 //!
-//! The at-rule classification (`can_atomicify_at_rule`), selector collection
-//! (`collect_rule_selectors`), selector parsing (`parse_selector_as_rule`),
-//! selector normalisation (`normalize_selector`, `replace_nesting_selector`),
-//! comment-list detection (`is_comment_list`), and serialisation helpers
-//! (`serialize_node`, `serialize_component_values`) are all reused directly
-//! from `atomicify_rules` (exposed as `pub(super)`).
+//! The following helpers are reused directly from `atomicify_rules` (exposed
+//! as `pub(super)`):
+//! - `can_atomicify_at_rule` — at-rule classification (scopeable/passthrough)
+//! - `collect_rule_selectors` — collect selector strings from a `QualifiedRule`
+//! - `parse_selector_as_rule` — parse a selector string back to a `QualifiedRule`
+//! - `normalize_selector` — normalise selector (prepend `&` if missing)
+//! - `replace_nesting_selector` — replace `&` with the parent class name
+//! - `is_comment_list` — detect comment-only `ListOfComponentValues`
 
 use swc_core::common::DUMMY_SP;
 use swc_core::css::ast::{

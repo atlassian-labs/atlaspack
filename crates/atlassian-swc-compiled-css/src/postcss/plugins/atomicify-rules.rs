@@ -79,10 +79,7 @@ struct AtomicifyOptions<'a> {
   optimize_css: bool,
 }
 
-pub(super) fn normalize_selectors(
-  selectors: Vec<String>,
-  options: &AtomicifyOptions<'_>,
-) -> Vec<String> {
+fn normalize_selectors(selectors: Vec<String>, options: &AtomicifyOptions<'_>) -> Vec<String> {
   if let Some(placeholder) = options.declaration_placeholder {
     selectors
       .into_iter()
@@ -364,7 +361,7 @@ where
   Some(output)
 }
 
-pub(super) fn serialize_component_values(values: &[ComponentValue]) -> Option<String> {
+fn serialize_component_values(values: &[ComponentValue]) -> Option<String> {
   let mut output = String::new();
   {
     let writer = BasicCssWriter::new(&mut output, None, Default::default());
@@ -437,7 +434,7 @@ pub(super) fn can_atomicify_at_rule(at_rule: &AtRule) -> bool {
   }
 }
 
-pub(super) fn at_rule_name(name: &AtRuleName) -> String {
+fn at_rule_name(name: &AtRuleName) -> String {
   match name {
     AtRuleName::Ident(ident) => ident.value.to_string(),
     AtRuleName::DashedIdent(ident) => ident.value.to_string(),
