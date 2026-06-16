@@ -25,7 +25,7 @@ function fixtureOutputName(target: string): string {
   const fixtureDir =
     segments.length >= 2
       ? segments[segments.length - 2]
-      : segments[0] ?? 'fixture';
+      : (segments[0] ?? 'fixture');
   const safe = fixtureDir.replace(/[^a-zA-Z0-9._-]/g, '_');
   // Append a short hash only when the target is more complex than `<dir>/index.html`,
   // to disambiguate without making the typical case unreadable.

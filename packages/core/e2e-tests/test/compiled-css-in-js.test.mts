@@ -400,14 +400,12 @@ describe('Compiled CSS in JS Playwright E2E tests', () => {
     // ------------------------------------------------------------------
     const allCcClasses = await page.evaluate(() => {
       const classes = new Set();
-      document
-        .querySelectorAll('[data-testid]')
-        .forEach((el) =>
-          el.className
-            .split(' ')
-            .filter((c) => c.startsWith('cc-'))
-            .forEach((c) => classes.add(c)),
-        );
+      document.querySelectorAll('[data-testid]').forEach((el) =>
+        el.className
+          .split(' ')
+          .filter((c) => c.startsWith('cc-'))
+          .forEach((c) => classes.add(c)),
+      );
       return Array.from(classes);
     });
 
