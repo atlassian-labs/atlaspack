@@ -6,7 +6,27 @@ import {buildFixture} from '../utils/build-fixture.mts';
 import {serve} from '../utils/server.mts';
 import type {ServeContext} from '../utils/server.mts';
 import {join, dirname} from 'node:path';
+import {readdirSync, readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
+
+/**
+ * Inline snapshot assertion for CSS strings — exact equality, no normalisation.
+ *
+ * Class-name hashes (`cc-<hash>`, `_<hash>`) are stable for a given fixture
+ * input because they're computed from the relative file path + binding name +
+ * variant key. To update an inline snapshot when the expected output changes
+ * intentionally, copy the actual value from the failure message into the source.
+ */
+function assertCssSnapshot(actual: string, expected: string, label: string) {
+  if (actual.trim() !== expected.trim()) {
+    throw new assert.AssertionError({
+      message: `CSS snapshot mismatch (${label})\n\nEXPECTED:\n${expected}\n\nACTUAL:\n${actual}\n\n>>>>>> paste the ACTUAL value into the test source to update the snapshot.\n`,
+      actual,
+      expected,
+      operator: 'assertCssSnapshot',
+    });
+  }
+}
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -121,7 +141,10 @@ describe('Compiled CSS in JS Playwright E2E tests', () => {
    *   - parent-pseudo selectors (`&:hover`, `&:focus`) correctly flattened
    *   - autoprefixer-driven vendor prefixes (e.g. `-webkit-user-select`)
    */
-  async function assertCssMapScopedFixture(fixtureName: string) {
+  async function assertCssMapScopedFixture(
+    fixtureName: string,
+    expectedCssSnapshot: string,
+  ) {
     const {outputDir} = await buildFixture(`${fixtureName}/index.html`, {
       mode: 'production',
       defaultTargetOptions: {
@@ -136,6 +159,40 @@ describe('Compiled CSS in JS Playwright E2E tests', () => {
 
     server = await serve(outputDir);
     await page.goto(server.address);
+
+    // ----------------------------------------------------------------------
+    // CSS snapshot: assert the FULL stylesheet matches an inline snapshot.
+    //
+    // For extract:true mode → read the extracted `.css` file from `outputDir`
+    // (linked from <head>).
+    // For extract:false mode → enumerate `document.styleSheets[*].cssRules`
+    // (sheets are injected at runtime by the CC/CS wrapper).
+    //
+    // Hash-prefixed class names (`cc-d76ndi`, `_abc123de`) are normalised to
+    // `cc-xxxxxx` / `_xxxxxxxx` in `assertCssSnapshot` so snapshots are
+    // stable across fixtures and machines.
+    // ----------------------------------------------------------------------
+    const cssFile = readdirSync(outputDir).find((f) => f.endsWith('.css'));
+    let collectedCss: string;
+    if (cssFile) {
+      // extract:true — read the linked stylesheet from disk.
+      collectedCss = readFileSync(join(outputDir, cssFile), 'utf-8');
+    } else {
+      // extract:false — collect inline runtime-injected sheets from the DOM.
+      collectedCss = await page.evaluate(() => {
+        const sheets = Array.from(document.styleSheets) as CSSStyleSheet[];
+        return sheets
+          .flatMap((s) => {
+            try {
+              return Array.from(s.cssRules).map((r) => r.cssText);
+            } catch {
+              return [];
+            }
+          })
+          .join('\n');
+      });
+    }
+    assertCssSnapshot(collectedCss, expectedCssSnapshot, fixtureName);
 
     // Helper to grab the inner `.panel` of a test panel — the wrapper carries
     // the `.cc-<hash>` class, the inner `.panel` is what receives the scoped
@@ -429,19 +486,107 @@ describe('Compiled CSS in JS Playwright E2E tests', () => {
       'rgb(0, 100, 200)',
       '`[dir="rtl"] &` rule must apply border-right-color to .editor blockquote inside an RTL wrapper',
     );
+
+    // ---------------------------------------------------------------
+    // Mixed cssMap + cssMapScoped composition
+    // ---------------------------------------------------------------
+    // The mixed panel uses `css={[panelStyles.default, messageStyles.info]}`
+    // — a cssMapScoped variant (non-atomic, `cc-<hash>` class) AND an atomic
+    // cssMap variant (multiple `_xxxxxxxx` classes) on the SAME element.
+    // Both styles must coexist on the rendered DOM with no interference.
+    const mixedPanel = await page.locator('[data-testid="mixed-panel"]');
+    const mixedPanelClassName = await mixedPanel.evaluate(
+      (el) => (el as HTMLElement).className,
+    );
+    const mixedPanelClasses = mixedPanelClassName.split(' ').filter(Boolean);
+
+    // The element must have BOTH cssMapScoped (`cc-` prefix) AND atomic
+    // (`_` prefix) classes — proving both APIs composed correctly.
+    const mixedCcClasses = mixedPanelClasses.filter((c) => c.startsWith('cc-'));
+    const mixedAtomicClasses = mixedPanelClasses.filter((c) =>
+      c.startsWith('_'),
+    );
+    assert.ok(
+      mixedCcClasses.length >= 1,
+      `mixed-panel must have at least one cc- class from cssMapScoped, got classes: ${mixedPanelClasses.join(', ')}`,
+    );
+    assert.ok(
+      mixedAtomicClasses.length >= 1,
+      `mixed-panel must have at least one _-prefixed atomic class from cssMap, got classes: ${mixedPanelClasses.join(', ')}`,
+    );
+
+    // The atomic cssMap (messageStyles.info) must apply the configured border.
+    assert.equal(
+      await mixedPanel.evaluate((el) => getComputedStyle(el).borderTopStyle),
+      'solid',
+      'mixed-panel must have border-style:solid from atomic cssMap messageStyles.info',
+    );
+    assert.equal(
+      await mixedPanel.evaluate((el) => getComputedStyle(el).borderTopColor),
+      'rgb(0, 128, 255)',
+      'mixed-panel must have border-color:rgb(0, 128, 255) from atomic cssMap messageStyles.info',
+    );
+
+    // The cssMapScoped (panelStyles.default) descendant rule must STILL apply
+    // to the inner `.editor .panel` — proving the cc- class works even when
+    // composed with atomic classes on the same wrapper.
+    const mixedPanelInner = await page.locator(
+      '[data-testid="mixed-panel-inner"]',
+    );
+    assert.equal(
+      await mixedPanelInner.evaluate(
+        (el) => getComputedStyle(el).backgroundColor,
+      ),
+      'rgb(240, 240, 240)',
+      'mixed-panel inner .panel must keep cssMapScoped descendant background-color (panelStyles.default)',
+    );
   }
 
   it('can bundle cssMapScoped with extract:true (sheets extracted to .css file)', async () => {
     // Extracted mode: @atlaspack/transformer-compiled-external pulls the
     // hoisted sheet strings out of the JS bundle, and @compiled/parcel-optimizer
     // links the resulting stylesheet into <head>. No runtime CSS injection.
-    await assertCssMapScopedFixture('simple-project-with-css-map-scoped-extracted');
+    await assertCssMapScopedFixture(
+      'simple-project-with-css-map-scoped-extracted',
+      `.cc-nc9thm .editor .panel{border-radius:4px;padding-top:8px;padding-right:8px;padding-bottom:8px;padding-left:8px;background-color:#f0f0f0;-webkit-user-select:none;-moz-user-select:none;user-select:none}._1dqonqa1{border-style:solid}._1h6d17jy{border-color:#0080ff}.cc-nc9thm .editor .panel .panel-footer{margin-top:6px;font-size:9pt;color:#646464}[dir=rtl] .cc-nc9thm .editor blockquote{padding-left:0;padding-right:1pc;border-right-width:2px;border-right-style:solid;border-right-color:#0064c8}.cc-nc9thm .editor .panel .panel-icon{color:#aaa}.cc-nc9thm .editor .panel-title{font-weight:bold;font-family:sans-serif}.cc-1s4lvcv .editor .panel,.cc-1s4lvcv .editor .panel-title{opacity:.95}.cc-1s4lvcv .editor .panel{background-color:#ffe0e0}.cc-1s4lvcv .editor .panel-title{color:red}.cc-rdkymy .editor .panel{background-color:red;animation-name:kzgsq9a;animation-duration:2s;animation-iteration-count:infinite}.cc-rdkymy .editor .panel-title{color:#fff}.cc-nc9thm .editor .panel:focus{outline-color:#00f}.cc-nc9thm .editor .panel:hover{cursor:pointer}@keyframes kzgsq9a{0%{opacity:1}to{opacity:.6}}@media (min-width:1px){.cc-nc9thm .editor .panel{letter-spacing:1px}}@supports (display:grid){@media (min-width:1px){.cc-nc9thm .editor .panel{row-gap:9pt}}.cc-nc9thm .editor .panel{display:grid}}`,
+    );
   });
 
   it('can bundle cssMapScoped with extract:false (sheets injected at runtime)', async () => {
     // Runtime mode: the CC/CS components inserted by the transform inject the
     // hoisted sheet strings via insertStyleSheet() at runtime. No separate
     // .css file is produced.
-    await assertCssMapScopedFixture('simple-project-with-css-map-scoped-runtime');
+    await assertCssMapScopedFixture(
+      'simple-project-with-css-map-scoped-runtime',
+      `._1dqonqa1 { border-style: solid; }
+._1h6d17jy { border-color: rgb(0, 128, 255); }
+.cc-nc9thm .editor .panel .panel-footer { margin-top: 6px; font-size: 9pt; color: rgb(100, 100, 100); }
+.cc-nc9thm .editor .panel { padding: 8px; background-color: rgb(240, 240, 240); border-radius: 4px; user-select: none; }
+[dir="rtl"] .cc-nc9thm .editor blockquote { padding-left: 0px; padding-right: 1pc; border-right: 2px solid rgb(0, 100, 200); }
+.cc-nc9thm .editor .panel .panel-icon { color: rgb(170, 170, 170); }
+.cc-nc9thm .editor .panel-title { font-weight: bold; font-family: sans-serif; }
+.cc-nc9thm .editor .panel:focus { outline-color: rgb(0, 0, 255); }
+.cc-nc9thm .editor .panel:hover { cursor: pointer; }
+@media (min-width: 1px) {
+  .cc-nc9thm .editor .panel { letter-spacing: 1px; }
+}
+@supports (display:grid) {
+  @media (min-width: 1px) {
+  .cc-nc9thm .editor .panel { row-gap: 9pt; }
+}
+}
+@supports (display:grid) {
+  .cc-nc9thm .editor .panel { display: grid; }
+}
+.cc-1s4lvcv .editor .panel, .cc-1s4lvcv .editor .panel-title { opacity: 0.95; }
+.cc-1s4lvcv .editor .panel { background-color: rgb(255, 224, 224); }
+.cc-1s4lvcv .editor .panel-title { color: red; }
+.cc-rdkymy .editor .panel { background-color: red; animation-name: kzgsq9a; animation-duration: 2s; animation-iteration-count: infinite; }
+.cc-rdkymy .editor .panel-title { color: rgb(255, 255, 255); }
+@keyframes kzgsq9a { 
+  0% { opacity: 1; }
+  100% { opacity: 0.6; }
+}`,
+    );
   });
 });

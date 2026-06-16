@@ -144,11 +144,20 @@ where
           return empty_object(object_lit.span);
         }
 
-        // Pre-compute a non-atomic class name from filename + binding name + variant key.
-        // The binding name (e.g. `panelStyles`, `panelDangerStyles`) is critical: without
-        // it, two `cssMapScoped` calls in the same file that happen to share a variant key
-        // (e.g. both have a `default` variant) would produce IDENTICAL class names and
-        // their CSS rules would collide.
+        // Pre-compute a non-atomic class name from relativeFilename + binding name + variant key.
+        //
+        // The hash inputs:
+        // - `relativeFilename` — path relative to the project root, so the hash is
+        //   stable across all machines and CI environments regardless of where the
+        //   monorepo is checked out. Falls back to the basename if the file is
+        //   outside the project root (e.g. test fixtures at arbitrary absolute paths).
+        // - `binding_name` (e.g. `panelStyles`, `panelDangerStyles`) is critical:
+        //   without it, two `cssMapScoped` calls in the same file that happen to
+        //   share a variant key (e.g. both have a `default` variant) would produce
+        //   IDENTICAL class names and their CSS rules would collide.
+        // - `variant_key` — the variant within that call.
+        //
+        // Mirrors `getNonAtomicClassName` in compiled's `packages/babel-plugin/src/css-map/index.ts`.
         let non_atomic_class_name = if matches!(kind, CssMapKind::NonAtomic) {
           let variant_key = match &key_value.key {
             swc_core::ecma::ast::PropName::Ident(i) => Some(i.sym.to_string()),
@@ -156,12 +165,13 @@ where
             _ => None,
           };
           variant_key.map(|key| {
-            let filename = meta.state().filename.clone().unwrap_or_default();
+            let state = meta.state();
+            let file_key = compute_relative_file_key(state.filename.as_deref(), &state.root);
             let binding_name = binding_identifier.sym.to_string();
             format!(
               "{}{}",
               NON_ATOMIC_CLASS_PREFIX,
-              hash(&format!("{}:{}:{}", filename, binding_name, key))
+              hash(&format!("{}:{}:{}", file_key, binding_name, key))
             )
           })
         } else {
@@ -260,10 +270,97 @@ pub fn visit_css_map_path<'a>(
   visit_css_map_path_with_builder(usage, parent_identifier, meta, kind, build_css_from_expr)
 }
 
+/// Compute a project-root-relative file key for hashing non-atomic class names.
+///
+/// Mirrors compiled's `getNonAtomicClassName` logic so that hashes are stable across
+/// machines and CI environments (where the absolute path varies but the relative
+/// path within the repo does not).
+///
+/// Rules:
+/// - If `filename` is `None`, returns an empty string (no filename available).
+/// - If `filename` is inside `root`, returns the forward-slash-normalised path
+///   relative to `root` (e.g. `"src/components/Panel.tsx"`).
+/// - If `filename` is OUTSIDE `root` (e.g. test fixtures at arbitrary absolute
+///   paths), falls back to the file's basename to avoid leaking `..` path
+///   traversal segments into the hash input.
+fn compute_relative_file_key(filename: Option<&str>, root: &std::path::Path) -> String {
+  let Some(filename) = filename else {
+    return String::new();
+  };
+  let path = std::path::Path::new(filename);
+  match path.strip_prefix(root) {
+    Ok(relative) => {
+      // Normalise to forward slashes so the hash is stable across Windows
+      // (where `Path` separators are backslashes by default).
+      relative
+        .components()
+        .map(|c| c.as_os_str().to_string_lossy())
+        .collect::<Vec<_>>()
+        .join("/")
+    }
+    Err(_) => {
+      // File is outside the project root — fall back to the basename so the
+      // hash doesn't depend on the absolute path of the test fixture / temp dir.
+      path
+        .file_name()
+        .map(|f| f.to_string_lossy().into_owned())
+        .unwrap_or_default()
+    }
+  }
+}
+
 fn empty_object(span: Span) -> ObjectLit {
   ObjectLit {
     span,
     props: Vec::new(),
+  }
+}
+
+#[cfg(test)]
+mod relative_file_key_tests {
+  use super::compute_relative_file_key;
+  use std::path::Path;
+
+  #[test]
+  fn returns_empty_when_filename_missing() {
+    assert_eq!(compute_relative_file_key(None, Path::new("/repo")), "");
+  }
+
+  #[test]
+  fn strips_root_prefix_when_file_is_inside_root() {
+    let key = compute_relative_file_key(Some("/repo/packages/x/src/foo.tsx"), Path::new("/repo"));
+    assert_eq!(key, "packages/x/src/foo.tsx");
+  }
+
+  #[test]
+  fn falls_back_to_basename_when_file_is_outside_root() {
+    // Test fixtures may live at arbitrary temp paths outside the configured
+    // project root — the helper must not leak `..` segments into the hash.
+    let key = compute_relative_file_key(Some("/tmp/some/fixture/dir/foo.tsx"), Path::new("/repo"));
+    assert_eq!(key, "foo.tsx");
+  }
+
+  #[test]
+  fn hash_is_stable_across_different_roots_for_same_relative_path() {
+    // The key insight: two devs / CI agents with the SAME relative path
+    // under different roots get the SAME key, so the hash is stable.
+    let a = compute_relative_file_key(
+      Some("/Users/alice/work/repo/src/foo.tsx"),
+      Path::new("/Users/alice/work/repo"),
+    );
+    let b = compute_relative_file_key(
+      Some("/home/runner/checkout/repo/src/foo.tsx"),
+      Path::new("/home/runner/checkout/repo"),
+    );
+    assert_eq!(a, b, "relative key must be identical across machines");
+    assert_eq!(a, "src/foo.tsx");
+  }
+
+  #[test]
+  fn returns_basename_when_path_has_no_directory_components() {
+    // Edge case: bare filename outside root.
+    let key = compute_relative_file_key(Some("foo.tsx"), Path::new("/repo"));
+    assert_eq!(key, "foo.tsx");
   }
 }
 

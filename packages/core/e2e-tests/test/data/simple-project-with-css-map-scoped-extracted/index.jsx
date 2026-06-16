@@ -2,7 +2,7 @@
 /* eslint-disable no-undef */
 
 import React from 'react';
-import {cssMapScoped, keyframes} from '@compiled/react';
+import {cssMap, cssMapScoped, keyframes} from '@compiled/react';
 import {createRoot} from 'react-dom/client';
 
 // cssMapScoped (extracted mode, extract:true) — sheets are extracted into a
@@ -130,6 +130,17 @@ const panelDangerStylesNew = cssMapScoped({
   },
 });
 
+// Atomic cssMap — used together with cssMapScoped on a single element to
+// verify that the two APIs compose correctly in `css={[scoped, atomic]}`.
+// Each declaration produces a separate `_xxxxxxxx` class (atomic), distinct
+// from the `cc-xxxxxx` classes produced by cssMapScoped.
+const messageStyles = cssMap({
+  info: {
+    borderStyle: 'solid',
+    borderColor: 'rgb(0, 128, 255)',
+  },
+});
+
 const root = createRoot(document.getElementById('app'));
 
 const page = (
@@ -192,6 +203,25 @@ const page = (
       <div data-testid="rtl-panel" css={panelStyles.default}>
         <div className="editor">
           <blockquote data-testid="rtl-blockquote">RTL quote</blockquote>
+        </div>
+      </div>
+    </div>
+
+    {/*
+      Mixed panel — combines a `cssMapScoped` variant with an atomic `cssMap`
+      variant on the same element via the `css={[scoped, atomic]}` array form.
+      Verifies that the two APIs compose at runtime:
+        - `panelStyles.default` (cssMapScoped) — `cc-<hash>` non-atomic class
+          providing the descendant-scoped editor styling (background, padding).
+        - `messageStyles.info` (cssMap) — atomic `_xxxxxxxx` classes providing
+          per-declaration border + outline.
+      Both styles must apply to the rendered DOM with no specificity conflicts.
+    */}
+    <div data-testid="mixed-panel" css={[panelStyles.default, messageStyles.info]}>
+      <div className="editor">
+        <div className="panel" data-testid="mixed-panel-inner">
+          <div className="panel-title">Mixed panel title</div>
+          Mixed content
         </div>
       </div>
     </div>
