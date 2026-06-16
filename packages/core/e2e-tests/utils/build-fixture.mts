@@ -3,6 +3,13 @@ import * as path from 'node:path';
 import * as fs from 'node:fs';
 import * as url from 'node:url';
 import {Atlaspack} from '@atlaspack/core';
+import type {ServeContext} from './server.mts';
+import type {
+  BuildSuccessEvent,
+  InitialAtlaspackOptions,
+} from '@atlaspack/types';
+import {setupThreeJsProject, cleanupThreeJsProject} from './three-js-setup.mts';
+import {THREE_JS_CONFIG} from '../benchmarks/config.mts';
 
 /**
  * Derive a readable output directory name from the fixture target path.
@@ -15,7 +22,10 @@ import {Atlaspack} from '@atlaspack/core';
 function fixtureOutputName(target: string): string {
   const segments = target.split(/[\\/]/).filter(Boolean);
   // Use the parent dir of the entry file (e.g. `.../foo/index.html` → `foo`).
-  const fixtureDir = segments.length >= 2 ? segments[segments.length - 2] : segments[0] ?? 'fixture';
+  const fixtureDir =
+    segments.length >= 2
+      ? segments[segments.length - 2]
+      : segments[0] ?? 'fixture';
   const safe = fixtureDir.replace(/[^a-zA-Z0-9._-]/g, '_');
   // Append a short hash only when the target is more complex than `<dir>/index.html`,
   // to disambiguate without making the typical case unreadable.
@@ -24,13 +34,6 @@ function fixtureOutputName(target: string): string {
   const suffix = createHash('sha256').update(target).digest('hex').slice(0, 8);
   return `${safe}-${suffix}`;
 }
-import type {ServeContext} from './server.mts';
-import type {
-  BuildSuccessEvent,
-  InitialAtlaspackOptions,
-} from '@atlaspack/types';
-import {setupThreeJsProject, cleanupThreeJsProject} from './three-js-setup.mts';
-import {THREE_JS_CONFIG} from '../benchmarks/config.mts';
 
 const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
