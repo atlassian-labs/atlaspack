@@ -20,7 +20,7 @@
     "@atlaspack/rust": "3.29.2",
     "@atlaspack/test-utils": "2.14.71",
     "@atlaspack/types": "2.15.53",
-    "playwright": "1.50.0"
+    "playwright": "1.60.0"
   },
   "dependencies": {
     "@compiled/react": "^0.18.6",
