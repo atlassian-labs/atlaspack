@@ -1,5 +1,6 @@
 ---
 '@atlaspack/transformer-js': minor
+'@atlaspack/rust': minor
 ---
 
 Add `cssMapScoped` API to the Rust/SWC pipeline — a dedicated, non-atomic variant of `cssMap`.
@@ -12,16 +13,35 @@ Add `cssMapScoped` API to the Rust/SWC pipeline — a dedicated, non-atomic vari
 import {cssMapScoped} from '@compiled/react';
 
 const styles = cssMapScoped({
-  panelStyles: {
-    '.editor .panel': {padding: '8px', backgroundColor: 'blue'},
-    '.editor .panel-title': {fontWeight: 'bold', color: 'blue'},
-  },
-  dangerStyles: {
-    '.editor .panel': {backgroundColor: 'pink'},
-    '.editor .panel-title': {color: 'red'},
-  },
+  danger: {color: 'red', fontWeight: 'bold'},
+  success: {color: 'green', fontWeight: 'bold'},
 });
-// → { panelStyles: 'cc-d76ndi', dangerStyles: 'cc-a6u7cm' }
+// → { danger: 'cc-d76ndi', success: 'cc-a6u7cm' }
+```
+
+Each variant produces ONE non-atomic class grouping all its declarations:
+
+```css
+/* cssMapScoped — one class per variant */
+.cc-d76ndi {
+  color: red;
+  font-weight: bold;
+}
+.cc-a6u7cm {
+  color: green;
+  font-weight: bold;
+}
+
+/* cssMap (atomic) — one class per declaration */
+._aaaa1111 {
+  color: red;
+}
+._bbbb2222 {
+  color: green;
+}
+._cccc3333 {
+  font-weight: bold;
+}
 ```
 
 ### `atlassian-swc-compiled-css` (Rust crate)
