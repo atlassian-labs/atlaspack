@@ -436,19 +436,40 @@ fn build_processor(options: &TransformCssOptions, collector: &AtomicCollector) -
   }
   // Match Babel ordering: expand shorthands after normalization.
   plugins.push(super::plugins::expand_shorthands_engine::plugin());
-  // Start emitting atomic rules.
-  plugins.push(atomicify_rules_plugin(
-    options.clone(),
-    collector.clone(),
-    autoprefixer_data.clone(),
-  ));
-  if flatten_enabled {
-    plugins.push(flatten_multiple_selectors_plugin());
+
+  // Non-atomic mode (`atomic: Some(false)`, used by `cssMapScoped`): replace
+  // the atomicify step with `non_atomicify_rules_plugin`. We reuse the rest of
+  // the postcss pipeline (postcss-nested, minify-selectors, normalize-css, …)
+  // so all selector handling — including parent-pseudo flattening (`&:hover`)
+  // — works identically to the atomic path.
+  if options.atomic == Some(false) {
+    // Register the pre-computed non-atomic class name with the collector so it
+    // ends up in `TransformCssResult.class_names` (used by
+    // `transform_css_items` to populate the variant→class mapping).
+    if let Some(ref name) = options.non_atomic_class_name {
+      collector.push_class(name.clone());
+    }
+    plugins.push(non_atomicify_rules_plugin(
+      options.clone(),
+      collector.clone(),
+      autoprefixer_data.clone(),
+    ));
+  } else {
+    // Start emitting atomic rules.
+    plugins.push(atomicify_rules_plugin(
+      options.clone(),
+      collector.clone(),
+      autoprefixer_data.clone(),
+    ));
+    if flatten_enabled {
+      plugins.push(flatten_multiple_selectors_plugin());
+    }
+    if options.increase_specificity.unwrap_or(false) {
+      plugins.push(pc::plugin("increase-specificity").build());
+    }
+    plugins.push(sort_atomic_style_sheet_plugin());
   }
-  if options.increase_specificity.unwrap_or(false) {
-    plugins.push(pc::plugin("increase-specificity").build());
-  }
-  plugins.push(sort_atomic_style_sheet_plugin());
+
   plugins.push(normalize_whitespace_plugin());
   // Collect keyframes as sheets to match Babel output
   plugins.push(extract_stylesheets_plugin(
@@ -457,6 +478,346 @@ fn build_processor(options: &TransformCssOptions, collector: &AtomicCollector) -
     autoprefixer_data.clone(),
   ));
   pc::postcss_with_plugins(plugins)
+}
+
+/// PostCSS plugin counterpart of `nonAtomicifyRules` (compiled TS).
+///
+/// Implements the `atomic: false` path from `packages/css/src/transform.ts`:
+/// groups all declarations of a cssMapScoped variant under a single
+/// pre-computed `.cc-<hash>` class. The class name is provided by the caller
+/// via `TransformCssOptions.non_atomic_class_name`.
+///
+/// Structurally mirrors `atomicify_rules_plugin`: same hooks, same stack-
+/// based parent-selector / at-rule tracking, same helper functions
+/// (`combine_selectors`, `normalized_selector`, `wrap_in_at_rules`,
+/// `can_atomicify_at_rule`, `is_inside_keyframes`). The only differences are:
+///
+///   1. **Selector composition** — `&` is replaced with the SAME
+///      pre-computed `.cc-<hash>` class for every rule (atomicify hashes a
+///      unique class per declaration).
+///   2. **Declaration grouping** — all declarations inside a rule share that
+///      one class (atomicify emits one rule per declaration).
+///   3. **No hashing / autoprefixer / class compression / sorting** —
+///      cssMapScoped does not deduplicate at the class level, so atomic-
+///      style metadata isn't needed.
+///
+/// At-rules `@keyframes`, `@font-face`, `@property`, `@import`, `@charset`
+/// are passed through unchanged (their inner content is not composed of
+/// element selectors), matching atomicify.
+#[cfg(feature = "postcss_engine")]
+fn non_atomicify_rules_plugin(
+  options: TransformCssOptions,
+  collector: AtomicCollector,
+  autoprefixer: Option<Arc<AutoprefixerData>>,
+) -> pc::BuiltPlugin {
+  use postcss::ast::nodes::{as_at_rule, as_declaration};
+  use postcss::list::comma;
+  use std::sync::Mutex;
+
+  // ---- Shared helpers (mirror atomicify_rules_plugin) -------------------
+
+  fn starts_with_combinator(selector: &str) -> bool {
+    matches!(selector.chars().next(), Some('>' | '+' | '~'))
+  }
+
+  /// Mirrors `combine_selectors` in `atomicify_rules_plugin`. Combines parent
+  /// selector list with a child rule's (possibly comma-separated) selectors,
+  /// handling `&` replacement and descendant/combinator combination.
+  fn combine_selectors(parent: &[String], child: &str) -> Vec<String> {
+    let child_parts = comma(child);
+    let parents = if parent.is_empty() {
+      vec!["&".to_string()]
+    } else {
+      parent.to_vec()
+    };
+    let mut out = Vec::new();
+    for p in &parents {
+      for c in &child_parts {
+        let trimmed = c.trim();
+        if trimmed == "*" && p.trim() == "*" {
+          out.push("*".to_string());
+          continue;
+        }
+        if trimmed.contains('&') {
+          out.push(trimmed.replace('&', p));
+        } else if p == "&" {
+          out.push(trimmed.to_string());
+        } else if trimmed.is_empty() {
+          out.push(p.clone());
+        } else if starts_with_combinator(trimmed) {
+          out.push(format!("{}{}", p, trimmed));
+        } else {
+          out.push(format!("{} {}", p, trimmed));
+        }
+      }
+    }
+    out
+  }
+
+  /// Ensures a selector contains a `&` nesting reference (prepending one if
+  /// missing). Mirrors `normalizeSelector` in the compiled TS plugin.
+  fn normalized_selector(selector: &str) -> String {
+    let trimmed = selector.trim();
+    if trimmed.is_empty() {
+      return "&".to_string();
+    }
+    if trimmed.contains('&') {
+      trimmed.to_string()
+    } else {
+      format!("& {}", trimmed)
+    }
+  }
+
+  /// At-rules whose body is NOT composed of element selectors (`@keyframes`,
+  /// `@font-face`, …) — their inner rules must NOT be scoped under the
+  /// non-atomic class. Mirrors the same set in atomicify.
+  fn is_passthrough_at_rule(name: &str) -> bool {
+    matches!(
+      name.to_ascii_lowercase().as_str(),
+      "keyframes"
+        | "-webkit-keyframes"
+        | "-moz-keyframes"
+        | "-o-keyframes"
+        | "font-face"
+        | "property"
+        | "color-profile"
+        | "counter-style"
+        | "font-palette-values"
+        | "page"
+        | "import"
+        | "charset"
+    )
+  }
+
+  /// True if any ancestor of `node` is a passthrough at-rule.
+  fn is_inside_passthrough_at_rule(node: &pc::ast::NodeRef) -> bool {
+    let mut current = node.borrow().parent();
+    while let Some(p) = current {
+      if let Some(at) = as_at_rule(&p) {
+        if is_passthrough_at_rule(&at.name()) {
+          return true;
+        }
+      }
+      current = p.borrow().parent();
+    }
+    false
+  }
+
+  /// Emits `@a{@b{...}}` wrappers around `rule_css`. Mirrors
+  /// `wrap_in_at_rules` in atomicify.
+  fn wrap_in_at_rules(rule_css: &str, at_chain: &[(String, String, usize)]) -> String {
+    if at_chain.is_empty() {
+      return rule_css.to_string();
+    }
+    let mut out = String::new();
+    for (n, p, _) in at_chain {
+      if p.is_empty() {
+        out.push_str(&format!("@{}{{", n));
+      } else {
+        out.push_str(&format!("@{} {}{{", n, p));
+      }
+    }
+    out.push_str(rule_css);
+    for _ in at_chain {
+      out.push('}');
+    }
+    out
+  }
+
+  // ---- Plugin body ------------------------------------------------------
+
+  let class_name = options.non_atomic_class_name.clone().unwrap_or_default();
+  let placeholder = options.declaration_placeholder.clone().unwrap_or_default();
+
+  // Selector-stack and at-rule-stack mirror atomicify's `sel_stack` /
+  // `at_stack`. The selector stack starts with `["&"]` so the root context
+  // resolves to "self" (i.e. just `.cc-<hash>`).
+  let sel_stack: Arc<Mutex<Vec<Vec<String>>>> = Arc::new(Mutex::new(vec![vec!["&".to_string()]]));
+  let at_stack: Arc<Mutex<Vec<(String, String)>>> = Arc::new(Mutex::new(Vec::new()));
+  // Buffer of (at_chain, rule_css) tuples emitted per rule_exit. Collected here
+  // and pushed into the actual collector during `OnceExit`-style cleanup is
+  // not needed — we set the rule selector + decls in place via the AST.
+  // Pattern: on rule_exit, rewrite the rule's selector(s) with the scoped
+  // versions so the existing extract_stylesheets plugin downstream picks them
+  // up. This avoids needing a parallel sheet collector for non-atomic.
+
+  pc::plugin("non-atomicify-rules")
+    .rule_filter("*", {
+      let sel_stack = sel_stack.clone();
+      let placeholder = placeholder.clone();
+      move |rule, _| {
+        // Skip rules under `@keyframes` etc. — selectors there are step
+        // keywords (`0%`, `from`, `to`), not element selectors.
+        if is_inside_passthrough_at_rule(&rule.to_node()) {
+          return Ok(());
+        }
+        let mut stack = sel_stack.lock().unwrap();
+        let parent = stack
+          .last()
+          .cloned()
+          .unwrap_or_else(|| vec!["&".to_string()]);
+        let mut raw_selector = rule.selector();
+        if !placeholder.is_empty() && raw_selector.contains(&placeholder) {
+          raw_selector = raw_selector.replace(&placeholder, "").trim().to_string();
+        }
+        let combined = if raw_selector.is_empty() {
+          parent.clone()
+        } else {
+          combine_selectors(&parent, &raw_selector)
+        };
+        stack.push(combined);
+        Ok(())
+      }
+    })
+    .rule_filter_exit("*", {
+      let sel_stack = sel_stack.clone();
+      let at_stack = at_stack.clone();
+      let class_name = class_name.clone();
+      let collector = collector.clone();
+      let autoprefixer = autoprefixer.clone();
+      move |rule, _| {
+        if is_inside_passthrough_at_rule(&rule.to_node()) {
+          return Ok(());
+        }
+        let combined = {
+          let mut stack = sel_stack.lock().unwrap();
+          let top = stack
+            .last()
+            .cloned()
+            .unwrap_or_else(|| vec!["&".to_string()]);
+          stack.pop();
+          top
+        };
+        if class_name.is_empty() {
+          return Ok(());
+        }
+        let scoped: Vec<String> = combined
+          .iter()
+          .map(|sel| normalized_selector(sel).replace('&', &format!(".{}", class_name)))
+          .collect();
+        let selector_text = scoped.join(",");
+        // Gather DIRECT declarations of this rule, expanding each through the
+        // autoprefixer (e.g. `user-select: none` → `-webkit-user-select:none;
+        // user-select:none`). Nested at-rules and nested rules have their own
+        // rule_filter_exit invocation that will emit their content separately.
+        let autoprefixer_ref = autoprefixer.as_ref().map(|arc| arc.as_ref());
+        let mut decl_entries: Vec<(String, String)> = Vec::new();
+        for child in rule.nodes() {
+          if let Some(d) = as_declaration(&child) {
+            let prop = d.prop();
+            let value = d.value();
+            let important = d.important();
+            // Use the first scoped selector as context for the autoprefixer
+            // selector-specific tweaks (e.g. `appearance` inside vendor-
+            // prefixed selectors).
+            let selector_for_autoprefixer = scoped.first().map(|s| s.as_str());
+            let prefixed = prefixed_decl_entries_with_selector(
+              autoprefixer_ref,
+              &prop,
+              &value,
+              important,
+              selector_for_autoprefixer,
+            );
+            decl_entries.extend(prefixed);
+          }
+        }
+        if decl_entries.is_empty() {
+          return Ok(());
+        }
+        let body = serialize_decl_entries(&decl_entries);
+        let css = format!("{}{{{}}}", selector_text, body);
+        // Build at-rule chain for wrapping (e.g. @media, @supports).
+        let at_chain_owned: Vec<(String, String, usize)> = at_stack
+          .lock()
+          .unwrap()
+          .iter()
+          .enumerate()
+          .map(|(i, (n, p))| (n.clone(), p.clone(), i))
+          .collect();
+        collector.push_sheet(
+          at_chain_owned.clone(),
+          wrap_in_at_rules(&css, &at_chain_owned),
+        );
+        Ok(())
+      }
+    })
+    .at_rule_filter("*", {
+      let at_stack = at_stack.clone();
+      move |at, _| {
+        // Track at-rule chain only for scopeable ones (matches atomicify's
+        // can_atomicify_at_rule set, which skips passthrough at-rules).
+        if !is_passthrough_at_rule(&at.name()) {
+          at_stack.lock().unwrap().push((at.name(), at.params()));
+        }
+        Ok(())
+      }
+    })
+    .at_rule_filter_exit("*", {
+      let at_stack = at_stack.clone();
+      let sel_stack = sel_stack.clone();
+      let class_name = class_name.clone();
+      let collector = collector.clone();
+      let autoprefixer = autoprefixer.clone();
+      move |at, _| {
+        if is_passthrough_at_rule(&at.name()) {
+          return Ok(());
+        }
+        // If this at-rule contains BARE declarations (not wrapped in a rule),
+        // emit them as a synthetic scoped rule using the current parent
+        // selector chain. This handles patterns like:
+        //   `.editor .panel { @media (min-width: 1px) { row-gap: 12px } }`
+        // where postcss-nested left the inner `@media` with bare decls.
+        let has_bare_decls = at.nodes().iter().any(|c| as_declaration(c).is_some());
+        if has_bare_decls && !class_name.is_empty() {
+          let combined = sel_stack
+            .lock()
+            .unwrap()
+            .last()
+            .cloned()
+            .unwrap_or_else(|| vec!["&".to_string()]);
+          let scoped: Vec<String> = combined
+            .iter()
+            .map(|sel| normalized_selector(sel).replace('&', &format!(".{}", class_name)))
+            .collect();
+          let selector_text = scoped.join(",");
+          let autoprefixer_ref = autoprefixer.as_ref().map(|arc| arc.as_ref());
+          let mut decl_entries: Vec<(String, String)> = Vec::new();
+          for child in at.nodes() {
+            if let Some(d) = as_declaration(&child) {
+              let prop = d.prop();
+              let value = d.value();
+              let important = d.important();
+              let prefixed = prefixed_decl_entries_with_selector(
+                autoprefixer_ref,
+                &prop,
+                &value,
+                important,
+                scoped.first().map(|s| s.as_str()),
+              );
+              decl_entries.extend(prefixed);
+            }
+          }
+          if !decl_entries.is_empty() {
+            let body = serialize_decl_entries(&decl_entries);
+            let css = format!("{}{{{}}}", selector_text, body);
+            let at_chain_owned: Vec<(String, String, usize)> = at_stack
+              .lock()
+              .unwrap()
+              .iter()
+              .enumerate()
+              .map(|(i, (n, p))| (n.clone(), p.clone(), i))
+              .collect();
+            collector.push_sheet(
+              at_chain_owned.clone(),
+              wrap_in_at_rules(&css, &at_chain_owned),
+            );
+          }
+        }
+        at_stack.lock().unwrap().pop();
+        Ok(())
+      }
+    })
+    .build()
 }
 
 #[cfg(feature = "postcss_engine")]
@@ -2519,6 +2880,16 @@ pub fn transform_css_via_postcss(
 ) -> Result<TransformCssResult, CssTransformError> {
   if std::env::var("STACK_DEBUG").is_ok() {
     eprintln!("[postcss] transform start");
+  }
+
+  // Non-atomic mode (`atomic: Some(false)`, cssMapScoped) is implemented in
+  // the postcss pipeline via `non_atomicify_rules_plugin`, which replaces
+  // the atomicify step. This lets cssMapScoped reuse the same selector
+  // handling (postcss-nested for `&:hover`, etc.) as atomic mode.
+  if options.atomic == Some(false) && options.non_atomic_class_name.is_none() {
+    return Err(CssTransformError::from_message(
+      "non_atomic_class_name is required when atomic is Some(false)".to_string(),
+    ));
   }
   if std::env::var("COMPILED_DEBUG_COLORMIN").is_ok() {
     eprintln!("[postcss-pipeline] input css: {}", css.replace('\n', "\\n"));

@@ -335,6 +335,8 @@ pub struct CompiledImports {
   pub keyframes: Vec<String>,
   pub styled: Vec<String>,
   pub css_map: Vec<String>,
+  /// Local binding names imported from `cssMapScoped` — the non-atomic variant of `cssMap`.
+  pub css_map_scoped: Vec<String>,
 }
 
 /// Tracks compiled runtime imports that have already been inserted.

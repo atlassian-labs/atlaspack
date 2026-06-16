@@ -28,7 +28,7 @@ use crate::utils_get_runtime_class_name_library::get_runtime_class_name_library;
 use crate::utils_hoist_sheet::hoist_sheet;
 use crate::utils_is_prop_valid::is_prop_valid;
 use crate::utils_transform_css_items::{
-  apply_selectors, create_transform_css_options, transform_css_items,
+  TransformCssItemsOptions, apply_selectors, create_transform_css_options, transform_css_items,
 };
 use crate::utils_types::{CssItem, CssOutput, Variable};
 
@@ -702,7 +702,11 @@ pub fn build_styled_component(
   let css_result =
     transform_css(&unconditional_css, options.clone()).unwrap_or_else(|err| panic!("{err}"));
 
-  let conditional_output = transform_css_items(&conditional_items, meta);
+  let conditional_output = transform_css_items(
+    &conditional_items,
+    meta,
+    &TransformCssItemsOptions::default(),
+  );
 
   let class_map_ref = compression_map.as_ref();
   let unconditional_class_names =

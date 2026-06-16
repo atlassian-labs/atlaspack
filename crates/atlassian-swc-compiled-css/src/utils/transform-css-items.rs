@@ -627,39 +627,131 @@ fn transform_css_item(item: &CssItem, meta: &Metadata) -> TransformCssItemResult
   }
 }
 
-pub fn transform_css_items(css_items: &[CssItem], meta: &Metadata) -> TransformCssItemsResult {
-  let mut sheets: Vec<String> = Vec::new();
-  let mut class_names: Vec<Expr> = Vec::new();
+/// Options controlling how CSS items are transformed into class names and sheets.
+///
+/// Defaults to atomic mode (standard `cssMap` / `css` prop behaviour).
+#[derive(Debug, Default)]
+pub struct TransformCssItemsOptions {
+  /// When `Some(false)`, all CSS items for the variant are combined and emitted as a
+  /// single non-atomic `.cc-<hash>` class instead of one atomic class per declaration.
+  /// Mirrors `TransformOptions.atomic` from `packages/babel-plugin/src/utils/transform-css-items.ts`.
+  pub atomic: Option<bool>,
+  /// Pre-computed non-atomic class name (e.g. `cc-<hash>`). When `atomic` is `Some(false)`
+  /// and this is `Some`, it is used directly instead of hashing the CSS content.
+  pub non_atomic_class_name: Option<String>,
+}
 
-  for item in css_items {
-    if std::env::var("STACK_DEBUG").is_ok() {
-      eprintln!(
-        "[transform_css_items] processing kind={:?}",
-        match item {
-          CssItem::Conditional(_) => "Conditional",
-          CssItem::Logical(_) => "Logical",
-          CssItem::Unconditional(_) => "Unconditional",
-          CssItem::Sheet(_) => "Sheet",
-          CssItem::Map(_) => "Map",
+/// Transform a slice of `CssItem`s into sheets and class-name expressions.
+///
+/// In the default (atomic) mode each declaration becomes its own `._hash { decl }` rule.
+///
+/// When `opts.atomic == Some(false)` (used by `cssMapScoped`), all items are combined into
+/// a single CSS string and scoped under one `.cc-<hash>` class — exactly **one** class name
+/// is generated per call, matching the `atomic: false` branch in the Babel helper.
+///
+/// Pass `&TransformCssItemsOptions::default()` for the standard atomic behaviour.
+pub fn transform_css_items(
+  css_items: &[CssItem],
+  meta: &Metadata,
+  opts: &TransformCssItemsOptions,
+) -> TransformCssItemsResult {
+  use swc_core::atoms::Atom;
+  use swc_core::ecma::ast::{Lit, Str};
+
+  if opts.atomic == Some(false) {
+    // Non-atomic mode: combine all CSS text into a single string and scope it under
+    // one `.cc-<hash>` class — matching the `atomic: false` branch in Babel.
+    // Conditional/Map items are skipped as they are not present in cssMap variants.
+    // Collect all unconditional CSS text from the items, joined with newlines.
+    // Mirrors the TypeScript: cssItems.filter(...).map(getItemCss).join('\n')
+    // Conditional/Map items are skipped — they don't appear in cssMap variants.
+    let combined_css: String = css_items
+      .iter()
+      .filter(|item| !matches!(item, CssItem::Conditional(_) | CssItem::Map(_)))
+      .map(|item| get_item_css(item))
+      .collect::<Vec<_>>()
+      .join("\n");
+
+    if combined_css.trim().is_empty() {
+      return TransformCssItemsResult::default();
+    }
+
+    let (mut transform_opts, _) = create_transform_css_options(meta);
+    transform_opts.atomic = Some(false);
+    transform_opts.non_atomic_class_name = opts.non_atomic_class_name.clone();
+
+    match transform_css(&combined_css, transform_opts) {
+      Ok(result) => {
+        // Collapse all sheets for this variant into a single string (matching Babel behaviour
+        // of emitting a single `const _N` per variant → one insertNonAtomicRule() call at runtime).
+        let sheet = if result.sheets.len() > 1 {
+          result.sheets.join("")
+        } else {
+          result.sheets.into_iter().next().unwrap_or_default()
+        };
+
+        let sheets: Vec<String> = if sheet.contains('{') {
+          vec![sheet]
+        } else {
+          vec![]
+        };
+
+        let class_name = result.class_names.into_iter().collect::<Vec<_>>().join(" ");
+        let class_name = class_name.trim().to_string();
+
+        let class_names = if class_name.is_empty() {
+          vec![]
+        } else {
+          vec![Expr::Lit(Lit::Str(Str {
+            span: swc_core::common::DUMMY_SP,
+            value: Atom::from(class_name),
+            raw: None,
+          }))]
+        };
+
+        record_style_rules(&sheets, meta);
+        TransformCssItemsResult {
+          sheets,
+          class_names,
         }
-      );
+      }
+      Err(_) => TransformCssItemsResult::default(),
     }
-    let result = transform_css_item(item, meta);
-    let filtered_sheets: Vec<String> = result
-      .sheets
-      .into_iter()
-      .filter(|sheet| sheet.contains('{'))
-      .collect();
-    record_style_rules(&filtered_sheets, meta);
-    sheets.extend(filtered_sheets);
-    if let Some(class_expression) = result.class_expression {
-      class_names.push(class_expression);
-    }
-  }
+  } else {
+    // Atomic mode: each declaration becomes its own `._hash { decl }` class.
+    let mut sheets: Vec<String> = Vec::new();
+    let mut class_names: Vec<Expr> = Vec::new();
 
-  TransformCssItemsResult {
-    sheets,
-    class_names,
+    for item in css_items {
+      if std::env::var("STACK_DEBUG").is_ok() {
+        eprintln!(
+          "[transform_css_items] processing kind={:?}",
+          match item {
+            CssItem::Conditional(_) => "Conditional",
+            CssItem::Logical(_) => "Logical",
+            CssItem::Unconditional(_) => "Unconditional",
+            CssItem::Sheet(_) => "Sheet",
+            CssItem::Map(_) => "Map",
+          }
+        );
+      }
+      let result = transform_css_item(item, meta);
+      let filtered_sheets: Vec<String> = result
+        .sheets
+        .into_iter()
+        .filter(|sheet| sheet.contains('{'))
+        .collect();
+      record_style_rules(&filtered_sheets, meta);
+      sheets.extend(filtered_sheets);
+      if let Some(class_expression) = result.class_expression {
+        class_names.push(class_expression);
+      }
+    }
+
+    TransformCssItemsResult {
+      sheets,
+      class_names,
+    }
   }
 }
 
@@ -699,7 +791,9 @@ mod tests {
   use crate::types::{Metadata, PluginOptions, TransformFile, TransformState};
   use crate::utils_types::{ConditionalCssItem, CssItem, CssMapItem, UnconditionalCssItem};
 
-  use super::{apply_selectors, create_transform_css_options, transform_css_items};
+  use super::{
+    TransformCssItemsOptions, apply_selectors, create_transform_css_options, transform_css_items,
+  };
 
   fn create_metadata() -> Metadata {
     let cm: Lrc<SourceMap> = Default::default();
@@ -787,7 +881,7 @@ mod tests {
       guard: None,
     });
 
-    let result = transform_css_items(&[conditional], &meta);
+    let result = transform_css_items(&[conditional], &meta, &TransformCssItemsOptions::default());
 
     assert_eq!(result.sheets.len(), 2);
     assert_eq!(result.sheets[0], ".a { color: red; }");
@@ -838,7 +932,7 @@ mod tests {
       guard: None,
     });
 
-    let result = transform_css_items(&[conditional], &meta);
+    let result = transform_css_items(&[conditional], &meta, &TransformCssItemsOptions::default());
 
     assert_eq!(result.sheets.len(), 1);
     assert_eq!(result.sheets[0], ".a { color: red; }");
@@ -1161,7 +1255,7 @@ mod tests {
       guard: Some(guard),
     });
 
-    let result = transform_css_items(&[conditional], &meta);
+    let result = transform_css_items(&[conditional], &meta, &TransformCssItemsOptions::default());
 
     // The class expression should be guard && (test ? consequent : alternate)
     assert_eq!(result.class_names.len(), 1);

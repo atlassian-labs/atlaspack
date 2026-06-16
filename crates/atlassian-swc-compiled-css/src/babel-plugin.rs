@@ -19,7 +19,7 @@ use swc_core::ecma::visit::{VisitMut, VisitMutWith, noop_visit_mut_type};
 
 use crate::class_names::visit_class_names;
 use crate::constants::COMPILED_IMPORT;
-use crate::css_map::{CssMapUsage, visit_css_map_path};
+use crate::css_map::{CssMapKind, CssMapUsage, visit_css_map_path};
 use crate::css_prop::visit_css_prop;
 use crate::postcss::plugins::extract_stylesheets::normalize_block_value_spacing;
 use crate::styled::{StyledVisitResult, visit_styled};
@@ -2063,6 +2063,786 @@ mod tests {
       state.diagnostics[0].message
     );
   }
+
+  // ─── cssMapScoped integration tests ────────────────────────────────────────
+
+  /// Helper: parse, transform, and return the printed JS output for a source string.
+  fn transform_source(source: &str) -> String {
+    let (mut program, cm, _) = parse_program(source);
+    let mut transform = CompiledCssInJsTransform::new(PluginOptions::default());
+    {
+      let file = TransformFile::transform_compiled_with_options(
+        cm.clone(),
+        Vec::new(),
+        TransformFileOptions {
+          filename: Some("test.tsx".into()),
+          ..TransformFileOptions::default()
+        },
+      );
+      let mut state = transform.state.borrow_mut();
+      state.replace_file(file);
+    }
+    program.visit_mut_with(&mut transform);
+    let Program::Module(module) = &program else {
+      panic!("expected module program");
+    };
+    print_module(&cm, module)
+  }
+
+  /// Extract the initialiser object of `const <name> = { ... }` from printed JS.
+  fn extract_styles_object_props(source: &str, var_name: &str) -> Vec<(String, String)> {
+    let (mut program, cm, _) = parse_program(source);
+    let mut transform = CompiledCssInJsTransform::new(PluginOptions::default());
+    {
+      let file = TransformFile::transform_compiled_with_options(
+        cm.clone(),
+        Vec::new(),
+        TransformFileOptions {
+          filename: Some("test.tsx".into()),
+          ..TransformFileOptions::default()
+        },
+      );
+      let mut state = transform.state.borrow_mut();
+      state.replace_file(file);
+    }
+    program.visit_mut_with(&mut transform);
+    let Program::Module(module) = &program else {
+      panic!("expected module program");
+    };
+    let var_decl = module.body.iter().find_map(|item| match item {
+      ModuleItem::Stmt(Stmt::Decl(Decl::Var(var))) => var.decls.iter().find_map(|decl| {
+        if let Pat::Ident(binding) = &decl.name {
+          if binding.id.sym.as_ref() == var_name {
+            return decl.init.as_ref();
+          }
+        }
+        None
+      }),
+      _ => None,
+    });
+    let Some(Expr::Object(obj)) = var_decl.map(|e| e.as_ref()) else {
+      return vec![];
+    };
+    obj
+      .props
+      .iter()
+      .filter_map(|p| {
+        if let swc_core::ecma::ast::PropOrSpread::Prop(prop) = p {
+          if let swc_core::ecma::ast::Prop::KeyValue(kv) = prop.as_ref() {
+            let key = match &kv.key {
+              swc_core::ecma::ast::PropName::Ident(i) => i.sym.to_string(),
+              swc_core::ecma::ast::PropName::Str(s) => s.value.to_string(),
+              _ => return None,
+            };
+            let val = match kv.value.as_ref() {
+              Expr::Lit(Lit::Str(s)) => s.value.to_string(),
+              _ => return None,
+            };
+            return Some((key, val));
+          }
+        }
+        None
+      })
+      .collect()
+  }
+
+  #[test]
+  fn css_map_scoped_is_recognised_from_import() {
+    // Ensures `cssMapScoped` is parsed and the variable is rewritten.
+    let source = r#"
+      import { cssMapScoped } from '@compiled/react';
+      const styles = cssMapScoped({
+        danger: { color: 'red' },
+        success: { color: 'green' },
+      });
+    "#;
+    let printed = transform_source(source);
+    assert!(
+      printed.contains("styles"),
+      "expected styles variable in output: {}",
+      printed
+    );
+    assert!(
+      printed.contains("danger") && printed.contains("success"),
+      "expected variant keys in output: {}",
+      printed
+    );
+  }
+
+  #[test]
+  fn css_map_scoped_variant_values_have_cc_prefix() {
+    // Each variant class name must start with `cc-` (NON_ATOMIC_CLASS_PREFIX),
+    // signalling to ax() that it is a non-atomic class.
+    let source = r#"
+      import { cssMapScoped } from '@compiled/react';
+      const styles = cssMapScoped({
+        danger: { color: 'red' },
+        success: { color: 'green' },
+      });
+    "#;
+    let props = extract_styles_object_props(source, "styles");
+    assert_eq!(props.len(), 2, "expected 2 variant props, got: {:?}", props);
+    for (key, class_name) in &props {
+      assert!(
+        class_name.starts_with("cc-"),
+        "variant '{}' class name '{}' must start with 'cc-'",
+        key,
+        class_name
+      );
+    }
+  }
+
+  #[test]
+  fn css_map_scoped_variants_have_distinct_class_names() {
+    // Each variant must get its own unique class name.
+    let source = r#"
+      import { cssMapScoped } from '@compiled/react';
+      const styles = cssMapScoped({
+        danger: { color: 'red' },
+        success: { color: 'green' },
+        neutral: { color: 'grey' },
+      });
+    "#;
+    let props = extract_styles_object_props(source, "styles");
+    assert_eq!(props.len(), 3, "expected 3 variants");
+    let class_names: Vec<&str> = props.iter().map(|(_, v)| v.as_str()).collect();
+    let unique: std::collections::HashSet<&str> = class_names.iter().copied().collect();
+    assert_eq!(
+      unique.len(),
+      class_names.len(),
+      "all cssMapScoped variants must have distinct class names: {:?}",
+      class_names
+    );
+  }
+
+  #[test]
+  fn css_map_scoped_class_names_differ_from_atomic_css_map() {
+    // The same CSS compiled via cssMap vs cssMapScoped must produce different class names.
+    let atomic_source = r#"
+      import { cssMap } from '@compiled/react';
+      const styles = cssMap({
+        danger: { color: 'red' },
+      });
+    "#;
+    let scoped_source = r#"
+      import { cssMapScoped } from '@compiled/react';
+      const styles = cssMapScoped({
+        danger: { color: 'red' },
+      });
+    "#;
+    let atomic_props = extract_styles_object_props(atomic_source, "styles");
+    let scoped_props = extract_styles_object_props(scoped_source, "styles");
+
+    let atomic_class = atomic_props
+      .iter()
+      .find(|(k, _)| k == "danger")
+      .map(|(_, v)| v.as_str())
+      .unwrap_or("");
+    let scoped_class = scoped_props
+      .iter()
+      .find(|(k, _)| k == "danger")
+      .map(|(_, v)| v.as_str())
+      .unwrap_or("");
+
+    assert!(
+      !atomic_class.is_empty() && !scoped_class.is_empty(),
+      "both should produce class names"
+    );
+    assert!(
+      !atomic_class.starts_with("cc-"),
+      "atomic cssMap class should NOT start with cc-: {}",
+      atomic_class
+    );
+    assert!(
+      scoped_class.starts_with("cc-"),
+      "cssMapScoped class MUST start with cc-: {}",
+      scoped_class
+    );
+    assert_ne!(
+      atomic_class, scoped_class,
+      "cssMap and cssMapScoped must produce different class names for the same variant"
+    );
+  }
+
+  #[test]
+  fn css_map_scoped_with_multiple_declarations_per_variant() {
+    // Multiple CSS declarations in one variant should still produce exactly ONE class name.
+    let source = r#"
+      import { cssMapScoped } from '@compiled/react';
+      const styles = cssMapScoped({
+        card: { color: 'red', fontWeight: 'bold', fontSize: '16px' },
+      });
+    "#;
+    let (props, rules) = extract_styles_with_rules(source, "styles");
+    assert_eq!(props.len(), 1, "expected 1 variant");
+    let (_, class_name) = &props[0];
+    assert!(
+      class_name.starts_with("cc-"),
+      "must produce a cc- class: {}",
+      class_name
+    );
+    insta::assert_snapshot!(normalize_cc_hashes(&rules.join("\n")), @".cc-xxxxxx{color:red;font-weight:bold;font-size:1pc}");
+  }
+
+  /// Normalise hash-based class names like `cc-d76ndi` (or `cc-a6u7cm`,
+  /// `cc-tmgs7i`, etc.) to a stable `cc-xxxxxx` so that snapshot assertions
+  /// don't depend on the underlying hash output (which is sensitive to
+  /// binding name, filename, and variant key).
+  fn normalize_cc_hashes(s: &str) -> String {
+    // Hashes are 6 alphanumeric chars after `cc-`, generated by `utils_hash::hash`.
+    let re = regex::Regex::new(r"cc-[a-z0-9]{6,8}").expect("regex compiles");
+    re.replace_all(s, "cc-xxxxxx").into_owned()
+  }
+
+  /// Like `extract_styles_object_props` but also returns the generated style rules
+  /// (CSS sheets) collected during the transform. Used to verify nested-selector
+  /// scoping in cssMapScoped.
+  ///
+  /// Sets `extract: true` because `record_style_rules` (the function that populates
+  /// `state.style_rules`) only does so when extraction is enabled.
+  fn extract_styles_with_rules(
+    source: &str,
+    var_name: &str,
+  ) -> (Vec<(String, String)>, Vec<String>) {
+    let (mut program, cm, _) = parse_program(source);
+    let options = PluginOptions {
+      extract: Some(true),
+      ..PluginOptions::default()
+    };
+    let mut transform = CompiledCssInJsTransform::new(options);
+    {
+      let file = TransformFile::transform_compiled_with_options(
+        cm.clone(),
+        Vec::new(),
+        TransformFileOptions {
+          filename: Some("test.tsx".into()),
+          ..TransformFileOptions::default()
+        },
+      );
+      let mut state = transform.state.borrow_mut();
+      state.replace_file(file);
+    }
+    program.visit_mut_with(&mut transform);
+
+    // Collect style_rules from the transform state.
+    let style_rules: Vec<String> = {
+      let state = transform.state.borrow();
+      state.style_rules.iter().cloned().collect()
+    };
+
+    let Program::Module(module) = &program else {
+      panic!("expected module program");
+    };
+    let var_decl = module.body.iter().find_map(|item| match item {
+      ModuleItem::Stmt(Stmt::Decl(Decl::Var(var))) => var.decls.iter().find_map(|decl| {
+        if let Pat::Ident(binding) = &decl.name {
+          if binding.id.sym.as_ref() == var_name {
+            return decl.init.as_ref();
+          }
+        }
+        None
+      }),
+      _ => None,
+    });
+    let props: Vec<(String, String)> = match var_decl.map(|e| e.as_ref()) {
+      Some(Expr::Object(obj)) => obj
+        .props
+        .iter()
+        .filter_map(|p| {
+          if let swc_core::ecma::ast::PropOrSpread::Prop(prop) = p {
+            if let swc_core::ecma::ast::Prop::KeyValue(kv) = prop.as_ref() {
+              let key = match &kv.key {
+                swc_core::ecma::ast::PropName::Ident(i) => i.sym.to_string(),
+                swc_core::ecma::ast::PropName::Str(s) => s.value.to_string(),
+                _ => return None,
+              };
+              let val = match kv.value.as_ref() {
+                Expr::Lit(Lit::Str(s)) => s.value.to_string(),
+                _ => return None,
+              };
+              return Some((key, val));
+            }
+          }
+          None
+        })
+        .collect(),
+      _ => vec![],
+    };
+
+    (props, style_rules)
+  }
+
+  #[test]
+  fn css_map_scoped_with_nested_at_rule_supports_containing_media() {
+    // Regression test: @supports containing @media containing a property —
+    // all wrappers must be preserved end-to-end.
+    let source = r#"
+      import { cssMapScoped } from '@compiled/react';
+      const styles = cssMapScoped({
+        default: {
+          '.editor .panel': {
+            display: 'grid',
+            '@media (min-width: 1px)': { rowGap: '12px' },
+          },
+          '@supports (display: grid)': {
+            '.editor .panel': {
+              display: 'grid',
+              '@media (min-width: 1px)': { rowGap: '12px' },
+            },
+          },
+        },
+      });
+    "#;
+    let (_, rules) = extract_styles_with_rules(source, "styles");
+    let all_css = normalize_cc_hashes(&rules.join("\n"));
+    assert!(
+      all_css.contains("@supports") && all_css.contains("@media"),
+      "wrappers missing: {}",
+      all_css
+    );
+    insta::assert_snapshot!(all_css, @".cc-xxxxxx .editor .panel{display:grid}@media (min-width:1px){.cc-xxxxxx .editor .panel{row-gap:9pt}}@supports (display:grid){@media (min-width:1px){.cc-xxxxxx .editor .panel{row-gap:9pt}}}@supports (display:grid){.cc-xxxxxx .editor .panel{display:grid}}");
+  }
+
+  #[test]
+  fn css_map_scoped_with_nested_descendant_selectors() {
+    // Two variants with multiple nested rules — verifies each variant is
+    // scoped under a distinct .cc-<hash> class.
+    // NOTE: Hash normalization maps BOTH classes to `cc-xxxxxx` (we can't
+    // tell them apart in the snapshot), so the relational uniqueness check
+    // is covered by other tests (`*_variants_have_distinct_class_names`).
+    // Here the snapshot validates the per-rule scoped CSS shape.
+    let source = r#"
+      import { cssMapScoped } from '@compiled/react';
+      const styles = cssMapScoped({
+        panelStyles: {
+          '.editor .panel': { padding: '8px', backgroundColor: 'blue' },
+          '.editor .panel-title': { fontWeight: 'bold', color: 'blue' },
+        },
+        dangerStyles: {
+          '.editor .panel': { backgroundColor: 'pink' },
+          '.editor .panel-title': { color: 'red' },
+        },
+      });
+    "#;
+    let (props, rules) = extract_styles_with_rules(source, "styles");
+    assert_eq!(props.len(), 2, "expected 2 variants");
+    let all_css = normalize_cc_hashes(&rules.join("\n"));
+    assert!(
+      !all_css.contains("__compiled_declaration_wrapper__"),
+      "placeholder leak: {}",
+      all_css
+    );
+    insta::assert_snapshot!(all_css, @r"
+    .cc-xxxxxx .editor .panel{padding-top:8px;padding-right:8px;padding-bottom:8px;padding-left:8px;background-color:blue}.cc-xxxxxx .editor .panel-title{font-weight:bold;color:blue}
+    .cc-xxxxxx .editor .panel{background-color:pink}.cc-xxxxxx .editor .panel-title{color:red}
+    ");
+  }
+
+  #[test]
+  fn css_map_scoped_with_parent_pseudo_selectors() {
+    // TDD: &:hover and &:focus must produce scoped pseudo selectors,
+    // i.e. `.cc-xxx .editor .panel:hover { cursor: pointer }`.
+    let source = r#"
+      import { cssMapScoped } from '@compiled/react';
+      const styles = cssMapScoped({
+        default: {
+          '.editor .panel': {
+            backgroundColor: 'red',
+            '&:hover': { cursor: 'pointer' },
+            '&:focus': { outlineColor: 'blue' },
+          },
+        },
+      });
+    "#;
+
+    let (props, rules) = extract_styles_with_rules(source, "styles");
+    let class_name = props
+      .iter()
+      .find(|(k, _)| k == "default")
+      .map(|(_, v)| v.clone())
+      .expect("missing default variant");
+
+    let all_css = rules.join("\n");
+
+    // Must have the base rule.
+    assert!(
+      all_css.contains(&format!(".{} .editor .panel{{", class_name))
+        || all_css.contains(&format!(".{} .editor .panel ", class_name)),
+      "missing base rule, got:\n{}",
+      all_css
+    );
+
+    // Must have :hover and :focus rules scoped to the class.
+    assert!(
+      all_css.contains(":hover"),
+      "&:hover must produce a :hover selector, got:\n{}",
+      all_css
+    );
+    assert!(
+      all_css.contains(":focus"),
+      "&:focus must produce a :focus selector, got:\n{}",
+      all_css
+    );
+    assert!(
+      all_css.contains("cursor:pointer") || all_css.contains("cursor: pointer"),
+      "cursor:pointer must be present, got:\n{}",
+      all_css
+    );
+
+    // The cursor declaration must be inside a :hover rule, not the base rule.
+    // Look for the pattern `:hover{...cursor...}` (declarations may be ordered
+    // arbitrarily by the optimizer, so we just check for presence inside
+    // the pseudo rule).
+    let hover_rule = format!(".{} .editor .panel:hover", class_name);
+    assert!(
+      all_css.contains(&hover_rule),
+      "expected scoped pseudo selector '{}', got:\n{}",
+      hover_rule,
+      all_css
+    );
+    let focus_rule = format!(".{} .editor .panel:focus", class_name);
+    assert!(
+      all_css.contains(&focus_rule),
+      "expected scoped pseudo selector '{}', got:\n{}",
+      focus_rule,
+      all_css
+    );
+  }
+
+  #[test]
+  fn css_map_scoped_with_shared_variant_key_produces_unique_class_names() {
+    // Regression: two cssMapScoped bindings in the same file sharing a variant key
+    // (`default`) must produce DISTINCT class names. Without including the binding
+    // name in the hash, both would resolve to the same `.cc-<hash>` and their CSS
+    // rules would collide.
+    let source = r#"
+      import { cssMapScoped } from '@compiled/react';
+      const panelStyles = cssMapScoped({
+        default: { '.editor .panel': { backgroundColor: 'grey' } },
+      });
+      const dangerStyles = cssMapScoped({
+        default: { '.editor .panel': { backgroundColor: 'red' } },
+      });
+    "#;
+
+    let panel_props = extract_styles_object_props(source, "panelStyles");
+    let danger_props = extract_styles_object_props(source, "dangerStyles");
+
+    let panel_default = panel_props
+      .iter()
+      .find(|(k, _)| k == "default")
+      .map(|(_, v)| v.clone())
+      .expect("panelStyles.default");
+    let danger_default = danger_props
+      .iter()
+      .find(|(k, _)| k == "default")
+      .map(|(_, v)| v.clone())
+      .expect("dangerStyles.default");
+
+    assert!(panel_default.starts_with("cc-"), "got: {}", panel_default);
+    assert!(danger_default.starts_with("cc-"), "got: {}", danger_default);
+    assert_ne!(
+      panel_default, danger_default,
+      "shared variant key 'default' across two cssMapScoped bindings must produce DISTINCT classes — got '{}' for both",
+      panel_default
+    );
+  }
+
+  #[test]
+  fn css_map_scoped_used_via_css_prop_hoists_sheets() {
+    crate::test_utils::with_globals(|| {
+      // TDD: the correct cssMapScoped usage is via the `css={styles.danger}` prop
+      // (just like regular cssMap), NOT via className. The css prop triggers the
+      // CC/CS runtime wrapper which hoists the sheets as `const _N = "..."` so the
+      // runtime can inject them.
+      let source = r#"
+      import { cssMapScoped } from '@compiled/react';
+      const styles = cssMapScoped({
+        panelStyles: {
+          '.editor .panel': { padding: '8px', backgroundColor: 'blue' },
+          '.editor .panel-title': { fontWeight: 'bold', color: 'blue' },
+        },
+        dangerStyles: {
+          '.editor .panel': { backgroundColor: 'pink' },
+          '.editor .panel-title': { color: 'red' },
+        },
+      });
+      export function Panel() {
+        return <div css={styles.panelStyles}>panel</div>;
+      }
+      export function DangerPanel() {
+        return <div css={styles.dangerStyles}>danger panel</div>;
+      }
+    "#;
+
+      // 1) Verify class name mapping is correct (cc- prefix, distinct values).
+      let props = extract_styles_object_props(source, "styles");
+      assert_eq!(props.len(), 2, "expected 2 variants, got: {:?}", props);
+      let panel_class = props
+        .iter()
+        .find(|(k, _)| k == "panelStyles")
+        .map(|(_, v)| v.clone())
+        .expect("panelStyles");
+      let danger_class = props
+        .iter()
+        .find(|(k, _)| k == "dangerStyles")
+        .map(|(_, v)| v.clone())
+        .expect("dangerStyles");
+      assert!(panel_class.starts_with("cc-"), "got: {}", panel_class);
+      assert!(danger_class.starts_with("cc-"), "got: {}", danger_class);
+      assert_ne!(panel_class, danger_class);
+
+      // 2) The printed output (runtime mode) MUST contain the CSS embedded as
+      //    hoisted sheet variable declarations, picked up by the CC/CS wrapper
+      //    around the JSX elements.
+      let printed = transform_source(source);
+
+      // Both class names must appear in the printed JS.
+      assert!(
+        printed.contains(&panel_class),
+        "missing panel class: \n{}",
+        printed
+      );
+      assert!(
+        printed.contains(&danger_class),
+        "missing danger class: \n{}",
+        printed
+      );
+
+      // Runtime imports CC/CS — the wrapper around <div css=...>.
+      assert!(
+        printed.contains("CC"),
+        "missing CC runtime import: \n{}",
+        printed
+      );
+      assert!(
+        printed.contains("CS"),
+        "missing CS runtime import: \n{}",
+        printed
+      );
+
+      // The CSS for nested selectors must be embedded as string literals — scoped
+      // under each variant's class.
+      assert!(
+        printed.contains(&format!(".{} .editor .panel", panel_class)),
+        "expected '.{} .editor .panel' in hoisted sheets, got:\n{}",
+        panel_class,
+        printed
+      );
+      assert!(
+        printed.contains(&format!(".{} .editor .panel-title", panel_class)),
+        "expected '.{} .editor .panel-title' in hoisted sheets, got:\n{}",
+        panel_class,
+        printed
+      );
+      assert!(
+        printed.contains(&format!(".{} .editor .panel", danger_class)),
+        "expected '.{} .editor .panel' in hoisted sheets, got:\n{}",
+        danger_class,
+        printed
+      );
+
+      // Variant-specific decls (blue/pink/red) must be present.
+      assert!(printed.contains("blue"), "got:\n{}", printed);
+      assert!(printed.contains("pink"), "got:\n{}", printed);
+      assert!(printed.contains("red"), "got:\n{}", printed);
+
+      // No placeholder leak, no missing semicolons.
+      assert!(
+        !printed.contains("__compiled_declaration_wrapper__"),
+        "placeholder leaked: {}",
+        printed
+      );
+      assert!(
+        !printed.contains("8pxbackground") && !printed.contains("boldcolor"),
+        "missing semicolons: {}",
+        printed
+      );
+    });
+  }
+
+  #[test]
+  fn css_map_scoped_autoprefixes_user_select_vendor_prefix() {
+    // Contract: autoprefixer must wire through to `non_atomicify_rules_plugin`,
+    // producing -webkit / -moz prefixes. Snapshot locks the full output.
+    let source = r#"
+      import { cssMapScoped } from '@compiled/react';
+      const styles = cssMapScoped({
+        default: { userSelect: 'none' },
+      });
+    "#;
+    let (_, rules) = extract_styles_with_rules(source, "styles");
+    let all_css = normalize_cc_hashes(&rules.join("\n"));
+    assert!(
+      all_css.contains("-webkit-user-select:none"),
+      "missing -webkit prefix: {}",
+      all_css
+    );
+    assert!(
+      all_css.contains("-moz-user-select:none"),
+      "missing -moz prefix: {}",
+      all_css
+    );
+    insta::assert_snapshot!(all_css, @".cc-xxxxxx{-webkit-user-select:none;-moz-user-select:none;user-select:none}");
+  }
+
+  #[test]
+  fn css_map_scoped_autoprefix_preserves_decl_grouping() {
+    // Contract: prefixed + unprefixed decls + the additional `color` decl
+    // must all live inside ONE scoped rule (non-atomic grouping invariant).
+    let source = r#"
+      import { cssMapScoped } from '@compiled/react';
+      const styles = cssMapScoped({
+        default: { userSelect: 'none', color: 'red' },
+      });
+    "#;
+    let (_, rules) = extract_styles_with_rules(source, "styles");
+    let all_css = normalize_cc_hashes(&rules.join("\n"));
+    assert_eq!(
+      all_css.matches('{').count(),
+      1,
+      "must be exactly ONE rule body: {}",
+      all_css
+    );
+    insta::assert_snapshot!(all_css, @".cc-xxxxxx{-webkit-user-select:none;-moz-user-select:none;user-select:none;color:red}");
+  }
+
+  #[test]
+  fn css_map_scoped_with_nested_media_inside_rule_emits_decls() {
+    // Regression test: inner @media with bare decls must not be dropped.
+    let source = r#"
+      import { cssMapScoped } from '@compiled/react';
+      const styles = cssMapScoped({
+        default: {
+          '.editor .panel': {
+            display: 'grid',
+            '@media (min-width: 1px)': { rowGap: '12px' },
+          },
+        },
+      });
+    "#;
+    let (_, rules) = extract_styles_with_rules(source, "styles");
+    let all_css = normalize_cc_hashes(&rules.join("\n"));
+    assert!(
+      all_css.contains("@media"),
+      "@media wrapper missing: {}",
+      all_css
+    );
+    insta::assert_snapshot!(all_css, @".cc-xxxxxx .editor .panel{display:grid}@media (min-width:1px){.cc-xxxxxx .editor .panel{row-gap:9pt}}");
+  }
+
+  #[test]
+  fn css_map_scoped_with_keyframes_does_not_scope_step_keywords() {
+    // Contract: @keyframes step keywords (`from`, `to`, `%`) must not be
+    // scoped under .cc-*. Snapshot locks the full output.
+    let source = r#"
+      import { cssMapScoped, keyframes } from '@compiled/react';
+      const fadeIn = keyframes({
+        from: { opacity: 0 },
+        to: { opacity: 1 },
+      });
+      const styles = cssMapScoped({
+        default: { animationName: fadeIn },
+      });
+    "#;
+    let (_, rules) = extract_styles_with_rules(source, "styles");
+    let all_css = normalize_cc_hashes(&rules.join("\n"));
+    for bad in [
+      ".cc-xxxxxx from",
+      ".cc-xxxxxxfrom",
+      ".cc-xxxxxx to",
+      ".cc-xxxxxx 0%",
+      ".cc-xxxxxx 100%",
+    ] {
+      assert!(
+        !all_css.contains(bad),
+        "step keyword pattern '{}' must NOT appear: {}",
+        bad,
+        all_css
+      );
+    }
+    insta::assert_snapshot!(all_css, @".cc-xxxxxx{animation-name:kgnpaw5}@keyframes kgnpaw5{0%{opacity:0}to{opacity:1}}");
+  }
+
+  #[test]
+  fn css_map_scoped_with_comma_separated_variant_selector_scopes_each() {
+    // Each selector in the comma list must be independently scoped; decl
+    // appears once (shared by both selectors).
+    let source = r#"
+      import { cssMapScoped } from '@compiled/react';
+      const styles = cssMapScoped({
+        default: {
+          '.editor .panel, .editor .panel-title': { opacity: 0.95 },
+        },
+      });
+    "#;
+    let (_, rules) = extract_styles_with_rules(source, "styles");
+    let all_css = normalize_cc_hashes(&rules.join("\n"));
+    assert_eq!(
+      all_css.matches("opacity").count(),
+      1,
+      "decl must appear once: {}",
+      all_css
+    );
+    insta::assert_snapshot!(all_css, @".cc-xxxxxx .editor .panel,.cc-xxxxxx .editor .panel-title{opacity:.95}");
+  }
+
+  #[test]
+  fn css_map_scoped_with_ampersand_descendant_child_inside_parent_selector() {
+    // Editor pattern: `.editor .panel`: { `& .panel-icon`: { color: 'red' } }
+    // `&` refers to outer descendant chain → `.cc-x .editor .panel .panel-icon`.
+    let source = r#"
+      import { cssMapScoped } from '@compiled/react';
+      const styles = cssMapScoped({
+        default: {
+          '.editor .panel': {
+            '& .panel-icon': { color: 'red' },
+          },
+        },
+      });
+    "#;
+    let (_, rules) = extract_styles_with_rules(source, "styles");
+    let all_css = normalize_cc_hashes(&rules.join("\n"));
+    insta::assert_snapshot!(all_css, @".cc-xxxxxx .editor .panel .panel-icon{color:red}");
+  }
+
+  #[test]
+  fn css_map_scoped_with_right_side_ampersand_rtl_prefix() {
+    // Editor i18n pattern: `[dir="rtl"] &`: { `.editor blockquote`: {...} }
+    // `&` on the right side attaches the class on the right of [dir="rtl"].
+    let source = r#"
+      import { cssMapScoped } from '@compiled/react';
+      const styles = cssMapScoped({
+        default: {
+          '[dir="rtl"] &': {
+            '.editor blockquote': { paddingLeft: 0, paddingRight: 16 },
+          },
+        },
+      });
+    "#;
+    let (_, rules) = extract_styles_with_rules(source, "styles");
+    let all_css = normalize_cc_hashes(&rules.join("\n"));
+    insta::assert_snapshot!(all_css, @"[dir=rtl] .cc-xxxxxx .editor blockquote{padding-left:0;padding-right:1pc}");
+  }
+
+  #[test]
+  fn css_map_scoped_with_renamed_import() {
+    // Renamed import `import { cssMapScoped as scoped }` must still be handled.
+    let source = r#"
+      import { cssMapScoped as scoped } from '@compiled/react';
+      const styles = scoped({
+        danger: { color: 'red' },
+      });
+    "#;
+    let props = extract_styles_object_props(source, "styles");
+    assert_eq!(props.len(), 1, "expected 1 variant after renamed import");
+    let (_, class_name) = &props[0];
+    assert!(
+      class_name.starts_with("cc-"),
+      "renamed cssMapScoped import must still produce cc- class: {}",
+      class_name
+    );
+  }
 }
 
 fn imported_name(specifier: &ImportNamedSpecifier) -> &str {
@@ -2236,6 +3016,13 @@ fn record_compiled_import(imports: &mut CompiledImports, name: &str, local: &str
       imports.css_map.push(local.to_string());
       true
     }
+    "cssMapScoped" => {
+      // cssMapScoped is the non-atomic variant of cssMap. It is tracked separately so
+      // CssMapVisitor can pass `scoped = true` to `visit_css_map_path`, which causes
+      // each variant to be emitted as a single `.cc-<hash>` class instead of atomic classes.
+      imports.css_map_scoped.push(local.to_string());
+      true
+    }
     _ => false,
   }
 }
@@ -2245,7 +3032,8 @@ fn has_active_compiled_imports(imports: &CompiledImports) -> bool {
     && imports.css.is_empty()
     && imports.keyframes.is_empty()
     && imports.styled.is_empty()
-    && imports.css_map.is_empty())
+    && imports.css_map.is_empty()
+    && imports.css_map_scoped.is_empty())
 }
 
 static JSX_SOURCE_ANNOTATION_REGEX: Lazy<Regex> = Lazy::new(|| {
@@ -2595,7 +3383,7 @@ impl CompiledCssInJsTransform {
           .unwrap_or(false),
         imports
           .as_ref()
-          .map(|imports| !imports.css_map.is_empty())
+          .map(|imports| !imports.css_map.is_empty() || !imports.css_map_scoped.is_empty())
           .unwrap_or(false),
         imports
           .as_ref()
@@ -3385,6 +4173,22 @@ impl CssMapVisitor {
       })
       .unwrap_or(false)
   }
+
+  /// Returns `true` if the identifier was imported from `cssMapScoped` (non-atomic variant).
+  fn is_css_map_scoped_ident(&self, ident: &Ident) -> bool {
+    self
+      .meta
+      .state()
+      .compiled_imports
+      .as_ref()
+      .map(|imports| {
+        imports
+          .css_map_scoped
+          .iter()
+          .any(|name| name == ident.sym.as_ref())
+      })
+      .unwrap_or(false)
+  }
 }
 
 impl VisitMut for CssMapVisitor {
@@ -3418,7 +4222,8 @@ impl VisitMut for CssMapVisitor {
           return;
         };
 
-        if !self.is_css_map_ident(&callee_ident) {
+        let is_scoped = self.is_css_map_scoped_ident(&callee_ident);
+        if !self.is_css_map_ident(&callee_ident) && !is_scoped {
           call.visit_mut_children_with(self);
           return;
         }
@@ -3433,13 +4238,23 @@ impl VisitMut for CssMapVisitor {
           .with_parent_span(Some(declarator.span))
           .with_own_span(Some(init_span));
 
-        let object = visit_css_map_path(CssMapUsage::Call(&call_expr), Some(&binding_ident), &meta);
+        let object = visit_css_map_path(
+          CssMapUsage::Call(&call_expr),
+          Some(&binding_ident),
+          &meta,
+          if is_scoped {
+            CssMapKind::NonAtomic
+          } else {
+            CssMapKind::Atomic
+          },
+        );
 
         *init = Expr::Object(object).into();
       }
       Expr::TaggedTpl(tagged) => {
         if let Expr::Ident(tag_ident) = &*tagged.tag {
-          if self.is_css_map_ident(tag_ident) {
+          let is_scoped = self.is_css_map_scoped_ident(tag_ident);
+          if self.is_css_map_ident(tag_ident) || is_scoped {
             let tagged_tpl = tagged.clone();
             let init_expr = Expr::TaggedTpl(tagged_tpl.clone());
             let init_span = tagged_tpl.span;
@@ -3453,6 +4268,11 @@ impl VisitMut for CssMapVisitor {
               CssMapUsage::TaggedTemplate(&tagged_tpl),
               Some(&binding_ident),
               &meta,
+              if is_scoped {
+                CssMapKind::NonAtomic
+              } else {
+                CssMapKind::Atomic
+              },
             );
 
             *init = Expr::Object(object).into();

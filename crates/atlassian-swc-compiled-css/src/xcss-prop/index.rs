@@ -12,7 +12,7 @@ use crate::utils_build_compiled_component::compiled_template;
 use crate::utils_css_builders::{
   build_css as build_css_from_expr, generate_cache_for_css_map_with_builder,
 };
-use crate::utils_transform_css_items::transform_css_items;
+use crate::utils_transform_css_items::{TransformCssItemsOptions, transform_css_items};
 use crate::utils_types::CssOutput;
 
 fn is_xcss_attribute(attr: &JSXAttr) -> bool {
@@ -240,7 +240,7 @@ where
         let crate::utils_transform_css_items::TransformCssItemsResult {
           sheets,
           class_names,
-        } = transform_css_items(&css, meta);
+        } = transform_css_items(&css, meta, &TransformCssItemsOptions::default());
         let mut class_iter = class_names.into_iter();
 
         let replacement = match (class_iter.next(), class_iter.next()) {

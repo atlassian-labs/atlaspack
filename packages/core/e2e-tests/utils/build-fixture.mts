@@ -3,6 +3,27 @@ import * as path from 'node:path';
 import * as fs from 'node:fs';
 import * as url from 'node:url';
 import {Atlaspack} from '@atlaspack/core';
+
+/**
+ * Derive a readable output directory name from the fixture target path.
+ *
+ * Uses the fixture's directory name (e.g. `simple-project-with-css-map-scoped-extracted`)
+ * so the build output is easy to locate under `dist/`, falling back to a sha256 hash
+ * suffix when the same fixture is built more than once in a single test run (rare —
+ * only happens if two distinct targets share a folder name).
+ */
+function fixtureOutputName(target: string): string {
+  const segments = target.split(/[\\/]/).filter(Boolean);
+  // Use the parent dir of the entry file (e.g. `.../foo/index.html` → `foo`).
+  const fixtureDir = segments.length >= 2 ? segments[segments.length - 2] : segments[0] ?? 'fixture';
+  const safe = fixtureDir.replace(/[^a-zA-Z0-9._-]/g, '_');
+  // Append a short hash only when the target is more complex than `<dir>/index.html`,
+  // to disambiguate without making the typical case unreadable.
+  const isSimpleEntry = segments.length === 2 && segments[1] === 'index.html';
+  if (isSimpleEntry) return safe;
+  const suffix = createHash('sha256').update(target).digest('hex').slice(0, 8);
+  return `${safe}-${suffix}`;
+}
 import type {ServeContext} from './server.mts';
 import type {
   BuildSuccessEvent,
@@ -48,7 +69,7 @@ export async function buildFixture(
   if (target.includes('three-js-project')) {
     return buildThreeJsFixture(target, config);
   }
-  const output = createHash('sha256').update(target).digest('hex');
+  const output = fixtureOutputName(target);
   const outputDir = path.join(__root, 'dist', output);
 
   if (fs.existsSync(outputDir)) {
@@ -78,7 +99,7 @@ export async function buildFixture(
 }
 
 export async function serveFixture(target: string): Promise<ServeContext> {
-  const output = createHash('sha256').update(target).digest('hex');
+  const output = fixtureOutputName(target);
   const outputDir = path.join(__root, 'dist', output);
   const randomPort = Math.floor(Math.random() * 10000) + 10000;
 
@@ -119,7 +140,7 @@ async function buildThreeJsFixture(
   outputDir: string;
   buildResult: BuildSuccessEvent;
 }> {
-  const output = createHash('sha256').update(target).digest('hex');
+  const output = fixtureOutputName(target);
   const outputDir = path.join(__root, 'dist', output);
 
   if (fs.existsSync(outputDir)) {

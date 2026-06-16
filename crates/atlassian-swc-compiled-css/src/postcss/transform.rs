@@ -14,7 +14,8 @@ use super::plugins::{
   atomicify_rules::atomicify_rules, discard_duplicates::discard_duplicates,
   discard_empty_rules::discard_empty_rules, expand_shorthands::index::expand_shorthands,
   extract_stylesheets::extract_stylesheets, flatten_multiple_selectors::flatten_multiple_selectors,
-  increase_specificity::increase_specificity, nested::nested, normalize_css::normalize_css,
+  increase_specificity::increase_specificity, nested::nested,
+  non_atomicify_rules::non_atomicify_rules, normalize_css::normalize_css,
   normalize_whitespace::normalize_whitespace, parent_orphaned_pseudos::parent_orphaned_pseudos,
   sort_atomic_style_sheet::sort_atomic_style_sheet,
 };
@@ -40,6 +41,16 @@ pub struct TransformCssOptions {
   /// `@compiled/css` package directory (falling back to browserslist
   /// defaults), matching Babel's cssnano plugins which use `{ path: __dirname }`.
   pub cssnano_browserslist_config_path: Option<PathBuf>,
+  /// When `false`, styles are emitted as a single non-atomic class per variant
+  /// rather than one atomic class per declaration. The class name is not prefixed
+  /// with `_`, so `ax()` will treat it as a plain (non-atomic) class.
+  /// Mirrors `TransformOpts.atomic` from `packages/css/src/transform.ts`.
+  pub atomic: Option<bool>,
+  /// Pre-computed class name for non-atomic mode (e.g. `cc-<hash>`).
+  /// When `atomic` is `false` and this is `Some`, the class name is used directly
+  /// instead of hashing the CSS content.
+  /// Mirrors `TransformOpts.nonAtomicClassName` from `packages/css/src/transform.ts`.
+  pub non_atomic_class_name: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -281,41 +292,63 @@ pub(crate) fn transform_css_via_swc_pipeline(
   for plugin in normalize_css(&options) {
     pipeline.push(plugin);
   }
-  pipeline.push(Box::new(atomicify_rules()));
 
-  if flatten_multiple_selectors_option {
-    pipeline.push(Box::new(flatten_multiple_selectors()));
-    pipeline.push(Box::new(discard_duplicates()));
+  let is_non_atomic = options.atomic == Some(false);
+
+  if is_non_atomic {
+    // Non-atomic mode: scope all declarations under a single `.cc-<hash>` class.
+    // Mirrors the `atomic: false` path in `packages/css/src/transform.ts`.
+    //
+    // Pipeline: non_atomicify_rules (rewrites selectors in AST + registers class name)
+    //           → normalize_whitespace
+    //           → extract_stylesheets (serialises the rewritten AST into ctx.sheets,
+    //             applying AT_RULE_SPACE_REGEX normalisation and other post-processing,
+    //             matching the atomic pipeline's serialisation path).
+    let Some(class_name) = options.non_atomic_class_name.clone() else {
+      return Err(CssTransformError::from_message(
+        "non_atomic_class_name is required when atomic is Some(false)".to_string(),
+      ));
+    };
+    pipeline.push(Box::new(non_atomicify_rules(class_name)));
+    pipeline.push(Box::new(normalize_whitespace()));
+    pipeline.push(Box::new(extract_stylesheets()));
+  } else {
+    pipeline.push(Box::new(atomicify_rules()));
+
+    if flatten_multiple_selectors_option {
+      pipeline.push(Box::new(flatten_multiple_selectors()));
+      pipeline.push(Box::new(discard_duplicates()));
+    }
+
+    if options.increase_specificity.unwrap_or(false) {
+      pipeline.push(Box::new(increase_specificity()));
+    }
+
+    let sort_at_rules_option = options.sort_at_rules;
+    let sort_shorthand_option = options.sort_shorthand;
+    pipeline.push(Box::new(sort_atomic_style_sheet(
+      sort_at_rules_option,
+      sort_shorthand_option,
+    )));
+
+    // Autoprefixer-equivalent vendor prefixing must run after
+    // sort-atomic-style-sheet and before whitespace/extract to match Babel.
+    // Full Autoprefixer port (wired to browserslist and caniuse data)
+    if std::env::var("AUTOPREFIXER")
+      .map(|v| v != "off")
+      .unwrap_or(true)
+    {
+      super::plugins::vendor_autoprefixer::AutoprefixerData::init(
+        options.browserslist_config_path.as_deref(),
+        options.browserslist_env.as_deref(),
+      );
+      pipeline.push(Box::new(
+        super::plugins::vendor_autoprefixer::vendor_autoprefixer(),
+      ));
+    }
+    pipeline.push(Box::new(normalize_whitespace()));
+    pipeline.push(Box::new(extract_stylesheets()));
   }
-
-  if options.increase_specificity.unwrap_or(false) {
-    pipeline.push(Box::new(increase_specificity()));
-  }
-
-  let sort_at_rules_option = options.sort_at_rules;
-  let sort_shorthand_option = options.sort_shorthand;
-  pipeline.push(Box::new(sort_atomic_style_sheet(
-    sort_at_rules_option,
-    sort_shorthand_option,
-  )));
-
-  // Autoprefixer-equivalent vendor prefixing must run after
-  // sort-atomic-style-sheet and before whitespace/extract to match Babel.
-  // Full Autoprefixer port (wired to browserslist and caniuse data)
-  if std::env::var("AUTOPREFIXER")
-    .map(|v| v != "off")
-    .unwrap_or(true)
-  {
-    super::plugins::vendor_autoprefixer::AutoprefixerData::init(
-      options.browserslist_config_path.as_deref(),
-      options.browserslist_env.as_deref(),
-    );
-    pipeline.push(Box::new(
-      super::plugins::vendor_autoprefixer::vendor_autoprefixer(),
-    ));
-  }
-  pipeline.push(Box::new(normalize_whitespace()));
-  pipeline.push(Box::new(extract_stylesheets()));
 
   for plugin in pipeline {
     plugin.run(&mut stylesheet, &mut ctx);
@@ -377,6 +410,10 @@ pub fn transform_css(
   }
 
   // Default to the PostCSS engine-backed pipeline when available.
+  // Non-atomic mode (`atomic: Some(false)`, used by `cssMapScoped`) is now
+  // implemented in the postcss pipeline via `non_atomicify_rules_plugin`, so
+  // it shares all selector handling (postcss-nested for `&:hover`, etc.)
+  // with the atomic path.
   #[cfg(feature = "postcss_engine")]
   {
     if std::env::var("COMPILED_CLI_TRACE").is_ok() {
