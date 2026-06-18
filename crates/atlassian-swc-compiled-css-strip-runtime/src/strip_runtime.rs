@@ -449,8 +449,27 @@ impl StripRuntimeTransform {
       })?;
     }
 
-    let mut rules = self.style_rules.clone();
-    rules.sort();
+    // Partition rules into:
+    //  - non-atomic (`.cc-<hash>` prefix, from `cssMapScoped`) — MUST preserve
+    //    source order so that override variants used later in
+    //    `css={[base, override]}` win the cascade.
+    //  - atomic (`._<hash>` prefix, from `cssMap` / `css` / `styled`) — order
+    //    doesn't matter semantically, so we sort lexically for deterministic
+    //    output (helpful for content-addressable bundling, snapshot diffs,
+    //    etc.).
+    //
+    // Final concatenation order: non-atomic first (in source order), then
+    // sorted atomic. This matches compiled's `sortStyleSheet` final ordering
+    // and ensures the CSS cascade does what users expect.
+    let (non_atomic, mut atomic): (Vec<String>, Vec<String>) = self
+      .style_rules
+      .iter()
+      .cloned()
+      .partition(|sheet| sheet.contains(".cc-"));
+    atomic.sort();
+    let mut rules = non_atomic;
+    rules.extend(atomic);
+
     let css = rules.join("\n");
     let sorted = sort_atomic_style_sheet(
       &css,
