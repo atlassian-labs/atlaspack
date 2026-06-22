@@ -1,5 +1,17 @@
 # @atlaspack/test-utils
 
+## 2.14.72
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/config-default@20.0.1
+  - @atlaspack/cache@3.2.59
+  - @atlaspack/core@2.39.1
+  - @atlaspack/fs@2.15.59
+  - @atlaspack/utils@3.4.6
+  - @atlaspack/package-manager@2.14.64
+
 ## 2.14.71
 
 ### Patch Changes

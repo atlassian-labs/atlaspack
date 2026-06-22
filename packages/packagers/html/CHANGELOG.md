@@ -1,5 +1,14 @@
 # @atlaspack/packager-html
 
+## 2.15.46
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.4.6
+  - @atlaspack/types@2.15.54
+  - @atlaspack/plugin@2.14.64
+
 ## 2.15.45
 
 ### Patch Changes
