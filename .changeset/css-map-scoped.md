@@ -73,3 +73,12 @@ Two new e2e tests in `packages/core/e2e-tests/test/compiled-css-in-js.test.mts` 
 
 - Adopted **inline `insta` snapshot tests** for cssMapScoped's postcss-plugin and babel-plugin tests where the assertions are about CSS output shape. Uses a `normalize_cc_hashes()` helper to map dynamic `cc-<hash>` class names to a stable `cc-xxxxxx` placeholder so snapshots don't depend on hash inputs.
 - Added `*.pending-snap` to `.gitignore` (insta scratch files should never be committed).
+- Added `.watchman-cookie-*` to `.gitignore`.
+
+### Dependency bumps
+
+- `@compiled/react` → `^0.22.1`
+- `@compiled/babel-plugin` → `^0.40.0`
+- `@compiled/babel-plugin-strip-runtime` → `^0.40.1`
+- `@compiled/parcel-optimizer` → `^0.6.7`
+- `@compiled/parcel-transformer` → `^0.19.2`
