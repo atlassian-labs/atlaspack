@@ -275,12 +275,12 @@ fn atomic_class_name(
   format!("_{}{}", group, value)
 }
 
-fn replace_nesting_selector(selector: &str, parent_class_name: &str) -> String {
+pub(super) fn replace_nesting_selector(selector: &str, parent_class_name: &str) -> String {
   let replacement = format!(".{}", parent_class_name);
   selector.replace('&', &replacement)
 }
 
-fn normalize_selector(selector: &str) -> String {
+pub(super) fn normalize_selector(selector: &str) -> String {
   let trimmed = selector.trim();
   let collapsed = collapse_adjacent_nesting_selectors(trimmed);
   let collapsed = collapsed.trim();
@@ -302,7 +302,7 @@ fn declaration_name(name: &DeclarationName) -> String {
 }
 
 #[allow(unreachable_patterns)]
-fn collect_rule_selectors(rule: &QualifiedRule) -> Vec<String> {
+pub(super) fn collect_rule_selectors(rule: &QualifiedRule) -> Vec<String> {
   let selectors = match &rule.prelude {
     QualifiedRulePrelude::SelectorList(list) => list
       .children
@@ -344,7 +344,7 @@ fn serialize_complex_selector_with_possible_nesting(
   crate::postcss::utils::selector_stringifier::serialize_complex_selector(selector)
 }
 
-fn serialize_node<T>(node: &T) -> Option<String>
+pub(super) fn serialize_node<T>(node: &T) -> Option<String>
 where
   T: Spanned,
   for<'writer> CodeGenerator<BasicCssWriter<'writer, &'writer mut String>>: Emit<T>,
@@ -377,7 +377,7 @@ fn serialize_component_values(values: &[ComponentValue]) -> Option<String> {
   Some(output)
 }
 
-fn parse_selector_as_rule(selector: &str) -> QualifiedRule {
+pub(super) fn parse_selector_as_rule(selector: &str) -> QualifiedRule {
   let css = format!("{}{{}}", selector);
   let cm: Arc<SourceMap> = Default::default();
   let fm = cm.new_source_file(FileName::Custom("atomic.css".into()).into(), css);
@@ -400,7 +400,7 @@ fn parse_selector_as_rule(selector: &str) -> QualifiedRule {
   }
 }
 
-fn can_atomicify_at_rule(at_rule: &AtRule) -> bool {
+pub(super) fn can_atomicify_at_rule(at_rule: &AtRule) -> bool {
   let name = at_rule_name(&at_rule.name);
   let allowed = [
     "container",
@@ -461,7 +461,7 @@ fn serialize_at_rule_prelude(prelude: &AtRulePrelude) -> String {
   output
 }
 
-fn is_comment_list(_list: &ListOfComponentValues) -> bool {
+pub(super) fn is_comment_list(_list: &ListOfComponentValues) -> bool {
   false
 }
 

@@ -28,6 +28,8 @@ pub mod minify_params;
 pub mod minify_selectors;
 #[path = "nested.rs"]
 pub mod nested;
+#[path = "non-atomicify-rules.rs"]
+pub mod non_atomicify_rules;
 #[path = "normalize-css.rs"]
 pub mod normalize_css;
 #[path = "normalize_css_engine/mod.rs"]

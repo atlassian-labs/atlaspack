@@ -4,6 +4,7 @@ use swc_core::ecma::ast::{
   CallExpr, Callee, Expr, Ident, KeyValueProp, Lit, ObjectLit, Prop, PropOrSpread, Str, TaggedTpl,
 };
 
+use crate::constants::NON_ATOMIC_CLASS_PREFIX;
 use crate::css_map_process_selectors::merge_extended_selectors_into_properties;
 use crate::types::Metadata;
 use crate::utils_css_builders::build_css as build_css_from_expr;
@@ -11,7 +12,8 @@ use crate::utils_css_map::{
   ErrorMessages, error_if_not_valid_object_property, report_css_map_error,
   report_css_map_error_with_hints,
 };
-use crate::utils_transform_css_items::transform_css_items;
+use crate::utils_hash::hash;
+use crate::utils_transform_css_items::{TransformCssItemsOptions, transform_css_items};
 use crate::utils_types::CssOutput;
 
 /// Describes the supported syntactic shapes for a `cssMap` invocation.
@@ -20,13 +22,29 @@ pub enum CssMapUsage<'a> {
   TaggedTemplate(&'a TaggedTpl),
 }
 
+/// Describes the transformation mode for a `cssMap` / `cssMapScoped` call.
+///
+/// - `Atomic`    — standard `cssMap`: one atomic class per declaration (default).
+/// - `NonAtomic` — `cssMapScoped`: all declarations grouped under a single `.cc-<hash>` class.
+#[derive(Debug, Default)]
+pub enum CssMapKind {
+  #[default]
+  Atomic,
+  NonAtomic,
+}
+
 /// Shared helper that mirrors the Babel `visitCssMapPath` implementation but allows the
 /// CSS builder to be injected so tests can exercise the behaviour before the full
 /// `build_css` port lands.
+///
+/// When `matches!(kind, CssMapKind::NonAtomic)` is `true` the call originated from `cssMapScoped` and each variant
+/// is compiled to a single non-atomic `.cc-<hash>` class instead of one atomic class per
+/// declaration — mirroring `cssMap` with `{ atomic: false }` in the Babel plugin.
 pub fn visit_css_map_path_with_builder<'a, F>(
   usage: CssMapUsage<'a>,
   parent_identifier: Option<&Ident>,
   meta: &Metadata,
+  kind: CssMapKind,
   mut build_css: F,
 ) -> ObjectLit
 where
@@ -126,7 +144,50 @@ where
           return empty_object(object_lit.span);
         }
 
-        let transform_result = transform_css_items(&css_output.css, meta);
+        // Pre-compute a non-atomic class name from relativeFilename + binding name + variant key.
+        //
+        // The hash inputs:
+        // - `relativeFilename` — path relative to the project root, so the hash is
+        //   stable across all machines and CI environments regardless of where the
+        //   monorepo is checked out. Falls back to the basename if the file is
+        //   outside the project root (e.g. test fixtures at arbitrary absolute paths).
+        // - `binding_name` (e.g. `panelStyles`, `panelDangerStyles`) is critical:
+        //   without it, two `cssMapScoped` calls in the same file that happen to
+        //   share a variant key (e.g. both have a `default` variant) would produce
+        //   IDENTICAL class names and their CSS rules would collide.
+        // - `variant_key` — the variant within that call.
+        //
+        // Mirrors `getNonAtomicClassName` in compiled's `packages/babel-plugin/src/css-map/index.ts`.
+        let non_atomic_class_name = if matches!(kind, CssMapKind::NonAtomic) {
+          let variant_key = match &key_value.key {
+            swc_core::ecma::ast::PropName::Ident(i) => Some(i.sym.to_string()),
+            swc_core::ecma::ast::PropName::Str(s) => Some(s.value.to_string()),
+            _ => None,
+          };
+          variant_key.map(|key| {
+            let state = meta.state();
+            let file_key = compute_relative_file_key(state.filename.as_deref(), &state.root);
+            let binding_name = binding_identifier.sym.to_string();
+            format!(
+              "{}{}",
+              NON_ATOMIC_CLASS_PREFIX,
+              hash(&format!("{}:{}:{}", file_key, binding_name, key))
+            )
+          })
+        } else {
+          None
+        };
+
+        let transform_opts = TransformCssItemsOptions {
+          atomic: if matches!(kind, CssMapKind::NonAtomic) {
+            Some(false)
+          } else {
+            None
+          },
+          non_atomic_class_name,
+        };
+        let transform_result = transform_css_items(&css_output.css, meta, &transform_opts);
+
         total_sheets.extend(
           transform_result
             .sheets
@@ -161,24 +222,29 @@ where
         new_properties.push(PropOrSpread::Prop(Box::new(new_prop)));
       }
 
-      if std::env::var("COMPILED_CLI_TRACE").is_ok() {
-        eprintln!(
-          "[css-map] cached {} sheets for {} => {:?}",
-          total_sheets.len(),
-          binding_identifier.sym,
-          total_sheets
-        );
-      }
-
       meta
         .state_mut()
         .css_map
         .insert(binding_identifier.sym.to_string(), total_sheets);
       {
         let mut state = meta.state_mut();
-        // Avoid surfacing style_rules/sheets from cssMap definitions; Babel leaves metadata empty.
-        state.style_rules = initial_style_rules;
-        state.sheets = initial_sheets;
+        match kind {
+          CssMapKind::Atomic => {
+            // For atomic cssMap, Babel leaves metadata empty — sheets are only emitted later
+            // when `styles.variant` is accessed in a `css` prop or `xcss` prop, which calls
+            // `transform_css_items` and flushes them from `state.css_map`. Reset to avoid
+            // surfacing them prematurely.
+            state.style_rules = initial_style_rules;
+            state.sheets = initial_sheets;
+          }
+          CssMapKind::NonAtomic => {
+            // For non-atomic cssMapScoped, each variant produces a single static `.cc-<hash>`
+            // class name that is used directly as a `className` string. There is no later
+            // `CssItem::Map` processing path that would flush the sheets — so we must emit
+            // them into `style_rules` now so the runtime style injection picks them up.
+            // (Do not reset: keep the sheets written by `transform_css_items_with_options`.)
+          }
+        }
       }
 
       ObjectLit {
@@ -191,12 +257,56 @@ where
 
 /// Convenience wrapper around `visit_css_map_path_with_builder` that wires in
 /// the shared `build_css` helper.
+///
+/// Pass `CssMapKind { non_atomic: true }` when the call originated from `cssMapScoped`
+/// to emit a single non-atomic `.cc-<hash>` class per variant instead of atomic classes.
+/// For regular `cssMap`, use `CssMapKind::Atomic`.
 pub fn visit_css_map_path<'a>(
   usage: CssMapUsage<'a>,
   parent_identifier: Option<&Ident>,
   meta: &Metadata,
+  kind: CssMapKind,
 ) -> ObjectLit {
-  visit_css_map_path_with_builder(usage, parent_identifier, meta, build_css_from_expr)
+  visit_css_map_path_with_builder(usage, parent_identifier, meta, kind, build_css_from_expr)
+}
+
+/// Compute a project-root-relative file key for hashing non-atomic class names.
+///
+/// Mirrors compiled's `getNonAtomicClassName` logic so that hashes are stable across
+/// machines and CI environments (where the absolute path varies but the relative
+/// path within the repo does not).
+///
+/// Rules:
+/// - If `filename` is `None`, returns an empty string (no filename available).
+/// - If `filename` is inside `root`, returns the forward-slash-normalised path
+///   relative to `root` (e.g. `"src/components/Panel.tsx"`).
+/// - If `filename` is OUTSIDE `root` (e.g. test fixtures at arbitrary absolute
+///   paths), falls back to the file's basename to avoid leaking `..` path
+///   traversal segments into the hash input.
+fn compute_relative_file_key(filename: Option<&str>, root: &std::path::Path) -> String {
+  let Some(filename) = filename else {
+    return String::new();
+  };
+  let path = std::path::Path::new(filename);
+  match path.strip_prefix(root) {
+    Ok(relative) => {
+      // Normalise to forward slashes so the hash is stable across Windows
+      // (where `Path` separators are backslashes by default).
+      relative
+        .components()
+        .map(|c| c.as_os_str().to_string_lossy())
+        .collect::<Vec<_>>()
+        .join("/")
+    }
+    Err(_) => {
+      // File is outside the project root — fall back to the basename so the
+      // hash doesn't depend on the absolute path of the test fixture / temp dir.
+      path
+        .file_name()
+        .map(|f| f.to_string_lossy().into_owned())
+        .unwrap_or_default()
+    }
+  }
 }
 
 fn empty_object(span: Span) -> ObjectLit {
@@ -207,8 +317,56 @@ fn empty_object(span: Span) -> ObjectLit {
 }
 
 #[cfg(test)]
+mod relative_file_key_tests {
+  use super::compute_relative_file_key;
+  use std::path::Path;
+
+  #[test]
+  fn returns_empty_when_filename_missing() {
+    assert_eq!(compute_relative_file_key(None, Path::new("/repo")), "");
+  }
+
+  #[test]
+  fn strips_root_prefix_when_file_is_inside_root() {
+    let key = compute_relative_file_key(Some("/repo/packages/x/src/foo.tsx"), Path::new("/repo"));
+    assert_eq!(key, "packages/x/src/foo.tsx");
+  }
+
+  #[test]
+  fn falls_back_to_basename_when_file_is_outside_root() {
+    // Test fixtures may live at arbitrary temp paths outside the configured
+    // project root — the helper must not leak `..` segments into the hash.
+    let key = compute_relative_file_key(Some("/tmp/some/fixture/dir/foo.tsx"), Path::new("/repo"));
+    assert_eq!(key, "foo.tsx");
+  }
+
+  #[test]
+  fn hash_is_stable_across_different_roots_for_same_relative_path() {
+    // The key insight: two devs / CI agents with the SAME relative path
+    // under different roots get the SAME key, so the hash is stable.
+    let a = compute_relative_file_key(
+      Some("/Users/alice/work/repo/src/foo.tsx"),
+      Path::new("/Users/alice/work/repo"),
+    );
+    let b = compute_relative_file_key(
+      Some("/home/runner/checkout/repo/src/foo.tsx"),
+      Path::new("/home/runner/checkout/repo"),
+    );
+    assert_eq!(a, b, "relative key must be identical across machines");
+    assert_eq!(a, "src/foo.tsx");
+  }
+
+  #[test]
+  fn returns_basename_when_path_has_no_directory_components() {
+    // Edge case: bare filename outside root.
+    let key = compute_relative_file_key(Some("foo.tsx"), Path::new("/repo"));
+    assert_eq!(key, "foo.tsx");
+  }
+}
+
+#[cfg(test)]
 mod tests {
-  use super::{CssMapUsage, visit_css_map_path_with_builder};
+  use super::{CssMapKind, CssMapUsage, visit_css_map_path_with_builder};
   use crate::types::{Metadata, PluginOptions, TransformFile, TransformState};
   use crate::utils_types::{CssItem, CssOutput};
   use std::cell::RefCell;
@@ -354,6 +512,7 @@ mod tests {
       CssMapUsage::Call(&call),
       Some(&binding),
       &meta,
+      CssMapKind::Atomic,
       |expr, _| build_css_from_object(expr),
     );
 
@@ -403,6 +562,7 @@ mod tests {
       CssMapUsage::TaggedTemplate(&tagged_template),
       Some(&ident("styles")),
       &meta,
+      CssMapKind::Atomic,
       |_, _| CssOutput::new(),
     );
 
@@ -428,6 +588,7 @@ mod tests {
       CssMapUsage::Call(&call),
       Some(&ident("styles")),
       &meta,
+      CssMapKind::Atomic,
       |_, _| CssOutput::new(),
     );
 
@@ -450,6 +611,7 @@ mod tests {
       CssMapUsage::Call(&call),
       Some(&ident("styles")),
       &meta,
+      CssMapKind::Atomic,
       |_, _| CssOutput {
         css: vec![CssItem::unconditional("color: red;".to_string())],
         variables: vec![crate::utils_types::Variable {
@@ -484,6 +646,7 @@ mod tests {
       CssMapUsage::Call(&call),
       Some(&ident("styles")),
       &meta,
+      CssMapKind::Atomic,
       |_, _| CssOutput {
         css: vec![
           CssItem::sheet(".one { color: red; }".to_string()),
@@ -508,10 +671,16 @@ mod tests {
     let argument = css_map_argument();
     let call = css_map_call(Expr::Object(argument));
 
-    visit_css_map_path_with_builder(CssMapUsage::Call(&call), None, &meta, |_, _| CssOutput {
-      css: vec![CssItem::unconditional("color: red;".to_string())],
-      variables: Vec::new(),
-    });
+    visit_css_map_path_with_builder(
+      CssMapUsage::Call(&call),
+      None,
+      &meta,
+      CssMapKind::Atomic,
+      |_, _| CssOutput {
+        css: vec![CssItem::unconditional("color: red;".to_string())],
+        variables: Vec::new(),
+      },
+    );
 
     let diagnostics = meta.state().diagnostics.clone();
     assert_eq!(diagnostics.len(), 1);
@@ -535,6 +704,7 @@ mod tests {
       CssMapUsage::Call(&call),
       Some(&ident("styles")),
       &meta,
+      CssMapKind::Atomic,
       |_, _| CssOutput::new(),
     );
 
@@ -682,6 +852,7 @@ mod tests {
       CssMapUsage::Call(&call),
       Some(&binding),
       &meta,
+      CssMapKind::Atomic,
       |expr, _| build_css_with_nested_selectors(expr),
     );
 
@@ -729,6 +900,7 @@ mod tests {
       CssMapUsage::Call(&call),
       Some(&binding),
       &meta,
+      CssMapKind::Atomic,
       |expr, _| build_css_with_nested_selectors(expr),
     );
 
@@ -800,6 +972,7 @@ mod tests {
       CssMapUsage::Call(&call),
       Some(&binding),
       &meta,
+      CssMapKind::Atomic,
       |expr, _| build_css_with_nested_selectors(expr),
     );
 
@@ -854,6 +1027,7 @@ mod tests {
       CssMapUsage::Call(&call),
       Some(&binding),
       &meta,
+      CssMapKind::Atomic,
       |expr, _| build_css_with_nested_selectors(expr),
     );
 
@@ -909,6 +1083,7 @@ mod tests {
       CssMapUsage::Call(&call),
       Some(&binding),
       &meta,
+      CssMapKind::Atomic,
       |expr, _| build_css_with_nested_selectors(expr),
     );
 
@@ -950,13 +1125,16 @@ mod tests {
     let call = css_map_call(Expr::Object(argument));
 
     let binding = ident("styles");
-    let result =
-      visit_css_map_path_with_builder(CssMapUsage::Call(&call), Some(&binding), &meta, |_, _| {
-        CssOutput {
-          css: vec![],
-          variables: Vec::new(),
-        }
-      });
+    let result = visit_css_map_path_with_builder(
+      CssMapUsage::Call(&call),
+      Some(&binding),
+      &meta,
+      CssMapKind::Atomic,
+      |_, _| CssOutput {
+        css: vec![],
+        variables: Vec::new(),
+      },
+    );
 
     assert_eq!(result.props.len(), 1);
 
@@ -1003,6 +1181,7 @@ mod tests {
       CssMapUsage::Call(&call),
       Some(&binding),
       &meta,
+      CssMapKind::Atomic,
       |expr, _| build_css_with_nested_selectors(expr),
     );
 
@@ -1062,6 +1241,7 @@ mod tests {
       CssMapUsage::Call(&call),
       Some(&binding),
       &meta,
+      CssMapKind::Atomic,
       |expr, _| build_css_with_nested_selectors(expr),
     );
 
@@ -1146,6 +1326,7 @@ mod tests {
         CssMapUsage::Call(&call),
         Some(&binding),
         &meta,
+        CssMapKind::Atomic,
         |expr, _| build_css_with_nested_selectors(expr),
       );
 
@@ -1187,6 +1368,7 @@ mod tests {
       CssMapUsage::Call(&call),
       Some(&ident("styles")),
       &meta,
+      CssMapKind::Atomic,
       |_, _| CssOutput {
         css: vec![],
         variables: vec![crate::utils_types::Variable {

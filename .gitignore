@@ -41,3 +41,11 @@ packaging-output/
 # SSR runtime meta output from testing
 tesseract-shared.lmdb
 tesseract-shared.lmdb-lock
+
+# insta snapshot review files (transient — never commit)
+# Inline snapshots are persisted directly into the source `.rs` files;
+# `.pending-snap` files are temporary scratch generated during a failing
+# snapshot diff that the developer reviews via `cargo insta review`.
+*.pending-snap
+# Watchman creates temporary cookie files for filesystem sync detection
+.watchman-cookie-*

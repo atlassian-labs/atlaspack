@@ -14,7 +14,7 @@ use crate::utils_build_compiled_component::compiled_template;
 use crate::utils_build_css_variables::build_css_variables;
 use crate::utils_css_builders::build_css as build_css_from_expr;
 use crate::utils_get_runtime_class_name_library::get_runtime_class_name_library;
-use crate::utils_transform_css_items::transform_css_items;
+use crate::utils_transform_css_items::{TransformCssItemsOptions, transform_css_items};
 use crate::utils_types::{CssOutput, Variable};
 
 #[derive(Clone, Debug, PartialEq)]
@@ -236,7 +236,11 @@ where
   fn visit_mut_expr(&mut self, expr: &mut Expr) {
     if let Some(styles) = extract_styles_from_expr(expr, self.css_identifiers) {
       let css_output = (self.build_css)(styles, self.meta);
-      let transform_result = transform_css_items(&css_output.css, self.meta);
+      let transform_result = transform_css_items(
+        &css_output.css,
+        self.meta,
+        &TransformCssItemsOptions::default(),
+      );
 
       self
         .collected_variables

@@ -1,0 +1,10 @@
+{
+  "name": "simple-project-with-css-map-scoped-runtime",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@compiled/react": "*",
+    "react": "*",
+    "react-dom": "*"
+  }
+}

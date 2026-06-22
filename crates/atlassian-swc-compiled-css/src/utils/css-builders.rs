@@ -13,7 +13,7 @@ use swc_core::ecma::codegen::text_writer::JsWriter;
 use swc_core::ecma::codegen::{Config, Emitter, Node};
 use swc_core::ecma::utils::ExprExt;
 
-use crate::css_map::{CssMapUsage, visit_css_map_path_with_builder};
+use crate::css_map::{CssMapKind, CssMapUsage, visit_css_map_path_with_builder};
 use crate::postcss::plugins::sort_shorthand_declarations::{
   parent_shorthand_for, shorthand_bucket,
 };
@@ -830,6 +830,7 @@ where
           CssMapUsage::Call(call),
           Some(identifier),
           &binding_meta,
+          CssMapKind::Atomic, // regular cssMap — atomic
           |expr, metadata| build_css(expr, metadata),
         );
 

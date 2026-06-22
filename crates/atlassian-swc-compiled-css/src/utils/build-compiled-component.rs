@@ -12,7 +12,7 @@ use crate::utils_build_css_variables::build_css_variables;
 use crate::utils_get_jsx_attribute::get_jsx_attribute;
 use crate::utils_get_runtime_class_name_library::get_runtime_class_name_library;
 use crate::utils_hoist_sheet::hoist_sheet;
-use crate::utils_transform_css_items::transform_css_items;
+use crate::utils_transform_css_items::{TransformCssItemsOptions, transform_css_items};
 use crate::utils_types::{CssOutput, Variable};
 
 fn ident(name: &str) -> Ident {
@@ -324,7 +324,8 @@ fn merge_style_attribute(node: &mut Expr, variables: &[Variable]) {
 /// Returns the Compiled component wrapper for the provided JSX element and CSS
 /// output, mirroring the behaviour of the Babel helper.
 pub fn build_compiled_component(mut node: Expr, css_output: &CssOutput, meta: &Metadata) -> Expr {
-  let transform_result = transform_css_items(&css_output.css, meta);
+  let transform_result =
+    transform_css_items(&css_output.css, meta, &TransformCssItemsOptions::default());
 
   if std::env::var("COMPILED_CLI_TRACE").is_ok() {
     let state = meta.state();
