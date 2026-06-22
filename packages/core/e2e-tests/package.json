@@ -23,9 +23,9 @@
     "playwright": "1.60.0"
   },
   "dependencies": {
-    "@compiled/react": "^0.22.0",
+    "@compiled/react": "^0.22.1",
     "@atlaskit/button": "^23.5.3",
     "@atlaspack/transformer-compiled-external": "0.2.17",
-    "@compiled/parcel-optimizer": "^0.6.6"
+    "@compiled/parcel-optimizer": "^0.6.7"
   }
 }
