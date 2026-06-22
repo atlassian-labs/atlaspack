@@ -1,5 +1,14 @@
 # @atlaspack/transformer-babel
 
+## 2.15.25
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.3.8
+  - @atlaspack/utils@3.4.6
+  - @atlaspack/plugin@2.14.64
+
 ## 2.15.24
 
 ### Patch Changes

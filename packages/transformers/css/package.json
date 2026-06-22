@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-css",
-  "version": "2.15.24",
+  "version": "2.15.25",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -17,11 +17,11 @@
   },
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/plugin": "2.14.63",
+    "@atlaspack/plugin": "2.14.64",
     "@atlaspack/feature-flags": "2.31.3",
-    "@atlaspack/source-map": "3.3.7",
-    "@atlaspack/types": "2.15.53",
-    "@atlaspack/utils": "3.4.5",
+    "@atlaspack/source-map": "3.3.8",
+    "@atlaspack/types": "2.15.54",
+    "@atlaspack/utils": "3.4.6",
     "browserslist": "^4.6.6",
     "lightningcss": "^1.28.2",
     "nullthrows": "^1.1.1"

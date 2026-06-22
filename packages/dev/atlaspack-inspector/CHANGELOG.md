@@ -1,5 +1,16 @@
 # @atlaspack/inspector
 
+## 0.0.51
+
+### Patch Changes
+
+- [#1112](https://github.com/atlassian-labs/atlaspack/pull/1112) [`e5bbfa7`](https://github.com/atlassian-labs/atlaspack/commit/e5bbfa7875c5c292a3d59b7b8e7d62d8e99e68c2) Thanks [@xtan-atlas](https://github.com/xtan-atlas)! - Fix flaky E2E tests and bump Playwright to 1.60.0.
+
+- Updated dependencies []:
+  - @atlaspack/cache@3.2.59
+  - @atlaspack/core@2.39.1
+  - @atlaspack/cli@2.15.27
+
 ## 0.0.50
 
 ### Patch Changes
