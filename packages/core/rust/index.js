@@ -342,6 +342,7 @@ const {
   hashBuffer,
   hashCode,
   hashString,
+  ImportedBindingHop,
   initializeMonitoring,
   initTracingSubscriber,
   isSafeFromJs,
@@ -392,6 +393,7 @@ module.exports.Hash = Hash
 module.exports.hashBuffer = hashBuffer
 module.exports.hashCode = hashCode
 module.exports.hashString = hashString
+module.exports.ImportedBindingHop = ImportedBindingHop
 module.exports.initializeMonitoring = initializeMonitoring
 module.exports.initTracingSubscriber = initTracingSubscriber
 module.exports.isSafeFromJs = isSafeFromJs
