@@ -604,7 +604,6 @@ fn config_to_plugin_options(
     // Allow the transformer to apply its own parser defaults (TS + JSX) instead of forcing none.
     parser_babel_plugins: None,
     add_component_name: Some(config.add_component_name),
-    class_name_compression_map: Some(std::collections::BTreeMap::new()),
     process_xcss: Some(config.process_xcss),
     increase_specificity: Some(config.increase_specificity),
     sort_at_rules: Some(config.sort_at_rules),

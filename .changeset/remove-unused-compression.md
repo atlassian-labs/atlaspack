@@ -1,5 +1,6 @@
 ---
-"@atlaspack/transformer-compiled-css-in-js": major
+'@atlaspack/transformer-compiled-css-in-js': major
+'@atlaspack/rust': major
 ---
 
 Remove unused `classNameCompressionMap` option and `ac` runtime helper.

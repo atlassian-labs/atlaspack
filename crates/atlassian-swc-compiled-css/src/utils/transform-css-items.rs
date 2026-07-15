@@ -1,5 +1,4 @@
 use std::cell::Cell;
-use std::collections::HashMap;
 
 fn first_property_from_sheet(sheet: &str) -> Option<String> {
   if let Some(open) = sheet.find('{') {

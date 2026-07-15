@@ -226,7 +226,7 @@ fn build_style_attribute(
   jsx_attribute("style", value)
 }
 
-fn merge_class_name(node: &mut Expr, class_names: &[Expr], meta: &Metadata) {
+fn merge_class_name(node: &mut Expr, class_names: &[Expr], _meta: &Metadata) {
   let helper = "ax";
 
   let (existing_value, index) = {

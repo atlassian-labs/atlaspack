@@ -32,7 +32,7 @@ fn create_specifier(name: &str) -> ImportSpecifier {
   })
 }
 
-fn ensure_runtime_import(module: &mut swc_core::ecma::ast::Module, state: &mut TransformState) {
+fn ensure_runtime_import(module: &mut swc_core::ecma::ast::Module, _state: &mut TransformState) {
   let runtime_imports = runtime_imports();
 
   if runtime_imports.is_empty() {

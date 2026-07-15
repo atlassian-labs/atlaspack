@@ -700,8 +700,7 @@ pub fn build_styled_component(
     &TransformCssItemsOptions::default(),
   );
 
-  let unconditional_class_names =
-    join_class_names(&css_result.class_names, &css_result.sheets);
+  let unconditional_class_names = join_class_names(&css_result.class_names, &css_result.sheets);
 
   let component_name = component_name
     .map(|name| name.to_string())

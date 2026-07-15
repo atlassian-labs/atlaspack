@@ -530,10 +530,9 @@ mod tests {
               panic!("unexpected callee");
             };
             match callee.as_ref() {
-              Expr::Ident(ident) => assert!(
-                ident.sym.as_ref() == "ax",
-                "unexpected runtime helper"
-              ),
+              Expr::Ident(ident) => {
+                assert!(ident.sym.as_ref() == "ax", "unexpected runtime helper")
+              }
               other => panic!("unexpected className expression: {other:?}"),
             }
           }
@@ -617,5 +616,4 @@ mod tests {
 
     assert!(result.is_err());
   }
-
 }
