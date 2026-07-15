@@ -1,5 +1,14 @@
 # @atlaspack/transformer-typescript-tsc
 
+## 2.15.26
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.3.9
+  - @atlaspack/plugin@2.14.65
+  - @atlaspack/ts-utils@2.14.44
+
 ## 2.15.25
 
 ### Patch Changes

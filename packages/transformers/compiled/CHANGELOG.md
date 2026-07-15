@@ -1,5 +1,22 @@
 # @atlaspack/transformer-compiled
 
+## 1.0.0
+
+### Major Changes
+
+- [#1117](https://github.com/atlassian-labs/atlaspack/pull/1117) [`13adf40`](https://github.com/atlassian-labs/atlaspack/commit/13adf402c718547777e81845be39b204644eb4c3) Thanks [@pancaspe87](https://github.com/pancaspe87)! - Remove unused `classNameCompressionMap` and `classNameCompressionMapFilePath` options from the TypeScript compiled transformer.
+
+  These options were never used in production by any Atlassian product. They have been removed from `CompiledTransformerOpts` and the transformer config handling.
+
+  **Breaking change:** If you were setting `classNameCompressionMap` or `classNameCompressionMapFilePath` in your transformer config, remove them. These options no longer exist.
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.3.9
+  - @atlaspack/utils@3.4.7
+  - @atlaspack/plugin@2.14.65
+
 ## 0.5.9
 
 ### Patch Changes

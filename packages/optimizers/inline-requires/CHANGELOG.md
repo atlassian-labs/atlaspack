@@ -1,5 +1,15 @@
 # @atlaspack/optimizer-inline-requires
 
+## 2.16.11
+
+### Patch Changes
+
+- Updated dependencies [[`91dd26c`](https://github.com/atlassian-labs/atlaspack/commit/91dd26c1ecf6e9045ca08759b60d41707d60de2a)]:
+  - @atlaspack/rust@4.0.0
+  - @atlaspack/source-map@3.3.9
+  - @atlaspack/types@2.15.55
+  - @atlaspack/plugin@2.14.65
+
 ## 2.16.10
 
 ### Patch Changes

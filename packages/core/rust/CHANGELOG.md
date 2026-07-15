@@ -1,5 +1,17 @@
 # @atlaspack/rust
 
+## 4.0.0
+
+### Major Changes
+
+- [#1115](https://github.com/atlassian-labs/atlaspack/pull/1115) [`91dd26c`](https://github.com/atlassian-labs/atlaspack/commit/91dd26c1ecf6e9045ca08759b60d41707d60de2a) Thanks [@pancaspe87](https://github.com/pancaspe87)! - Remove unused `classNameCompressionMap` option and `ac` runtime helper.
+
+  The `classNameCompressionMap` option was never used in production by any Atlassian product. It has been removed alongside the `ac()` runtime helper and the related `compress-class-names-for-runtime` and `get-runtime-class-name-library` utilities.
+
+  All class name merging now unconditionally uses `ax()`.
+
+  **Breaking change:** If you were setting `classNameCompressionMap` in your transformer config, remove it. The option no longer exists.
+
 ## 3.30.0
 
 ### Minor Changes

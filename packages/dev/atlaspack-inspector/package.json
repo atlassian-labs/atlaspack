@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/inspector",
-  "version": "0.0.51",
+  "version": "0.0.52",
   "license": "(MIT OR Apache-2.0)",
   "authors": [
     "Pedro Tacla Yamada"
@@ -38,9 +38,9 @@
   ],
   "dependencies": {
     "@atlaspack/build-cache": "2.13.17",
-    "@atlaspack/cache": "3.2.59",
-    "@atlaspack/core": "2.39.1",
-    "@atlaspack/cli": "2.15.27",
+    "@atlaspack/cache": "3.2.60",
+    "@atlaspack/core": "2.39.2",
+    "@atlaspack/cli": "2.15.28",
     "@atlaspack/feature-flags": "2.31.3",
     "@modelcontextprotocol/sdk": "^1.13.0",
     "commander": "^8.3.0",
