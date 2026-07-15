@@ -89,29 +89,6 @@ export default new Transformer<Config>({
         config.invalidateOnStartup();
       }
 
-      // Use `classNameCompressionMapFilePath` to get classNameCompressionMap
-      // Note `classNameCompressionMap` and `classNameCompressionMapFilePath` are mutually exclusive.
-      // If both are provided, classNameCompressionMap takes precedence.
-      if (
-        !conf.contents.classNameCompressionMap &&
-        conf.contents.classNameCompressionMapFilePath
-      ) {
-        // Use `getConfigFrom` from Atlaspack so the contents are cached at `.parcel-cache`
-        const configClassNameCompressionMap = await config.getConfigFrom(
-          join(options.projectRoot, 'index'),
-          [conf.contents.classNameCompressionMapFilePath],
-          {
-            packageKey,
-          },
-        );
-
-        if (configClassNameCompressionMap?.contents) {
-          Object.assign(contents, {
-            classNameCompressionMap: configClassNameCompressionMap?.contents,
-          });
-        }
-      }
-
       Object.assign(contents, conf.contents);
 
       contents.importSources = [
@@ -222,9 +199,6 @@ export default new Transformer<Config>({
           {
             ...config.compiledConfig,
             importSources: config.compiledConfig.importSources,
-            classNameCompressionMap:
-              config.compiledConfig.extract &&
-              config.compiledConfig.classNameCompressionMap,
             onIncludedFiles: (files: string[]) => includedFiles.push(...files),
             resolver: config.compiledConfig.resolver
               ? config.compiledConfig.resolver
