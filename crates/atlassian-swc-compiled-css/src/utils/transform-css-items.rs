@@ -1,5 +1,5 @@
 use std::cell::Cell;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
 fn first_property_from_sheet(sheet: &str) -> Option<String> {
   if let Some(open) = sheet.find('{') {
@@ -153,7 +153,6 @@ use swc_core::ecma::ast::{
 
 use crate::postcss::transform::{TransformCssOptions, transform_css};
 use crate::types::Metadata;
-use crate::utils_compress_class_names_for_runtime::compress_class_names_for_runtime;
 use crate::utils_types::{CssItem, LogicalOperator};
 
 #[derive(Debug, Default)]
@@ -168,9 +167,7 @@ pub struct TransformCssItemsResult {
   pub class_names: Vec<Expr>,
 }
 
-pub(crate) fn create_transform_css_options(
-  meta: &Metadata,
-) -> (TransformCssOptions, Option<BTreeMap<String, String>>) {
+pub(crate) fn create_transform_css_options(meta: &Metadata) -> (TransformCssOptions,) {
   let state = meta.state();
   let mut options = TransformCssOptions::default();
   options.optimize_css = state.opts.optimize_css;
@@ -189,16 +186,7 @@ pub(crate) fn create_transform_css_options(
   options.cssnano_browserslist_config_path = Some(state.cssnano_browserslist_config_path.clone());
   options.browserslist_env = state.opts.browserslist_env.clone();
 
-  let compression_map = state.opts.class_name_compression_map.clone();
-  if let Some(map) = &compression_map {
-    let converted: HashMap<String, String> = map
-      .iter()
-      .map(|(key, value)| (key.clone(), value.clone()))
-      .collect();
-    options.class_name_compression_map = Some(converted);
-  }
-
-  (options, compression_map)
+  (options,)
 }
 
 fn logical_operator_to_binary_op(operator: LogicalOperator) -> BinaryOp {
@@ -530,11 +518,10 @@ fn transform_css_item(item: &CssItem, meta: &Metadata) -> TransformCssItemResult
       }
     }
     CssItem::Logical(logical) => {
-      let (options, compression_map) = create_transform_css_options(meta);
+      let (options,) = create_transform_css_options(meta);
       let css_result = transform_css(&logical.css, options).unwrap_or_else(|err| panic!("{err}"));
       let ordered = order_class_names_from_sheet_order(&css_result.class_names, &css_result.sheets);
-      let compressed = compress_class_names_for_runtime(&ordered, compression_map.as_ref());
-      let class_name_literal = string_literal(compressed.join(" "));
+      let class_name_literal = string_literal(ordered.join(" "));
 
       TransformCssItemResult {
         sheets: css_result.sheets,
@@ -600,7 +587,7 @@ fn transform_css_item(item: &CssItem, meta: &Metadata) -> TransformCssItemResult
           }
         }
       }
-      let (options, compression_map) = create_transform_css_options(meta);
+      let (options,) = create_transform_css_options(meta);
       let css_result = transform_css(&css, options).unwrap_or_else(|err| panic!("{err}"));
       if std::env::var("COMPILED_CSS_TRACE").is_ok() {
         eprintln!("[transform-css-item] sheets raw={:?}", css_result.sheets);
@@ -611,8 +598,7 @@ fn transform_css_item(item: &CssItem, meta: &Metadata) -> TransformCssItemResult
       }
 
       let ordered = order_class_names_from_sheet_order(&css_result.class_names, &css_result.sheets);
-      let compressed = compress_class_names_for_runtime(&ordered, compression_map.as_ref());
-      let class_name = compressed.join(" ");
+      let class_name = ordered.join(" ");
       let class_expression = if class_name.trim().is_empty() {
         None
       } else {
@@ -676,7 +662,7 @@ pub fn transform_css_items(
       return TransformCssItemsResult::default();
     }
 
-    let (mut transform_opts, _) = create_transform_css_options(meta);
+    let (mut transform_opts,) = create_transform_css_options(meta);
     transform_opts.atomic = Some(false);
     transform_opts.non_atomic_class_name = opts.non_atomic_class_name.clone();
 
@@ -816,7 +802,7 @@ mod tests {
   #[test]
   fn default_browserslist_resolution_walks_to_compiled_css() {
     let meta = create_metadata();
-    let (options, _compression) = create_transform_css_options(&meta);
+    let (options,) = create_transform_css_options(&meta);
     let resolved = options
       .browserslist_config_path
       .expect("browserslist_config_path should be set");
@@ -843,7 +829,7 @@ mod tests {
     let cwd = file.cwd.clone();
     let state = Rc::new(RefCell::new(TransformState::new(file, opts)));
     let meta = Metadata::new(state);
-    let (options, _compression) = create_transform_css_options(&meta);
+    let (options,) = create_transform_css_options(&meta);
     // Default (false): browserslist resolves from cwd, matching Babel's
     // autoprefixer which uses { from: undefined } → process.cwd().
     assert_eq!(options.browserslist_config_path, Some(cwd));
@@ -1004,7 +990,7 @@ mod tests {
   #[test]
   fn transform_simple_minheight_css() {
     let meta = create_metadata();
-    let (options, _) = create_transform_css_options(&meta);
+    let (options,) = create_transform_css_options(&meta);
 
     let css1 = transform_css("a{min-height:100%;}", options).expect("transform css");
     assert_eq!(css1.class_names.len(), 1);
@@ -1016,7 +1002,7 @@ mod tests {
     // (matching Babel's postcss-reduce-initial behavior with default browsers),
     // so `transparent` is NOT converted to `initial`.
     let meta = create_metadata();
-    let (options, _) = create_transform_css_options(&meta);
+    let (options,) = create_transform_css_options(&meta);
 
     let result = transform_css("background-color:transparent;", options).expect("transform css");
     assert!(
@@ -1033,7 +1019,7 @@ mod tests {
     // because browserslist defaults include browsers that don't support
     // css-rrggbbaa (4/8-digit hex colors).
     let meta = create_metadata();
-    let (options, _) = create_transform_css_options(&meta);
+    let (options,) = create_transform_css_options(&meta);
 
     let result = transform_css(
       "background-color:var(--ds-background-neutral-subtle,#00000000);",
@@ -1068,7 +1054,7 @@ mod tests {
     // initial_support is false, so currentColor should NOT be converted to
     // `initial` by reduce-initial for text-decoration-color.
     let meta = create_metadata();
-    let (options, _) = create_transform_css_options(&meta);
+    let (options,) = create_transform_css_options(&meta);
 
     let result =
       transform_css("text-decoration-color:currentColor;", options).expect("transform css");
@@ -1090,7 +1076,7 @@ mod tests {
   #[test]
   fn transform_keyframes_preserves_negative_percent() {
     let meta = create_metadata();
-    let (mut options, _) = create_transform_css_options(&meta);
+    let (mut options,) = create_transform_css_options(&meta);
 
     // This tests that -100% is preserved in keyframes, not truncated to -100
     let css = "@keyframes test{0%{background-position:100%}to{background-position:-100%}}";

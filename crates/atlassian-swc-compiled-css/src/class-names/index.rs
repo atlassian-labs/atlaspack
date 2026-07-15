@@ -13,7 +13,6 @@ use crate::utils_ast::pick_function_body;
 use crate::utils_build_compiled_component::compiled_template;
 use crate::utils_build_css_variables::build_css_variables;
 use crate::utils_css_builders::build_css as build_css_from_expr;
-use crate::utils_get_runtime_class_name_library::get_runtime_class_name_library;
 use crate::utils_transform_css_items::{TransformCssItemsOptions, transform_css_items};
 use crate::utils_types::{CssOutput, Variable};
 
@@ -328,7 +327,7 @@ where
     return false;
   }
 
-  let runtime_helper = get_runtime_class_name_library(meta);
+  let runtime_helper = "ax";
   let children_expr = ensure_children_function(element, meta);
   let (css_identifiers, style_identifiers) = collect_css_and_style_aliases(children_expr);
 
@@ -532,7 +531,7 @@ mod tests {
             };
             match callee.as_ref() {
               Expr::Ident(ident) => assert!(
-                ident.sym.as_ref() == "ax" || ident.sym.as_ref() == "ac",
+                ident.sym.as_ref() == "ax",
                 "unexpected runtime helper"
               ),
               other => panic!("unexpected className expression: {other:?}"),
@@ -619,37 +618,4 @@ mod tests {
     assert!(result.is_err());
   }
 
-  #[test]
-  fn runtime_helper_switches_with_compression_map() {
-    crate::test_utils::with_globals(|| {
-      let mut expr =
-        parse_jsx_expression("<ClassNames>{({ css }) => <div className={css({})} />}</ClassNames>");
-      let mut options = PluginOptions::default();
-      options.class_name_compression_map = Some(std::collections::BTreeMap::from([(
-        "ax".into(),
-        "a".into(),
-      )]));
-      let cm: Lrc<SourceMap> = Default::default();
-      let file = TransformFile::transform_compiled_with_options(
-        cm,
-        Vec::new(),
-        crate::types::TransformFileOptions {
-          filename: Some("file.tsx".into()),
-          ..Default::default()
-        },
-      );
-      let state = Rc::new(RefCell::new(TransformState::new(file, options)));
-      {
-        let mut state_mut = state.borrow_mut();
-        state_mut.compiled_imports = Some(CompiledImports {
-          class_names: vec!["ClassNames".into()],
-          ..CompiledImports::default()
-        });
-      }
-      let meta = Metadata::new(Rc::clone(&state));
-
-      let transformed = visit_class_names_with_builder(&mut expr, &meta, |_, _| css_output());
-      assert!(transformed);
-    });
-  }
 }

@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::env;
 
 use indexmap::IndexSet;
@@ -21,10 +20,8 @@ use crate::postcss::transform::transform_css;
 use crate::types::{Metadata, Tag, TagType};
 use crate::utils_ast::pick_function_body;
 use crate::utils_build_css_variables::build_css_variables_with_transform;
-use crate::utils_compress_class_names_for_runtime::compress_class_names_for_runtime;
 use crate::utils_css_builders::get_item_css;
 use crate::utils_find_open_selectors::find_open_selectors;
-use crate::utils_get_runtime_class_name_library::get_runtime_class_name_library;
 use crate::utils_hoist_sheet::hoist_sheet;
 use crate::utils_is_prop_valid::is_prop_valid;
 use crate::utils_transform_css_items::{
@@ -636,14 +633,9 @@ fn order_class_names_from_sheet_order(class_names: &[String], sheets: &[String])
   ordered.into_iter().collect()
 }
 
-fn compress_class_names(
-  class_names: &[String],
-  compression_map: Option<&BTreeMap<String, String>>,
-  sheets: &[String],
-) -> String {
+fn join_class_names(class_names: &[String], sheets: &[String]) -> String {
   let ordered = order_class_names_from_sheet_order(class_names, sheets);
-  let compressed = compress_class_names_for_runtime(&ordered, compression_map);
-  compressed.join(" ")
+  ordered.join(" ")
 }
 
 /// Builds the styled component wrapper mirroring the Babel helper.
@@ -678,7 +670,7 @@ pub fn build_styled_component(
   let has_invalid_dom_props = !invalid_dom_props.is_empty();
 
   let (unconditional_css, conditional_items) = serialize_css_items(&css_output.css);
-  let (options, compression_map) = create_transform_css_options(meta);
+  let (options,) = create_transform_css_options(meta);
 
   if let Ok(label) = std::env::var("DEBUG_CSS_FIXTURE") {
     if let Some(filename) = &meta.state().filename {
@@ -708,14 +700,13 @@ pub fn build_styled_component(
     &TransformCssItemsOptions::default(),
   );
 
-  let class_map_ref = compression_map.as_ref();
   let unconditional_class_names =
-    compress_class_names(&css_result.class_names, class_map_ref, &css_result.sheets);
+    join_class_names(&css_result.class_names, &css_result.sheets);
 
   let component_name = component_name
     .map(|name| name.to_string())
     .or_else(|| component_name_from_tag(&tag));
-  let helper = get_runtime_class_name_library(meta);
+  let helper = "ax";
 
   let class_array = build_class_name_array(
     component_name.as_deref(),

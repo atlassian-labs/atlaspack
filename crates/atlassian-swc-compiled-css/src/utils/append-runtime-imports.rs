@@ -9,22 +9,10 @@ use swc_core::ecma::ast::{
 use crate::types::TransformState;
 
 const COMPILED_RUNTIME_MODULE: &str = "@compiled/react/runtime";
-const COMPILED_RUNTIME_IMPORTS_WITH_COMPRESSION: &[&str] = &["ac", "ix", "CC", "CS"];
 const COMPILED_RUNTIME_IMPORTS_WITHOUT_COMPRESSION: &[&str] = &["ax", "ix", "CC", "CS"];
 
-fn runtime_imports<'a>(state: &'a TransformState) -> &'a [&'static str] {
-  let uses_compression = state
-    .opts
-    .class_name_compression_map
-    .as_ref()
-    .map(|map| !map.is_empty())
-    .unwrap_or(false);
-
-  if uses_compression {
-    COMPILED_RUNTIME_IMPORTS_WITH_COMPRESSION
-  } else {
-    COMPILED_RUNTIME_IMPORTS_WITHOUT_COMPRESSION
-  }
+fn runtime_imports() -> &'static [&'static str] {
+  COMPILED_RUNTIME_IMPORTS_WITHOUT_COMPRESSION
 }
 
 fn local_name(specifier: &ImportSpecifier) -> &str {
@@ -45,7 +33,7 @@ fn create_specifier(name: &str) -> ImportSpecifier {
 }
 
 fn ensure_runtime_import(module: &mut swc_core::ecma::ast::Module, state: &mut TransformState) {
-  let runtime_imports = runtime_imports(state);
+  let runtime_imports = runtime_imports();
 
   if runtime_imports.is_empty() {
     return;
@@ -180,20 +168,6 @@ mod tests {
     append_runtime_imports(&mut module, &mut state);
 
     assert_eq!(local_names(&module), vec!["ix", "ax", "CC", "CS"]);
-  }
-
-  #[test]
-  fn respects_compression_map() {
-    let mut module = parse_module("const value = 1;");
-    let mut options = PluginOptions::default();
-    let mut map = std::collections::BTreeMap::new();
-    map.insert("a".to_string(), "b".to_string());
-    options.class_name_compression_map = Some(map);
-    let mut state = create_state(options);
-
-    append_runtime_imports(&mut module, &mut state);
-
-    assert_eq!(local_names(&module), vec!["ac", "ix", "CC", "CS"]);
   }
 
   #[test]

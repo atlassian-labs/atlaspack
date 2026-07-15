@@ -1706,16 +1706,7 @@ fn extract_stylesheets_plugin(
                 .take(4)
                 .collect::<String>();
               let full_class = format!("_{}{}", group, value_hash);
-              let used_class = if let Some(map) = &opts.class_name_compression_map {
-                let key = full_class.trim_start_matches('_');
-                if let Some(compressed) = map.get(key) {
-                  compressed.clone()
-                } else {
-                  full_class.clone()
-                }
-              } else {
-                full_class.clone()
-              };
+              let used_class = full_class.clone();
               let replaced = norm.replace('&', &format!(".{}", used_class));
               replaced_selectors.push(replaced);
             }
@@ -2542,16 +2533,7 @@ fn atomicify_rules_plugin(
           let value_hash = hash(&hash_seed).chars().take(4).collect::<String>();
           let full_class = format!("_{}{}", group, value_hash);
           collector.push_class(full_class.clone());
-          let used_class = if let Some(map) = &opts.class_name_compression_map {
-            let key = full_class.trim_start_matches('_');
-            if let Some(compressed) = map.get(key) {
-              compressed.clone()
-            } else {
-              full_class.clone()
-            }
-          } else {
-            full_class.clone()
-          };
+          let used_class = full_class.clone();
           let replaced = norm.replace('&', &format!(".{}", used_class));
           let selector_text =
             clean_placeholder_selector(replaced, opts.declaration_placeholder.as_deref());
@@ -2738,16 +2720,7 @@ fn atomicify_rules_plugin(
               let value_hash = hash(&hash_seed).chars().take(4).collect::<String>();
               let full_class = format!("_{}{}", group, value_hash);
               collector.push_class(full_class.clone());
-              let used_class = if let Some(map) = &opts.class_name_compression_map {
-                let key = full_class.trim_start_matches('_');
-                if let Some(compressed) = map.get(key) {
-                  compressed.clone()
-                } else {
-                  full_class.clone()
-                }
-              } else {
-                full_class.clone()
-              };
+              let used_class = full_class.clone();
               let replaced = norm.replace('&', &format!(".{}", used_class));
               let selector_text =
                 clean_placeholder_selector(replaced, opts.declaration_placeholder.as_deref());
@@ -2836,16 +2809,7 @@ fn atomicify_rules_plugin(
                   let value_hash = hash(&hash_seed).chars().take(4).collect::<String>();
                   let full_class = format!("_{}{}", group, value_hash);
                   collector.push_class(full_class.clone());
-                  let used_class = if let Some(map) = &opts.class_name_compression_map {
-                    let key = full_class.trim_start_matches('_');
-                    if let Some(compressed) = map.get(key) {
-                      compressed.clone()
-                    } else {
-                      full_class.clone()
-                    }
-                  } else {
-                    full_class.clone()
-                  };
+                  let used_class = full_class.clone();
                   let replaced = norm.replace('&', &format!(".{}", used_class));
                   let selector_text =
                     clean_placeholder_selector(replaced, opts.declaration_placeholder.as_deref());

@@ -51,8 +51,6 @@ mod utils_build_styled_component;
 mod utils_cache;
 #[path = "utils/comments.rs"]
 mod utils_comments;
-#[path = "utils/compress-class-names-for-runtime.rs"]
-mod utils_compress_class_names_for_runtime;
 #[path = "utils/constants.rs"]
 mod utils_constants;
 #[path = "utils/create-result-pair.rs"]
@@ -69,8 +67,6 @@ mod utils_evaluate_expression;
 mod utils_find_open_selectors;
 #[path = "utils/get-jsx-attribute.rs"]
 mod utils_get_jsx_attribute;
-#[path = "utils/get-runtime-class-name-library.rs"]
-mod utils_get_runtime_class_name_library;
 #[path = "utils/has-numeric-value.rs"]
 mod utils_has_numeric_value;
 #[path = "utils/hash.rs"]

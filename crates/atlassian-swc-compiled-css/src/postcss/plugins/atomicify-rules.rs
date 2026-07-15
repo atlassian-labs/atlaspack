@@ -32,7 +32,6 @@ impl Plugin for AtomicifyRules {
     }
 
     let options = AtomicifyOptions {
-      class_name_compression_map: ctx.options.class_name_compression_map.as_ref(),
       class_hash_prefix: ctx.options.class_hash_prefix.as_deref(),
       declaration_placeholder: ctx.options.declaration_placeholder.as_deref(),
       optimize_css: ctx.options.optimize_css.unwrap_or(true),
@@ -73,7 +72,6 @@ pub fn atomicify_rules() -> AtomicifyRules {
 }
 
 struct AtomicifyOptions<'a> {
-  class_name_compression_map: Option<&'a std::collections::HashMap<String, String>>,
   class_hash_prefix: Option<&'a str>,
   declaration_placeholder: Option<&'a str>,
   optimize_css: bool,
@@ -221,13 +219,7 @@ fn build_atomic_selector(
     let class_name = atomic_class_name(declaration, options, &normalized, at_rule_label);
     ctx.push_class_name(class_name.clone());
 
-    let replacement = options
-      .class_name_compression_map
-      .and_then(|map| map.get(&class_name[1..]))
-      .cloned()
-      .unwrap_or(class_name.clone());
-
-    let replaced = replace_nesting_selector(&normalized, &replacement);
+    let replaced = replace_nesting_selector(&normalized, &class_name);
     if trace_enabled() {
       let prop = declaration_name(&declaration.name);
       eprintln!(
