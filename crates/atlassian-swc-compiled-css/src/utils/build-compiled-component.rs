@@ -10,7 +10,6 @@ use swc_core::ecma::ast::{
 use crate::types::Metadata;
 use crate::utils_build_css_variables::build_css_variables;
 use crate::utils_get_jsx_attribute::get_jsx_attribute;
-use crate::utils_get_runtime_class_name_library::get_runtime_class_name_library;
 use crate::utils_hoist_sheet::hoist_sheet;
 use crate::utils_transform_css_items::{TransformCssItemsOptions, transform_css_items};
 use crate::utils_types::{CssOutput, Variable};
@@ -227,8 +226,8 @@ fn build_style_attribute(
   jsx_attribute("style", value)
 }
 
-fn merge_class_name(node: &mut Expr, class_names: &[Expr], meta: &Metadata) {
-  let helper = get_runtime_class_name_library(meta);
+fn merge_class_name(node: &mut Expr, class_names: &[Expr], _meta: &Metadata) {
+  let helper = "ax";
 
   let (existing_value, index) = {
     let (attribute, index) = get_jsx_attribute(node, "className");

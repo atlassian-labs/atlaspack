@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 
 use indexmap::IndexSet;
 use swc_core::common::{FileName, SourceMap, input::StringInput};
@@ -24,7 +24,6 @@ use super::plugins::{
 #[derive(Debug, Clone, Default)]
 pub struct TransformCssOptions {
   pub optimize_css: Option<bool>,
-  pub class_name_compression_map: Option<HashMap<String, String>>,
   pub increase_specificity: Option<bool>,
   pub sort_at_rules: Option<bool>,
   pub sort_shorthand: Option<bool>,

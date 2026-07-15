@@ -1,5 +1,4 @@
 use std::cell::{Ref, RefCell, RefMut};
-use std::collections::BTreeMap;
 use std::env;
 use std::fmt;
 #[cfg(test)]
@@ -149,7 +148,6 @@ pub struct PluginOptions {
   pub extensions: Option<Vec<String>>,
   pub parser_babel_plugins: Option<Vec<Value>>,
   pub add_component_name: Option<bool>,
-  pub class_name_compression_map: Option<BTreeMap<String, String>>,
   pub process_xcss: Option<bool>,
   pub increase_specificity: Option<bool>,
   pub sort_at_rules: Option<bool>,
@@ -175,7 +173,6 @@ impl Default for PluginOptions {
       extensions: None,
       parser_babel_plugins: None,
       add_component_name: None,
-      class_name_compression_map: None,
       process_xcss: None,
       increase_specificity: None,
       sort_at_rules: None,
@@ -201,7 +198,6 @@ impl From<&crate::config::CompiledCssInJsConfig> for PluginOptions {
       extensions: config.extensions.clone(),
       parser_babel_plugins: None,
       add_component_name: config.add_component_name,
-      class_name_compression_map: None,
       process_xcss: config.process_xcss,
       increase_specificity: config.increase_specificity,
       sort_at_rules: config.sort_at_rules,
