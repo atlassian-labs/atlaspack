@@ -11,6 +11,16 @@ pub fn hash(value: &str) -> String {
 /// custom seed. This mirrors the behaviour of `hash(str, seed)` in
 /// `packages/utils/src/hash.ts`.
 pub fn hash_with_seed(value: &str, seed: u32) -> String {
+  to_base36(murmur2(value, seed))
+}
+
+/// Computes the raw 32-bit MurmurHash2 value for a string.
+///
+/// This is the shared core used by every encoding variant (`hash`,
+/// `hash_base62`). Extracted so all hashing shares a single algorithm — the only
+/// difference between variants is how the resulting u32 is encoded. Mirrors
+/// `murmur2` in `packages/utils/src/hash.ts`.
+fn murmur2(value: &str, seed: u32) -> u32 {
   const M: u32 = 0x5bd1e995;
   const R: u32 = 24;
 
@@ -59,7 +69,39 @@ pub fn hash_with_seed(value: &str, seed: u32) -> String {
   hash = hash.wrapping_mul(M);
   hash ^= hash >> 15;
 
-  to_base36(hash)
+  hash
+}
+
+/// Base-62 character set: digits, lowercase, uppercase. Matches the AFM
+/// in-sourced `ap_compiled_css` crate's `hash_base62` and the babel plugin's
+/// `hashBase62` so class names are identical across all three implementations,
+/// avoiding version-skew mismatches.
+const BASE62_CHARS: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+/// The number of characters used for the group hash portion of an atomic class
+/// name. 6 chars in base-62 encodes 62^6 = 56.8B values, covering the full
+/// 32-bit hash space (4.3B) with zero truncation — eliminating the
+/// leading-character bias of the previous base-36 encoding.
+pub const ATOMIC_GROUP_HASH_LENGTH: usize = 6;
+
+/// The number of characters used for the value hash portion of an atomic class
+/// name. 4 chars in base-62 encodes 62^4 = 14.8M values, sufficient for value
+/// deduplication. Fixed-width so `ax()` can extract the group key with a fast,
+/// fixed-offset slice.
+pub const ATOMIC_VALUE_HASH_LENGTH: usize = 4;
+
+/// Hashes a string and encodes it in base-62 (0-9, a-z, A-Z), zero-padded to a
+/// fixed width. Used for collision-resistant atomic class name generation.
+///
+/// Mirrors `hashBase62` in `packages/utils/src/hash.ts`.
+pub fn hash_base62(value: &str, length: usize) -> String {
+  let mut v = murmur2(value, 0);
+  let mut buffer = vec![b'0'; length];
+  for slot in buffer.iter_mut().rev() {
+    *slot = BASE62_CHARS[(v % 62) as usize];
+    v /= 62;
+  }
+  String::from_utf8(buffer).expect("base62 conversion produced invalid utf8")
 }
 
 fn to_base36(mut value: u32) -> String {
@@ -109,5 +151,72 @@ mod tests {
   fn hashes_with_seed_match_js_reference() {
     assert_eq!(hash_with_seed("namespace----cacheKey", 0), "11sab8f");
     assert_eq!(hash_with_seed("namespace----cacheKey", 5), "wqqrxw");
+  }
+
+  #[test]
+  fn atomic_class_hash_lengths_produce_an_11_char_class() {
+    // An atomic class is `_` + group + value. With a 6-char group and 4-char
+    // value that is exactly 11 characters — the shape `ax()` relies on.
+    assert_eq!(ATOMIC_GROUP_HASH_LENGTH, 6);
+    assert_eq!(ATOMIC_VALUE_HASH_LENGTH, 4);
+    assert_eq!(1 + ATOMIC_GROUP_HASH_LENGTH + ATOMIC_VALUE_HASH_LENGTH, 11);
+  }
+
+  #[test]
+  fn hash_base62_output_is_always_exactly_the_requested_length() {
+    // Fixed-width (zero-padded) output is required so `ax()` can extract the
+    // group key with a fixed-offset slice. Even small hashes must not shrink.
+    for input in ["a", "color", "margin", "scrollbar-width", "text-anchor"] {
+      assert_eq!(
+        hash_base62(input, ATOMIC_GROUP_HASH_LENGTH).len(),
+        ATOMIC_GROUP_HASH_LENGTH,
+        "group hash for {input:?} was not zero-padded to a fixed width"
+      );
+      assert_eq!(
+        hash_base62(input, ATOMIC_VALUE_HASH_LENGTH).len(),
+        ATOMIC_VALUE_HASH_LENGTH,
+        "value hash for {input:?} was not zero-padded to a fixed width"
+      );
+    }
+  }
+
+  #[test]
+  fn hash_base62_only_emits_base62_characters() {
+    // Class names must be valid CSS identifiers. base-62 (0-9, a-z, A-Z)
+    // deliberately excludes `-`/`_` which would break `ax()` and CSS parsing.
+    let out = hash_base62("some-arbitrary-input-value", 6);
+    assert!(
+      out
+        .chars()
+        .all(|c| c.is_ascii_digit() || c.is_ascii_lowercase() || c.is_ascii_uppercase()),
+      "unexpected non-base62 char in output: {out}"
+    );
+  }
+
+  #[test]
+  fn hash_base62_is_deterministic_for_the_same_input() {
+    // The same input must always hash to the same class name across builds.
+    assert_eq!(hash_base62("color", 6), hash_base62("color", 6));
+  }
+
+  #[test]
+  fn hash_base62_known_good_values_cross_implementation_parity() {
+    // These values are verified against compiled/packages/utils/src/hash.ts
+    // (hashBase62) and the AFM in-sourced ap_compiled_css crate's hash.rs
+    // (hash_base62). All three must produce identical output for the same input —
+    // any divergence causes version-skew class-name mismatches across prod/CI
+    // (babel plugin), Confluence local dev (AFM crate), and Jira local dev
+    // (this crate). If this test fails after touching hash.rs, re-verify
+    // parity with the other two implementations before landing.
+    assert_eq!(hash_base62("color", 6), "4EWkA1");
+    assert_eq!(hash_base62("color", 4), "WkA1");
+    assert_eq!(hash_base62("margin", 6), "45uXpk");
+    assert_eq!(hash_base62("margin", 4), "uXpk");
+    assert_eq!(hash_base62("display", 6), "4i4Gny");
+    assert_eq!(hash_base62("display", 4), "4Gny");
+    assert_eq!(hash_base62("padding", 6), "4BPML4");
+    assert_eq!(hash_base62("padding", 4), "PML4");
+    assert_eq!(hash_base62("font-size", 6), "2HlGlw");
+    assert_eq!(hash_base62("font-size", 4), "lGlw");
   }
 }

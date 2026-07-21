@@ -11,7 +11,16 @@ use swc_core::css::parser::{parse_string_input, parser::ParserConfig};
 
 use super::super::transform::{Plugin, TransformContext};
 use crate::postcss::utils::collapse_adjacent_nesting_selectors;
-use crate::utils_hash::hash;
+use crate::utils_hash::{
+  ATOMIC_GROUP_HASH_LENGTH, ATOMIC_VALUE_HASH_LENGTH, hash, hash_base62,
+};
+
+/// Number of base-36 characters taken from each hash for the legacy (non
+/// collision-resistant) class name. Group and value each use this many chars,
+/// producing a 9-char class (`_` + 4 + 4). Kept in one place so the legacy
+/// branch here stays in sync with any other code that reconstructs the legacy
+/// group length.
+pub(crate) const LEGACY_HASH_SLICE_LENGTH: usize = 4;
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct AtomicifyRules;
@@ -35,6 +44,7 @@ impl Plugin for AtomicifyRules {
       class_hash_prefix: ctx.options.class_hash_prefix.as_deref(),
       declaration_placeholder: ctx.options.declaration_placeholder.as_deref(),
       optimize_css: ctx.options.optimize_css.unwrap_or(true),
+      collision_resistant_hash: ctx.options.collision_resistant_hash.unwrap_or(false),
     };
 
     let mut transformed: Vec<Rule> = Vec::with_capacity(stylesheet.rules.len());
@@ -75,6 +85,13 @@ struct AtomicifyOptions<'a> {
   class_hash_prefix: Option<&'a str>,
   declaration_placeholder: Option<&'a str>,
   optimize_css: bool,
+  /// When `true`, atomic class names use the collision-resistant base-62 hash
+  /// (11-char class). When `false` (the default), the legacy base-36 truncated
+  /// hash is used (9-char class), preserving existing output.
+  ///
+  /// This is a migration flag. Once every consumer has migrated, the legacy
+  /// branch will be removed and this becomes unconditional.
+  collision_resistant_hash: bool,
 }
 
 fn normalize_selectors(selectors: Vec<String>, options: &AtomicifyOptions<'_>) -> Vec<String> {
@@ -243,8 +260,6 @@ fn atomic_class_name(
   let prop = declaration_name(&declaration.name);
   let at_rule = at_rule_label.unwrap_or("undefined");
   let group_seed = format!("{}{}{}{}", prefix, at_rule, normalized_selector, prop);
-  let group_hash = hash(&group_seed);
-  let group = group_hash.chars().take(4).collect::<String>();
 
   let mut value_seed = serialize_component_values(&declaration.value).unwrap_or_default();
   // COMPAT: Babel trims whitespace around multiplication inside calc() before hashing.
@@ -261,8 +276,22 @@ fn atomic_class_name(
       eprintln!("[atomicify.hash] prop='{}' raw='{}'", prop_name, value_seed);
     }
   }
-  let value_hash = hash(&value_seed);
-  let value = value_hash.chars().take(4).collect::<String>();
+  if options.collision_resistant_hash {
+    // Collision-resistant: base-62, zero-padded fixed width (6 + 4 = 11-char class).
+    let group = hash_base62(&group_seed, ATOMIC_GROUP_HASH_LENGTH);
+    let value = hash_base62(&value_seed, ATOMIC_VALUE_HASH_LENGTH);
+    return format!("_{}{}", group, value);
+  }
+
+  // Legacy: base-36 truncated to 4 chars each (9-char class). Preserves existing output.
+  let group = hash(&group_seed)
+    .chars()
+    .take(LEGACY_HASH_SLICE_LENGTH)
+    .collect::<String>();
+  let value = hash(&value_seed)
+    .chars()
+    .take(LEGACY_HASH_SLICE_LENGTH)
+    .collect::<String>();
 
   format!("_{}{}", group, value)
 }

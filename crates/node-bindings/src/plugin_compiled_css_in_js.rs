@@ -62,6 +62,10 @@ pub struct CompiledCssInJsConfigPlugin {
   pub unsafe_skip_pattern: Option<String>,
   /// Browserslist environment (e.g. "development" or "production") for package.json "browserslist".
   pub browserslist_env: Option<String>,
+  /// When `true`, atomic class names use the collision-resistant base-62 hash
+  /// (11-char class). When `false`/`None` (the default), the legacy base-36
+  /// truncated hash is used (9-char class).
+  pub collision_resistant_hash: Option<bool>,
 }
 
 #[napi(object)]
@@ -288,6 +292,7 @@ fn process_compiled_css_in_js(
         .browserslist_env
         .clone()
         .or_else(|| input.browserslist_env.clone()),
+      collision_resistant_hash: input.config.collision_resistant_hash,
     },
   );
 
@@ -611,6 +616,7 @@ fn config_to_plugin_options(
     flatten_multiple_selectors: Some(config.flatten_multiple_selectors),
     extract: Some(config.extract),
     browserslist_env: config.browserslist_env.clone(),
+    collision_resistant_hash: Some(config.collision_resistant_hash),
   }
 }
 
@@ -647,6 +653,7 @@ mod tests {
         ssr: Some(true),
         sort_shorthand: Some(true),
         browserslist_env: None,
+        collision_resistant_hash: None,
       },
     }
   }

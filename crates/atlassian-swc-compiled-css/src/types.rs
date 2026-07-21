@@ -157,6 +157,10 @@ pub struct PluginOptions {
   /// Browserslist environment (e.g. "development" or "production") for config with
   /// "browserslist": { "development": [...], "production": [...] }.
   pub browserslist_env: Option<String>,
+  /// When `true`, atomic class names use the collision-resistant base-62 hash
+  /// (11-char class). When `false`/`None` (the default), the legacy base-36
+  /// truncated hash is used (9-char class).
+  pub collision_resistant_hash: Option<bool>,
 }
 
 impl Default for PluginOptions {
@@ -180,6 +184,7 @@ impl Default for PluginOptions {
       flatten_multiple_selectors: None,
       extract: None,
       browserslist_env: None,
+      collision_resistant_hash: None,
     }
   }
 }
@@ -205,6 +210,7 @@ impl From<&crate::config::CompiledCssInJsConfig> for PluginOptions {
       flatten_multiple_selectors: config.flatten_multiple_selectors,
       extract: config.extract,
       browserslist_env: config.browserslist_env.clone(),
+      collision_resistant_hash: config.collision_resistant_hash,
     }
   }
 }

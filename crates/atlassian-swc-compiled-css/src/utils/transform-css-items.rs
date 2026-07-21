@@ -184,6 +184,7 @@ pub(crate) fn create_transform_css_options(meta: &Metadata) -> (TransformCssOpti
   options.browserslist_config_path = Some(state.browserslist_config_path.clone());
   options.cssnano_browserslist_config_path = Some(state.cssnano_browserslist_config_path.clone());
   options.browserslist_env = state.opts.browserslist_env.clone();
+  options.collision_resistant_hash = state.opts.collision_resistant_hash;
 
   (options,)
 }
