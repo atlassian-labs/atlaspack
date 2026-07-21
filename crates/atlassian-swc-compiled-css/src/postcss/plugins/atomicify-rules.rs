@@ -11,9 +11,7 @@ use swc_core::css::parser::{parse_string_input, parser::ParserConfig};
 
 use super::super::transform::{Plugin, TransformContext};
 use crate::postcss::utils::collapse_adjacent_nesting_selectors;
-use crate::utils_hash::{
-  ATOMIC_GROUP_HASH_LENGTH, ATOMIC_VALUE_HASH_LENGTH, hash, hash_base62,
-};
+use crate::utils_hash::{ATOMIC_GROUP_HASH_LENGTH, ATOMIC_VALUE_HASH_LENGTH, hash, hash_base62};
 
 /// Number of base-36 characters taken from each hash for the legacy (non
 /// collision-resistant) class name. Group and value each use this many chars,

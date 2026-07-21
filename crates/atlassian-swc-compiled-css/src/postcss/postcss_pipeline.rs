@@ -3552,8 +3552,114 @@ fn wrap_bare_declarations_plugin(options: TransformCssOptions) -> pc::BuiltPlugi
 mod tests {
   use super::collapse_repeated_class_descendants;
   use crate::postcss::transform::{TransformCssOptions, transform_css};
-  use crate::utils_hash::hash;
   use pretty_assertions::assert_eq;
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // LEGACY-HASH CLEANUP (AFB-2160)
+  //
+  // When `collision_resistant_hash` becomes the DEFAULT and the legacy base-36
+  // path is deleted, grep this file for `LEGACY-HASH CLEANUP` and remove the
+  // `Some(false)` pins, the legacy collision-repro test, and the legacy branch
+  // in `default_options`. Full instructions live on AFB-2160.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// Options with the collision-resistant (base-62) hash enabled.
+  fn collision_resistant_options() -> TransformCssOptions {
+    let mut options = TransformCssOptions::default();
+    options.optimize_css = Some(true);
+    options.collision_resistant_hash = Some(true);
+    options
+  }
+
+  #[test]
+  fn collision_resistant_hash_is_disabled_by_default() {
+    // The default must remain legacy so landing this change is inert until
+    // explicitly enabled.
+    assert_eq!(
+      TransformCssOptions::default().collision_resistant_hash,
+      None,
+      "collision_resistant_hash must default to None (treated as false)"
+    );
+  }
+
+  #[test]
+  fn collision_resistant_hash_produces_11_char_class_via_production_pipeline() {
+    // The production (postcss_engine) pipeline must honour collision_resistant_hash.
+    // Default (off) => legacy 9-char; on => base-62 11-char.
+    let css = "& { color: red; }";
+
+    let mut legacy_opts = TransformCssOptions::default();
+    legacy_opts.optimize_css = Some(true);
+    let legacy = transform_css(css, legacy_opts).expect("transform should succeed");
+    assert_eq!(legacy.class_names.len(), 1);
+    assert_eq!(
+      legacy.class_names[0].len(),
+      9,
+      "default (legacy) class should be `_` + 4 + 4 = 9 chars"
+    );
+
+    let new = transform_css(css, collision_resistant_options()).expect("transform should succeed");
+    assert_eq!(new.class_names.len(), 1);
+    assert_eq!(
+      new.class_names[0].len(),
+      11,
+      "collision-resistant class should be `_` + 6 + 4 = 11 chars"
+    );
+    assert!(
+      new.class_names[0][1..]
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric()),
+      "collision-resistant class should only use base-62 chars: {}",
+      new.class_names[0]
+    );
+  }
+
+  #[test]
+  fn legacy_hash_reproduces_scrollbar_width_text_anchor_collision_via_pipeline() {
+    // LEGACY-HASH CLEANUP (AFB-2160): remove this whole test when the new hash is the default.
+    //
+    // Regression guard through the PRODUCTION postcss pipeline: under the legacy
+    // base-36 4-char group hash, `scrollbar-width` and `text-anchor` share the
+    // group `_1fjg`, so `ax()` would wrongly dedup these unrelated properties.
+    let mut opts = TransformCssOptions::default();
+    opts.optimize_css = Some(true);
+    // LEGACY-HASH CLEANUP (AFB-2160): explicitly legacy for the collision repro.
+    opts.collision_resistant_hash = Some(false);
+    let a = transform_css("& { scrollbar-width: none; }", opts.clone())
+      .expect("transform should succeed");
+    let b = transform_css("& { text-anchor: middle; }", opts).expect("transform should succeed");
+    let group = |c: &str| c[..5].to_string();
+    assert_eq!(
+      group(&a.class_names[0]),
+      "_1fjg",
+      "legacy group hash for scrollbar-width changed unexpectedly"
+    );
+    assert_eq!(
+      group(&a.class_names[0]),
+      group(&b.class_names[0]),
+      "expected legacy group-hash collision for scrollbar-width vs text-anchor"
+    );
+  }
+
+  #[test]
+  fn collision_resistant_hash_fixes_collision_via_pipeline() {
+    // The same pair must NOT collide under the collision-resistant hash, through
+    // the production pipeline.
+    let a = transform_css(
+      "& { scrollbar-width: none; }",
+      collision_resistant_options(),
+    )
+    .expect("transform should succeed");
+    let b = transform_css("& { text-anchor: middle; }", collision_resistant_options())
+      .expect("transform should succeed");
+    // 11-char class: `_` + 6-char group + 4-char value. Compare the 7-char group key.
+    let group = |c: &str| c[..7].to_string();
+    assert_ne!(
+      group(&a.class_names[0]),
+      group(&b.class_names[0]),
+      "base-62 group hashes should differ for scrollbar-width vs text-anchor"
+    );
+  }
 
   #[test]
   fn collapses_repeated_class_descendants() {
@@ -3588,6 +3694,8 @@ mod tests {
   fn hashes_box_shadow_with_minified_whitespace() {
     let css = ".foo { box-shadow: 0px 0px 1px 0px rgba(30, 31, 33, 0.31), 0px 8px 12px 0px rgba(30, 31, 33, 0.15); }";
     let mut options = TransformCssOptions::default();
+    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let result = transform_css(css, options).expect("transform should succeed");
 
@@ -3605,6 +3713,8 @@ mod tests {
     // This is the exact CSS pattern from csm-widget-ui-components/widget-container
     let css = "& { box-shadow: 0px 0px 1px 0px rgba(30, 31, 33, 0.31), 0px 8px 12px 0px rgba(30, 31, 33, 0.15); }";
     let mut options = TransformCssOptions::default();
+    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let result = transform_css(css, options).expect("transform should succeed");
 
@@ -3628,6 +3738,8 @@ mod tests {
     // This is the exact CSS pattern with design token fallback
     let css = "& { padding-top: var(--ds-space-300, 24px); }";
     let mut options = TransformCssOptions::default();
+    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let result = transform_css(css, options).expect("transform should succeed");
 
@@ -3648,6 +3760,8 @@ mod tests {
   fn background_color_var_rgba_fallback_produces_exact_classname() {
     let css = "& { background-color: var(--ds-surface, rgba(255, 255, 255, 1)); }";
     let mut options = TransformCssOptions::default();
+    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let result = transform_css(css, options).expect("transform should succeed");
 
@@ -3701,6 +3815,8 @@ mod tests {
   fn linear_gradient_background_produces_exact_classname() {
     let css = "& { background: linear-gradient(90deg, #4d8ced, #cfe1fd); }";
     let mut options = TransformCssOptions::default();
+    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let result = transform_css(css, options).expect("transform should succeed");
 
@@ -3729,6 +3845,8 @@ mod tests {
 
     let css = "& { text-decoration-color: currentColor; }";
     let mut options = TransformCssOptions::default();
+    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     options.browserslist_config_path = Some(tmp.path().to_path_buf());
     options.browserslist_env = Some("production".to_string());
@@ -3766,6 +3884,8 @@ mod tests {
 
     let css = "& { background: transparent; }";
     let mut options = TransformCssOptions::default();
+    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     options.browserslist_config_path = Some(tmp.path().to_path_buf());
     options.browserslist_env = Some("production".to_string());
@@ -3796,6 +3916,8 @@ mod tests {
 
     let css = "& { box-sizing: content-box; text-decoration-color: currentColor; }";
     let mut options = TransformCssOptions::default();
+    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     options.browserslist_config_path = Some(tmp.path().to_path_buf());
     options.browserslist_env = Some("development".to_string());
@@ -3838,6 +3960,8 @@ mod tests {
   fn grid_column_negative_hash_matches_babel() {
     let css = "& { grid-column: 1 / -1; }";
     let mut options = TransformCssOptions::default();
+    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let result = transform_css(css, options).expect("transform should succeed");
 
@@ -3874,6 +3998,11 @@ mod tests {
       .expect("browserslist config write");
     let mut options = TransformCssOptions::default();
     options.optimize_css = Some(true);
+    // LEGACY-HASH CLEANUP (AFB-2160): Babel-parity tests using this helper assert
+    // exact legacy class-name literals (Rust == Babel), which stays legacy. Pin
+    // so those guards survive the default flip; new-hash coverage lives in the
+    // dedicated `collision_resistant_hash_*` tests.
+    options.collision_resistant_hash = Some(false);
     options.browserslist_config_path = Some(tmp.path().to_path_buf());
     (options, tmp)
   }
@@ -3885,6 +4014,8 @@ mod tests {
       "div > .ProseMirror { > p { padding-top: 0.5px; line-height: 24px; } }",
     ];
     let mut options = TransformCssOptions::default();
+    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let sheets = collect_sheets(&css_inputs, options);
     let expected = [
@@ -3903,6 +4034,8 @@ mod tests {
       "> span { margin: 0; align-items: var(--align-items); > span { max-width: var(--content-width); &:has([data-testid=\"command-palette-rovo-agent-icon\"]) { height: var(--elem-before-height); margin-inline: 0; > div { margin-inline: 0; } } } }",
     ];
     let mut options = TransformCssOptions::default();
+    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let sheets = collect_sheets(&css_inputs, options);
     let expected = [
@@ -3921,6 +4054,8 @@ mod tests {
       "div&:active { background-color: var(--ds-background-neutral-subtle, transparent); color: var(--ds-text-subtle, #42526e); }",
     ];
     let mut options = TransformCssOptions::default();
+    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let sheets = collect_sheets(&css_inputs, options);
     let expected = [
@@ -3939,6 +4074,8 @@ mod tests {
       "div&:active { background-color: var(--ds-background-neutral-subtle, transparent); color: var(--ds-text, #42526e); }",
     ];
     let mut options = TransformCssOptions::default();
+    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let sheets = collect_sheets(&css_inputs, options);
     let expected = [
@@ -3956,6 +4093,8 @@ mod tests {
       "& { width: calc(100% - var(--ds-space-150, 9pt)); height: calc(100% - var(--ds-space-200, 1pc)); }",
     ];
     let mut options = TransformCssOptions::default();
+    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let sheets = collect_sheets(&css_inputs, options);
     let expected = [
@@ -3969,6 +4108,8 @@ mod tests {
   fn agent_header_gradient_outputs_match_babel() {
     let css_inputs = ["& { background: linear-gradient(90deg, #4D8CED 0%, #CFE1FD 100%); }"];
     let mut options = TransformCssOptions::default();
+    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let sheets = collect_sheets(&css_inputs, options);
     let expected = ["._11q7taqa{background:linear-gradient(90deg,#4d8ced,#cfe1fd)}"];
@@ -4000,6 +4141,8 @@ mod tests {
     let css_inputs =
       ["& { background-image: linear-gradient(90deg, #6B6E76 0%, #C7CDDC 59%, #6B6E76 97.12%); }"];
     let mut options = TransformCssOptions::default();
+    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let sheets = collect_sheets(&css_inputs, options);
     let expected =
@@ -4023,6 +4166,8 @@ mod tests {
   fn title_box_surface_color_outputs_match_babel() {
     let css_inputs = ["& { background-color: var(--ds-surface, rgba(255, 255, 255, 1)); }"];
     let mut options = TransformCssOptions::default();
+    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let sheets = collect_sheets(&css_inputs, options);
     let expected = ["._bfhkvuon{background-color:var(--ds-surface,#fff)}"];
@@ -4033,6 +4178,8 @@ mod tests {
   fn backlog_story_point_empty_selector_outputs_match_babel() {
     let css_inputs = ["& { * { &:empty { box-shadow: none; } } }"];
     let mut options = TransformCssOptions::default();
+    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let sheets = collect_sheets(&css_inputs, options);
     let expected = ["._y5xnglyw :empty{box-shadow:none}"];
@@ -4043,6 +4190,8 @@ mod tests {
   fn quarter_picker_child_pseudo_outputs_match_babel() {
     let css_inputs = ["& { > :hover { height: 105px; } > :disabled { height: 105px; } }"];
     let mut options = TransformCssOptions::default();
+    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let sheets = collect_sheets(&css_inputs, options);
     let expected = [
