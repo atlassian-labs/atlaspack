@@ -30,6 +30,10 @@ pub struct TransformCssOptions {
   pub class_hash_prefix: Option<String>,
   pub flatten_multiple_selectors: Option<bool>,
   pub declaration_placeholder: Option<String>,
+  /// When `true`, atomic class names use the collision-resistant base-62 hash
+  /// (6-char group + 4-char value = 11-char class). When `false`/`None` (the
+  /// default), the legacy base-36 truncated hash is used (9-char class).
+  pub collision_resistant_hash: Option<bool>,
   /// Path used to resolve the browserslist config for autoprefixer.
   /// Defaults to `cwd`, matching Babel's autoprefixer which uses `{ from: undefined }`.
   pub browserslist_config_path: Option<PathBuf>,

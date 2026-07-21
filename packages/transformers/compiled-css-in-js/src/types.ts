@@ -69,6 +69,16 @@ export interface TransformerOpts {
   classHashPrefix?: string;
 
   /**
+   * When `true`, atomic class names are generated with the collision-resistant
+   * hash: base-62 encoding, zero-padded to a fixed width (11-char class).
+   * When `false` (the default), the legacy base-36 truncated hash is used
+   * (9-char class), preserving existing output.
+   *
+   * Defaults to `false`.
+   */
+  collisionResistantHash?: boolean;
+
+  /**
    * Whether to flatten multiple selectors into separate rules to better deduplicate and sort styles.
    *
    * Defults to `true`.
