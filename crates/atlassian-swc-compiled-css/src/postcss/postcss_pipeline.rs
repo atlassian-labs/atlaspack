@@ -20,6 +20,37 @@ use once_cell::sync::Lazy;
 use regex::{Captures, Regex};
 use std::sync::{Arc, Mutex};
 
+/// Hash an atomic group seed, mirroring compiled's `atomicClassName`.
+///
+/// When `collision_resistant_hash` is off (default) this reproduces the legacy
+/// base-36 4-char group hash. When on, it uses the base-62 fixed-width
+/// (zero-padded) `ATOMIC_GROUP_HASH_LENGTH`-char hash.
+fn hash_group(seed: &str, collision_resistant_hash: bool) -> String {
+  if collision_resistant_hash {
+    crate::utils_hash::hash_base62(seed, crate::utils_hash::ATOMIC_GROUP_HASH_LENGTH)
+  } else {
+    crate::utils_hash::hash(seed)
+      .chars()
+      .take(crate::postcss::plugins::atomicify_rules::LEGACY_HASH_SLICE_LENGTH)
+      .collect::<String>()
+  }
+}
+
+/// Hash an atomic value seed, mirroring compiled's `atomicClassName`.
+///
+/// Legacy: base-36 4-char. Collision-resistant: base-62 fixed-width
+/// `ATOMIC_VALUE_HASH_LENGTH`-char.
+fn hash_value(seed: &str, collision_resistant_hash: bool) -> String {
+  if collision_resistant_hash {
+    crate::utils_hash::hash_base62(seed, crate::utils_hash::ATOMIC_VALUE_HASH_LENGTH)
+  } else {
+    crate::utils_hash::hash(seed)
+      .chars()
+      .take(crate::postcss::plugins::atomicify_rules::LEGACY_HASH_SLICE_LENGTH)
+      .collect::<String>()
+  }
+}
+
 fn collapse_adjacent_ampersands(selector: &str) -> String {
   let mut out = String::with_capacity(selector.len());
   let mut chars = selector.chars().peekable();
@@ -1697,14 +1728,9 @@ fn extract_stylesheets_plugin(
               }
               group_seed.push_str(&norm);
               group_seed.push_str(&prop);
-              let group = crate::utils_hash::hash(&group_seed)
-                .chars()
-                .take(4)
-                .collect::<String>();
-              let value_hash = crate::utils_hash::hash(&hash_seed)
-                .chars()
-                .take(4)
-                .collect::<String>();
+              let collision_resistant = opts.collision_resistant_hash.unwrap_or(false);
+              let group = hash_group(&group_seed, collision_resistant);
+              let value_hash = hash_value(&hash_seed, collision_resistant);
               let full_class = format!("_{}{}", group, value_hash);
               let used_class = full_class.clone();
               let replaced = norm.replace('&', &format!(".{}", used_class));
@@ -2057,7 +2083,6 @@ fn atomicify_rules_plugin(
   collector: AtomicCollector,
   autoprefixer: Option<Arc<AutoprefixerData>>,
 ) -> pc::BuiltPlugin {
-  use crate::utils_hash::hash;
   use postcss::list::comma;
 
   // Compute initial_support once based on browserslist config.
@@ -2353,7 +2378,8 @@ fn atomicify_rules_plugin(
           group_seed.push_str(&at_seg);
           group_seed.push_str(norm);
           group_seed.push_str(&prop);
-          let group = hash(&group_seed).chars().take(4).collect::<String>();
+          let collision_resistant = ctx.opts.collision_resistant_hash.unwrap_or(false);
+          let group = hash_group(&group_seed, collision_resistant);
           if std::env::var("COMPILED_CLI_TRACE").is_ok() {
             eprintln!(
               "[atomicify.group] at='{}' sel='{}' prop='{}' seed='{}' -> {}",
@@ -2366,7 +2392,7 @@ fn atomicify_rules_plugin(
               prop, hash_seed
             );
           }
-          let value_hash = hash(&hash_seed).chars().take(4).collect::<String>();
+          let value_hash = hash_value(&hash_seed, collision_resistant);
           let class = format!("_{}{}", group, value_hash);
           ctx.collector.push_class(class.clone());
 
@@ -2517,7 +2543,7 @@ fn atomicify_rules_plugin(
           group_seed.push_str(at_seg);
           group_seed.push_str(norm);
           group_seed.push_str(&prop);
-          let group = hash(&group_seed).chars().take(4).collect::<String>();
+          let group = hash_group(&group_seed, opts.collision_resistant_hash.unwrap_or(false));
           if std::env::var("COMPILED_CLI_TRACE").is_ok() {
             eprintln!(
               "[atomicify.group] at='{}' sel='{}' prop='{}' seed='{}' -> {}",
@@ -2530,7 +2556,7 @@ fn atomicify_rules_plugin(
               );
             }
           }
-          let value_hash = hash(&hash_seed).chars().take(4).collect::<String>();
+          let value_hash = hash_value(&hash_seed, opts.collision_resistant_hash.unwrap_or(false));
           let full_class = format!("_{}{}", group, value_hash);
           collector.push_class(full_class.clone());
           let used_class = full_class.clone();
@@ -2704,7 +2730,7 @@ fn atomicify_rules_plugin(
               group_seed.push_str(at_seg);
               group_seed.push_str(norm);
               group_seed.push_str(&prop);
-              let group = hash(&group_seed).chars().take(4).collect::<String>();
+              let group = hash_group(&group_seed, opts.collision_resistant_hash.unwrap_or(false));
               if std::env::var("COMPILED_CLI_TRACE").is_ok() {
                 eprintln!(
                   "[atomicify.group] at='{}' sel='{}' prop='{}' seed='{}' -> {}",
@@ -2717,7 +2743,8 @@ fn atomicify_rules_plugin(
                   );
                 }
               }
-              let value_hash = hash(&hash_seed).chars().take(4).collect::<String>();
+              let value_hash =
+                hash_value(&hash_seed, opts.collision_resistant_hash.unwrap_or(false));
               let full_class = format!("_{}{}", group, value_hash);
               collector.push_class(full_class.clone());
               let used_class = full_class.clone();
@@ -2793,7 +2820,8 @@ fn atomicify_rules_plugin(
                   group_seed.push_str(at_seg);
                   group_seed.push_str(norm);
                   group_seed.push_str(&prop);
-                  let group = hash(&group_seed).chars().take(4).collect::<String>();
+                  let group =
+                    hash_group(&group_seed, opts.collision_resistant_hash.unwrap_or(false));
                   if std::env::var("COMPILED_CLI_TRACE").is_ok() {
                     eprintln!(
                       "[atomicify.group] at='{}' sel='{}' prop='{}' seed='{}' -> {}",
@@ -2806,7 +2834,8 @@ fn atomicify_rules_plugin(
                       );
                     }
                   }
-                  let value_hash = hash(&hash_seed).chars().take(4).collect::<String>();
+                  let value_hash =
+                    hash_value(&hash_seed, opts.collision_resistant_hash.unwrap_or(false));
                   let full_class = format!("_{}{}", group, value_hash);
                   collector.push_class(full_class.clone());
                   let used_class = full_class.clone();
