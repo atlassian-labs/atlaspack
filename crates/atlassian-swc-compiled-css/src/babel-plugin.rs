@@ -1285,6 +1285,9 @@ mod tests {
 
       let mut transform = CompiledCssInJsTransform::new(PluginOptions {
         extract: Some(true),
+        // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard
+        // (exact legacy class-name literal) survives the default flip.
+        collision_resistant_hash: Some(false),
         ..PluginOptions::default()
       });
 
