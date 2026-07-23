@@ -2370,6 +2370,7 @@ fn atomicify_rules_plugin(
         // Collect all replaced selectors so we can group them into a single
         // comma-separated CSS rule, matching Babel's selector grouping behaviour.
         let mut replaced_selectors: Vec<String> = Vec::new();
+        let collision_resistant = ctx.opts.collision_resistant_hash.unwrap_or(false);
         for norm in &normalized_list {
           let mut group_seed = String::new();
           if let Some(prefix) = &ctx.opts.class_hash_prefix {
@@ -2378,7 +2379,6 @@ fn atomicify_rules_plugin(
           group_seed.push_str(&at_seg);
           group_seed.push_str(norm);
           group_seed.push_str(&prop);
-          let collision_resistant = ctx.opts.collision_resistant_hash.unwrap_or(false);
           let group = hash_group(&group_seed, collision_resistant);
           if std::env::var("COMPILED_CLI_TRACE").is_ok() {
             eprintln!(
@@ -2526,6 +2526,7 @@ fn atomicify_rules_plugin(
         };
 
         // Emit one rule per selector to match Babel's flattenMultipleSelectors output.
+        let collision_resistant = opts.collision_resistant_hash.unwrap_or(false);
         for norm in &normalized_list {
           let prefixed_entries = prefixed_decl_entries_with_selector(
             autoprefixer_ref,
@@ -2543,7 +2544,7 @@ fn atomicify_rules_plugin(
           group_seed.push_str(at_seg);
           group_seed.push_str(norm);
           group_seed.push_str(&prop);
-          let group = hash_group(&group_seed, opts.collision_resistant_hash.unwrap_or(false));
+          let group = hash_group(&group_seed, collision_resistant);
           if std::env::var("COMPILED_CLI_TRACE").is_ok() {
             eprintln!(
               "[atomicify.group] at='{}' sel='{}' prop='{}' seed='{}' -> {}",
@@ -2556,7 +2557,7 @@ fn atomicify_rules_plugin(
               );
             }
           }
-          let value_hash = hash_value(&hash_seed, opts.collision_resistant_hash.unwrap_or(false));
+          let value_hash = hash_value(&hash_seed, collision_resistant);
           let full_class = format!("_{}{}", group, value_hash);
           collector.push_class(full_class.clone());
           let used_class = full_class.clone();
@@ -2713,6 +2714,7 @@ fn atomicify_rules_plugin(
             };
 
             // Emit one rule per selector to match Babel's flattenMultipleSelectors output.
+            let collision_resistant = opts.collision_resistant_hash.unwrap_or(false);
             for norm in &normalized_list {
               let prefixed_entries = prefixed_decl_entries_with_selector(
                 autoprefixer_ref,
@@ -2730,7 +2732,7 @@ fn atomicify_rules_plugin(
               group_seed.push_str(at_seg);
               group_seed.push_str(norm);
               group_seed.push_str(&prop);
-              let group = hash_group(&group_seed, opts.collision_resistant_hash.unwrap_or(false));
+              let group = hash_group(&group_seed, collision_resistant);
               if std::env::var("COMPILED_CLI_TRACE").is_ok() {
                 eprintln!(
                   "[atomicify.group] at='{}' sel='{}' prop='{}' seed='{}' -> {}",
@@ -2743,8 +2745,7 @@ fn atomicify_rules_plugin(
                   );
                 }
               }
-              let value_hash =
-                hash_value(&hash_seed, opts.collision_resistant_hash.unwrap_or(false));
+              let value_hash = hash_value(&hash_seed, collision_resistant);
               let full_class = format!("_{}{}", group, value_hash);
               collector.push_class(full_class.clone());
               let used_class = full_class.clone();
@@ -2803,6 +2804,7 @@ fn atomicify_rules_plugin(
                 };
 
                 // Emit one rule per selector to match Babel's flattenMultipleSelectors output.
+                let collision_resistant = opts.collision_resistant_hash.unwrap_or(false);
                 for norm in &normalized_list {
                   let prefixed_entries = prefixed_decl_entries_with_selector(
                     autoprefixer_ref,
@@ -2820,8 +2822,7 @@ fn atomicify_rules_plugin(
                   group_seed.push_str(at_seg);
                   group_seed.push_str(norm);
                   group_seed.push_str(&prop);
-                  let group =
-                    hash_group(&group_seed, opts.collision_resistant_hash.unwrap_or(false));
+                  let group = hash_group(&group_seed, collision_resistant);
                   if std::env::var("COMPILED_CLI_TRACE").is_ok() {
                     eprintln!(
                       "[atomicify.group] at='{}' sel='{}' prop='{}' seed='{}' -> {}",
@@ -2834,8 +2835,7 @@ fn atomicify_rules_plugin(
                       );
                     }
                   }
-                  let value_hash =
-                    hash_value(&hash_seed, opts.collision_resistant_hash.unwrap_or(false));
+                  let value_hash = hash_value(&hash_seed, collision_resistant);
                   let full_class = format!("_{}{}", group, value_hash);
                   collector.push_class(full_class.clone());
                   let used_class = full_class.clone();

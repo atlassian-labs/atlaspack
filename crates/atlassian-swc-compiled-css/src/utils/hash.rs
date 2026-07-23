@@ -101,7 +101,14 @@ pub fn hash_base62(value: &str, length: usize) -> String {
     *slot = BASE62_CHARS[(v % 62) as usize];
     v /= 62;
   }
-  String::from_utf8(buffer).expect("base62 conversion produced invalid utf8")
+  // `buffer` only ever contains bytes from `BASE62_CHARS` (all ASCII), so each
+  // byte is a valid single-byte UTF-8 char. Build the string directly via
+  // `push` to avoid both `.expect()` and `unsafe`.
+  let mut out = String::with_capacity(length);
+  for byte in buffer {
+    out.push(byte as char);
+  }
+  out
 }
 
 fn to_base36(mut value: u32) -> String {
@@ -122,7 +129,14 @@ fn to_base36(mut value: u32) -> String {
   }
 
   buffer.reverse();
-  String::from_utf8(buffer).expect("base36 conversion produced invalid utf8")
+  // `buffer` only ever contains ASCII bytes (`0-9`, `a-z`), so each byte is a
+  // valid single-byte UTF-8 char. Build the string directly via `push` to avoid
+  // both `.expect()` and `unsafe`.
+  let mut out = String::with_capacity(buffer.len());
+  for byte in buffer {
+    out.push(byte as char);
+  }
+  out
 }
 
 #[cfg(test)]
