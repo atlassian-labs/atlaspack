@@ -1,5 +1,26 @@
 # @atlaspack/transformer-compiled-css-in-js
 
+## 1.0.0
+
+### Major Changes
+
+- [#1115](https://github.com/atlassian-labs/atlaspack/pull/1115) [`91dd26c`](https://github.com/atlassian-labs/atlaspack/commit/91dd26c1ecf6e9045ca08759b60d41707d60de2a) Thanks [@pancaspe87](https://github.com/pancaspe87)! - Remove unused `classNameCompressionMap` option and `ac` runtime helper.
+
+  The `classNameCompressionMap` option was never used in production by any Atlassian product. It has been removed alongside the `ac()` runtime helper and the related `compress-class-names-for-runtime` and `get-runtime-class-name-library` utilities.
+
+  All class name merging now unconditionally uses `ax()`.
+
+  **Breaking change:** If you were setting `classNameCompressionMap` in your transformer config, remove it. The option no longer exists.
+
+### Patch Changes
+
+- Updated dependencies [[`91dd26c`](https://github.com/atlassian-labs/atlaspack/commit/91dd26c1ecf6e9045ca08759b60d41707d60de2a)]:
+  - @atlaspack/rust@4.0.0
+  - @atlaspack/source-map@3.3.9
+  - @atlaspack/utils@3.4.7
+  - @atlaspack/transformer-js@20.1.1
+  - @atlaspack/plugin@2.14.65
+
 ## 0.3.10
 
 ### Patch Changes
