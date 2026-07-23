@@ -92,6 +92,12 @@ impl Tracer {
       .to_string();
     let prefix = "atlaspack-tracing".to_string();
     let max_files = 4;
+
+    // Print the log directory if any tracing mode is active
+    if !options.is_empty() {
+      println!("Atlaspack tracing logs → {directory}/");
+    }
+
     let file_appender = tracing_appender::rolling::Builder::new()
       .rotation(tracing_appender::rolling::Rotation::HOURLY)
       .max_log_files(max_files as usize)
