@@ -5045,6 +5045,48 @@ describe('javascript', function () {
       assert(contents.includes('_liftedReactAsyncImport'));
     });
 
+    it('should lift imports from JSResourceForUserVisible imported via a deep subpath', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        node_modules/@atlassian/react-async/package.json:
+          { "name": "@atlassian/react-async", "version": "1.0.0", "main": "index.js" }
+        node_modules/@atlassian/react-async/index.js:
+          export function JSResourceForUserVisible(fn, opts) { return { fn, opts }; }
+          export function createEntryPoint(config) { return config; }
+        node_modules/@atlassian/react-async/js-resource-for-user-visible.js:
+          export function JSResourceForUserVisible(fn, opts) { return { fn, opts }; }
+        ui.tsx:
+          export const UI = 'ui';
+        index.js:
+          import { JSResourceForUserVisible } from '@atlassian/react-async/js-resource-for-user-visible';
+          import { createEntryPoint } from '@atlassian/react-async';
+          export const MyEntryPoint = createEntryPoint({
+            root: JSResourceForUserVisible(
+              () => import('./ui.tsx'),
+              { moduleId: "abc123", entryFsSsrLiftImportToModule: true },
+            ),
+          });
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        env: {
+          NATIVE_REACT_ASYNC_IMPORT_LIFT: 'true',
+          REACT_ASYNC_IMPORT_LIFTING_BY_DEFAULT: 'false',
+          REACT_ASYNC_LIFT_REPORT_LEVEL: 'none',
+        },
+      });
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      // Import should be lifted to module scope even though
+      // JSResourceForUserVisible was imported via a deep subpath
+      // (e.g. @atlassian/react-async/js-resource-for-user-visible).
+      assert(contents.includes('_liftedReactAsyncImport'));
+    });
+
     it('should lift all imports when lift by default is enabled', async () => {
       await fsFixture(overlayFS, __dirname)`
         node_modules/@atlassian/react-async/package.json:

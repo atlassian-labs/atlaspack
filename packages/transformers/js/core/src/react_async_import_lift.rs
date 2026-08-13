@@ -7,6 +7,18 @@ use swc_core::quote;
 
 use crate::utils::{CodeHighlight, Diagnostic, DiagnosticSeverity, SourceLocation};
 
+/// The bare `@atlassian/react-async` package specifier.
+const REACT_ASYNC_MODULE: &str = "@atlassian/react-async";
+/// Prefix for `@atlassian/react-async`'s deep, tree-shaking-friendly subpath
+/// exports (e.g. `@atlassian/react-async/js-resource-for-interaction`).
+const REACT_ASYNC_MODULE_PREFIX: &str = "@atlassian/react-async/";
+
+/// True for the bare [`REACT_ASYNC_MODULE`] specifier or any of its deep
+/// subpath exports (e.g. `@atlassian/react-async/js-resource-for-interaction`).
+fn is_react_async_module(specifier: &str) -> bool {
+  specifier == REACT_ASYNC_MODULE || specifier.starts_with(REACT_ASYNC_MODULE_PREFIX)
+}
+
 /// Transformer that lifts dynamic imports out of JSResourceForUserVisible calls
 /// from @atlassian/react-async for SSR optimization.
 ///
@@ -287,14 +299,16 @@ impl<'a> ReactAsyncImportLift<'a> {
   }
 
   pub fn should_transform(file_code: &str) -> bool {
-    file_code.contains("@atlassian/react-async")
+    file_code.contains(REACT_ASYNC_MODULE)
   }
 }
 
 impl VisitMut for ReactAsyncImportLift<'_> {
   fn visit_mut_import_decl(&mut self, import: &mut ImportDecl) {
     // Collect JSResourceForUserVisible bindings from @atlassian/react-async imports
-    if import.src.value == "@atlassian/react-async" {
+    // (or one of its deep subpath exports, e.g.
+    // @atlassian/react-async/js-resource-for-user-visible)
+    if is_react_async_module(&import.src.value) {
       import
         .specifiers
         .iter()
@@ -394,6 +408,25 @@ mod tests {
   fn test_basic_import_lifting() {
     let input = indoc! {r#"
       import { JSResourceForUserVisible } from '@atlassian/react-async';
+      export const MyEntryPoint = JSResourceForUserVisible(
+        () => import('./ui/index.tsx'),
+        { moduleId: "abc123", entryFsSsrLiftImportToModule: true }
+      );
+    "#};
+
+    let output = run_transform(input, false);
+
+    assert!(output.contains("const _liftedReactAsyncImport = import('./ui/index.tsx')"));
+    assert!(output.contains("()=>_liftedReactAsyncImport"));
+  }
+
+  #[test]
+  fn test_basic_import_lifting_deep_subpath_import() {
+    // @atlassian/react-async also exports tree-shaking-friendly deep subpaths
+    // (e.g. `@atlassian/react-async/js-resource-for-user-visible`); these must
+    // be recognised just like the bare package specifier.
+    let input = indoc! {r#"
+      import { JSResourceForUserVisible } from '@atlassian/react-async/js-resource-for-user-visible';
       export const MyEntryPoint = JSResourceForUserVisible(
         () => import('./ui/index.tsx'),
         { moduleId: "abc123", entryFsSsrLiftImportToModule: true }
