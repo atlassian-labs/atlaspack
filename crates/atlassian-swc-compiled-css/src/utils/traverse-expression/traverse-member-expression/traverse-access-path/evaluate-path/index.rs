@@ -24,6 +24,9 @@ pub fn evaluate_path(
       path_name,
       evaluate_expression,
     ),
+    Expr::TsSatisfies(satisfies) => {
+      evaluate_path(&satisfies.expr, meta, path_name, evaluate_expression)
+    }
     Expr::TsConstAssertion(assertion) => {
       evaluate_path(&assertion.expr, meta, path_name, evaluate_expression)
     }

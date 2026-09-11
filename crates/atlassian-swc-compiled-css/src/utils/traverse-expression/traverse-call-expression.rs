@@ -58,6 +58,7 @@ fn extract_property_value(argument: &Expr, property: &str) -> Option<Expr> {
   match argument {
     Expr::Object(object) => get_object_property_value(object, property).map(|result| result.node),
     Expr::TsAs(ts_as) => extract_property_value(&ts_as.expr, property),
+    Expr::TsSatisfies(satisfies) => extract_property_value(&satisfies.expr, property),
     Expr::Paren(paren) => extract_property_value(&paren.expr, property),
     Expr::Ident(_) | Expr::Member(_) | Expr::Call(_) | Expr::Fn(_) | Expr::Arrow(_) => {
       Some(member_expression_for_property(argument, property))
