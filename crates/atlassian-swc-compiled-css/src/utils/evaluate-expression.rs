@@ -20,6 +20,7 @@ use crate::utils_types::EvaluateExpression;
 fn skip_wrappers<'a>(expression: &'a Expr) -> &'a Expr {
   match expression {
     Expr::TsAs(ts_as) => skip_wrappers(&ts_as.expr),
+    Expr::TsSatisfies(satisfies) => skip_wrappers(&satisfies.expr),
     Expr::TsTypeAssertion(assertion) => skip_wrappers(&assertion.expr),
     Expr::TsConstAssertion(assertion) => skip_wrappers(&assertion.expr),
     Expr::TsNonNull(non_null) => skip_wrappers(&non_null.expr),

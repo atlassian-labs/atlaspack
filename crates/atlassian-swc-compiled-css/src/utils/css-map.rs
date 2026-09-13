@@ -170,13 +170,20 @@ pub fn create_error_message(message: impl AsRef<str>) -> String {
   )
 }
 
+fn computed_key_value(expr: &Expr) -> Option<String> {
+  match expr {
+    Expr::Ident(ident) => Some(ident.sym.as_ref().to_string()),
+    Expr::Lit(Lit::Str(str)) => Some(str.value.as_ref().to_string()),
+    Expr::TsSatisfies(satisfies) => computed_key_value(&satisfies.expr),
+    _ => None,
+  }
+}
+
 /// Determines whether the provided property key is a static literal value.
 pub fn object_key_is_literal_value(key: &PropName) -> bool {
   match key {
     PropName::Ident(_) | PropName::Str(_) => true,
-    PropName::Computed(comp) => {
-      matches!(comp.expr.as_ref(), Expr::Ident(_) | Expr::Lit(Lit::Str(_)))
-    }
+    PropName::Computed(comp) => computed_key_value(&comp.expr).is_some(),
     _ => false,
   }
 }
@@ -196,19 +203,15 @@ pub fn get_key_value(key: &PropName) -> String {
   match key {
     PropName::Ident(ident) => ident.sym.as_ref().to_string(),
     PropName::Str(str) => str.value.as_ref().to_string(),
-    PropName::Computed(comp) => match comp.expr.as_ref() {
-      Expr::Ident(ident) => ident.sym.as_ref().to_string(),
-      Expr::Lit(Lit::Str(str)) => str.value.as_ref().to_string(),
-      _ => {
-        // This should never happen if object_key_is_literal_value was called first.
-        // Log for debugging but provide a fallback value to prevent crashes.
-        eprintln!(
-          "[compiled-css] Warning: get_key_value called on non-literal computed expression. \
-           This indicates a validation bug. Returning placeholder value."
-        );
-        "<invalid-computed-key>".to_string()
-      }
-    },
+    PropName::Computed(comp) => computed_key_value(&comp.expr).unwrap_or_else(|| {
+      // This should never happen if object_key_is_literal_value was called first.
+      // Log for debugging but provide a fallback value to prevent crashes.
+      eprintln!(
+        "[compiled-css] Warning: get_key_value called on non-literal computed expression. \
+         This indicates a validation bug. Returning placeholder value."
+      );
+      "<invalid-computed-key>".to_string()
+    }),
     _ => {
       // This should never happen if object_key_is_literal_value was called first.
       let key_type = match key {
@@ -327,7 +330,8 @@ mod tests {
   use swc_core::common::sync::Lrc;
   use swc_core::common::{DUMMY_SP, SourceMap, SyntaxContext};
   use swc_core::ecma::ast::{
-    Expr, Ident, KeyValueProp, Lit, Number, PropName, PropOrSpread, SpreadElement, Str,
+    ComputedPropName, Expr, Ident, KeyValueProp, Lit, Number, PropName, PropOrSpread,
+    SpreadElement, Str, TsKeywordType, TsKeywordTypeKind, TsSatisfiesExpr,
   };
 
   use crate::types::{Metadata, PluginOptions, TransformFile, TransformState};
@@ -353,6 +357,34 @@ mod tests {
       value: value.into(),
       raw: None,
     })
+  }
+
+  fn satisfies_string_key(value: &str) -> PropName {
+    PropName::Computed(ComputedPropName {
+      span: DUMMY_SP,
+      expr: Box::new(Expr::TsSatisfies(TsSatisfiesExpr {
+        span: DUMMY_SP,
+        expr: Box::new(Expr::Lit(Lit::Str(Str {
+          span: DUMMY_SP,
+          value: value.into(),
+          raw: None,
+        }))),
+        type_ann: Box::new(
+          TsKeywordType {
+            span: DUMMY_SP,
+            kind: TsKeywordTypeKind::TsStringKeyword,
+          }
+          .into(),
+        ),
+      })),
+    })
+  }
+
+  #[test]
+  fn accepts_satisfies_wrapped_string_key() {
+    let key = satisfies_string_key("--ds-surface");
+    assert!(object_key_is_literal_value(&key));
+    assert_eq!(get_key_value(&key), "--ds-surface");
   }
 
   #[test]

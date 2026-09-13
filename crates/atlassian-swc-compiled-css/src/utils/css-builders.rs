@@ -3112,6 +3112,10 @@ fn build_css_internal(node: &Expr, meta: &Metadata) -> CssOutput {
     return build_css_internal(&ts_as.expr, meta);
   }
 
+  if let Expr::TsSatisfies(satisfies) = node {
+    return build_css_internal(&satisfies.expr, meta);
+  }
+
   if let Expr::TsConstAssertion(assertion) = node {
     return build_css_internal(&assertion.expr, meta);
   }
@@ -3378,7 +3382,8 @@ mod tests {
   use swc_core::common::{DUMMY_SP, FileName, SourceMap, Spanned, SyntaxContext};
   use swc_core::ecma::ast::{
     BinExpr, BinaryOp, CallExpr, Callee, CondExpr, Expr, ExprOrSpread, Ident, KeyValueProp, Lit,
-    Number, ObjectLit, Prop, PropName, PropOrSpread, Str,
+    Number, ObjectLit, Prop, PropName, PropOrSpread, Str, TsKeywordType, TsKeywordTypeKind,
+    TsSatisfiesExpr,
   };
   use swc_core::ecma::parser::{Parser, StringInput, Syntax, lexer::Lexer};
 
@@ -4113,6 +4118,29 @@ mod tests {
       }
       _ => panic!("expected conditional item"),
     }
+  }
+
+  #[test]
+  fn build_css_unwraps_satisfies_value() {
+    let expression = Expr::TsSatisfies(TsSatisfiesExpr {
+      span: DUMMY_SP,
+      expr: Box::new(Expr::Lit(Lit::Str(Str {
+        span: DUMMY_SP,
+        value: "flex".into(),
+        raw: None,
+      }))),
+      type_ann: Box::new(
+        TsKeywordType {
+          span: DUMMY_SP,
+          kind: TsKeywordTypeKind::TsStringKeyword,
+        }
+        .into(),
+      ),
+    });
+
+    let output = build_css_internal(&expression, &create_metadata());
+    assert_eq!(output.css.len(), 1);
+    assert_eq!(get_item_css(&output.css[0]), "flex");
   }
 
   #[test]

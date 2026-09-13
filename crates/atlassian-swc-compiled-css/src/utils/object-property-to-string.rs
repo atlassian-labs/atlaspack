@@ -196,6 +196,7 @@ pub(crate) fn expression_type(expr: &Expr) -> &'static str {
     Expr::OptChain(_) => "OptionalChain",
     Expr::TsAs(_) => "TsAsExpression",
     Expr::TsConstAssertion(_) => "TsConstAssertion",
+    Expr::TsSatisfies(_) => "TsSatisfiesExpression",
     Expr::TsInstantiation(_) => "TsInstantiationExpression",
     Expr::TsNonNull(_) => "TsNonNullExpression",
     Expr::TsTypeAssertion(_) => "TsTypeAssertion",
@@ -239,6 +240,7 @@ pub(crate) fn expression_to_string(expression: &Expr, meta: Metadata) -> String 
     }
     Expr::TsConstAssertion(assertion) => expression_to_string(&assertion.expr, meta),
     Expr::TsAs(assertion) => expression_to_string(&assertion.expr, meta),
+    Expr::TsSatisfies(assertion) => expression_to_string(&assertion.expr, meta),
     Expr::TsTypeAssertion(assertion) => expression_to_string(&assertion.expr, meta),
     Expr::TsNonNull(assertion) => expression_to_string(&assertion.expr, meta),
     Expr::Paren(paren) => expression_to_string(&paren.expr, meta),
@@ -276,13 +278,15 @@ mod tests {
   use super::{expression_value_to_string, object_property_to_string};
   use crate::types::{Metadata, PluginOptions, TransformFile, TransformState};
   use crate::utils_types::{BindingPath, BindingSource, PartialBindingWithMeta};
+  use pretty_assertions::assert_eq;
   use std::cell::RefCell;
   use std::rc::Rc;
   use swc_core::common::sync::Lrc;
   use swc_core::common::{DUMMY_SP, SourceMap, SyntaxContext};
   use swc_core::ecma::ast::{
     BinExpr, BinaryOp, CallExpr, Callee, ComputedPropName, Expr, ExprOrSpread, Ident, KeyValueProp,
-    Lit, MemberExpr, MemberProp, Number, PropName, Str, Tpl, TplElement,
+    Lit, MemberExpr, MemberProp, Number, PropName, Str, Tpl, TplElement, TsKeywordType,
+    TsKeywordTypeKind, TsSatisfiesExpr,
   };
 
   fn create_metadata() -> Metadata {
@@ -436,6 +440,32 @@ mod tests {
 
     let meta = create_metadata();
     assert_eq!(object_property_to_string(&prop, meta), "id, hidden");
+  }
+
+  #[test]
+  fn unwraps_satisfies_expression_in_computed_key() {
+    let prop = KeyValueProp {
+      key: PropName::Computed(ComputedPropName {
+        span: DUMMY_SP,
+        expr: Box::new(Expr::TsSatisfies(TsSatisfiesExpr {
+          span: DUMMY_SP,
+          expr: Box::new(string_literal("--custom-property")),
+          type_ann: Box::new(
+            TsKeywordType {
+              span: DUMMY_SP,
+              kind: TsKeywordTypeKind::TsStringKeyword,
+            }
+            .into(),
+          ),
+        })),
+      }),
+      value: Box::new(string_literal("value")),
+    };
+
+    assert_eq!(
+      object_property_to_string(&prop, create_metadata()),
+      "--custom-property"
+    );
   }
 
   #[test]
