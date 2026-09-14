@@ -3555,12 +3555,12 @@ mod tests {
   use pretty_assertions::assert_eq;
 
   // ─────────────────────────────────────────────────────────────────────────
-  // LEGACY-HASH CLEANUP (AFB-2160)
+  // LEGACY-HASH CLEANUP
   //
   // When `collision_resistant_hash` becomes the DEFAULT and the legacy base-36
   // path is deleted, grep this file for `LEGACY-HASH CLEANUP` and remove the
   // `Some(false)` pins, the legacy collision-repro test, and the legacy branch
-  // in `default_options`. Full instructions live on AFB-2160.
+  // in `default_options`.
   // ─────────────────────────────────────────────────────────────────────────
 
   /// Options with the collision-resistant (base-62) hash enabled.
@@ -3616,14 +3616,14 @@ mod tests {
 
   #[test]
   fn legacy_hash_reproduces_scrollbar_width_text_anchor_collision_via_pipeline() {
-    // LEGACY-HASH CLEANUP (AFB-2160): remove this whole test when the new hash is the default.
+    // LEGACY-HASH CLEANUP: remove this whole test when the new hash is the default.
     //
     // Regression guard through the PRODUCTION postcss pipeline: under the legacy
     // base-36 4-char group hash, `scrollbar-width` and `text-anchor` share the
     // group `_1fjg`, so `ax()` would wrongly dedup these unrelated properties.
     let mut opts = TransformCssOptions::default();
     opts.optimize_css = Some(true);
-    // LEGACY-HASH CLEANUP (AFB-2160): explicitly legacy for the collision repro.
+    // LEGACY-HASH CLEANUP: explicitly legacy for the collision repro.
     opts.collision_resistant_hash = Some(false);
     let a = transform_css("& { scrollbar-width: none; }", opts.clone())
       .expect("transform should succeed");
@@ -3694,7 +3694,7 @@ mod tests {
   fn hashes_box_shadow_with_minified_whitespace() {
     let css = ".foo { box-shadow: 0px 0px 1px 0px rgba(30, 31, 33, 0.31), 0px 8px 12px 0px rgba(30, 31, 33, 0.15); }";
     let mut options = TransformCssOptions::default();
-    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    // LEGACY-HASH CLEANUP: pinned so this cross-plugin parity guard (matching @compiled/css and ap_compiled_css) survives the default flip.
     options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let result = transform_css(css, options).expect("transform should succeed");
@@ -3704,6 +3704,14 @@ mod tests {
     // from colormin-normalized value. With alpha_hex=true (matching Babel defaults),
     // colormin shortens rgba to hex notation.
     assert_eq!(result.class_names[0], "_19mh5t6j");
+
+    // Cross-plugin parity: with the collision-resistant hash enabled, this
+    // Atlaspack SWC transformer must emit the exact same 11-char class as the
+    // other Compiled plugins (@compiled/css Babel plugin and ap_compiled_css)
+    // for identical input. This guards against CSS mismatches if an app builds
+    // CSS with different plugins.
+    let cr = transform_css(css, collision_resistant_options()).expect("transform should succeed");
+    assert_eq!(cr.class_names[0], "_30HnVdMcXe");
   }
 
   /// Regression test: box-shadow with rgba colors must produce exact class name
@@ -3713,7 +3721,7 @@ mod tests {
     // This is the exact CSS pattern from csm-widget-ui-components/widget-container
     let css = "& { box-shadow: 0px 0px 1px 0px rgba(30, 31, 33, 0.31), 0px 8px 12px 0px rgba(30, 31, 33, 0.15); }";
     let mut options = TransformCssOptions::default();
-    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    // LEGACY-HASH CLEANUP: pinned so this cross-plugin parity guard (matching @compiled/css and ap_compiled_css) survives the default flip.
     options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let result = transform_css(css, options).expect("transform should succeed");
@@ -3729,6 +3737,36 @@ mod tests {
       "Expected box-shadow in sheet: {}",
       result.sheets[0]
     );
+
+    // Cross-plugin parity (no browserslist config): the collision-resistant
+    // class must match the other Compiled plugins (@compiled/css and
+    // ap_compiled_css) for identical input, so an app that builds CSS with
+    // different plugins stays consistent.
+    let cr = transform_css(css, collision_resistant_options()).expect("transform should succeed");
+    assert_eq!(cr.class_names[0], "_2OUyjtMcXe");
+  }
+
+  #[test]
+  fn collision_resistant_box_shadow_matches_babel_with_controlled_browserslist() {
+    let tmp = tempfile::tempdir().expect("tmpdir");
+    std::fs::write(tmp.path().join(".browserslistrc"), "Chrome >= 80\n")
+      .expect("browserslist config write");
+
+    let css = "& { box-shadow: 0px 0px 1px 0px rgba(30, 31, 33, 0.31), 0px 8px 12px 0px rgba(30, 31, 33, 0.15); }";
+    let mut options = collision_resistant_options();
+    options.browserslist_config_path = Some(tmp.path().to_path_buf());
+    options.cssnano_browserslist_config_path = Some(tmp.path().to_path_buf());
+    options.browserslist_env = Some("production".to_string());
+
+    let result = transform_css(css, options).expect("transform should succeed");
+
+    // Cross-plugin parity for a cssnano/browserslist-dependent value hash: with
+    // the same modern browser target, this Atlaspack SWC transformer must emit
+    // the same class as the other Compiled plugins (@compiled/css and
+    // ap_compiled_css). This is the box-shadow case that otherwise drifts when
+    // an app builds CSS with different plugins and browser targets.
+    assert_eq!(result.class_names[0], "_2OUyjtlSGD");
+    assert!(result.sheets[0].contains("box-shadow:0 0 1px 0 #1e1f214f,0 8px 9pt 0 #1e1f2126"));
   }
 
   /// Regression test: padding-top with var() fallback must produce exact class name
@@ -3738,7 +3776,7 @@ mod tests {
     // This is the exact CSS pattern with design token fallback
     let css = "& { padding-top: var(--ds-space-300, 24px); }";
     let mut options = TransformCssOptions::default();
-    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    // LEGACY-HASH CLEANUP: pinned so this cross-plugin parity guard (matching @compiled/css and ap_compiled_css) survives the default flip.
     options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let result = transform_css(css, options).expect("transform should succeed");
@@ -3752,6 +3790,11 @@ mod tests {
     // Verify the CSS output contains the normalized value (no space after comma in var())
     // Note: The OUTPUT is normalized, but the HASH uses the original value with space
     assert!(result.sheets[0].contains("padding-top:var(--ds-space-300,24px)"));
+
+    // Cross-plugin parity: the collision-resistant class must match the other
+    // Compiled plugins (@compiled/css and ap_compiled_css) for identical input.
+    let cr = transform_css(css, collision_resistant_options()).expect("transform should succeed");
+    assert_eq!(cr.class_names[0], "_0Of8r2NHnM");
   }
 
   /// Regression test: background-color var() with rgba fallback should not
@@ -3760,7 +3803,7 @@ mod tests {
   fn background_color_var_rgba_fallback_produces_exact_classname() {
     let css = "& { background-color: var(--ds-surface, rgba(255, 255, 255, 1)); }";
     let mut options = TransformCssOptions::default();
-    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    // LEGACY-HASH CLEANUP: pinned so this cross-plugin parity guard (matching @compiled/css and ap_compiled_css) survives the default flip.
     options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let result = transform_css(css, options).expect("transform should succeed");
@@ -3770,6 +3813,11 @@ mod tests {
     assert_eq!(result.class_names[0], "_bfhkvuon");
     // Verify the CSS output contains the normalized fallback color
     assert!(result.sheets[0].contains("background-color:var(--ds-surface,#fff)"));
+
+    // Cross-plugin parity: the collision-resistant class must match the other
+    // Compiled plugins (@compiled/css and ap_compiled_css) for identical input.
+    let cr = transform_css(css, collision_resistant_options()).expect("transform should succeed");
+    assert_eq!(cr.class_names[0], "_0KLXrulfZc");
   }
 
   #[test]
@@ -3815,7 +3863,7 @@ mod tests {
   fn linear_gradient_background_produces_exact_classname() {
     let css = "& { background: linear-gradient(90deg, #4d8ced, #cfe1fd); }";
     let mut options = TransformCssOptions::default();
-    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    // LEGACY-HASH CLEANUP: pinned so this cross-plugin parity guard (matching @compiled/css and ap_compiled_css) survives the default flip.
     options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let result = transform_css(css, options).expect("transform should succeed");
@@ -3828,6 +3876,11 @@ mod tests {
 
     // Verify the CSS output contains the minified gradient (no spaces after commas)
     assert!(result.sheets[0].contains("background:linear-gradient(90deg,#4d8ced,#cfe1fd)"));
+
+    // Cross-plugin parity: the collision-resistant class must match the other
+    // Compiled plugins (@compiled/css and ap_compiled_css) for identical input.
+    let cr = transform_css(css, collision_resistant_options()).expect("transform should succeed");
+    assert_eq!(cr.class_names[0], "_2uo31fTcZv");
   }
 
   /// Regression test: text-decoration-color should use 'initial' when browsers support it,
@@ -3845,7 +3898,7 @@ mod tests {
 
     let css = "& { text-decoration-color: currentColor; }";
     let mut options = TransformCssOptions::default();
-    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    // LEGACY-HASH CLEANUP: pinned so this cross-plugin parity guard (matching @compiled/css and ap_compiled_css) survives the default flip.
     options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     options.browserslist_config_path = Some(tmp.path().to_path_buf());
@@ -3860,6 +3913,15 @@ mod tests {
 
     // Verify the CSS output contains 'initial'
     assert!(result.sheets[0].contains("text-decoration-color:initial"));
+
+    // Cross-plugin parity (same browserslist config so reduce-initial behaves
+    // identically): the collision-resistant class must match the other Compiled
+    // plugins (@compiled/css and ap_compiled_css) for identical input.
+    let mut cr_options = collision_resistant_options();
+    cr_options.browserslist_config_path = Some(tmp.path().to_path_buf());
+    cr_options.browserslist_env = Some("production".to_string());
+    let cr = transform_css(css, cr_options).expect("transform should succeed");
+    assert_eq!(cr.class_names[0], "_00uqCYyL8i");
 
     // Clean up cache
     browserslist_cache().lock().unwrap().remove(
@@ -3884,7 +3946,7 @@ mod tests {
 
     let css = "& { background: transparent; }";
     let mut options = TransformCssOptions::default();
-    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    // LEGACY-HASH CLEANUP: pinned so this cross-plugin parity guard (matching @compiled/css and ap_compiled_css) survives the default flip.
     options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     options.browserslist_config_path = Some(tmp.path().to_path_buf());
@@ -3894,6 +3956,14 @@ mod tests {
     assert_eq!(result.class_names.len(), 1);
     assert_eq!(result.class_names[0], "_bfhk18uv");
     assert!(result.sheets[0].contains("background-color:initial"));
+
+    // Cross-plugin parity (same browserslist config): the collision-resistant
+    // class must match the other Compiled plugins (@compiled/css and ap_compiled_css).
+    let mut cr_options = collision_resistant_options();
+    cr_options.browserslist_config_path = Some(tmp.path().to_path_buf());
+    cr_options.browserslist_env = Some("production".to_string());
+    let cr = transform_css(css, cr_options).expect("transform should succeed");
+    assert_eq!(cr.class_names[0], "_0KLXruyL8i");
 
     browserslist_cache().lock().unwrap().remove(
       &crate::postcss::plugins::normalize_css_engine::browserslist_support::BrowserslistCacheKey {
@@ -3916,7 +3986,7 @@ mod tests {
 
     let css = "& { box-sizing: content-box; text-decoration-color: currentColor; }";
     let mut options = TransformCssOptions::default();
-    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    // LEGACY-HASH CLEANUP: pinned so this cross-plugin parity guard (matching @compiled/css and ap_compiled_css) survives the default flip.
     options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     options.browserslist_config_path = Some(tmp.path().to_path_buf());
@@ -3960,7 +4030,7 @@ mod tests {
   fn grid_column_negative_hash_matches_babel() {
     let css = "& { grid-column: 1 / -1; }";
     let mut options = TransformCssOptions::default();
-    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    // LEGACY-HASH CLEANUP: pinned so this cross-plugin parity guard (matching @compiled/css and ap_compiled_css) survives the default flip.
     options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let result = transform_css(css, options).expect("transform should succeed");
@@ -3968,6 +4038,11 @@ mod tests {
     assert_eq!(result.class_names.len(), 1);
     assert_eq!(result.class_names[0], "_yyhyjvu9");
     assert!(result.sheets[0].contains("grid-column:1/-1"));
+
+    // Cross-plugin parity: the collision-resistant class must match the other
+    // Compiled plugins (@compiled/css and ap_compiled_css) for identical input.
+    let cr = transform_css(css, collision_resistant_options()).expect("transform should succeed");
+    assert_eq!(cr.class_names[0], "_2j3gqAg8pm");
   }
 
   fn collect_sheets(css_inputs: &[&str], options: TransformCssOptions) -> Vec<String> {
@@ -3998,10 +4073,10 @@ mod tests {
       .expect("browserslist config write");
     let mut options = TransformCssOptions::default();
     options.optimize_css = Some(true);
-    // LEGACY-HASH CLEANUP (AFB-2160): Babel-parity tests using this helper assert
-    // exact legacy class-name literals (Rust == Babel), which stays legacy. Pin
-    // so those guards survive the default flip; new-hash coverage lives in the
-    // dedicated `collision_resistant_hash_*` tests.
+    // LEGACY-HASH CLEANUP: cross-plugin parity tests using this helper assert
+    // exact legacy class-name literals (Rust output == @compiled/css Babel output),
+    // which stays legacy. Pin so those guards survive the default flip; new-hash
+    // coverage lives in the dedicated `collision_resistant_hash_*` tests.
     options.collision_resistant_hash = Some(false);
     options.browserslist_config_path = Some(tmp.path().to_path_buf());
     (options, tmp)
@@ -4014,7 +4089,7 @@ mod tests {
       "div > .ProseMirror { > p { padding-top: 0.5px; line-height: 24px; } }",
     ];
     let mut options = TransformCssOptions::default();
-    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    // LEGACY-HASH CLEANUP: pinned so this cross-plugin parity guard (matching @compiled/css and ap_compiled_css) survives the default flip.
     options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let sheets = collect_sheets(&css_inputs, options);
@@ -4034,7 +4109,7 @@ mod tests {
       "> span { margin: 0; align-items: var(--align-items); > span { max-width: var(--content-width); &:has([data-testid=\"command-palette-rovo-agent-icon\"]) { height: var(--elem-before-height); margin-inline: 0; > div { margin-inline: 0; } } } }",
     ];
     let mut options = TransformCssOptions::default();
-    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    // LEGACY-HASH CLEANUP: pinned so this cross-plugin parity guard (matching @compiled/css and ap_compiled_css) survives the default flip.
     options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let sheets = collect_sheets(&css_inputs, options);
@@ -4054,7 +4129,7 @@ mod tests {
       "div&:active { background-color: var(--ds-background-neutral-subtle, transparent); color: var(--ds-text-subtle, #42526e); }",
     ];
     let mut options = TransformCssOptions::default();
-    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    // LEGACY-HASH CLEANUP: pinned so this cross-plugin parity guard (matching @compiled/css and ap_compiled_css) survives the default flip.
     options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let sheets = collect_sheets(&css_inputs, options);
@@ -4074,7 +4149,7 @@ mod tests {
       "div&:active { background-color: var(--ds-background-neutral-subtle, transparent); color: var(--ds-text, #42526e); }",
     ];
     let mut options = TransformCssOptions::default();
-    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    // LEGACY-HASH CLEANUP: pinned so this cross-plugin parity guard (matching @compiled/css and ap_compiled_css) survives the default flip.
     options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let sheets = collect_sheets(&css_inputs, options);
@@ -4093,7 +4168,7 @@ mod tests {
       "& { width: calc(100% - var(--ds-space-150, 9pt)); height: calc(100% - var(--ds-space-200, 1pc)); }",
     ];
     let mut options = TransformCssOptions::default();
-    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    // LEGACY-HASH CLEANUP: pinned so this cross-plugin parity guard (matching @compiled/css and ap_compiled_css) survives the default flip.
     options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let sheets = collect_sheets(&css_inputs, options);
@@ -4108,7 +4183,7 @@ mod tests {
   fn agent_header_gradient_outputs_match_babel() {
     let css_inputs = ["& { background: linear-gradient(90deg, #4D8CED 0%, #CFE1FD 100%); }"];
     let mut options = TransformCssOptions::default();
-    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    // LEGACY-HASH CLEANUP: pinned so this cross-plugin parity guard (matching @compiled/css and ap_compiled_css) survives the default flip.
     options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let sheets = collect_sheets(&css_inputs, options);
@@ -4141,7 +4216,7 @@ mod tests {
     let css_inputs =
       ["& { background-image: linear-gradient(90deg, #6B6E76 0%, #C7CDDC 59%, #6B6E76 97.12%); }"];
     let mut options = TransformCssOptions::default();
-    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    // LEGACY-HASH CLEANUP: pinned so this cross-plugin parity guard (matching @compiled/css and ap_compiled_css) survives the default flip.
     options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let sheets = collect_sheets(&css_inputs, options);
@@ -4166,7 +4241,7 @@ mod tests {
   fn title_box_surface_color_outputs_match_babel() {
     let css_inputs = ["& { background-color: var(--ds-surface, rgba(255, 255, 255, 1)); }"];
     let mut options = TransformCssOptions::default();
-    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    // LEGACY-HASH CLEANUP: pinned so this cross-plugin parity guard (matching @compiled/css and ap_compiled_css) survives the default flip.
     options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let sheets = collect_sheets(&css_inputs, options);
@@ -4178,7 +4253,7 @@ mod tests {
   fn backlog_story_point_empty_selector_outputs_match_babel() {
     let css_inputs = ["& { * { &:empty { box-shadow: none; } } }"];
     let mut options = TransformCssOptions::default();
-    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    // LEGACY-HASH CLEANUP: pinned so this cross-plugin parity guard (matching @compiled/css and ap_compiled_css) survives the default flip.
     options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let sheets = collect_sheets(&css_inputs, options);
@@ -4190,7 +4265,7 @@ mod tests {
   fn quarter_picker_child_pseudo_outputs_match_babel() {
     let css_inputs = ["& { > :hover { height: 105px; } > :disabled { height: 105px; } }"];
     let mut options = TransformCssOptions::default();
-    // LEGACY-HASH CLEANUP (AFB-2160): pinned so this Babel-parity guard survives the default flip.
+    // LEGACY-HASH CLEANUP: pinned so this cross-plugin parity guard (matching @compiled/css and ap_compiled_css) survives the default flip.
     options.collision_resistant_hash = Some(false);
     options.optimize_css = Some(true);
     let sheets = collect_sheets(&css_inputs, options);
