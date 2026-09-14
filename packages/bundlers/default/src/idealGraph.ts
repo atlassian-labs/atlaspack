@@ -1435,6 +1435,10 @@ export function createIdealGraph(
             for (let childId of bundleGraph.getNodeIdsConnectedFrom(
               bundleIdToRemove,
             )) {
+              // Cyclic reuse must not make a source bundle depend on itself.
+              if (childId === sourceBundleId) {
+                continue;
+              }
               let child = bundleGraph.getNode(childId);
               invariant(child !== 'root' && child != null);
               child.sourceBundles.add(sourceBundleId);
