@@ -1,5 +1,23 @@
 # @atlaspack/transformer-js
 
+## 20.1.1
+
+### Patch Changes
+
+- [#1118](https://github.com/atlassian-labs/atlaspack/pull/1118) [`9dc423e`](https://github.com/atlassian-labs/atlaspack/commit/9dc423e24e61744b667981b4c4bd2bafc77b47df) Thanks [@OliverWessels](https://github.com/OliverWessels)! - Clean up the `activate_reject_on_unresolved_imports` flag in `SYNC_DYNAMIC_IMPORT_CONFIG`.
+
+  The flag was added to safely enable rejecting promises for unresolved dynamic imports in SSR code. It is now always on, so the flag has been removed and unresolved imports always generate a rejecting promise when a config is present.
+
+  Unresolved dynamic imports now reject with an `Error` object instead of a string. As before, the rejection only fires at runtime when `globalThis.__SSR_TEMP_THROW_ON_UNRESOLVED_DYNAMIC_IMPORT` is set.
+
+- Updated dependencies [[`b4f16b8`](https://github.com/atlassian-labs/atlaspack/commit/b4f16b83c1759a7b06d0aaf1e6eb3d940dfa46d4), [`9dc423e`](https://github.com/atlassian-labs/atlaspack/commit/9dc423e24e61744b667981b4c4bd2bafc77b47df), [`91dd26c`](https://github.com/atlassian-labs/atlaspack/commit/91dd26c1ecf6e9045ca08759b60d41707d60de2a), [`861d54c`](https://github.com/atlassian-labs/atlaspack/commit/861d54c89eb0bcad763cceebaa35c97ea1c511bc)]:
+  - @atlaspack/rust@4.0.0
+  - @atlaspack/core@2.39.2
+  - @atlaspack/source-map@3.3.9
+  - @atlaspack/utils@3.4.7
+  - @atlaspack/workers@2.14.65
+  - @atlaspack/plugin@2.14.65
+
 ## 20.1.0
 
 ### Minor Changes
