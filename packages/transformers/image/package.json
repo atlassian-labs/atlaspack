@@ -22,7 +22,7 @@
     "nullthrows": "^1.1.1"
   },
   "devDependencies": {
-    "sharp": "^0.33.5"
+    "sharp": "^0.35.4"
   },
   "peerDependencies": {
     "@atlaspack/core": "2.39.2"
