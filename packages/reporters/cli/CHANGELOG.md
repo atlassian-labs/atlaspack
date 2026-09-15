@@ -1,5 +1,14 @@
 # @atlaspack/reporter-cli
 
+## 2.18.7
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.4.7
+  - @atlaspack/types@2.15.55
+  - @atlaspack/plugin@2.14.65
+
 ## 2.18.6
 
 ### Patch Changes

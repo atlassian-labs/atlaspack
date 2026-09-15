@@ -1,5 +1,36 @@
 # @atlaspack/transformer-compiled-css-in-js
 
+## 1.0.0
+
+### Major Changes
+
+- [#1115](https://github.com/atlassian-labs/atlaspack/pull/1115) [`91dd26c`](https://github.com/atlassian-labs/atlaspack/commit/91dd26c1ecf6e9045ca08759b60d41707d60de2a) Thanks [@pancaspe87](https://github.com/pancaspe87)! - Remove unused `classNameCompressionMap` option and `ac` runtime helper.
+
+  The `classNameCompressionMap` option was never used in production by any Atlassian product. It has been removed alongside the `ac()` runtime helper and the related `compress-class-names-for-runtime` and `get-runtime-class-name-library` utilities.
+
+  All class name merging now unconditionally uses `ax()`.
+
+  **Breaking change:** If you were setting `classNameCompressionMap` in your transformer config, remove it. The option no longer exists.
+
+### Minor Changes
+
+- [#1119](https://github.com/atlassian-labs/atlaspack/pull/1119) [`b4f16b8`](https://github.com/atlassian-labs/atlaspack/commit/b4f16b83c1759a7b06d0aaf1e6eb3d940dfa46d4) Thanks [@pancaspe87](https://github.com/pancaspe87)! - Add an opt-in `collisionResistantHash` option to the Compiled CSS-in-JS transformer.
+
+  When enabled, atomic class names are generated using a base-62 fixed-width hash (`_<6-char group><4-char value>`, 11 chars) instead of the legacy base-36 truncated hash (`_<4><4>`, 9 chars). This eliminates the group-hash collisions that can cause `ax()` to incorrectly de-duplicate unrelated declarations.
+
+  The option defaults to `false`, so output is byte-for-byte unchanged unless it is explicitly enabled. The two formats are length-disjoint, so legacy (9-char) and new (11-char) classes can safely co-exist on the same page during migration. The base-62 hash matches the reference implementation in `@compiled/css`.
+
+### Patch Changes
+
+- [#1121](https://github.com/atlassian-labs/atlaspack/pull/1121) [`861d54c`](https://github.com/atlassian-labs/atlaspack/commit/861d54c89eb0bcad763cceebaa35c97ea1c511bc) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - Add support for TSSatisfies in css/cssMap
+
+- Updated dependencies [[`b4f16b8`](https://github.com/atlassian-labs/atlaspack/commit/b4f16b83c1759a7b06d0aaf1e6eb3d940dfa46d4), [`9dc423e`](https://github.com/atlassian-labs/atlaspack/commit/9dc423e24e61744b667981b4c4bd2bafc77b47df), [`91dd26c`](https://github.com/atlassian-labs/atlaspack/commit/91dd26c1ecf6e9045ca08759b60d41707d60de2a), [`861d54c`](https://github.com/atlassian-labs/atlaspack/commit/861d54c89eb0bcad763cceebaa35c97ea1c511bc)]:
+  - @atlaspack/rust@4.0.0
+  - @atlaspack/transformer-js@20.1.1
+  - @atlaspack/source-map@3.3.9
+  - @atlaspack/utils@3.4.7
+  - @atlaspack/plugin@2.14.65
+
 ## 0.3.10
 
 ### Patch Changes

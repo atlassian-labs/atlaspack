@@ -1,5 +1,13 @@
 # @atlaspack/transformer-compiled-external
 
+## 0.2.19
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.3.9
+  - @atlaspack/plugin@2.14.65
+
 ## 0.2.18
 
 ### Patch Changes
