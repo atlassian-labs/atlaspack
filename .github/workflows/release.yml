@@ -58,19 +58,22 @@ jobs:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     container:
-      image: node:22-bullseye-slim
+      image: node:22-bullseye
     steps:
       - uses: actions/checkout@v4
-      - name: Install dependencies
-        # Use a Node-based Bullseye image because JavaScript actions require
-        # node to be present in container jobs.
+      - name: Verify container dependencies
+        # Use the full Node Bullseye image so this job does not depend on apt
+        # mirrors during release builds. It includes Node, Yarn, curl, git and
+        # the native build toolchain from buildpack-deps.
         run: |
-          rm -rf /var/lib/apt/lists/*
-          apt-get update
-          apt-get install -y --no-install-recommends build-essential curl ca-certificates
-          apt-get clean
-          rm -rf /var/lib/apt/lists/*
-          npm i -g yarn
+          node --version
+          npm --version
+          yarn --version
+          git --version
+          curl --version
+          gcc --version
+          g++ --version
+          make --version
       - name:
           Free up space
           # This build uses a debian image that's different than the Ubuntu image for the CI jobs
