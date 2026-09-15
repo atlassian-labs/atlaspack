@@ -119,6 +119,15 @@ pub struct CompiledCssInJsConfig {
   /// Defaults to `None`.
   ///
   pub browserslist_env: Option<String>,
+  ///
+  /// When `true`, atomic class names are generated with the collision-resistant
+  /// hash: base-62 encoding, zero-padded to a fixed width (11-char class).
+  /// When `false` (the default), the legacy base-36 truncated hash is used
+  /// (9-char class), preserving existing output.
+  ///
+  /// Defaults to `false`.
+  ///
+  pub collision_resistant_hash: Option<bool>,
 }
 
 /// Full configuration for CompiledCssInJs transform.
@@ -239,6 +248,13 @@ pub struct CompiledCssInJsTransformConfig {
   /// Browserslist environment (e.g. "development" or "production") for package.json "browserslist".
   ///
   pub browserslist_env: Option<String>,
+  ///
+  /// When `true`, atomic class names use the collision-resistant base-62 hash
+  /// (11-char class). When `false` (the default), the legacy base-36 truncated
+  /// hash is used (9-char class).
+  ///
+  /// Defaults to `false`.
+  pub collision_resistant_hash: bool,
 }
 
 impl Default for CompiledCssInJsTransformConfig {
@@ -263,6 +279,7 @@ impl Default for CompiledCssInJsTransformConfig {
       unsafe_use_safe_assets: false,
       unsafe_skip_pattern: None,
       browserslist_env: None,
+      collision_resistant_hash: false,
     }
   }
 }
@@ -300,6 +317,9 @@ impl From<CompiledCssInJsConfig> for CompiledCssInJsTransformConfig {
         .unwrap_or(defaults.unsafe_use_safe_assets),
       unsafe_skip_pattern: partial.unsafe_skip_pattern.or(defaults.unsafe_skip_pattern),
       browserslist_env: partial.browserslist_env.or(defaults.browserslist_env),
+      collision_resistant_hash: partial
+        .collision_resistant_hash
+        .unwrap_or(defaults.collision_resistant_hash),
     }
   }
 }

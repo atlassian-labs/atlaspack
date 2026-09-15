@@ -1285,6 +1285,9 @@ mod tests {
 
       let mut transform = CompiledCssInJsTransform::new(PluginOptions {
         extract: Some(true),
+        // LEGACY-HASH CLEANUP: pinned so this cross-plugin parity guard
+        // (exact legacy class-name literal matching @compiled/css) survives the default flip.
+        collision_resistant_hash: Some(false),
         ..PluginOptions::default()
       });
 
