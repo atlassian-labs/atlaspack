@@ -341,6 +341,50 @@ mod postcss_plugin_tests {
   }
 
   #[test]
+  fn preserves_source_order_for_same_specificity_overrides() {
+    // cssMapScoped is intentionally non-atomic, so equal-specificity selectors
+    // rely on source order for overrides. The base rule's `border-width` shorthand is
+    // expanded into declarations with a shorthand-sort bucket, while the state
+    // rule starts with `background`. Atomic sheet sorting must not move the
+    // state rule ahead of the base rule.
+    let out = snapshot(
+      ".ak-editor-expand{border-width:1px;border-style:solid;border-color:transparent}.ak-editor-expand__expanded{background:var(--ds-background);border-color:var(--ds-border)}",
+    );
+    let base = out
+      .find(".cc-xxxxxx .ak-editor-expand{")
+      .expect("base rule must be present");
+    let expanded = out
+      .find(".cc-xxxxxx .ak-editor-expand__expanded{")
+      .expect("expanded rule must be present");
+
+    assert!(
+      base < expanded,
+      "later same-specificity override must remain after the base rule: {out}"
+    );
+  }
+
+  #[test]
+  fn preserves_source_order_for_same_specificity_overrides_inside_at_rules() {
+    // Rules grouped under the same at-rule must also bypass atomic shorthand
+    // sorting. Otherwise the variable-valued background moves the override
+    // ahead of the base rule inside the generated @media block.
+    let out = snapshot(
+      "@media (min-width:1px){.base{border-width:1px;border-style:solid;border-color:transparent}.override{background:var(--ds-background);border-color:var(--ds-border)}}",
+    );
+    let base = out
+      .find(".cc-xxxxxx .base{")
+      .expect("base rule must be present");
+    let override_rule = out
+      .find(".cc-xxxxxx .override{")
+      .expect("override rule must be present");
+
+    assert!(
+      base < override_rule,
+      "later same-specificity override must remain after the base rule inside the at-rule: {out}"
+    );
+  }
+
+  #[test]
   fn nested_at_rule_bare_decls_emit_correctly() {
     // Regression test: `@media` with bare decls inside a parent rule was
     // being dropped before the at_rule_filter_exit bare-decl handling was

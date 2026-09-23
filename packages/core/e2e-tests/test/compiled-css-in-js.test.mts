@@ -546,7 +546,7 @@ describe('Compiled CSS in JS Playwright E2E tests', () => {
     // links the resulting stylesheet into <head>. No runtime CSS injection.
     await assertCssMapScopedFixture(
       'simple-project-with-css-map-scoped-extracted',
-      `.cc-nc9thm .editor .panel .panel-footer{margin-top:6px;font-size:9pt;color:#646464}.cc-nc9thm .editor .panel{padding-top:8px;padding-right:8px;padding-bottom:8px;padding-left:8px;background-color:#f0f0f0;border-radius:4px;-webkit-user-select:none;-moz-user-select:none;user-select:none}[dir=rtl] .cc-nc9thm .editor blockquote{padding-left:0;padding-right:1pc;border-right-width:2px;border-right-style:solid;border-right-color:#0064c8}.cc-nc9thm .editor .panel .panel-icon{color:#aaa}.cc-nc9thm .editor .panel-title{font-weight:bold;font-family:sans-serif}.cc-nc9thm .editor .panel:focus{outline-color:#00f}.cc-nc9thm .editor .panel:hover{cursor:pointer}@media (min-width:1px){.cc-nc9thm .editor .panel{letter-spacing:1px}}@supports (display:grid){@media (min-width:1px){.cc-nc9thm .editor .panel{row-gap:9pt}}}@supports (display:grid){.cc-nc9thm .editor .panel{display:grid}}.cc-1s4lvcv .editor .panel,.cc-1s4lvcv .editor .panel-title{opacity:.95}.cc-1s4lvcv .editor .panel{background-color:#ffe0e0}.cc-1s4lvcv .editor .panel-title{color:red}.cc-rdkymy .editor .panel{background-color:red;animation-name:kzgsq9a;animation-duration:2s;animation-iteration-count:infinite}.cc-rdkymy .editor .panel-title{color:#fff}._1dqonqa1{border-style:solid}._1h6d17jy{border-color:#0080ff}@keyframes kzgsq9a{0%{opacity:1}to{opacity:.6}}`,
+      `.cc-nc9thm .editor .panel:hover{cursor:pointer}.cc-nc9thm .editor .panel:focus{outline-color:#00f}.cc-nc9thm .editor .panel .panel-footer{margin-top:6px;font-size:9pt;color:#646464}.cc-nc9thm .editor .panel .panel-icon{color:#aaa}.cc-nc9thm .editor .panel{padding-top:8px;padding-right:8px;padding-bottom:8px;padding-left:8px;background-color:#f0f0f0;border-radius:4px;-webkit-user-select:none;-moz-user-select:none;user-select:none}[dir=rtl] .cc-nc9thm .editor blockquote{padding-left:0;padding-right:1pc;border-right-width:2px;border-right-style:solid;border-right-color:#0064c8}.cc-nc9thm .editor .panel-title{font-weight:bold;font-family:sans-serif}@media (min-width:1px){.cc-nc9thm .editor .panel{letter-spacing:1px}}@supports (display:grid){@media (min-width:1px){.cc-nc9thm .editor .panel{row-gap:9pt}}}@supports (display:grid){.cc-nc9thm .editor .panel{display:grid}}.cc-1s4lvcv .editor .panel,.cc-1s4lvcv .editor .panel-title{opacity:.95}.cc-1s4lvcv .editor .panel{background-color:#ffe0e0}.cc-1s4lvcv .editor .panel-title{color:red}.cc-rdkymy .editor .panel{background-color:red;animation-name:kzgsq9a;animation-duration:2s;animation-iteration-count:infinite}.cc-rdkymy .editor .panel-title{color:#fff}._1dqonqa1{border-style:solid}._1h6d17jy{border-color:#0080ff}@keyframes kzgsq9a{0%{opacity:1}to{opacity:.6}}`,
     );
   });
 
@@ -558,13 +558,13 @@ describe('Compiled CSS in JS Playwright E2E tests', () => {
       'simple-project-with-css-map-scoped-runtime',
       `._1dqonqa1 { border-style: solid; }
 ._1h6d17jy { border-color: rgb(0, 128, 255); }
+.cc-nc9thm .editor .panel:hover { cursor: pointer; }
+.cc-nc9thm .editor .panel:focus { outline-color: rgb(0, 0, 255); }
 .cc-nc9thm .editor .panel .panel-footer { margin-top: 6px; font-size: 9pt; color: rgb(100, 100, 100); }
+.cc-nc9thm .editor .panel .panel-icon { color: rgb(170, 170, 170); }
 .cc-nc9thm .editor .panel { padding: 8px; background-color: rgb(240, 240, 240); border-radius: 4px; user-select: none; }
 [dir="rtl"] .cc-nc9thm .editor blockquote { padding-left: 0px; padding-right: 1pc; border-right: 2px solid rgb(0, 100, 200); }
-.cc-nc9thm .editor .panel .panel-icon { color: rgb(170, 170, 170); }
 .cc-nc9thm .editor .panel-title { font-weight: bold; font-family: sans-serif; }
-.cc-nc9thm .editor .panel:focus { outline-color: rgb(0, 0, 255); }
-.cc-nc9thm .editor .panel:hover { cursor: pointer; }
 @media (min-width: 1px) {
   .cc-nc9thm .editor .panel { letter-spacing: 1px; }
 }
