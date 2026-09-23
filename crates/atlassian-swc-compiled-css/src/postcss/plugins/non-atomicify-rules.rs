@@ -341,6 +341,29 @@ mod postcss_plugin_tests {
   }
 
   #[test]
+  fn preserves_source_order_for_same_specificity_overrides() {
+    // cssMapScoped is intentionally non-atomic, so equal-specificity selectors
+    // rely on source order for overrides. The base rule's `border-width` shorthand is
+    // expanded into declarations with a shorthand-sort bucket, while the state
+    // rule starts with `background`. Atomic sheet sorting must not move the
+    // state rule ahead of the base rule.
+    let out = snapshot(
+      ".ak-editor-expand{border-width:1px;border-style:solid;border-color:transparent}.ak-editor-expand__expanded{background:var(--ds-background);border-color:var(--ds-border)}",
+    );
+    let base = out
+      .find(".cc-xxxxxx .ak-editor-expand{")
+      .expect("base rule must be present");
+    let expanded = out
+      .find(".cc-xxxxxx .ak-editor-expand__expanded{")
+      .expect("expanded rule must be present");
+
+    assert!(
+      base < expanded,
+      "later same-specificity override must remain after the base rule: {out}"
+    );
+  }
+
+  #[test]
   fn nested_at_rule_bare_decls_emit_correctly() {
     // Regression test: `@media` with bare decls inside a parent rule was
     // being dropped before the at_rule_filter_exit bare-decl handling was
