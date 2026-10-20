@@ -324,7 +324,7 @@ mod tests {
   };
   use swc_core::ecma::codegen::{Config, Emitter, text_writer::JsWriter};
   use swc_core::ecma::parser::lexer::Lexer;
-  use swc_core::ecma::parser::{EsSyntax, Parser, StringInput, Syntax};
+  use swc_core::ecma::parser::{EsSyntax, Parser, StringInput, Syntax, TsSyntax};
   use swc_core::ecma::visit::VisitMutWith;
 
   struct EnvVarGuard(&'static str);
@@ -355,20 +355,25 @@ mod tests {
   }
 
   fn parse_program(code: &str) -> (Program, Lrc<SourceMap>, Lrc<SourceFile>) {
+    parse_program_with_syntax(
+      code,
+      Syntax::Es(EsSyntax {
+        jsx: true,
+        ..Default::default()
+      }),
+    )
+  }
+
+  fn parse_program_with_syntax(
+    code: &str,
+    syntax: Syntax,
+  ) -> (Program, Lrc<SourceMap>, Lrc<SourceFile>) {
     let cm: Lrc<SourceMap> = Default::default();
     let fm = cm.new_source_file(
       Lrc::new(FileName::Custom("test.tsx".into())),
       code.to_string(),
     );
-    let lexer = Lexer::new(
-      Syntax::Es(EsSyntax {
-        jsx: true,
-        ..Default::default()
-      }),
-      Default::default(),
-      StringInput::from(&*fm),
-      None,
-    );
+    let lexer = Lexer::new(syntax, Default::default(), StringInput::from(&*fm), None);
     let mut parser = Parser::new_from(lexer);
     let program = parser.parse_program().expect("failed to parse program");
     assert!(parser.take_errors().is_empty());
@@ -546,6 +551,213 @@ mod tests {
     assert!(imports.css.is_empty());
     assert!(imports.keyframes.is_empty());
     assert!(imports.css_map.is_empty());
+  }
+
+  #[test]
+  fn promotes_type_only_react_imports_without_duplicate_bindings() {
+    for (react_import, expected_import) in [
+      (
+        "import type React from 'react';",
+        "import React from 'react';",
+      ),
+      (
+        "import type * as React from 'react';",
+        "import * as React from 'react';",
+      ),
+      (
+        "import type { default as React } from 'react';",
+        "import { default as React } from 'react';",
+      ),
+      (
+        "import { type default as React } from 'react';",
+        "import { default as React } from 'react';",
+      ),
+      (
+        "import type { default as React, ReactElement } from 'react';",
+        "import { default as React, type ReactElement } from 'react';",
+      ),
+      ("import React from 'react';", "import React from 'react';"),
+      (
+        "import * as React from 'react';",
+        "import * as React from 'react';",
+      ),
+      (
+        "import { default as React } from 'react';",
+        "import { default as React } from 'react';",
+      ),
+    ] {
+      for compiled_code in [
+        "import { jsx } from '@atlaskit/css'; const Component = () => <div />;",
+        "import { css } from '@atlaskit/css'; const styles = css({ color: 'red' });",
+      ] {
+        let source = format!(
+          "/** @jsx jsx */\nimport {{ useCallback, useMemo, type ReactNode }} from 'react';\n{react_import}\n{compiled_code}"
+        );
+        let (program, cm) = transform_typescript(&source, PluginOptions::default());
+        assert_import_for_binding(&program, &cm, "React", expected_import);
+      }
+    }
+  }
+
+  fn transform_typescript(code: &str, options: PluginOptions) -> (Program, Lrc<SourceMap>) {
+    let (mut program, cm, _) = parse_program_with_syntax(
+      code,
+      Syntax::Typescript(TsSyntax {
+        tsx: true,
+        ..Default::default()
+      }),
+    );
+    crate::test_utils::with_globals(|| {
+      let mut transform = CompiledCssInJsTransform::new(options);
+      reset_transform_state(&mut transform, cm.clone(), "test.tsx");
+      program.visit_mut_with(&mut transform);
+    });
+    (program, cm)
+  }
+
+  fn assert_import_for_binding(program: &Program, cm: &Lrc<SourceMap>, name: &str, expected: &str) {
+    let Program::Module(module) = program else {
+      panic!("expected module program");
+    };
+    let mut imports = module.clone();
+    imports.body.retain(|item| match item {
+      ModuleItem::ModuleDecl(ModuleDecl::Import(import)) => {
+        import.specifiers.iter().any(|specifier| match specifier {
+          ImportSpecifier::Named(named) => named.local.sym.as_ref() == name,
+          ImportSpecifier::Default(default) => default.local.sym.as_ref() == name,
+          ImportSpecifier::Namespace(namespace) => namespace.local.sym.as_ref() == name,
+        })
+      }
+      _ => false,
+    });
+    let (expected, expected_cm, _) = parse_program_with_syntax(
+      expected,
+      Syntax::Typescript(TsSyntax {
+        tsx: true,
+        ..Default::default()
+      }),
+    );
+    let Program::Module(expected) = expected else {
+      panic!("expected module program");
+    };
+    pretty_assertions::assert_eq!(
+      print_module(cm, &imports),
+      print_module(&expected_cm, &expected),
+    );
+  }
+
+  #[test]
+  fn promotes_type_only_jsx_imports_without_duplicate_bindings() {
+    for (jsx_import, expected_import) in [
+      (
+        "import type { jsx } from 'react/jsx-runtime';",
+        "import { jsx } from 'react/jsx-runtime';",
+      ),
+      (
+        "import { type jsx } from 'react/jsx-runtime';",
+        "import { jsx } from 'react/jsx-runtime';",
+      ),
+      (
+        "import type { jsx, JSX } from 'react/jsx-runtime';",
+        "import { jsx, type JSX } from 'react/jsx-runtime';",
+      ),
+      (
+        "import { jsx } from 'react/jsx-runtime';",
+        "import { jsx } from 'react/jsx-runtime';",
+      ),
+    ] {
+      let source = format!(
+        "{jsx_import}\nimport {{ jsx as compiledJsx }} from '@atlaskit/css';\nconst Component = () => <div />;"
+      );
+      let (program, cm) = transform_typescript(&source, PluginOptions::default());
+      assert_import_for_binding(&program, &cm, "jsx", expected_import);
+      assert_import_for_binding(&program, &cm, "React", "import * as React from \"react\";");
+    }
+  }
+
+  #[test]
+  fn promotes_type_only_forward_ref_imports_without_duplicate_bindings() {
+    for (forward_ref_import, expected_import) in [
+      (
+        "import type { forwardRef } from 'react';",
+        "import { forwardRef } from 'react';",
+      ),
+      (
+        "import { type forwardRef } from 'react';",
+        "import { forwardRef } from 'react';",
+      ),
+      (
+        "import type { forwardRef, Ref } from 'react';",
+        "import { forwardRef, type Ref } from 'react';",
+      ),
+      (
+        "import { useMemo, type forwardRef, type Ref } from 'react';",
+        "import { useMemo, forwardRef, type Ref } from 'react';",
+      ),
+      (
+        "import { forwardRef } from 'react';",
+        "import { forwardRef } from 'react';",
+      ),
+    ] {
+      let source = format!(
+        "{forward_ref_import}\nimport {{ styled }} from '@compiled/react';\nconst Component = styled.div({{ color: 'red' }});"
+      );
+      let (program, cm) = transform_typescript(&source, PluginOptions::default());
+      assert_import_for_binding(&program, &cm, "forwardRef", expected_import);
+    }
+  }
+
+  #[test]
+  fn runtime_binding_takes_precedence_over_type_only_import_promotion() {
+    let (mut program, _, _) = parse_program_with_syntax(
+      "import type React from 'react'; const React = customReact;",
+      Syntax::Typescript(TsSyntax::default()),
+    );
+    let original = program.clone();
+    let Program::Module(module) = &mut program else {
+      panic!("expected module program");
+    };
+    assert!(super::ensure_runtime_binding(
+      module, "React", "react", "default"
+    ));
+    pretty_assertions::assert_eq!(program, original);
+  }
+
+  #[test]
+  fn preserves_type_only_imports_from_unrelated_sources_or_exports() {
+    for source in [
+      "import type React from './types';",
+      "import type { Other as React } from 'react';",
+    ] {
+      let (mut program, _, _) =
+        parse_program_with_syntax(source, Syntax::Typescript(TsSyntax::default()));
+      let original = program.clone();
+      let Program::Module(module) = &mut program else {
+        panic!("expected module program");
+      };
+      assert!(!super::ensure_runtime_binding(
+        module, "React", "react", "default"
+      ));
+      pretty_assertions::assert_eq!(program, original);
+    }
+  }
+
+  #[test]
+  fn preserves_type_only_react_import_when_runtime_import_is_disabled() {
+    for compiled_code in [
+      "import { jsx } from '@atlaskit/css'; const Component = () => <div />;",
+      "import { css } from '@atlaskit/css'; const styles = css({ color: 'red' });",
+    ] {
+      let source = format!("import type React from 'react';\n{compiled_code}");
+      let (program, cm) = transform_typescript(
+        &source,
+        PluginOptions {
+          import_react: Some(false),
+          ..PluginOptions::default()
+        },
+      );
+      assert_import_for_binding(&program, &cm, "React", "import type React from 'react';");
+    }
   }
 
   #[test]
@@ -2882,12 +3094,15 @@ fn pattern_contains_ident(pat: &Pat, name: &str) -> bool {
   }
 }
 
-fn module_has_binding(module: &Module, name: &str) -> bool {
+fn module_has_runtime_binding(module: &Module, name: &str) -> bool {
   for item in &module.body {
     match item {
       ModuleItem::ModuleDecl(ModuleDecl::Import(import)) => {
+        if import.type_only {
+          continue;
+        }
         if import.specifiers.iter().any(|specifier| match specifier {
-          ImportSpecifier::Named(named) => named.local.sym.as_ref() == name,
+          ImportSpecifier::Named(named) => !named.is_type_only && named.local.sym.as_ref() == name,
           ImportSpecifier::Default(default) => default.local.sym.as_ref() == name,
           ImportSpecifier::Namespace(namespace) => namespace.local.sym.as_ref() == name,
         }) {
@@ -2918,6 +3133,55 @@ fn module_has_binding(module: &Module, name: &str) -> bool {
       },
       _ => {}
     }
+  }
+
+  false
+}
+
+fn ensure_runtime_binding(module: &mut Module, name: &str, source: &str, exported: &str) -> bool {
+  if module_has_runtime_binding(module, name) {
+    return true;
+  }
+
+  for item in &mut module.body {
+    let ModuleItem::ModuleDecl(ModuleDecl::Import(import)) = item else {
+      continue;
+    };
+    if import.src.value.as_ref() != source {
+      continue;
+    }
+
+    let Some(index) = import
+      .specifiers
+      .iter()
+      .position(|specifier| match specifier {
+        ImportSpecifier::Named(named) => {
+          named.local.sym.as_ref() == name && imported_name(named) == exported
+        }
+        ImportSpecifier::Default(default) => {
+          default.local.sym.as_ref() == name && exported == "default"
+        }
+        ImportSpecifier::Namespace(namespace) => {
+          namespace.local.sym.as_ref() == name && exported == "default"
+        }
+      })
+    else {
+      continue;
+    };
+
+    if import.type_only {
+      // Preserve type-only siblings when promoting the import declaration.
+      for specifier in &mut import.specifiers {
+        if let ImportSpecifier::Named(named) = specifier {
+          named.is_type_only = true;
+        }
+      }
+      import.type_only = false;
+    }
+    if let ImportSpecifier::Named(named) = &mut import.specifiers[index] {
+      named.is_type_only = false;
+    }
+    return true;
   }
 
   false
@@ -3120,11 +3384,11 @@ impl CompiledCssInJsTransform {
       (should_import_react, has_styled_import)
     };
 
-    if should_import_react && !module_has_binding(module, "React") {
+    if should_import_react && !ensure_runtime_binding(module, "React", "react", "default") {
       insert_react_import(module);
     }
 
-    if has_styled_import && !module_has_binding(module, "forwardRef") {
+    if has_styled_import && !ensure_runtime_binding(module, "forwardRef", "react", "forwardRef") {
       insert_forward_ref_import(module);
     }
 
@@ -3244,40 +3508,19 @@ impl CompiledCssInJsTransform {
     drop(state);
 
     // Add jsx import from react if we removed it from @compiled/react
-    if needs_react_jsx_import && !module_has_binding(module, "jsx") {
-      let import_decl = ImportDecl {
-        span: DUMMY_SP,
-        specifiers: vec![ImportSpecifier::Named(ImportNamedSpecifier {
+    if needs_react_jsx_import {
+      if !ensure_runtime_binding(module, "jsx", "react/jsx-runtime", "jsx") {
+        let import_decl = ImportDecl {
           span: DUMMY_SP,
-          local: Ident::new("jsx".into(), DUMMY_SP, SyntaxContext::empty()),
-          imported: None,
-          is_type_only: false,
-        })],
-        src: Box::new(Str {
-          span: DUMMY_SP,
-          value: "react/jsx-runtime".into(),
-          raw: None,
-        }),
-        type_only: false,
-        with: None,
-        phase: ImportPhase::Evaluation,
-      };
-
-      module
-        .body
-        .insert(0, ModuleItem::ModuleDecl(ModuleDecl::Import(import_decl)));
-
-      // Only add React import if it doesn't already exist and import_react option allows it
-      if should_import_react && !module_has_binding(module, "React") {
-        let react_import_decl = ImportDecl {
-          span: DUMMY_SP,
-          specifiers: vec![ImportSpecifier::Namespace(ImportStarAsSpecifier {
+          specifiers: vec![ImportSpecifier::Named(ImportNamedSpecifier {
             span: DUMMY_SP,
-            local: Ident::new("React".into(), DUMMY_SP, SyntaxContext::empty()),
+            local: Ident::new("jsx".into(), DUMMY_SP, SyntaxContext::empty()),
+            imported: None,
+            is_type_only: false,
           })],
           src: Box::new(Str {
             span: DUMMY_SP,
-            value: "react".into(),
+            value: "react/jsx-runtime".into(),
             raw: None,
           }),
           type_only: false,
@@ -3285,10 +3528,14 @@ impl CompiledCssInJsTransform {
           phase: ImportPhase::Evaluation,
         };
 
-        module.body.insert(
-          0,
-          ModuleItem::ModuleDecl(ModuleDecl::Import(react_import_decl)),
-        );
+        module
+          .body
+          .insert(0, ModuleItem::ModuleDecl(ModuleDecl::Import(import_decl)));
+      }
+
+      // Only add React import if it doesn't already exist and import_react option allows it
+      if should_import_react && !ensure_runtime_binding(module, "React", "react", "default") {
+        insert_react_import(module);
       }
     }
   }
