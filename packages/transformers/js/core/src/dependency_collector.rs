@@ -18,7 +18,6 @@ use swc_core::common::{Mark, SourceMap, SyntaxContext};
 use swc_core::ecma::ast::*;
 use swc_core::ecma::atoms::Atom;
 use swc_core::ecma::atoms::atom;
-use swc_core::ecma::utils::member_expr;
 use swc_core::ecma::visit::VisitMut;
 use swc_core::ecma::visit::VisitMutWith;
 
@@ -445,33 +444,6 @@ impl VisitMut for DependencyCollector<'_> {
                   DUMMY_SP,
                   SyntaxContext::empty().apply_mark(self.ignore_mark),
                 ))));
-
-                return;
-              }
-              "parcelRequire" => {
-                if let Some(ExprOrSpread { expr, .. }) = node.args.first()
-                  && let Some((id, span)) = match_str(expr)
-                {
-                  self.items.push(DependencyDescriptor {
-                    kind: DependencyKind::Id,
-                    loc: SourceLocation::from(&self.source_map, span),
-                    specifier: id,
-                    attributes: None,
-                    is_optional: false,
-                    is_helper: false,
-                    source_type: None,
-                    placeholder: None,
-                  });
-                }
-                node.visit_mut_children_with(self);
-
-                if !self.config.scope_hoist {
-                  node.callee = Callee::Expr(Box::new(Expr::Member(member_expr!(
-                    Default::default(),
-                    node.span,
-                    module.bundle.root
-                  ))));
-                }
 
                 return;
               }
@@ -2795,24 +2767,12 @@ mod tests {
     });
 
     let expected_code = formatdoc! {r#"
-      const x = module.bundle.root('foo');
+      const x = parcelRequire('foo');
     "#};
 
     assert_eq!(output_code, expected_code);
     assert_eq!(diagnostics, []);
-    assert_eq!(
-      items,
-      [DependencyDescriptor {
-        kind: DependencyKind::Id,
-        specifier: "foo".into(),
-        attributes: None,
-        is_optional: false,
-        is_helper: false,
-        source_type: None,
-        placeholder: None,
-        ..items[0].clone()
-      },]
-    );
+    assert_eq!(items, []);
     assert_eq!(conditions, BTreeSet::new(),);
   }
 }

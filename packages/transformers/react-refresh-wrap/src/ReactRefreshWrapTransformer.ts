@@ -33,14 +33,14 @@ export default new Transformer({
 
     let wrapperPath = `@atlaspack/transformer-react-refresh-wrap/${path.basename(
       __dirname,
-    )}/helpers/helpers-new.js`;
+    )}/helpers/helpers.js`;
 
     let code = await asset.getCode();
     let map = await asset.getMap();
     let name = `$parcel$ReactRefreshHelpers$${asset.id.slice(-4)}`;
 
     code = `var ${name} = require(${JSON.stringify(wrapperPath)});
-${name}.init();
+
 var prevRefreshReg = window.$RefreshReg$;
 var prevRefreshSig = window.$RefreshSig$;
 ${name}.prelude(module);

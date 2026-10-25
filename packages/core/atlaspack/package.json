@@ -217,6 +217,7 @@
     "@atlaspack/resolver-glob": "2.14.65",
     "@atlaspack/runtime-browser-hmr": "2.15.22",
     "@atlaspack/runtime-js": "2.20.22",
+    "@atlaspack/runtime-react-refresh": "2.16.22",
     "@atlaspack/runtime-service-worker": "2.15.22",
     "@atlaspack/runtime-webextension": "2.15.22",
     "@atlaspack/transformer-babel": "2.15.26",

@@ -126,16 +126,6 @@ export class DevPackager {
             deps[specifier] = dep.specifier;
           }
         }
-        // Add dependencies for parcelRequire calls added by runtimes
-        // so that the HMR runtime can correctly traverse parents.
-        let hmrDeps = asset.meta.hmrDeps;
-        if (this.options.hmrOptions && Array.isArray(hmrDeps)) {
-          for (let id of hmrDeps) {
-            invariant(typeof id === 'string');
-            deps[id] = id;
-          }
-        }
-
         // @ts-expect-error TS2339
         let {code, mapBuffer} = results[i];
         let output = code || '';

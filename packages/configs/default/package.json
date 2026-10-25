@@ -34,6 +34,7 @@
     "@atlaspack/resolver-default": "2.14.65",
     "@atlaspack/runtime-browser-hmr": "2.15.22",
     "@atlaspack/runtime-js": "2.20.22",
+    "@atlaspack/runtime-react-refresh": "2.16.22",
     "@atlaspack/runtime-service-worker": "2.15.22",
     "@atlaspack/transformer-css": "2.15.26",
     "@atlaspack/transformer-html": "2.15.42",

@@ -448,7 +448,7 @@ describe('AssetGraph', () => {
     assert(!graph.hasEdge(nodeId2, dependencyNodeId2));
   });
 
-  it('preserves resolver metadata and priority across repeated asset updates', () => {
+  it('uses transformed dependency priority after repeated asset updates', () => {
     let graph = new AssetGraph();
     let filePath = toProjectPath('/index.js');
     let assetGroup = {filePath, env: DEFAULT_ENV};
@@ -482,14 +482,15 @@ describe('AssetGraph', () => {
     dependency.meta.resolved = true;
     dependency.resolverMeta = {resolved: true};
     dependency.priority = Priority.lazy;
-    dependency.resolverPriority = Priority.lazy;
 
     for (let requestId of ['first-rebuild', 'second-rebuild']) {
       let updated = resolveAsset(requestId);
-      assert.deepStrictEqual(updated.meta, {transformed: true, resolved: true});
-      assert.deepStrictEqual(updated.resolverMeta, {resolved: true});
-      assert.strictEqual(updated.priority, Priority.lazy);
-      assert.strictEqual(updated.resolverPriority, Priority.lazy);
+      assert.deepStrictEqual(updated.meta, {
+        transformed: true,
+        ...(requestId === 'first-rebuild' ? {resolved: true} : {}),
+      });
+      assert.strictEqual(updated.resolverMeta, undefined);
+      assert.strictEqual(updated.priority, Priority.sync);
     }
   });
 

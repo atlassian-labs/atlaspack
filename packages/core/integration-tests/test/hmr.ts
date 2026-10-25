@@ -529,7 +529,7 @@ module.hot.dispose((data) => {
       assert(reloaded);
     });
 
-    it('should work across bundles', async function () {
+    it('should reload when a dependency changes across bundles', async function () {
       let {reloaded, outputs} = await testHMRClient(
         'hmr-dynamic',
         (outputs) => {
@@ -540,11 +540,11 @@ module.hot.dispose((data) => {
         },
       );
 
-      assert.deepEqual(outputs, [3, 10]);
-      assert(!reloaded);
+      assert(reloaded);
+      assert.deepEqual(outputs, []);
     });
 
-    it('should work when an asset is duplicated', async function () {
+    it('should reload when a changed asset is duplicated across bundles', async function () {
       let {reloaded, outputs} = await testHMRClient(
         'hmr-duplicate',
         (outputs) => {
@@ -555,8 +555,8 @@ module.hot.dispose((data) => {
         },
       );
 
-      assert.deepEqual(outputs, [7, 13]);
-      assert(!reloaded);
+      assert(reloaded);
+      assert.deepEqual(outputs, []);
     });
 
     it('should bubble to parents if child returns additional parents', async function () {

@@ -52,7 +52,7 @@ pub fn wrap_with_react_refresh(
     return None;
   }
 
-  let wrapper_path = "@atlaspack/transformer-react-refresh-wrap/lib/helpers/helpers-new.js";
+  let wrapper_path = "@atlaspack/transformer-react-refresh-wrap/lib/helpers/helpers.js";
 
   let name = format!(
     "$parcel$ReactRefreshHelpers${}",
@@ -63,7 +63,6 @@ pub fn wrap_with_react_refresh(
 
   let wrapped_code = format!(
     r#"var {name} = require({wrapper_path_json});
-{name}.init();
 var prevRefreshReg = window.$RefreshReg$;
 var prevRefreshSig = window.$RefreshSig$;
 {name}.prelude(module);
@@ -87,7 +86,7 @@ try {{
     .build();
 
   // Calculate the number of lines added by the wrapper
-  let offset_lines = 7;
+  let offset_lines = 6;
   let start_column = 0; // Original code starts at column 0 after the "try {" line
 
   Some((
@@ -360,10 +359,10 @@ mod tests {
 
   #[test]
   fn test_wrap_with_react_refresh_basic() {
-    let asset = create_test_asset("xyz789abc123def4", true);
+    let asset = create_test_asset("abcd1234efgh5678", true);
     let options = create_test_options(BuildMode::Development, true);
     let deps = create_dependencies_with_specifiers(vec!["react"]);
-    let code = b"const App = () => <div />;".to_vec();
+    let code = b"console.log('test');".to_vec();
 
     let result = wrap_with_react_refresh(
       &asset,
@@ -378,15 +377,14 @@ mod tests {
 
     let result_str = String::from_utf8(result_code).unwrap();
 
-    let expected = r#"var $parcel$ReactRefreshHelpers$def4 = require("@atlaspack/transformer-react-refresh-wrap/lib/helpers/helpers-new.js");
-$parcel$ReactRefreshHelpers$def4.init();
+    let expected = r#"var $parcel$ReactRefreshHelpers$5678 = require("@atlaspack/transformer-react-refresh-wrap/lib/helpers/helpers.js");
 var prevRefreshReg = window.$RefreshReg$;
 var prevRefreshSig = window.$RefreshSig$;
-$parcel$ReactRefreshHelpers$def4.prelude(module);
+$parcel$ReactRefreshHelpers$5678.prelude(module);
 
 try {
-const App = () => <div />;
-  $parcel$ReactRefreshHelpers$def4.postlude(module);
+console.log('test');
+  $parcel$ReactRefreshHelpers$5678.postlude(module);
 } finally {
   window.$RefreshReg$ = prevRefreshReg;
   window.$RefreshSig$ = prevRefreshSig;
@@ -396,14 +394,14 @@ const App = () => <div />;
 
     assert_eq!(
       dependency.specifier,
-      "@atlaspack/transformer-react-refresh-wrap/lib/helpers/helpers-new.js"
+      "@atlaspack/transformer-react-refresh-wrap/lib/helpers/helpers.js"
     );
     assert_eq!(dependency.specifier_type, SpecifierType::Esm);
     assert_eq!(dependency.kind, Some(DependencyKind::Require));
     assert_eq!(dependency.priority, Priority::Sync);
 
     // Check source map offset
-    assert_eq!(source_map_offset, (0, 7));
+    assert_eq!(source_map_offset, (0, 6));
   }
 
   #[test]
@@ -426,8 +424,7 @@ const App = () => <div />;
 
     let result_str = String::from_utf8(result_code).unwrap();
 
-    let expected = r#"var $parcel$ReactRefreshHelpers$ars7 = require("@atlaspack/transformer-react-refresh-wrap/lib/helpers/helpers-new.js");
-$parcel$ReactRefreshHelpers$ars7.init();
+    let expected = r#"var $parcel$ReactRefreshHelpers$ars7 = require("@atlaspack/transformer-react-refresh-wrap/lib/helpers/helpers.js");
 var prevRefreshReg = window.$RefreshReg$;
 var prevRefreshSig = window.$RefreshSig$;
 $parcel$ReactRefreshHelpers$ars7.prelude(module);
@@ -443,6 +440,6 @@ const str = "Hello \"world\""; // Comment with 'quotes'
     assert_eq!(result_str, expected);
 
     // Check source map offset
-    assert_eq!(source_map_offset, (0, 7));
+    assert_eq!(source_map_offset, (0, 6));
   }
 }

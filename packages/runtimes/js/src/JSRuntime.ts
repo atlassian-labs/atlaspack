@@ -165,7 +165,7 @@ export default new Runtime({
 
           assets.push({
             filePath: __filename,
-            code: `module.exports = Promise.resolve(parcelRequire(${JSON.stringify(
+            code: `module.exports = Promise.resolve(module.bundle.root(${JSON.stringify(
               bundleGraph.getAssetPublicId(resolved.value),
             )}))`,
             dependency,
@@ -235,6 +235,10 @@ export default new Runtime({
         bundle,
       );
       for (const cond of conditions) {
+        const requireName = bundle.env.shouldScopeHoist
+          ? 'parcelRequire'
+          : '__parcel__require__';
+
         // We have fallback behaviour that can be used in development mode, so we need to handle both types of packagers
         const getFallbackArgs = (cond: {
           ifTrueBundles: NamedBundle[];
@@ -279,8 +283,8 @@ export default new Runtime({
           options.mode === 'development' ? '-dev' : ''
         }`;
 
-        const ifTrue = `function (){return parcelRequire('${cond.ifTrueAssetId}')}`;
-        const ifFalse = `function (){return parcelRequire('${cond.ifFalseAssetId}')}`;
+        const ifTrue = `function (){return ${requireName}('${cond.ifTrueAssetId}')}`;
+        const ifFalse = `function (){return ${requireName}('${cond.ifFalseAssetId}')}`;
 
         const assetCode = `module.exports = require('${loaderPath}')('${
           cond.key
@@ -795,7 +799,11 @@ function getLoaderRuntime({
   }
 
   if (mainBundle.type === 'js') {
-    loaderCode += `.then(() => parcelRequire('${bundleGraph.getAssetPublicId(
+    let parcelRequire = bundle.env.shouldScopeHoist
+      ? 'parcelRequire'
+      : 'module.bundle.root';
+
+    loaderCode += `.then(() => ${parcelRequire}('${bundleGraph.getAssetPublicId(
       bundleGraph.getAssetById(bundleGroup.entryAssetId),
     )}'))`;
   }
@@ -1081,7 +1089,7 @@ function getURLRuntime(
   options: PluginOptions,
   shardingConfig: JSRuntimeConfig['domainSharding'],
 ): RuntimeAsset {
-  let relativePathExpr = getRelativePathExpr(from, to, options, true);
+  let relativePathExpr = getRelativePathExpr(from, to, options);
   let code;
 
   if (dependency.meta.webworker === true && !from.env.isLibrary) {
@@ -1251,11 +1259,10 @@ function getRelativePathExpr(
   from: NamedBundle,
   to: NamedBundle,
   options: PluginOptions,
-  isURL = to.type !== 'js',
 ): string {
   let relativePath = relativeBundlePath(from, to, {leadingDotSlash: false});
   let res = JSON.stringify(relativePath);
-  if (isURL && options.hmrOptions) {
+  if (options.hmrOptions) {
     if (getFeatureFlag('hmrBundleVersioning')) {
       res +=
         ' + (globalThis.__parcel__hmrBundleVersion == null' +
