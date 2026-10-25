@@ -6,9 +6,6 @@
   },
   "references": [
     {
-      "path": "../../core/feature-flags/tsconfig.json"
-    },
-    {
       "path": "../../core/plugin/tsconfig.json"
     },
     {

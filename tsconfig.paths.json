@@ -239,9 +239,6 @@
       "path": "./packages/runtimes/js/tsconfig.json"
     },
     {
-      "path": "./packages/runtimes/react-refresh/tsconfig.json"
-    },
-    {
       "path": "./packages/runtimes/service-worker/tsconfig.json"
     },
     {

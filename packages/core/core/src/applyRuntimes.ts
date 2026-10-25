@@ -245,9 +245,9 @@ export default async function applyRuntimes<TResult extends RequestResult>({
    * won't error, as the entry runtime assets are added to many bundles in a
    * single bundle group but their dependencies are not.
    *
-   * This issue is almost exclusive to HMR scenarios as the two HMR runtime
-   * plugins (@atlaspack/runtime-browser-hmr and @atlaspack/runtime-react-refresh)
-   * are the only known cases where a runtime asset is marked as `isEntry`.
+   * This issue is almost exclusive to HMR scenarios as the HMR runtime
+   * plugin (@atlaspack/runtime-browser-hmr) is the only known case where a
+   * runtime asset is marked as `isEntry`.
    */
   let connections: Array<RuntimeConnection> = [];
   bundleGraph.traverseBundles({

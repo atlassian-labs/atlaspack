@@ -86,7 +86,7 @@ describe('hmr', function () {
       },
       inputFS: overlayFS,
       config,
-      featureFlags: {hmrImprovements: true, ...featureFlags},
+      featureFlags,
     });
 
     subscription = await b.watch();

@@ -449,37 +449,31 @@ impl VisitMut for DependencyCollector<'_> {
                 return;
               }
               "parcelRequire" => {
-                if self.config.hmr_improvements {
-                  if let Some(ExprOrSpread { expr, .. }) = node.args.first()
-                    && let Some((id, span)) = match_str(expr)
-                  {
-                    self.items.push(DependencyDescriptor {
-                      kind: DependencyKind::Id,
-                      loc: SourceLocation::from(&self.source_map, span),
-                      specifier: id,
-                      attributes: None,
-                      is_optional: false,
-                      is_helper: false,
-                      source_type: None,
-                      placeholder: None,
-                    });
-                  }
-                  node.visit_mut_children_with(self);
-
-                  if !self.config.scope_hoist {
-                    node.callee = Callee::Expr(Box::new(Expr::Member(member_expr!(
-                      Default::default(),
-                      node.span,
-                      module.bundle.root
-                    ))));
-                  }
-
-                  return;
-                } else {
-                  // Mimic the behaviour of the default case
-                  node.visit_mut_children_with(self);
-                  return;
+                if let Some(ExprOrSpread { expr, .. }) = node.args.first()
+                  && let Some((id, span)) = match_str(expr)
+                {
+                  self.items.push(DependencyDescriptor {
+                    kind: DependencyKind::Id,
+                    loc: SourceLocation::from(&self.source_map, span),
+                    specifier: id,
+                    attributes: None,
+                    is_optional: false,
+                    is_helper: false,
+                    source_type: None,
+                    placeholder: None,
+                  });
                 }
+                node.visit_mut_children_with(self);
+
+                if !self.config.scope_hoist {
+                  node.callee = Callee::Expr(Box::new(Expr::Member(member_expr!(
+                    Default::default(),
+                    node.span,
+                    module.bundle.root
+                  ))));
+                }
+
+                return;
               }
               _ => {
                 node.visit_mut_children_with(self);
@@ -2785,39 +2779,6 @@ mod tests {
     let mut items = vec![];
 
     let config = make_config();
-
-    let input_code = r#"
-      const x = parcelRequire('foo');
-    "#;
-
-    let RunVisitResult { output_code, .. } = run_test_visit(input_code, |context| {
-      make_dependency_collector(
-        context,
-        &mut items,
-        &mut diagnostics,
-        &config,
-        &mut conditions,
-      )
-    });
-
-    let expected_code = formatdoc! {r#"
-      const x = parcelRequire('foo');
-    "#};
-
-    assert_eq!(output_code, expected_code);
-    assert_eq!(diagnostics, []);
-    assert_eq!(items, []);
-    assert_eq!(conditions, BTreeSet::new(),);
-  }
-
-  #[test]
-  fn test_parcel_require_with_hmr_improvements_ff_on() {
-    let mut conditions = BTreeSet::new();
-    let mut diagnostics = vec![];
-    let mut items = vec![];
-
-    let mut config = make_config();
-    config.hmr_improvements = true;
 
     let input_code = r#"
       const x = parcelRequire('foo');

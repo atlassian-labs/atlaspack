@@ -47,22 +47,12 @@ pub fn wrap_with_react_refresh(
   mode: &BuildMode,
   hmr_enabled: bool,
   dependencies: &IndexMap<Atom, Dependency>,
-  hmr_improvements: bool,
 ) -> Option<(Vec<u8>, Dependency, SourceMapOffset)> {
   if should_exclude_from_react_refresh(asset, mode, hmr_enabled, dependencies) {
     return None;
   }
 
-  let helper_filename = if hmr_improvements {
-    "helpers-new.js"
-  } else {
-    "helpers.js"
-  };
-
-  let wrapper_path = format!(
-    "@atlaspack/transformer-react-refresh-wrap/lib/helpers/{}",
-    helper_filename
-  );
+  let wrapper_path = "@atlaspack/transformer-react-refresh-wrap/lib/helpers/helpers-new.js";
 
   let name = format!(
     "$parcel$ReactRefreshHelpers${}",
@@ -70,15 +60,11 @@ pub fn wrap_with_react_refresh(
   );
   let code_str = String::from_utf8_lossy(code);
   let wrapper_path_json = format!("\"{}\"", wrapper_path);
-  let init_line = if hmr_improvements {
-    format!("{}.init();\n", name)
-  } else {
-    String::new()
-  };
 
   let wrapped_code = format!(
     r#"var {name} = require({wrapper_path_json});
-{init_line}var prevRefreshReg = window.$RefreshReg$;
+{name}.init();
+var prevRefreshReg = window.$RefreshReg$;
 var prevRefreshSig = window.$RefreshSig$;
 {name}.prelude(module);
 
@@ -93,7 +79,7 @@ try {{
 
   // Create the dependency for the React refresh helpers
   let dependency = DependencyBuilder::default()
-    .specifier(wrapper_path.clone())
+    .specifier(wrapper_path.to_string())
     .specifier_type(SpecifierType::Esm)
     .kind(DependencyKind::Require)
     .priority(Priority::Sync)
@@ -101,8 +87,7 @@ try {{
     .build();
 
   // Calculate the number of lines added by the wrapper
-  // The original JS transformer used offsetLines(1, 6) but let's be more precise
-  let offset_lines = if hmr_improvements { 7 } else { 6 };
+  let offset_lines = 7;
   let start_column = 0; // Original code starts at column 0 after the "try {" line
 
   Some((
@@ -368,7 +353,6 @@ mod tests {
       &options.mode,
       options.hmr_options.is_some(),
       &deps,
-      false,
     );
 
     assert!(result.is_none());
@@ -376,55 +360,6 @@ mod tests {
 
   #[test]
   fn test_wrap_with_react_refresh_basic() {
-    let asset = create_test_asset("abcd1234efgh5678", true);
-    let options = create_test_options(BuildMode::Development, true);
-    let deps = create_dependencies_with_specifiers(vec!["react"]);
-    let code = b"console.log('test');".to_vec();
-
-    let result = wrap_with_react_refresh(
-      &asset,
-      &code,
-      &options.mode,
-      options.hmr_options.is_some(),
-      &deps,
-      false,
-    );
-
-    assert!(result.is_some());
-    let (result_code, dependency, source_map_offset) = result.unwrap();
-
-    let result_str = String::from_utf8(result_code).unwrap();
-
-    let expected = r#"var $parcel$ReactRefreshHelpers$5678 = require("@atlaspack/transformer-react-refresh-wrap/lib/helpers/helpers.js");
-var prevRefreshReg = window.$RefreshReg$;
-var prevRefreshSig = window.$RefreshSig$;
-$parcel$ReactRefreshHelpers$5678.prelude(module);
-
-try {
-console.log('test');
-  $parcel$ReactRefreshHelpers$5678.postlude(module);
-} finally {
-  window.$RefreshReg$ = prevRefreshReg;
-  window.$RefreshSig$ = prevRefreshSig;
-}"#;
-
-    assert_eq!(result_str, expected);
-
-    // Check that dependency is created
-    assert_eq!(
-      dependency.specifier,
-      "@atlaspack/transformer-react-refresh-wrap/lib/helpers/helpers.js"
-    );
-    assert_eq!(dependency.specifier_type, SpecifierType::Esm);
-    assert_eq!(dependency.kind, Some(DependencyKind::Require));
-    assert_eq!(dependency.priority, Priority::Sync);
-
-    // Check source map offset
-    assert_eq!(source_map_offset, (0, 6));
-  }
-
-  #[test]
-  fn test_wrap_with_react_refresh_hmr_improvements() {
     let asset = create_test_asset("xyz789abc123def4", true);
     let options = create_test_options(BuildMode::Development, true);
     let deps = create_dependencies_with_specifiers(vec!["react"]);
@@ -436,7 +371,6 @@ console.log('test');
       &options.mode,
       options.hmr_options.is_some(),
       &deps,
-      true, // hmr_improvements = true
     );
 
     assert!(result.is_some());
@@ -460,13 +394,15 @@ const App = () => <div />;
 
     assert_eq!(result_str, expected);
 
-    // Check that dependency points to helpers-new.js
     assert_eq!(
       dependency.specifier,
       "@atlaspack/transformer-react-refresh-wrap/lib/helpers/helpers-new.js"
     );
+    assert_eq!(dependency.specifier_type, SpecifierType::Esm);
+    assert_eq!(dependency.kind, Some(DependencyKind::Require));
+    assert_eq!(dependency.priority, Priority::Sync);
 
-    // Check source map offset (should be 7 for HMR improvements)
+    // Check source map offset
     assert_eq!(source_map_offset, (0, 7));
   }
 
@@ -483,7 +419,6 @@ const App = () => <div />;
       &options.mode,
       options.hmr_options.is_some(),
       &deps,
-      false,
     );
 
     assert!(result.is_some());
@@ -491,7 +426,8 @@ const App = () => <div />;
 
     let result_str = String::from_utf8(result_code).unwrap();
 
-    let expected = r#"var $parcel$ReactRefreshHelpers$ars7 = require("@atlaspack/transformer-react-refresh-wrap/lib/helpers/helpers.js");
+    let expected = r#"var $parcel$ReactRefreshHelpers$ars7 = require("@atlaspack/transformer-react-refresh-wrap/lib/helpers/helpers-new.js");
+$parcel$ReactRefreshHelpers$ars7.init();
 var prevRefreshReg = window.$RefreshReg$;
 var prevRefreshSig = window.$RefreshSig$;
 $parcel$ReactRefreshHelpers$ars7.prelude(module);
@@ -507,6 +443,6 @@ const str = "Hello \"world\""; // Comment with 'quotes'
     assert_eq!(result_str, expected);
 
     // Check source map offset
-    assert_eq!(source_map_offset, (0, 6));
+    assert_eq!(source_map_offset, (0, 7));
   }
 }
