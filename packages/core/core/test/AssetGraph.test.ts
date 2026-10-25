@@ -12,6 +12,7 @@ import {createDependency as _createDependency} from '../src/Dependency';
 import {createAsset as _createAsset, AssetOptions} from '../src/assetUtils';
 import {DEFAULT_ENV, DEFAULT_TARGETS} from './test-utils';
 import {toProjectPath as _toProjectPath} from '../src/projectPath';
+import {Priority} from '../src/types';
 
 const stats = {size: 0, time: 0} as const;
 
@@ -445,6 +446,52 @@ describe('AssetGraph', () => {
     assert(!graph.hasEdge(assetGroupNode, nodeId3));
     assert(graph.hasEdge(nodeId1, dependencyNodeId1));
     assert(!graph.hasEdge(nodeId2, dependencyNodeId2));
+  });
+
+  it('uses transformed dependency priority after repeated asset updates', () => {
+    let graph = new AssetGraph();
+    let filePath = toProjectPath('/index.js');
+    let assetGroup = {filePath, env: DEFAULT_ENV};
+    graph.setRootConnections({assetGroups: [assetGroup]});
+
+    const resolveAsset = (requestId: string) => {
+      let dependency = createDependency({
+        specifier: './lazy.js',
+        specifierType: 'esm',
+        env: DEFAULT_ENV,
+        sourcePath: '/index.js',
+        priority: 'sync',
+        meta: {transformed: true},
+      });
+      let asset = createAsset({
+        id: 'index',
+        filePath,
+        type: 'js',
+        isSource: true,
+        stats,
+        dependencies: new Map([[dependency.id, dependency]]),
+        env: DEFAULT_ENV,
+      });
+      graph.resolveAssetGroup(assetGroup, [asset], requestId);
+      let node = nullthrows(graph.getNodeByContentKey(dependency.id));
+      invariant(node.type === 'dependency');
+      return node.value;
+    };
+
+    let dependency = resolveAsset('initial');
+    dependency.meta.resolved = true;
+    dependency.resolverMeta = {resolved: true};
+    dependency.priority = Priority.lazy;
+
+    for (let requestId of ['first-rebuild', 'second-rebuild']) {
+      let updated = resolveAsset(requestId);
+      assert.deepStrictEqual(updated.meta, {
+        transformed: true,
+        ...(requestId === 'first-rebuild' ? {resolved: true} : {}),
+      });
+      assert.strictEqual(updated.resolverMeta, undefined);
+      assert.strictEqual(updated.priority, Priority.sync);
+    }
   });
 
   // Assets can define dependent assets in the same asset group by declaring a dependency with a module

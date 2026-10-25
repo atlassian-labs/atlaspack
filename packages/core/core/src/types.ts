@@ -157,7 +157,6 @@ export type Dependency = {
   customPackageConditions?: Array<string>;
   meta: Meta;
   resolverMeta?: Meta | null | undefined;
-  resolverPriority?: (typeof Priority)[keyof typeof Priority];
   target: Target | null | undefined;
   sourceAssetId: string | null | undefined;
   sourcePath: ProjectPath | null | undefined;

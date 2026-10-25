@@ -180,7 +180,6 @@ pub struct Config {
   pub standalone: bool,
   pub inline_constants: bool,
   pub conditional_bundling: bool,
-  pub hmr_improvements: bool,
   pub magic_comments: bool,
   pub exports_rebinding_optimisation: bool,
   pub nested_promise_import_fix: bool,

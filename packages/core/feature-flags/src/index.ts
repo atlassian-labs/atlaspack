@@ -143,16 +143,6 @@ export const DEFAULT_FEATURE_FLAGS = {
   inlineConstOptimisationFix: false,
 
   /**
-   * Improves/fixes HMR behaviour by:
-   * - Fixing HMR behaviour with lazy bundle edges
-   * - Moving the functionality of the react-refresh runtime into the react-refresh-wrap transformer
-   *
-   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
-   * @since 2025-06-20
-   */
-  hmrImprovements: false,
-
-  /**
    * When enabled, HMR uses a single incrementing bundle version token for all
    * refreshed asset URLs in a given update cycle, instead of generating a fresh
    * timestamp per asset fetch.

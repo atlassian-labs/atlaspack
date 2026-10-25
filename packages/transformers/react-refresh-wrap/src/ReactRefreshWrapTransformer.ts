@@ -1,6 +1,5 @@
 import path from 'path';
 import {Transformer} from '@atlaspack/plugin';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 // @ts-expect-error TS2304
 function shouldExclude(asset: MutableAsset, options: PluginOptions) {
@@ -32,20 +31,16 @@ export default new Transformer({
       return [asset];
     }
 
-    const helperFilename = getFeatureFlag('hmrImprovements')
-      ? 'helpers-new.js'
-      : 'helpers.js';
-
     let wrapperPath = `@atlaspack/transformer-react-refresh-wrap/${path.basename(
       __dirname,
-    )}/helpers/${helperFilename}`;
+    )}/helpers/helpers.js`;
 
     let code = await asset.getCode();
     let map = await asset.getMap();
     let name = `$parcel$ReactRefreshHelpers$${asset.id.slice(-4)}`;
 
     code = `var ${name} = require(${JSON.stringify(wrapperPath)});
-${getFeatureFlag('hmrImprovements') ? `${name}.init();` : ''}
+
 var prevRefreshReg = window.$RefreshReg$;
 var prevRefreshSig = window.$RefreshSig$;
 ${name}.prelude(module);

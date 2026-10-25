@@ -1,7 +1,6 @@
 import {Runtime} from '@atlaspack/plugin';
 import {loadConfig} from '@atlaspack/utils';
 import {version} from 'react-refresh/package.json';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 const CODE = `
 var Refresh = require('react-refresh/runtime');
@@ -32,13 +31,6 @@ window.addEventListener('parcelhmraccept', () => {
 
 export default new Runtime({
   async apply({bundle, options}) {
-    if (getFeatureFlag('hmrImprovements')) {
-      // Note for https://jplat.atlassian.net/browse/JFP-3539:
-      // When cleaning up this feature flag, delete the entire
-      // @atlaspack/runtime-react-refresh package and remove all references to it
-      return;
-    }
-
     if (
       bundle.type !== 'js' ||
       !options.hmrOptions ||

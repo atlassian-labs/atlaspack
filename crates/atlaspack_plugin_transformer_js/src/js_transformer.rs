@@ -38,7 +38,6 @@ define_feature_flags!(JsTransformerFlags, {
   conditionalBundlingApi,
   exportsRebindingOptimisation,
   fixExportStarNamespaceOverwrite,
-  hmrImprovements,
   nestedPromiseImportFix,
   newJsxConfig
 });
@@ -657,7 +656,6 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
         })
         .unwrap_or_default(),
       conditional_bundling: self.feature_flags.conditionalBundlingApi(),
-      hmr_improvements: self.feature_flags.hmrImprovements(),
       exports_rebinding_optimisation: self.feature_flags.exportsRebindingOptimisation(),
       nested_promise_import_fix: self.feature_flags.nestedPromiseImportFix(),
       enable_ssr_typeof_replacement,
@@ -1366,7 +1364,6 @@ mod tests {
         core_path: PathBuf::from("test"),
         feature_flags: FeatureFlags::default()
           .with_bool_flag_default("conditionalBundlingApi", true)
-          .with_bool_flag_default("hmrImprovements", true)
           .with_bool_flag_default("nestedPromiseImportFix", true)
           .with_bool_flag_default("exportsRebindingOptimisation", true)
           .with_bool_flag_default("newJsxConfig", true),

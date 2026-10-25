@@ -379,7 +379,6 @@ pub(crate) fn convert_result(
         mode,
         hmr_options.is_some(),
         &dependency_by_specifier,
-        transformer_config.hmr_improvements,
       )
     {
       final_code = wrapped_code;

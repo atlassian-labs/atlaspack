@@ -775,7 +775,6 @@ export default new Transformer({
       standalone: asset.query.has('standalone'),
       inline_constants: config.inlineConstants,
       conditional_bundling: options.featureFlags.conditionalBundlingApi,
-      hmr_improvements: options.featureFlags.hmrImprovements,
       add_display_name: Boolean(config.addReactDisplayName),
       exports_rebinding_optimisation:
         options.featureFlags.exportsRebindingOptimisation,
@@ -1124,13 +1123,6 @@ export default new Transformer({
         });
       } else if (dep.kind === 'File') {
         asset.invalidateOnFileChange(dep.specifier);
-      } else if (dep.kind === 'Id') {
-        // Record parcelRequire calls so that the dev packager can add them as dependencies.
-        // This allows the HMR runtime to collect parents across async boundaries (through runtimes).
-        // TODO: ideally this would result as an actual dep in the graph rather than asset.meta.
-        asset.meta.hmrDeps ??= [];
-        invariant(Array.isArray(asset.meta.hmrDeps));
-        asset.meta.hmrDeps.push(dep.specifier);
       } else {
         let meta: JSONObject = {kind: dep.kind};
         if (dep.attributes) {
