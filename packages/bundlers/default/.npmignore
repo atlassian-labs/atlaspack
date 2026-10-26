@@ -1,0 +1,4 @@
+# AFB-2361 spike: ship prebuilt lib/ in git-installable package.
+# Empty allowlist override so packing does not fall back to the repo
+# .gitignore (which ignores **/lib/**). The "files" field in package.json
+# is the real allowlist.

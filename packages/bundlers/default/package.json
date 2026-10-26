@@ -13,6 +13,10 @@
   "main": "./lib/DefaultBundler.js",
   "source": "./src/DefaultBundler.ts",
   "types": "./src/DefaultBundler.ts",
+  "files": [
+    "lib",
+    "src"
+  ],
   "engines": {
     "node": ">= 16.0.0"
   },
