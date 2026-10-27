@@ -1,4 +1,4 @@
-use swc_core::ecma::ast::{BinExpr, Expr, PrivateName};
+use swc_core::ecma::ast::{BinExpr, BinaryOp, Expr, Lit, PrivateName};
 
 use crate::types::Metadata;
 use crate::utils_create_result_pair::{ResultPair, create_result_pair};
@@ -9,9 +9,8 @@ fn is_private_name(expr: &Expr) -> bool {
   matches!(expr, Expr::PrivateName(PrivateName { .. }))
 }
 
-/// Mirrors the Babel `traverseBinaryExpression` helper by recursively
-/// evaluating both sides of the binary expression and reusing the evaluated
-/// operands when they both represent numeric values.
+/// Recursively evaluates both operands, reusing numeric values and literal
+/// string/number operands for string concatenation.
 pub fn traverse_binary_expression(
   expression: &BinExpr,
   meta: Metadata,
@@ -21,7 +20,16 @@ pub fn traverse_binary_expression(
     let left_pair = (evaluate_expression)(expression.left.as_ref(), meta.clone());
     let right_pair = (evaluate_expression)(expression.right.as_ref(), meta.clone());
 
-    if has_numeric_value(&left_pair.value) && has_numeric_value(&right_pair.value) {
+    let is_string_concatenation = expression.op == BinaryOp::Add
+      && matches!(
+        (&left_pair.value, &right_pair.value),
+        (Expr::Lit(Lit::Str(_)), Expr::Lit(Lit::Str(_) | Lit::Num(_)))
+          | (Expr::Lit(Lit::Num(_)), Expr::Lit(Lit::Str(_)))
+      );
+
+    if is_string_concatenation
+      || (has_numeric_value(&left_pair.value) && has_numeric_value(&right_pair.value))
+    {
       let evaluated = Expr::Bin(BinExpr {
         span: expression.span,
         op: expression.op,

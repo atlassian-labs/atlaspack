@@ -533,28 +533,10 @@ fn transform_css_item(item: &CssItem, meta: &Metadata) -> TransformCssItemResult
       }
     }
     CssItem::Map(map) => {
-      let sheets = meta
-        .state()
-        .css_map
-        .get(&map.name)
-        .cloned()
-        .unwrap_or_default();
-      if std::env::var("COMPILED_CLI_TRACE").is_ok() {
-        eprintln!(
-          "[transform_css_item] map name={} sheets={} values={:?}",
-          map.name,
-          sheets.len(),
-          sheets
-        );
-      }
+      let sheets = meta.state().css_map.get(&map.name).cloned();
 
-      // Detect when a cssMap lookup resolves to no sheets. This can happen when:
-      // 1. The cssMap name was not registered (typo, missing import, or transform ordering issue)
-      // 2. The cssMap variant produced no CSS output
-      // In either case, the class expression (e.g., styles.root) will still be passed
-      // to the className array, but without corresponding sheets the CS runtime component
-      // may receive unexpected values.
-      if sheets.is_empty() {
+      // Empty variants register an empty sheet list and are valid no-op styles.
+      if sheets.is_none() {
         let filename = meta.state().filename.clone().unwrap_or_default();
         let message = format!(
           "Compiled CSS: cssMap lookup for '{}' in {} produced no sheets. \
@@ -568,6 +550,16 @@ fn transform_css_item(item: &CssItem, meta: &Metadata) -> TransformCssItemResult
           None,
           None,
         ));
+      }
+
+      let sheets = sheets.unwrap_or_default();
+      if std::env::var("COMPILED_CLI_TRACE").is_ok() {
+        eprintln!(
+          "[transform_css_item] map name={} sheets={} values={:?}",
+          map.name,
+          sheets.len(),
+          sheets
+        );
       }
 
       TransformCssItemResult {
@@ -778,7 +770,8 @@ mod tests {
   use crate::utils_types::{ConditionalCssItem, CssItem, CssMapItem, UnconditionalCssItem};
 
   use super::{
-    TransformCssItemsOptions, apply_selectors, create_transform_css_options, transform_css_items,
+    TransformCssItemsOptions, apply_selectors, create_transform_css_options, transform_css_item,
+    transform_css_items,
   };
 
   fn create_metadata() -> Metadata {
@@ -833,6 +826,33 @@ mod tests {
     // Default (false): browserslist resolves from cwd, matching Babel's
     // autoprefixer which uses { from: undefined } → process.cwd().
     assert_eq!(options.browserslist_config_path, Some(cwd));
+  }
+
+  #[test]
+  fn reports_unregistered_css_map_lookup() {
+    let meta = create_metadata();
+    let expression = string_lit("missing");
+    let item = CssItem::Map(CssMapItem {
+      name: "missing".into(),
+      expression: expression.clone(),
+      css: String::new(),
+    });
+
+    let result = transform_css_item(&item, &meta);
+
+    assert_eq!(
+      (result.sheets, result.class_expression),
+      (Vec::<String>::new(), Some(expression))
+    );
+    let state = meta.state();
+    assert_eq!(state.diagnostics.len(), 1);
+    assert!(
+      state.diagnostics[0]
+        .message
+        .contains("cssMap lookup for 'missing'"),
+      "{:?}",
+      state.diagnostics
+    );
   }
 
   #[test]
