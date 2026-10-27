@@ -1680,6 +1680,39 @@ mod tests {
   }
 
   #[test]
+  fn transforms_empty_css_map_variants_in_jsx() {
+    crate::test_utils::with_globals(|| {
+      for (attribute, value, has_css) in [
+        ("css", "styles.root", false),
+        ("css", "[styles.root, { color: 'red' }]", true),
+        ("xcss", "styles.root", false),
+      ] {
+        let source = format!(
+          "import {{ cssMap }} from '@compiled/react';
+           const styles = cssMap({{ root: {{}} }});
+           const Component = () => <div {attribute}={{{value}}} />;"
+        );
+        let (mut program, cm, _) = parse_program(&source);
+        let mut transform = CompiledCssInJsTransform::new(PluginOptions::default());
+        reset_transform_state(&mut transform, cm.clone(), "test.tsx");
+
+        program.visit_mut_with(&mut transform);
+
+        let state = transform.state.borrow();
+        assert!(state.diagnostics.is_empty(), "{:?}", state.diagnostics);
+        assert_eq!(state.css_map.get("styles"), Some(&Vec::<String>::new()));
+        assert_eq!(state.sheets.is_empty(), !has_css, "{attribute}={value}");
+
+        let Program::Module(module) = &program else {
+          panic!("expected module program");
+        };
+        let printed = print_module(&cm, module);
+        assert!(printed.contains("root: \"\""), "{printed}");
+      }
+    });
+  }
+
+  #[test]
   fn transforms_css_map_with_concatenated_gradient() {
     let expressions = [
       r#"'repeating-linear-gradient(' + '180deg, ' +
