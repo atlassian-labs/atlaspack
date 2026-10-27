@@ -2430,6 +2430,53 @@ describe('bundler', function () {
     await run(b);
   });
 
+  for (let shouldScopeHoist of [false, true]) {
+    it(`should preserve availability across lazy cycles (scope hoisting: ${shouldScopeHoist})`, async () => {
+      await fsFixture(overlayFS, __dirname)`
+        lazy-cycle-availability
+          entry.html:
+            <script type="module" src="./entry.js"></script>
+          entry.js:
+            window.openA = () => import('./a.js');
+            window.openB = () => import('./b.js');
+          a.js:
+            import {value} from './shared.js';
+            export const a = value;
+            export const openC = () => import('./c.js');
+          b.js:
+            export const openC = () => import('./c.js');
+          c.js:
+            export const openB = () => import('./b.js');
+            export const openD = () => import('./d.js');
+          d.js:
+            import {value} from './shared.js';
+            export const d = value;
+          shared.js:
+            export const value = sideEffectNoop('shared');
+          package.json:
+            {"@atlaspack/bundler-default": {"minBundleSize": 0, "minBundles": 1}}
+          yarn.lock:
+      `;
+
+      const graph = await bundle(
+        path.join(__dirname, 'lazy-cycle-availability/entry.html'),
+        {
+          inputFS: overlayFS,
+          mode: 'production',
+          defaultTargetOptions: {shouldScopeHoist},
+        },
+      );
+
+      // Load through the cycle without first loading the other parent of C.
+      // Loading A first would supply shared.js and mask missing availability.
+      const context = await run(graph, {}, {require: false});
+      const b = await context.openB();
+      const c = await b.openC();
+      assert.strictEqual((await c.openD()).d, 'shared');
+      assert.strictEqual((await context.openA()).a, 'shared');
+    });
+  }
+
   describe('shared bundle merging', () => {
     it('should support bundling merging with overlap threshold', async () => {
       await fsFixture(overlayFS, __dirname)`
