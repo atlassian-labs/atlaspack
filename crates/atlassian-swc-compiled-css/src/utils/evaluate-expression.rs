@@ -404,6 +404,7 @@ mod tests {
   use super::evaluate_expression;
   use crate::types::{CompiledImports, Metadata, PluginOptions, TransformFile, TransformState};
   use crate::utils_types::{BindingPath, BindingSource, PartialBindingWithMeta};
+  use pretty_assertions::assert_eq;
   use std::cell::RefCell;
   use std::rc::Rc;
   use swc_core::common::sync::Lrc;
@@ -526,6 +527,49 @@ mod tests {
       Expr::Lit(Lit::Str(Str { value, .. })) => assert_eq!(value.as_ref(), "abcd"),
       other => panic!("expected string literal, found {:?}", other),
     }
+  }
+
+  #[test]
+  fn statically_evaluates_nested_string_concatenation() {
+    for (source, expected) in [
+      ("'a' + 'b' + 'c'", "abc"),
+      ("'a' + ('b' + 'c')", "abc"),
+      ("'a' + `b`", "ab"),
+      ("'a' + `b${'c'}` + 'd'", "abcd"),
+      ("'a' + (1 + 2) + 3", "a33"),
+      ("1 + 2 + 'a' + 3", "3a3"),
+      ("'a' + (1 + 'b')", "a1b"),
+    ] {
+      let expr = parse_expression(source);
+      let pair = evaluate_expression(&expr, create_metadata());
+
+      match pair.value {
+        Expr::Lit(Lit::Str(Str { value, .. })) => assert_eq!(value.as_ref(), expected, "{source}"),
+        other => panic!("expected string literal for {source}, found {other:?}"),
+      }
+    }
+  }
+
+  #[test]
+  fn preserves_dynamic_string_concatenation() {
+    for source in [
+      "'a' + 'b' + dynamic",
+      "'a' + `b${dynamic}`",
+      "'a' + getValue()",
+    ] {
+      let expr = parse_expression(source);
+      let pair = evaluate_expression(&expr, create_metadata());
+
+      assert_eq!(pair.value, expr, "{source}");
+    }
+  }
+
+  #[test]
+  fn preserves_non_addition_string_expressions() {
+    let expr = parse_expression("('a' + 'b') - ('c' + 'd')");
+    let pair = evaluate_expression(&expr, create_metadata());
+
+    assert_eq!(pair.value, expr);
   }
 
   #[test]

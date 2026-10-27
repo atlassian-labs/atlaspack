@@ -313,6 +313,7 @@ impl CompiledCssInJsTransform {
 mod tests {
   use super::CompiledCssInJsTransform;
   use crate::types::{PluginOptions, TransformFile, TransformFileOptions, TransformState};
+  use pretty_assertions::assert_eq;
   use std::any::Any;
   use std::panic::{AssertUnwindSafe, catch_unwind};
   use swc_core::common::comments::{Comment, CommentKind};
@@ -1675,6 +1676,69 @@ mod tests {
       printed.contains("danger") && printed.contains("success"),
       "expected variant keys in output: {}",
       printed
+    );
+  }
+
+  #[test]
+  fn transforms_css_map_with_concatenated_gradient() {
+    let expressions = [
+      r#"'repeating-linear-gradient(' + '180deg, ' +
+        `${'var(--hovered)'} 0px, ` + `${'var(--raised)'} 1px, ` +
+        `${'var(--raised)'} calc(var(--default-card-height) - 1px), ` +
+        `${'var(--hovered)'} var(--default-card-height) )`"#,
+      r#"`repeating-linear-gradient(180deg, ${'var(--hovered)'} 0px, ${'var(--raised)'} 1px, ${'var(--raised)'} calc(var(--default-card-height) - 1px), ${'var(--hovered)'} var(--default-card-height) )`"#,
+    ];
+    let mut outputs = Vec::new();
+
+    for expression in expressions {
+      let source = format!(
+        "import {{ cssMap }} from '@compiled/react';
+         export const styles = cssMap({{ card: {{ backgroundImage: {expression} }} }});"
+      );
+      let (mut program, cm, _) = parse_program(&source);
+      let mut transform = CompiledCssInJsTransform::new(PluginOptions::default());
+      reset_transform_state(&mut transform, cm.clone(), "test.tsx");
+
+      program.visit_mut_with(&mut transform);
+
+      let Program::Module(module) = &program else {
+        panic!("expected module program");
+      };
+      let printed = print_module(&cm, module);
+      let state = transform.state.borrow();
+      assert!(state.diagnostics.is_empty(), "{:?}", state.diagnostics);
+      let sheets = state.css_map.get("styles").expect("compiled cssMap sheets");
+      assert!(
+        sheets
+          .iter()
+          .any(|sheet| sheet.contains("repeating-linear-gradient(")),
+        "{sheets:?}"
+      );
+      outputs.push((printed, sheets.clone()));
+    }
+
+    assert_eq!(outputs[0], outputs[1]);
+  }
+
+  #[test]
+  fn rejects_css_map_with_dynamic_string_concatenation() {
+    let (mut program, cm, _) = parse_program(
+      "import { cssMap } from '@compiled/react';
+       export const styles = cssMap({ card: { backgroundImage: 'url(' + imageUrl + ')' } });",
+    );
+    let mut transform = CompiledCssInJsTransform::new(PluginOptions::default());
+    reset_transform_state(&mut transform, cm, "test.tsx");
+
+    program.visit_mut_with(&mut transform);
+
+    let state = transform.state.borrow();
+    assert_eq!(state.diagnostics.len(), 1);
+    assert!(
+      state.diagnostics[0]
+        .message
+        .contains("CSS variables are not allowed in cssMap variants"),
+      "{:?}",
+      state.diagnostics
     );
   }
 
