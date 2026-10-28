@@ -3110,41 +3110,57 @@ pub fn transform_css_via_postcss(
       )
     })
     .collect();
-  paired.sort_by(|(ka, ia), (kb, ib)| {
-    use std::cmp::Ordering;
-    let mut ord = match (ka, kb) {
-      (SheetKind::CatchAll { score: sa }, SheetKind::CatchAll { score: sb }) => {
-        let mut o = sa.cmp(sb);
-        if o == Ordering::Equal {
-          // Fallback to shorthand bucket ordering for identical pseudo score
-          let ba = first_property(&ia.text).and_then(|p| {
-            use crate::postcss::plugins::sort_shorthand_declarations::{
-              parent_shorthand_for, shorthand_bucket,
+  if options.atomic == Some(false) {
+    // The collector can emit nested at-rules before their parent rule's direct
+    // declarations. Keep the established top-level rule-before-at-rule layout,
+    // but preserve encounter order within each bucket. In particular, do not
+    // apply atomic pseudo/shorthand ordering to cssMapScoped selectors.
+    paired.sort_by(|(a, ia), (b, ib)| {
+      use std::cmp::Ordering;
+      let order = match (a, b) {
+        (SheetKind::CatchAll { .. }, SheetKind::AtRule { .. }) => Ordering::Less,
+        (SheetKind::AtRule { .. }, SheetKind::CatchAll { .. }) => Ordering::Greater,
+        _ => Ordering::Equal,
+      };
+      order.then_with(|| ia.idx.cmp(&ib.idx))
+    });
+  } else {
+    paired.sort_by(|(ka, ia), (kb, ib)| {
+      use std::cmp::Ordering;
+      let mut ord = match (ka, kb) {
+        (SheetKind::CatchAll { score: sa }, SheetKind::CatchAll { score: sb }) => {
+          let mut o = sa.cmp(sb);
+          if o == Ordering::Equal {
+            // Fallback to shorthand bucket ordering for identical pseudo score
+            let ba = first_property(&ia.text).and_then(|p| {
+              use crate::postcss::plugins::sort_shorthand_declarations::{
+                parent_shorthand_for, shorthand_bucket,
+              };
+              shorthand_bucket(&p).or_else(|| parent_shorthand_for(&p).and_then(shorthand_bucket))
+            });
+            let bb = first_property(&ib.text).and_then(|p| {
+              use crate::postcss::plugins::sort_shorthand_declarations::{
+                parent_shorthand_for, shorthand_bucket,
+              };
+              shorthand_bucket(&p).or_else(|| parent_shorthand_for(&p).and_then(shorthand_bucket))
+            });
+            o = match (ba, bb) {
+              (Some(a), Some(b)) => a.cmp(&b),
+              (Some(_), None) => Ordering::Less,
+              (None, Some(_)) => Ordering::Greater,
+              (None, None) => Ordering::Equal,
             };
-            shorthand_bucket(&p).or_else(|| parent_shorthand_for(&p).and_then(shorthand_bucket))
-          });
-          let bb = first_property(&ib.text).and_then(|p| {
-            use crate::postcss::plugins::sort_shorthand_declarations::{
-              parent_shorthand_for, shorthand_bucket,
-            };
-            shorthand_bucket(&p).or_else(|| parent_shorthand_for(&p).and_then(shorthand_bucket))
-          });
-          o = match (ba, bb) {
-            (Some(a), Some(b)) => a.cmp(&b),
-            (Some(_), None) => Ordering::Less,
-            (None, Some(_)) => Ordering::Greater,
-            (None, None) => Ordering::Equal,
-          };
+          }
+          o
         }
-        o
+        _ => cmp_at(ka, kb),
+      };
+      if ord == Ordering::Equal {
+        ord = ia.idx.cmp(&ib.idx);
       }
-      _ => cmp_at(ka, kb),
-    };
-    if ord == Ordering::Equal {
-      ord = ia.idx.cmp(&ib.idx);
-    }
-    ord
-  });
+      ord
+    });
+  }
   fn path_key(path: &[(String, String, usize)]) -> String {
     path
       .iter()
@@ -3220,14 +3236,17 @@ pub fn transform_css_via_postcss(
     }
   }
 
-  // Sort parts within each group by shorthand bucket to match Babel's sortShorthandDeclarations.
-  // This ensures shorthand properties come before their constituent properties within at-rules.
-  for (_key, (_header, parts)) in group_map.iter_mut() {
-    parts.sort_by(|a, b| {
-      let bucket_a = get_shorthand_bucket_for_sort(a);
-      let bucket_b = get_shorthand_bucket_for_sort(b);
-      bucket_a.cmp(&bucket_b)
-    });
+  // Atomic rules are sorted to match Babel's sortShorthandDeclarations.
+  // Non-atomic cssMapScoped rules intentionally retain source order because
+  // equal-specificity selectors use it to express overrides.
+  if options.atomic != Some(false) {
+    for (_key, (_header, parts)) in group_map.iter_mut() {
+      parts.sort_by(|a, b| {
+        let bucket_a = get_shorthand_bucket_for_sort(a);
+        let bucket_b = get_shorthand_bucket_for_sort(b);
+        bucket_a.cmp(&bucket_b)
+      });
+    }
   }
 
   // Build group_order from sorted paired to get the correct ordering of different at-rule groups.
