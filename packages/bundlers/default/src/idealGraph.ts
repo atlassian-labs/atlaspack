@@ -757,12 +757,6 @@ export function createIdealGraph(
     );
   }
 
-  for (let entry of entries.keys()) {
-    // Initialize an empty set of ancestors available to entries
-    let entryId = nullthrows(assetToBundleRootNodeId.get(entry));
-    ancestorAssets[entryId] = new BitSet(assets.length);
-  }
-
   // Step Determine Availability
   // Visit nodes in a topological order, visiting parent nodes before child nodes.
 
@@ -771,89 +765,121 @@ export function createIdealGraph(
   // computing the intersection of assets available through all possible paths to a bundle.
   // We call this structure ancestorAssets, a Map that tracks a bundleRoot,
   // to all assets available to it (meaning they will exist guaranteed when the bundleRoot is loaded)
-  //  The topological sort ensures all parents are visited before the node we want to process.
-  for (let nodeId of bundleRootGraph.topoSort(ALL_EDGE_TYPES)) {
-    if (nodeId === rootNodeId) continue;
-    const bundleRoot = assets[nullthrows(bundleRootGraph.getNode(nodeId))];
-    let bundleGroupId = nullthrows(bundleRoots.get(bundleRoot))[1];
+  // Cycles can cause a node to be visited before all of its parents have
+  // contributed their availability. Repeat propagation until the sets stabilize
+  // so descendants do not retain assets that are unavailable on some paths.
+  // After initialization, intersections only remove assets from these finite
+  // sets, so propagation converges without an arbitrary iteration limit.
+  const availabilityOrder = bundleRootGraph.topoSort(ALL_EDGE_TYPES);
+  let availabilityChanged = true;
+  while (availabilityChanged) {
+    let previousAncestorAssets = ancestorAssets.map((set) =>
+      set == null ? null : set.clone(),
+    );
 
-    // At a BundleRoot, we access it's available assets (via ancestorAssets),
-    // and add to that all assets within the bundles in that BundleGroup.
+    // Entries always start with an empty availability set. Re-initialising them
+    // each iteration keeps entries pinned while non-entry nodes carry (and keep
+    // shrinking) their intersected availability from the previous pass.
+    for (let entry of entries.keys()) {
+      let entryId = nullthrows(assetToBundleRootNodeId.get(entry));
+      ancestorAssets[entryId] = new BitSet(assets.length);
+    }
 
-    // This set is available to all bundles in a particular bundleGroup because
-    // bundleGroups are just bundles loaded at the same time. However it is
-    // not true that a bundle's available assets = all assets of all the bundleGroups
-    // it belongs to. It's the intersection of those sets.
-    let available;
-    if (
-      bundleRoot.bundleBehavior === 'isolated' ||
-      bundleRoot.bundleBehavior === 'inlineIsolated'
-    ) {
-      available = new BitSet(assets.length);
-    } else {
-      available = nullthrows(ancestorAssets[nodeId]).clone();
-      for (let bundleIdInGroup of [
-        bundleGroupId,
-        ...bundleGraph.getNodeIdsConnectedFrom(bundleGroupId),
-      ]) {
-        let bundleInGroup = nullthrows(bundleGraph.getNode(bundleIdInGroup));
-        invariant(bundleInGroup !== 'root');
-        if (bundleInGroup.bundleBehavior != null) {
+    for (let nodeId of availabilityOrder) {
+      if (nodeId === rootNodeId) continue;
+      const bundleRoot = assets[nullthrows(bundleRootGraph.getNode(nodeId))];
+      let bundleGroupId = nullthrows(bundleRoots.get(bundleRoot))[1];
+
+      // At a BundleRoot, we access it's available assets (via ancestorAssets),
+      // and add to that all assets within the bundles in that BundleGroup.
+
+      // This set is available to all bundles in a particular bundleGroup because
+      // bundleGroups are just bundles loaded at the same time. However it is
+      // not true that a bundle's available assets = all assets of all the bundleGroups
+      // it belongs to. It's the intersection of those sets.
+      let available;
+      if (
+        bundleRoot.bundleBehavior === 'isolated' ||
+        bundleRoot.bundleBehavior === 'inlineIsolated'
+      ) {
+        available = new BitSet(assets.length);
+      } else {
+        available = nullthrows(ancestorAssets[nodeId]).clone();
+        for (let bundleIdInGroup of [
+          bundleGroupId,
+          ...bundleGraph.getNodeIdsConnectedFrom(bundleGroupId),
+        ]) {
+          let bundleInGroup = nullthrows(bundleGraph.getNode(bundleIdInGroup));
+          invariant(bundleInGroup !== 'root');
+          if (bundleInGroup.bundleBehavior != null) {
+            continue;
+          }
+
+          for (let bundleRoot of bundleInGroup.assets) {
+            // Assets directly connected to current bundleRoot
+            available.add(nullthrows(assetToIndex.get(bundleRoot)));
+            available.union(
+              reachableAssets[
+                nullthrows(assetToBundleRootNodeId.get(bundleRoot))
+              ],
+            );
+          }
+        }
+      }
+
+      //  Now that we have bundleGroup availability, we will propagate that down to all the children
+      //  of this bundleGroup. For a child, we also must maintain parallel availability. If it has
+      //  parallel siblings that come before it, those, too, are available to it. Add those parallel
+      //  available assets to the set of available assets for this child as well.
+      let children = bundleRootGraph.getNodeIdsConnectedFrom(
+        nodeId,
+        ALL_EDGE_TYPES,
+      );
+      let parallelAvailability = new BitSet(assets.length);
+
+      for (let childId of children) {
+        let assetId = nullthrows(bundleRootGraph.getNode(childId));
+        let child = assets[assetId];
+        let bundleBehavior = getBundleFromBundleRoot(child).bundleBehavior;
+        if (bundleBehavior != null) {
           continue;
         }
+        let isParallel = bundleRootGraph.hasEdge(
+          nodeId,
+          childId,
+          bundleRootEdgeTypes.parallel,
+        );
 
-        for (let bundleRoot of bundleInGroup.assets) {
-          // Assets directly connected to current bundleRoot
-          available.add(nullthrows(assetToIndex.get(bundleRoot)));
-          available.union(
-            reachableAssets[
-              nullthrows(assetToBundleRootNodeId.get(bundleRoot))
-            ],
-          );
+        // Most of the time, a child will have many parent bundleGroups,
+        // so the next time we peek at a child from another parent, we will
+        // intersect the availability built there with the previously computed
+        // availability. this ensures no matter which bundleGroup loads a particular bundle,
+        // it will only assume availability of assets it has under any circumstance
+        const childAvailableAssets = ancestorAssets[childId];
+        let currentChildAvailable = isParallel
+          ? BitSet.union(parallelAvailability, available)
+          : available;
+        if (childAvailableAssets != null) {
+          childAvailableAssets.intersect(currentChildAvailable);
+        } else {
+          ancestorAssets[childId] = currentChildAvailable.clone();
+        }
+        if (isParallel) {
+          parallelAvailability.union(reachableAssets[childId]);
+          parallelAvailability.add(assetId); //The next sibling should have older sibling available via parallel
         }
       }
     }
 
-    //  Now that we have bundleGroup availability, we will propagate that down to all the children
-    //  of this bundleGroup. For a child, we also must maintain parallel availability. If it has
-    //  parallel siblings that come before it, those, too, are available to it. Add those parallel
-    //  available assets to the set of available assets for this child as well.
-    let children = bundleRootGraph.getNodeIdsConnectedFrom(
-      nodeId,
-      ALL_EDGE_TYPES,
-    );
-    let parallelAvailability = new BitSet(assets.length);
-
-    for (let childId of children) {
-      let assetId = nullthrows(bundleRootGraph.getNode(childId));
-      let child = assets[assetId];
-      let bundleBehavior = getBundleFromBundleRoot(child).bundleBehavior;
-      if (bundleBehavior != null) {
-        continue;
-      }
-      let isParallel = bundleRootGraph.hasEdge(
-        nodeId,
-        childId,
-        bundleRootEdgeTypes.parallel,
-      );
-
-      // Most of the time, a child will have many parent bundleGroups,
-      // so the next time we peek at a child from another parent, we will
-      // intersect the availability built there with the previously computed
-      // availability. this ensures no matter which bundleGroup loads a particular bundle,
-      // it will only assume availability of assets it has under any circumstance
-      const childAvailableAssets = ancestorAssets[childId];
-      let currentChildAvailable = isParallel
-        ? BitSet.union(parallelAvailability, available)
-        : available;
-      if (childAvailableAssets != null) {
-        childAvailableAssets.intersect(currentChildAvailable);
-      } else {
-        ancestorAssets[childId] = currentChildAvailable.clone();
-      }
-      if (isParallel) {
-        parallelAvailability.union(reachableAssets[childId]);
-        parallelAvailability.add(assetId); //The next sibling should have older sibling available via parallel
+    // Propagate changes from back edges before consuming the availability sets.
+    availabilityChanged = false;
+    for (let i = 0; i < ancestorAssets.length; i++) {
+      let previous = previousAncestorAssets[i];
+      let current = ancestorAssets[i];
+      if (previous == null && current == null) continue;
+      if (previous == null || current == null || !previous.equals(current)) {
+        availabilityChanged = true;
+        break;
       }
     }
   }
