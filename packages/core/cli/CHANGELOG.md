@@ -1,5 +1,25 @@
 # @atlaspack/cli
 
+## 2.15.29
+
+### Patch Changes
+
+- [#1153](https://github.com/atlassian-labs/atlaspack/pull/1153) [`0de569d`](https://github.com/atlassian-labs/atlaspack/commit/0de569d9e6bff51916f4ed753c4aa93a8549f428) Thanks [@jackbrown](https://github.com/jackbrown)! - Configure package publishing to use the forwarding registry with short-lived credentials.
+
+- Updated dependencies [[`02f585c`](https://github.com/atlassian-labs/atlaspack/commit/02f585c489d7399f15f2ccf7c3b0510b07438102), [`0de569d`](https://github.com/atlassian-labs/atlaspack/commit/0de569d9e6bff51916f4ed753c4aa93a8549f428)]:
+  - @atlaspack/feature-flags@2.31.4
+  - @atlaspack/core@2.39.3
+  - @atlaspack/config-default@20.0.3
+  - @atlaspack/diagnostic@2.14.5
+  - @atlaspack/fs@2.15.61
+  - @atlaspack/logger@2.14.58
+  - @atlaspack/package-manager@2.14.66
+  - @atlaspack/utils@3.4.8
+  - @atlaspack/reporter-cli@2.18.8
+  - @atlaspack/reporter-dev-server@2.14.66
+  - @atlaspack/reporter-tracer@2.14.66
+  - @atlaspack/events@2.14.5
+
 ## 2.15.28
 
 ### Patch Changes

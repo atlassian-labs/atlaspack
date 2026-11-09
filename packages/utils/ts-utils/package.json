@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/ts-utils",
-  "version": "2.14.44",
+  "version": "2.14.45",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public",
@@ -17,7 +17,7 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/types-internal": "2.25.7",
+    "@atlaspack/types-internal": "2.25.8",
     "nullthrows": "^1.1.1"
   },
   "devDependencies": {

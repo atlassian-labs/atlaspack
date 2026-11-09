@@ -1,5 +1,17 @@
 # @atlaspack/bundle-stats
 
+## 2.14.68
+
+### Patch Changes
+
+- [#1153](https://github.com/atlassian-labs/atlaspack/pull/1153) [`0de569d`](https://github.com/atlassian-labs/atlaspack/commit/0de569d9e6bff51916f4ed753c4aa93a8549f428) Thanks [@jackbrown](https://github.com/jackbrown)! - Configure package publishing to use the forwarding registry with short-lived credentials.
+
+- Updated dependencies [[`02f585c`](https://github.com/atlassian-labs/atlaspack/commit/02f585c489d7399f15f2ccf7c3b0510b07438102), [`0de569d`](https://github.com/atlassian-labs/atlaspack/commit/0de569d9e6bff51916f4ed753c4aa93a8549f428)]:
+  - @atlaspack/core@2.39.3
+  - @atlaspack/utils@3.4.8
+  - @atlaspack/query@2.14.68
+  - @atlaspack/reporter-bundle-stats@2.14.68
+
 ## 2.14.67
 
 ### Patch Changes
