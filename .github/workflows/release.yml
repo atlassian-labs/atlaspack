@@ -16,8 +16,6 @@ on:
         required: true
         type: string
     secrets:
-      NPM_TOKEN:
-        required: true
       SENTRY_ORG:
         required: true
       SENTRY_PROJECT:
@@ -170,11 +168,16 @@ jobs:
           merge-multiple: true
       - name: Debug
         run: ls -l packages/*/*/*.node
-      - name: Npm
+      - name: Get Artifact Publish Token
+        uses: atlassian-labs/artifact-publish-token@v1.0.1
+        with:
+          output-modes: npm
+      - name: Set publish registry
         run: |
-          npm config set "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}"
-          npm config set registry https://registry.npmjs.org/
+          printf "\n@atlaspack:registry=https://packages.atlassian.com/api/npm/npm-public/\n" >> "${{ github.workspace }}/.npmrc-public"
       - run: ${{ inputs.release-command }}
+        env:
+          NPM_CONFIG_USERCONFIG: ${{ github.workspace }}/.npmrc-public
 
   build-and-release-changesets:
     name: Build and release Changesets

@@ -6,7 +6,8 @@
   "source": "./src/index.ts",
   "types": "./src/index.ts",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://packages.atlassian.com/api/npm/npm-public/"
   },
   "dependencies": {
     "@atlaspack/logger": "2.14.57",

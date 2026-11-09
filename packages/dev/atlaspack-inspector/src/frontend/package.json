@@ -6,7 +6,8 @@
     "Pedro Tacla Yamada"
   ],
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://packages.atlassian.com/api/npm/npm-public/"
   },
   "scripts": {
     "dev": "ATLASPACK_INSPECTOR_BACKEND_URL='http://localhost:3000' atlaspack serve --cache-dir=.atlaspack-cache ./index.html",

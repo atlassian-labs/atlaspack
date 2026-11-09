@@ -23,7 +23,8 @@
   },
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://packages.atlassian.com/api/npm/npm-public/"
   },
   "dependencies": {
     "@npmcli/promise-spawn": "^1.3.2",

@@ -15,7 +15,8 @@
     "apvm-linux-arm64": "apvm-linux-arm64"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://packages.atlassian.com/api/npm/npm-public/"
   },
   "repository": {
     "type": "git",
