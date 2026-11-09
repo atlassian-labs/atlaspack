@@ -3,7 +3,8 @@
   "version": "2.14.67",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://packages.atlassian.com/api/npm/npm-public/"
   },
   "scripts": {
     "dev:prepare": "rimraf ./lib/ && mkdir -p lib && cp ./bin/dev-bin.js ./lib/bin.js",

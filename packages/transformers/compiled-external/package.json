@@ -4,7 +4,8 @@
   "description": "Atlaspack transformer for handling external Compiled CSS imports (insourced from @compiled/parcel-transformer-external)",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://packages.atlassian.com/api/npm/npm-public/"
   },
   "repository": {
     "type": "git",

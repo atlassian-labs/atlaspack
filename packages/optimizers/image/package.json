@@ -6,7 +6,8 @@
   "source": "./src/ImageOptimizer.ts",
   "types": "./src/ImageOptimizer.ts",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://packages.atlassian.com/api/npm/npm-public/"
   },
   "repository": {
     "type": "git",

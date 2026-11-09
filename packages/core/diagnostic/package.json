@@ -4,7 +4,8 @@
   "description": "Types and utilities for printing source-code located errors, warning and information messages.",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://packages.atlassian.com/api/npm/npm-public/"
   },
   "repository": {
     "type": "git",

@@ -9,7 +9,8 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://packages.atlassian.com/api/npm/npm-public/"
   },
   "type": "commonjs",
   "scripts": {

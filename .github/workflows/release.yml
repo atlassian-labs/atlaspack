@@ -1,32 +1,10 @@
 name: Release
 
 on:
-  workflow_call:
-    inputs:
-      release-command:
-        description: 'The command that will release packages as part of the final step'
-        required: true
-        type: string
-      release-tag:
-        description: 'The tag used to release the packages under'
-        required: false
-        type: string
-      type:
-        description: 'The type of release, usually corresponds to the dist-tag'
-        required: true
-        type: string
-    secrets:
-      NPM_TOKEN:
-        required: true
-      SENTRY_ORG:
-        required: true
-      SENTRY_PROJECT:
-        required: true
-      SENTRY_AUTH_TOKEN:
-        required: true
-
-env:
-  ATLASPACK_RELEASE_TAG: '${{ inputs.release-tag }}'
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
 permissions:
   contents: write # for actions/checkout and adding tag
@@ -153,33 +131,12 @@ jobs:
           name: packages-${{ matrix.target }}
           path: packages/**/*
 
-  build-and-release:
-    name: Build and release
-    needs:
-      - build-native-linux
-      - build-native-macos
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-        with: {fetch-depth: 0}
-      - uses: ./.github/actions/setup-node
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: packages-*
-          path: packages
-          merge-multiple: true
-      - name: Debug
-        run: ls -l packages/*/*/*.node
-      - name: Npm
-        run: |
-          npm config set "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}"
-          npm config set registry https://registry.npmjs.org/
-      - run: ${{ inputs.release-command }}
-
   build-and-release-changesets:
     name: Build and release Changesets
     if: github.ref_name == 'main'
-    needs: build-and-release
+    needs:
+      - build-native-linux
+      - build-native-macos
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
