@@ -272,7 +272,8 @@ jobs:
     strategy:
       matrix:
         node: [24]
-        os: [ubuntu-latest]
+        # Pinned: Playwright 1.60 can't install Chromium on ubuntu-latest (26.04)
+        os: [ubuntu-24.04]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
