@@ -1,5 +1,31 @@
 # @atlaspack/core
 
+## 2.39.3
+
+### Patch Changes
+
+- [#1144](https://github.com/atlassian-labs/atlaspack/pull/1144) [`02f585c`](https://github.com/atlassian-labs/atlaspack/commit/02f585c489d7399f15f2ccf7c3b0510b07438102) Thanks [@spanishpear](https://github.com/spanishpear)! - Remove the hmrImprovements feature flag while preserving its disabled behavior, including the separate React Refresh runtime and legacy refresh helper.
+
+- [#1153](https://github.com/atlassian-labs/atlaspack/pull/1153) [`0de569d`](https://github.com/atlassian-labs/atlaspack/commit/0de569d9e6bff51916f4ed753c4aa93a8549f428) Thanks [@jackbrown](https://github.com/jackbrown)! - Configure package publishing to use the forwarding registry with short-lived credentials.
+
+- Updated dependencies [[`02f585c`](https://github.com/atlassian-labs/atlaspack/commit/02f585c489d7399f15f2ccf7c3b0510b07438102), [`0de569d`](https://github.com/atlassian-labs/atlaspack/commit/0de569d9e6bff51916f4ed753c4aa93a8549f428), [`e600069`](https://github.com/atlassian-labs/atlaspack/commit/e600069e93943cc63d1febeb40b022713508f72c)]:
+  - @atlaspack/feature-flags@2.31.4
+  - @atlaspack/rust@4.0.1
+  - @atlaspack/build-cache@2.13.18
+  - @atlaspack/cache@3.2.61
+  - @atlaspack/diagnostic@2.14.5
+  - @atlaspack/fs@2.15.61
+  - @atlaspack/graph@3.6.28
+  - @atlaspack/logger@2.14.58
+  - @atlaspack/package-manager@2.14.66
+  - @atlaspack/plugin@2.14.66
+  - @atlaspack/profiler@2.15.27
+  - @atlaspack/source-map@3.3.10
+  - @atlaspack/types@2.15.56
+  - @atlaspack/utils@3.4.8
+  - @atlaspack/workers@2.14.66
+  - @atlaspack/events@2.14.5
+
 ## 2.39.2
 
 ### Patch Changes

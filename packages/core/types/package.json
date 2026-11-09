@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/types",
-  "version": "2.15.55",
+  "version": "2.15.56",
   "license": "(MIT OR Apache-2.0)",
   "main": "./lib/index.js",
   "source": "./src/index.ts",
@@ -17,8 +17,8 @@
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
-    "@atlaspack/types-internal": "2.25.7",
-    "@atlaspack/workers": "2.14.65"
+    "@atlaspack/types-internal": "2.25.8",
+    "@atlaspack/workers": "2.14.66"
   },
   "type": "commonjs"
 }

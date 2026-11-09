@@ -1,5 +1,44 @@
 # @atlaspack/config-default
 
+## 20.0.3
+
+### Patch Changes
+
+- [#1153](https://github.com/atlassian-labs/atlaspack/pull/1153) [`0de569d`](https://github.com/atlassian-labs/atlaspack/commit/0de569d9e6bff51916f4ed753c4aa93a8549f428) Thanks [@jackbrown](https://github.com/jackbrown)! - Configure package publishing to use the forwarding registry with short-lived credentials.
+
+- Updated dependencies [[`02f585c`](https://github.com/atlassian-labs/atlaspack/commit/02f585c489d7399f15f2ccf7c3b0510b07438102), [`0de569d`](https://github.com/atlassian-labs/atlaspack/commit/0de569d9e6bff51916f4ed753c4aa93a8549f428), [`3d70928`](https://github.com/atlassian-labs/atlaspack/commit/3d709281cb87e83dda6e2e7aed7b388efa46e004)]:
+  - @atlaspack/core@2.39.3
+  - @atlaspack/packager-js@2.25.13
+  - @atlaspack/runtime-js@2.20.23
+  - @atlaspack/runtime-react-refresh@2.16.23
+  - @atlaspack/transformer-js@20.1.2
+  - @atlaspack/transformer-react-refresh-wrap@2.15.42
+  - @atlaspack/bundler-default@3.4.38
+  - @atlaspack/compressor-raw@2.13.68
+  - @atlaspack/namer-default@2.14.66
+  - @atlaspack/optimizer-css@2.15.27
+  - @atlaspack/optimizer-htmlnano@2.14.66
+  - @atlaspack/optimizer-image@20.0.3
+  - @atlaspack/optimizer-svgo@2.14.66
+  - @atlaspack/optimizer-swc@2.16.12
+  - @atlaspack/packager-css@2.15.27
+  - @atlaspack/packager-html@2.15.48
+  - @atlaspack/packager-raw@2.14.66
+  - @atlaspack/packager-svg@2.14.66
+  - @atlaspack/packager-wasm@2.14.66
+  - @atlaspack/reporter-dev-server@2.14.66
+  - @atlaspack/resolver-default@2.14.66
+  - @atlaspack/runtime-browser-hmr@2.15.23
+  - @atlaspack/runtime-service-worker@2.15.23
+  - @atlaspack/transformer-css@2.15.27
+  - @atlaspack/transformer-html@2.15.43
+  - @atlaspack/transformer-image@20.0.3
+  - @atlaspack/transformer-json@2.14.66
+  - @atlaspack/transformer-postcss@2.14.66
+  - @atlaspack/transformer-posthtml@2.14.66
+  - @atlaspack/transformer-raw@2.14.66
+  - @atlaspack/transformer-svg@2.14.66
+
 ## 20.0.2
 
 ### Patch Changes

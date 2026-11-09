@@ -1,5 +1,20 @@
 # @atlaspack/config-webextension
 
+## 20.0.3
+
+### Patch Changes
+
+- [#1153](https://github.com/atlassian-labs/atlaspack/pull/1153) [`0de569d`](https://github.com/atlassian-labs/atlaspack/commit/0de569d9e6bff51916f4ed753c4aa93a8549f428) Thanks [@jackbrown](https://github.com/jackbrown)! - Configure package publishing to use the forwarding registry with short-lived credentials.
+
+- Updated dependencies [[`02f585c`](https://github.com/atlassian-labs/atlaspack/commit/02f585c489d7399f15f2ccf7c3b0510b07438102), [`0de569d`](https://github.com/atlassian-labs/atlaspack/commit/0de569d9e6bff51916f4ed753c4aa93a8549f428)]:
+  - @atlaspack/core@2.39.3
+  - @atlaspack/config-default@20.0.3
+  - @atlaspack/types@2.15.56
+  - @atlaspack/packager-webextension@2.14.66
+  - @atlaspack/runtime-webextension@2.15.23
+  - @atlaspack/transformer-raw@2.14.66
+  - @atlaspack/transformer-webextension@2.14.66
+
 ## 20.0.2
 
 ### Patch Changes

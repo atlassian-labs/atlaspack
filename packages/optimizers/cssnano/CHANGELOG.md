@@ -1,5 +1,15 @@
 # @atlaspack/optimizer-cssnano
 
+## 2.15.27
+
+### Patch Changes
+
+- [#1153](https://github.com/atlassian-labs/atlaspack/pull/1153) [`0de569d`](https://github.com/atlassian-labs/atlaspack/commit/0de569d9e6bff51916f4ed753c4aa93a8549f428) Thanks [@jackbrown](https://github.com/jackbrown)! - Configure package publishing to use the forwarding registry with short-lived credentials.
+
+- Updated dependencies [[`0de569d`](https://github.com/atlassian-labs/atlaspack/commit/0de569d9e6bff51916f4ed753c4aa93a8549f428)]:
+  - @atlaspack/plugin@2.14.66
+  - @atlaspack/source-map@3.3.10
+
 ## 2.15.26
 
 ### Patch Changes

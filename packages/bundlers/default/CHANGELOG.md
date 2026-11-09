@@ -1,5 +1,22 @@
 # @atlaspack/bundler-default
 
+## 3.4.38
+
+### Patch Changes
+
+- [#1153](https://github.com/atlassian-labs/atlaspack/pull/1153) [`0de569d`](https://github.com/atlassian-labs/atlaspack/commit/0de569d9e6bff51916f4ed753c4aa93a8549f428) Thanks [@jackbrown](https://github.com/jackbrown)! - Configure package publishing to use the forwarding registry with short-lived credentials.
+
+- [#1150](https://github.com/atlassian-labs/atlaspack/pull/1150) [`3d70928`](https://github.com/atlassian-labs/atlaspack/commit/3d709281cb87e83dda6e2e7aed7b388efa46e004) Thanks [@jackbrown](https://github.com/jackbrown)! - Improve dependency availability calculation in the bundling algorithm to prevent runtime issues with cyclic lazy imports.
+
+- Updated dependencies [[`02f585c`](https://github.com/atlassian-labs/atlaspack/commit/02f585c489d7399f15f2ccf7c3b0510b07438102), [`0de569d`](https://github.com/atlassian-labs/atlaspack/commit/0de569d9e6bff51916f4ed753c4aa93a8549f428), [`e600069`](https://github.com/atlassian-labs/atlaspack/commit/e600069e93943cc63d1febeb40b022713508f72c)]:
+  - @atlaspack/feature-flags@2.31.4
+  - @atlaspack/rust@4.0.1
+  - @atlaspack/diagnostic@2.14.5
+  - @atlaspack/graph@3.6.28
+  - @atlaspack/plugin@2.14.66
+  - @atlaspack/types-internal@2.25.8
+  - @atlaspack/utils@3.4.8
+
 ## 3.4.37
 
 ### Patch Changes

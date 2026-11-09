@@ -1,5 +1,13 @@
 # @atlaspack/feature-flags
 
+## 2.31.4
+
+### Patch Changes
+
+- [#1144](https://github.com/atlassian-labs/atlaspack/pull/1144) [`02f585c`](https://github.com/atlassian-labs/atlaspack/commit/02f585c489d7399f15f2ccf7c3b0510b07438102) Thanks [@spanishpear](https://github.com/spanishpear)! - Remove the hmrImprovements feature flag while preserving its disabled behavior, including the separate React Refresh runtime and legacy refresh helper.
+
+- [#1153](https://github.com/atlassian-labs/atlaspack/pull/1153) [`0de569d`](https://github.com/atlassian-labs/atlaspack/commit/0de569d9e6bff51916f4ed753c4aa93a8549f428) Thanks [@jackbrown](https://github.com/jackbrown)! - Configure package publishing to use the forwarding registry with short-lived credentials.
+
 ## 2.31.3
 
 ### Patch Changes

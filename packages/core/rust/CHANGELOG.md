@@ -1,5 +1,16 @@
 # @atlaspack/rust
 
+## 4.0.1
+
+### Patch Changes
+
+- [#1144](https://github.com/atlassian-labs/atlaspack/pull/1144) [`02f585c`](https://github.com/atlassian-labs/atlaspack/commit/02f585c489d7399f15f2ccf7c3b0510b07438102) Thanks [@spanishpear](https://github.com/spanishpear)! - Remove the hmrImprovements feature flag while preserving its disabled behavior, including the separate React Refresh runtime and legacy refresh helper.
+
+- [#1153](https://github.com/atlassian-labs/atlaspack/pull/1153) [`0de569d`](https://github.com/atlassian-labs/atlaspack/commit/0de569d9e6bff51916f4ed753c4aa93a8549f428) Thanks [@jackbrown](https://github.com/jackbrown)! - Configure package publishing to use the forwarding registry with short-lived credentials.
+
+- [#1149](https://github.com/atlassian-labs/atlaspack/pull/1149) [`e600069`](https://github.com/atlassian-labs/atlaspack/commit/e600069e93943cc63d1febeb40b022713508f72c) Thanks [@spanishpear](https://github.com/spanishpear)! - Fix constant folding of nested string concatenation in Compiled CSS values.
+  Allow empty cssMap variants in css and xcss props without reporting missing stylesheets.
+
 ## 4.0.0
 
 ### Major Changes
