@@ -740,6 +740,72 @@ describe('bundler', function () {
     await run(b);
   });
 
+  for (let shouldScopeHoist of [false, true]) {
+    for (let maxParallelRequests of [0, 1]) {
+      it(`should prune cyclic reused bundles without self-references (scope hoisting: ${shouldScopeHoist}, maxParallelRequests: ${maxParallelRequests})`, async function () {
+        // A and B reuse each other. C keeps both reachable after their reuse
+        // edges are pruned, exposing stale sourceBundles in subsequent groups.
+        await fsFixture(overlayFS, __dirname)`
+          cyclic-reused-bundle-pruning
+            index.js:
+              Promise.all([import('./a'), import('./b'), import('./c')])
+                .then(([a, b, c]) => output([a.readB(), b.readA(), b.readShared(), c.readBoth()]));
+            a.js:
+              import {b} from './b';
+              export const a = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+              export function readB() { return b; }
+            b.js:
+              import {a} from './a';
+              import {shared} from './shared';
+              export const b = 'b';
+              export function readA() { return a; }
+              export function readShared() { return shared; }
+            c.js:
+              import {a} from './a';
+              import {b} from './b';
+              import {shared} from './shared';
+              export function readBoth() { return a + b + shared; }
+            shared.js:
+              export const shared = 'shared';
+            package.json:
+              {
+                "@atlaspack/bundler-default": {
+                  "minBundleSize": 0,
+                  "minBundles": 1,
+                  "maxParallelRequests": ${maxParallelRequests}
+                }
+              }
+            yarn.lock:
+        `;
+
+        let b = await bundle(
+          path.join(__dirname, 'cyclic-reused-bundle-pruning/index.js'),
+          {
+            inputFS: overlayFS,
+            mode: 'production',
+            defaultTargetOptions: {
+              shouldScopeHoist,
+              shouldOptimize: false,
+            },
+          },
+        );
+
+        let output;
+        await run(b, {
+          output(value: string[]) {
+            output = value;
+          },
+        });
+        assert.deepEqual(output, [
+          'b',
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          'shared',
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabshared',
+        ]);
+      });
+    }
+  }
+
   // This test case is the same as previous except we remove the shared bundle since it is smaller
   it('should remove shared bundle (over reused bundles based on size) if the bundlegroup hit the parallel request limit', async function () {
     let b = await bundle(
